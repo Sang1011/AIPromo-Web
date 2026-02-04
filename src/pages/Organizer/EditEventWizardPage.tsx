@@ -1,15 +1,15 @@
 import { useState } from "react";
 
-import Stepper from "./Stepper";
-import ManagementLayout from "./ManagementLayout";
+import Stepper from "../../components/Organizer/Stepper";
+import ManagementLayout from "../../components/Organizer/ManagementLayout";
 
-import Step1EventInfo from "./steps/Step1EventInfo";
-import Step2Schedule from "./steps/Step2Schedule";
-import Step3Settings from "./steps/Step3Settings";
-import Step4Registration from "./steps/Step4Registration";
-import Step5Payment from "./steps/Step5Payment";
+import Step1EventInfo from "../../components/Organizer/steps/Step1EventInfo";
+import Step2Schedule from "../../components/Organizer/steps/Step2Schedule";
+import Step3Settings from "../../components/Organizer/steps/Step3Settings";
+import Step4Registration from "../../components/Organizer/steps/Step4Registration";
+import Step5Payment from "../../components/Organizer/steps/Step5Payment";
 
-export default function EditEventWizard() {
+export default function EditEventWizardPage() {
     const [step, setStep] = useState(1);
 
     const nextStep = () => setStep((s) => Math.min(s + 1, 5));
