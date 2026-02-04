@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIPromo Admin - Tài chính &amp; Doanh thu</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7c3bed",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0B0B12",
+                        "card-dark": "#18122B",
+                        "border-dark": "#302447",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Spline Sans', sans-serif;
+        }
+        .glass-card {
+            background: rgba(24, 18, 43, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(124, 59, 237, 0.2);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(124, 59, 237, 0.4);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0B0B12;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #302447;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<aside class="w-72 bg-[#120D1D] border-r border-border-dark flex flex-col justify-between py-6">
+<div>
+<div class="px-6 mb-10 flex items-center gap-3">
+<div class="bg-primary rounded-lg p-1.5 flex items-center justify-center neon-glow">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1">rocket_launch</span>
+</div>
+<div>
+<h1 class="text-white text-lg font-bold leading-tight tracking-tight">AIPromo Admin</h1>
+            <p class="text-[#a592c8] text-xs font-medium">Giám sát Hệ thống</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1 px-3">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-sm font-medium">Tổng quan</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<p class="text-sm font-medium">Quản lý Người dùng</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">gavel</span>
+<p class="text-sm font-medium">Duyệt Sự kiện</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary border-r-4 border-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">payments</span>
+<p class="text-sm font-semibold">Tài chính & Doanh thu</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">terminal</span>
+<p class="text-sm font-medium">System Logs</p>
+</a>
+</nav>
+</div>
+<div class="px-6">
+<button class="w-full flex cursor-pointer items-center justify-center rounded-lg h-11 bg-primary text-white text-sm font-bold tracking-wide transition-all hover:bg-primary/90 neon-glow">
+<span class="material-symbols-outlined mr-2 text-base">download</span>
+                    Xuất Báo cáo
+                </button>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-hidden">
+<header class="h-16 border-b border-border-dark flex items-center justify-between px-8 bg-background-dark/50 backdrop-blur-md">
+<div class="flex items-center gap-6 flex-1">
+<label class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#a592c8] text-xl">search</span>
+<input class="w-full bg-[#18122B] border-none rounded-lg py-2 pl-11 pr-4 text-sm text-white focus:ring-1 focus:ring-primary placeholder-[#a592c8]/50" placeholder="Tìm giao dịch, hóa đơn hoặc thanh toán..."/>
+</label>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-lg bg-[#18122B] text-[#a592c8] hover:text-white transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background-dark"></span>
+</button>
+<button class="p-2 rounded-lg bg-[#18122B] text-[#a592c8] hover:text-white transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-px bg-border-dark mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block">
+<p class="text-xs font-bold text-white">Alex Rivera</p>
+<p class="text-[10px] text-[#a592c8]">Super Admin</p>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-primary/30 p-0.5">
+<div class="w-full h-full rounded-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD9irLgmMhxd6f3j25fVXJck-IOqBCeQ3iy2GWgfqENZsArdhDSBErV1la_mITMsuVfHLbB44zkjSSoFgHqcC8UjsML4ddQemZjbJeIy0qMRtlfB2uM1yHfc97Ii094sYRCZfS1OaELqauTN5vvPwVKPQDpde-p69IVYC2niqJ07st1R9BGT1-CliJS35aHxNmR0ziqtwIXKiqUu8FbwZEes5Gfxtov6knd1j2PUdr-mhpzYD5vx7gIyDbrO42J30rRi9hCM7PG1dJo')"></div>
+</div>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-8">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="glass-card rounded-xl p-6 relative overflow-hidden group transition-all hover:bg-[#1f1837]">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#a592c8] text-xs font-semibold uppercase tracking-wider">Tổng Doanh Thu</p>
+<h3 class="text-2xl font-bold text-white mt-1">$128,450.00</h3>
+</div>
+<div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-emerald-400 text-xs font-bold">+14.2%</span>
+<span class="text-[#a592c8] text-[10px]">from last month</span>
+</div>
+<div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 to-transparent"></div>
+</div>
+<div class="glass-card rounded-xl p-6 transition-all hover:bg-[#1f1837]">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#a592c8] text-xs font-semibold uppercase tracking-wider">Phí nền tảng</p>
+<h3 class="text-2xl font-bold text-white mt-1">$19,267.50</h3>
+</div>
+<div class="p-2 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined text-sm">account_balance_wallet</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-primary text-xs font-bold">15% Fee</span>
+<span class="text-[#a592c8] text-[10px]">platform average</span>
+</div>
+</div>
+<div class="glass-card rounded-xl p-6 transition-all hover:bg-[#1f1837]">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#a592c8] text-xs font-semibold uppercase tracking-wider">Tổng Thanh toán</p>
+<h3 class="text-2xl font-bold text-white mt-1">$102,182.50</h3>
+</div>
+<div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
+<span class="material-symbols-outlined text-sm">outbound</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-blue-400 text-xs font-bold">84</span>
+<span class="text-[#a592c8] text-[10px]">pending approvals</span>
+</div>
+</div>
+<div class="glass-card rounded-xl p-6 transition-all hover:bg-[#1f1837]">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#a592c8] text-xs font-semibold uppercase tracking-wider">Giao dịch</p>
+<h3 class="text-2xl font-bold text-white mt-1">4,812</h3>
+</div>
+<div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+<span class="material-symbols-outlined text-sm">receipt_long</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-emerald-400 text-xs font-bold">+210</span>
+<span class="text-[#a592c8] text-[10px]">in last 24h</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-8 mb-8">
+<div class="glass-card rounded-xl p-8">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+<div>
+<h2 class="text-lg font-bold text-white">Tăng trưởng Doanh thu</h2>
+<p class="text-[#a592c8] text-sm">Theo dõi hiệu suất doanh số và phí nền tảng</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-4 mr-4">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-full bg-primary"></span>
+<span class="text-xs text-[#a592c8]">Net Revenue</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-full bg-blue-400"></span>
+<span class="text-xs text-[#a592c8]">System Fees</span>
+</div>
+</div>
+<select class="bg-[#302447] border-none text-white text-xs rounded-lg py-1.5 pl-3 pr-8 focus:ring-1 focus:ring-primary">
+<option>30 ngày qua</option>
+<option>6 tháng qua</option>
+<option>Từ đầu năm</option>
+</select>
+</div>
+</div>
+<div class="h-80 relative w-full">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1000 300">
+<defs>
+<linearGradient id="revenueGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#7c3bed" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="#7c3bed" stop-opacity="0"></stop>
+</linearGradient>
+<linearGradient id="feeGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#60a5fa" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#60a5fa" stop-opacity="0"></stop>
+</linearGradient>
+</defs>
+<path d="M0,250 Q125,230 250,150 T500,180 T750,80 T1000,40 V300 H0 Z" fill="url(#revenueGradient)"></path>
+<path d="M0,250 Q125,230 250,150 T500,180 T750,80 T1000,40" fill="none" stroke="#7c3bed" stroke-linecap="round" stroke-width="4"></path>
+<path d="M0,280 Q125,270 250,220 T500,240 T750,180 T1000,140 V300 H0 Z" fill="url(#feeGradient)"></path>
+<path d="M0,280 Q125,270 250,220 T500,240 T750,180 T1000,140" fill="none" stroke="#60a5fa" stroke-dasharray="8,8" stroke-linecap="round" stroke-width="2"></path>
+<circle class="neon-glow" cx="750" cy="80" fill="#7c3bed" r="6" stroke="#fff" stroke-width="2"></circle>
+</svg>
+<div class="flex justify-between mt-6 px-2 text-[10px] text-[#a592c8] font-bold uppercase tracking-widest">
+<span>Oct 01</span>
+<span>Oct 07</span>
+<span>Oct 14</span>
+<span>Oct 21</span>
+<span>Oct 28</span>
+<span>Nov 01</span>
+</div>
+</div>
+</div>
+</div>
+<div class="glass-card rounded-xl overflow-hidden">
+<div class="px-8 py-6 border-b border-border-dark flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div>
+<h2 class="text-lg font-bold text-white">Lịch sử Giao dịch Chi tiết</h2>
+<p class="text-[#a592c8] text-sm">Xem và quản lý tất cả các hoạt động tài chính trong hệ sinh thái</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-[#18122B] border border-border-dark rounded-lg text-[#a592c8] text-xs font-semibold hover:text-white transition-colors">
+                                Lọc
+                            </button>
+<button class="px-4 py-2 bg-[#18122B] border border-border-dark rounded-lg text-[#a592c8] text-xs font-semibold hover:text-white transition-colors">
+                                Khoảng thời gian
+                            </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-white/5 text-[10px] text-[#a592c8] uppercase tracking-widest font-bold">
+<th class="px-8 py-4">Mã giao dịch</th>
+<th class="px-8 py-4">Thực thể</th>
+<th class="px-8 py-4">Loại</th>
+<th class="px-8 py-4">Tổng tiền</th>
+<th class="px-8 py-4">Phí ròng</th>
+<th class="px-8 py-4">Phương thức</th>
+<th class="px-8 py-4 text-center">Trạng thái</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5 text-sm font-medium text-[#a592c8]">#TXN-88291</td>
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPpgJwx9-_D61wkKl3dsOf4eMniUmgnBLVY99tXLkB-WcVAu7fGHNh6yHSQcO3sV4tuSqNy43Sr2LpdM2fsP5EO8QMpNfVZhFmQfOPPXdQtMg6IKEGbCFQ6uXZ7r-ixv3xX6XGhOy1EAHwxQtcffVuyp8bE9WJxpeuHcpBJD0Fk1V3iCRX-gNU7yCeFpFr-UVYH9ElbaH44U67eQjXnZFJowRgzUlk6OcnsKjvUPAT5vJrp8CK6XQUgyxiUSSeJi36Cmfx-8YBhTM2')"></div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white">Vibe Collective</span>
+<span class="text-[10px] text-[#a592c8]">Organizer</span>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-primary/10 text-primary uppercase">Payout</span>
+</td>
+<td class="px-8 py-5 text-sm font-bold text-white">$4,250.00</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">$637.50</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">Bank Transfer</td>
+<td class="px-8 py-5 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Hoàn tất
+                                        </span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5 text-sm font-medium text-[#a592c8]">#TXN-88290</td>
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDLd3Lrptc5vsqrxnxIszULo1pCpyIuJvmB5_sElcHxmPKpxhwCdWZNJ0SWAqpXooXaIVGBJ_t-AuMn4ClE7mOtkTpS_8K45zkRtIVFe1YWowMqvfFy2Vd9LW8t3oP7NgCuJ117FLoJ21WRrJ9ZW4PQmLokOi3CoR-t4u9E-bZrPZfTv3wKbqkGX74QdQApamCJ36JNVgWeCP-Cz22J0jBtyzuj3gT9t0TLYGfX8qBUczpy8ceuqLCPqfvObwJMtLRlGHzn06opT2TB')"></div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white">Sarah Wilson</span>
+<span class="text-[10px] text-[#a592c8]">Attendee</span>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-400 uppercase">Ticket Sale</span>
+</td>
+<td class="px-8 py-5 text-sm font-bold text-white">$85.00</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">$12.75</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">VNPay</td>
+<td class="px-8 py-5 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Đang chờ
+                                        </span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5 text-sm font-medium text-[#a592c8]">#TXN-88289</td>
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBwULc5HdQIH2uuQr7i9dr1Oy5ZnO-py4nGHJYnI14gelm8hRIvlOQO44Oj6MYyXMh_WuRoajJfp0ztlRX-sDfIGc2PV5XnUoMz51FdEzgz-MnCvyLLNJkGM4M_RSGj-LWzeXOxfPcstn6CE3FLgewdbYhpV58jWiKMzTQHLfyc6Cath-TyvKe9g3c5XZK85N3us5jJTo9V-WHV8zoLBqt92afrSojGqh8yIcR2ufmv5G4aCRyvD5veS_Ejrj1dytd5SwdzwasaIlxD')"></div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white">Michael Chen</span>
+<span class="text-[10px] text-[#a592c8]">Attendee</span>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-400 uppercase">Ticket Sale</span>
+</td>
+<td class="px-8 py-5 text-sm font-bold text-white">$150.00</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">$22.50</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">MoMo</td>
+<td class="px-8 py-5 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Completed
+                                        </span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5 text-sm font-medium text-[#a592c8]">#TXN-88288</td>
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-[#302447] flex items-center justify-center">
+<span class="material-symbols-outlined text-xs text-primary">store</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-white">Neon Nights Expo</span>
+<span class="text-[10px] text-[#a592c8]">Organizer</span>
+</div>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-primary/10 text-primary uppercase">Payout</span>
+</td>
+<td class="px-8 py-5 text-sm font-bold text-white">$12,800.00</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">$1,920.00</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">Bank Transfer</td>
+<td class="px-8 py-5 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400">
+<span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> Thất bại
+                                        </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-8 py-4 bg-white/2 flex justify-between items-center border-t border-border-dark">
+<span class="text-xs text-[#a592c8]">Hiển thị 4 trên 24.192 kết quả</span>
+<div class="flex gap-2">
+<button class="p-1.5 rounded bg-[#18122B] border border-border-dark text-[#a592c8] hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="p-1.5 rounded bg-[#18122B] border border-border-dark text-[#a592c8] hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+</body></html>

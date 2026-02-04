@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIPromo Admin - Tổng quan chính</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7c3bed",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0B0B12",
+                        "card-dark": "#18122B",
+                        "border-dark": "#302447",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Spline Sans', sans-serif;
+        }
+        .glass-card {
+            background: rgba(24, 18, 43, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(124, 59, 237, 0.2);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(124, 59, 237, 0.4);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0B0B12;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #302447;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-72 bg-[#120D1D] border-r border-border-dark flex flex-col justify-between py-6">
+<div>
+<div class="px-6 mb-10 flex items-center gap-3">
+<div class="bg-primary rounded-lg p-1.5 flex items-center justify-center neon-glow">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1">rocket_launch</span>
+</div>
+<div>
+            <h1 class="text-white text-lg font-bold leading-tight tracking-tight">AIPromo Admin</h1>
+            <p class="text-[#a592c8] text-xs font-medium">Giám sát Hệ thống</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1 px-3">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary border-r-4 border-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">dashboard</span>
+<p class="text-sm font-semibold">Tổng quan</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<p class="text-sm font-medium">Quản lý Người dùng</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">gavel</span>
+<p class="text-sm font-medium">Duyệt Sự kiện</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<p class="text-sm font-medium">Tài chính & Doanh thu</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">terminal</span>
+<p class="text-sm font-medium">Nhật ký Hệ thống</p>
+</a>
+</nav>
+</div>
+<div class="px-6">
+<button class="w-full flex cursor-pointer items-center justify-center rounded-lg h-11 bg-primary text-white text-sm font-bold tracking-wide transition-all hover:bg-primary/90 neon-glow">
+<span class="material-symbols-outlined mr-2 text-base">download</span>
+                    Tải báo cáo
+                </button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Top Navigation -->
+<header class="h-16 border-b border-border-dark flex items-center justify-between px-8 bg-background-dark/50 backdrop-blur-md">
+<div class="flex items-center gap-6 flex-1">
+<label class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#a592c8] text-xl">search</span>
+<input class="w-full bg-[#18122B] border-none rounded-lg py-2 pl-11 pr-4 text-sm text-white focus:ring-1 focus:ring-primary placeholder-[#a592c8]/50" placeholder="Tìm kiếm phân tích, người dùng hoặc sự kiện..."/>
+</label>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-lg bg-[#18122B] text-[#a592c8] hover:text-white transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background-dark"></span>
+</button>
+<button class="p-2 rounded-lg bg-[#18122B] text-[#a592c8] hover:text-white transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-px bg-border-dark mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block">
+<p class="text-xs font-bold text-white">Alex Rivera</p>
+<p class="text-[10px] text-[#a592c8]">Super Admin</p>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-primary/30 p-0.5">
+<div class="w-full h-full rounded-full bg-cover bg-center" data-alt="Administrator profile picture avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD9irLgmMhxd6f3j25fVXJck-IOqBCeQ3iy2GWgfqENZsArdhDSBErV1la_mITMsuVfHLbB44zkjSSoFgHqcC8UjsML4ddQemZjbJeIy0qMRtlfB2uM1yHfc97Ii094sYRCZfS1OaELqauTN5vvPwVKPQDpde-p69IVYC2niqJ07st1R9BGT1-CliJS35aHxNmR0ziqtwIXKiqUu8FbwZEes5Gfxtov6knd1j2PUdr-mhpzYD5vx7gIyDbrO42J30rRi9hCM7PG1dJo')"></div>
+</div>
+</div>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-8">
+<!-- Top Stats Row -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<!-- Revenue Stat -->
+<div class="glass-card rounded-xl p-6 relative overflow-hidden group">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#a592c8] text-xs font-semibold uppercase tracking-wider">Tổng Doanh Thu</p>
+<h3 class="text-2xl font-bold text-white mt-1">$45,280.50</h3>
+</div>
+<div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-emerald-400 text-xs font-bold">+12.5%</span>
+<span class="text-[#a592c8] text-[10px]">so với tháng trước</span>
+</div>
+<div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 to-transparent"></div>
+</div>
+<!-- Active Users Stat -->
+<div class="glass-card rounded-xl p-6">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#a592c8] text-xs font-semibold uppercase tracking-wider">Người dùng Hoạt động</p>
+<h3 class="text-2xl font-bold text-white mt-1">12,480</h3>
+</div>
+<div class="p-2 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined text-sm">group</span>
+</div>
+</div>
+<div class="w-full bg-[#302447] h-1.5 rounded-full overflow-hidden flex mt-2">
+<div class="bg-primary h-full" style="width: 35%;"></div>
+<div class="bg-indigo-400 h-full" style="width: 65%;"></div>
+</div>
+<div class="flex justify-between mt-3">
+<span class="text-[10px] text-[#a592c8] flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Người Tổ chức (35%)
+                            </span>
+<span class="text-[10px] text-[#a592c8] flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span> Người tham dự (65%)
+                            </span>
+</div>
+</div>
+<!-- Total Events Stat -->
+<div class="glass-card rounded-xl p-6">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#a592c8] text-xs font-semibold uppercase tracking-wider">Tổng Sự kiện</p>
+<h3 class="text-2xl font-bold text-white mt-1">1,240</h3>
+</div>
+<div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-emerald-400 text-xs font-bold">+42</span>
+<span class="text-[#a592c8] text-[10px]">live events now</span>
+</div>
+</div>
+<!-- Ticket Sales Stat -->
+<div class="glass-card rounded-xl p-6">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[#a592c8] text-xs font-semibold uppercase tracking-wider">Bán Vé</p>
+<h3 class="text-2xl font-bold text-white mt-1">8,500</h3>
+</div>
+<div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+<span class="material-symbols-outlined text-sm">confirmation_number</span>
+</div>
+</div>
+<div class="flex items-end gap-1 h-8">
+<div class="w-1.5 bg-primary/20 rounded-full h-1/2"></div>
+<div class="w-1.5 bg-primary/20 rounded-full h-3/4"></div>
+<div class="w-1.5 bg-primary rounded-full h-full"></div>
+<div class="w-1.5 bg-primary/40 rounded-full h-2/3"></div>
+<div class="w-1.5 bg-primary/20 rounded-full h-1/2"></div>
+</div>
+</div>
+</div>
+<!-- Center Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+<!-- Large Line Chart -->
+<div class="lg:col-span-2 glass-card rounded-xl p-8">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h2 class="text-lg font-bold text-white">Xu hướng Doanh thu &amp; Giao dịch</h2>
+<p class="text-[#a592c8] text-sm">Số liệu hiệu suất hàng ngày trong 30 ngày gần nhất</p>
+</div>
+<select class="bg-[#302447] border-none text-white text-xs rounded-lg py-1.5 pl-3 pr-8 focus:ring-1 focus:ring-primary">
+<option>Tháng này</option>
+<option>Tháng trước</option>
+</select>
+</div>
+<div class="h-64 relative w-full">
+<!-- SVG Chart Simulation -->
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 800 200">
+<defs>
+<lineargradient id="gradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#7c3bed" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#7c3bed" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0,180 Q100,160 200,100 T400,120 T600,60 T800,40 V200 H0 Z" fill="url(#gradient)"></path>
+<path d="M0,180 Q100,160 200,100 T400,120 T600,60 T800,40" fill="none" stroke="#7c3bed" stroke-linecap="round" stroke-width="3"></path>
+<!-- Points -->
+<circle class="neon-glow" cx="200" cy="100" fill="#7c3bed" r="5"></circle>
+<circle class="neon-glow" cx="600" cy="60" fill="#7c3bed" r="5"></circle>
+</svg>
+<div class="flex justify-between mt-4 text-[10px] text-[#a592c8] font-bold">
+<span>W1</span><span>W2</span><span>W3</span><span>W4</span>
+</div>
+</div>
+</div>
+<!-- Pie Chart / User Distribution -->
+<div class="glass-card rounded-xl p-8">
+<h2 class="text-lg font-bold text-white mb-2">Phân bổ Người dùng</h2>
+<p class="text-[#a592c8] text-sm mb-10">Tỷ lệ Người tổ chức so với Người tham dự</p>
+<div class="relative w-48 h-48 mx-auto flex items-center justify-center">
+<!-- Circular Progress Simulation -->
+<svg class="w-full h-full transform -rotate-90">
+<circle cx="96" cy="96" fill="transparent" r="80" stroke="#302447" stroke-width="20"></circle>
+<circle class="neon-glow" cx="96" cy="96" fill="transparent" r="80" stroke="#7c3bed" stroke-dasharray="351, 502" stroke-width="20"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-bold text-white">70%</span>
+<span class="text-[10px] text-[#a592c8] uppercase font-bold tracking-widest">Tăng trưởng</span>
+</div>
+</div>
+<div class="mt-8 space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+<span class="text-sm text-white">Attendees</span>
+</div>
+<span class="text-sm font-bold text-white">8,112</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-[#302447]"></div>
+<span class="text-sm text-white">Organizers</span>
+</div>
+<span class="text-sm font-bold text-white">4,368</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Transactions Section -->
+<div class="glass-card rounded-xl overflow-hidden">
+<div class="px-8 py-6 border-b border-border-dark flex justify-between items-center">
+<div>
+<h2 class="text-lg font-bold text-white">Giao dịch Gần đây</h2>
+<p class="text-[#a592c8] text-sm">Cập nhật thời gian thực các thanh toán hệ thống</p>
+</div>
+<button class="text-primary text-sm font-bold flex items-center gap-2 hover:underline">
+                            Xem tất cả <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-white/5 text-[10px] text-[#a592c8] uppercase tracking-widest font-bold">
+<th class="px-8 py-4">Transaction ID</th>
+<th class="px-8 py-4">User</th>
+<th class="px-8 py-4">Role</th>
+<th class="px-8 py-4">Amount</th>
+<th class="px-8 py-4">Payment Method</th>
+<th class="px-8 py-4 text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5 text-sm font-medium text-[#a592c8]">#TRX-94021</td>
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-cover" data-alt="User profile thumbnail" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBPpgJwx9-_D61wkKl3dsOf4eMniUmgnBLVY99tXLkB-WcVAu7fGHNh6yHSQcO3sV4tuSqNy43Sr2LpdM2fsP5EO8QMpNfVZhFmQfOPPXdQtMg6IKEGbCFQ6uXZ7r-ixv3xX6XGhOy1EAHwxQtcffVuyp8bE9WJxpeuHcpBJD0Fk1V3iCRX-gNU7yCeFpFr-UVYH9ElbaH44U67eQjXnZFJowRgzUlk6OcnsKjvUPAT5vJrp8CK6XQUgyxiUSSeJi36Cmfx-8YBhTM2')"></div>
+<span class="text-sm font-semibold text-white">Johnathan Smith</span>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-primary/10 text-primary uppercase">Organizer</span>
+</td>
+<td class="px-8 py-5 text-sm font-bold text-white">$1,250.00</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">MoMo</td>
+<td class="px-8 py-5 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Success
+                                        </span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5 text-sm font-medium text-[#a592c8]">#TRX-94019</td>
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-cover" data-alt="User profile thumbnail" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDLd3Lrptc5vsqrxnxIszULo1pCpyIuJvmB5_sElcHxmPKpxhwCdWZNJ0SWAqpXooXaIVGBJ_t-AuMn4ClE7mOtkTpS_8K45zkRtIVFe1YWowMqvfFy2Vd9LW8t3oP7NgCuJ117FLoJ21WRrJ9ZW4PQmLokOi3CoR-t4u9E-bZrPZfTv3wKbqkGX74QdQApamCJ36JNVgWeCP-Cz22J0jBtyzuj3gT9t0TLYGfX8qBUczpy8ceuqLCPqfvObwJMtLRlGHzn06opT2TB')"></div>
+<span class="text-sm font-semibold text-white">Sarah Wilson</span>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-400 uppercase">Attendee</span>
+</td>
+<td class="px-8 py-5 text-sm font-bold text-white">$45.00</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">VNPay</td>
+<td class="px-8 py-5 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Pending
+                                        </span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-5 text-sm font-medium text-[#a592c8]">#TRX-94018</td>
+<td class="px-8 py-5">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-cover" data-alt="User profile thumbnail" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBwULc5HdQIH2uuQr7i9dr1Oy5ZnO-py4nGHJYnI14gelm8hRIvlOQO44Oj6MYyXMh_WuRoajJfp0ztlRX-sDfIGc2PV5XnUoMz51FdEzgz-MnCvyLLNJkGM4M_RSGj-LWzeXOxfPcstn6CE3FLgewdbYhpV58jWiKMzTQHLfyc6Cath-TyvKe9g3c5XZK85N3us5jJTo9V-WHV8zoLBqt92afrSojGqh8yIcR2ufmv5G4aCRyvD5veS_Ejrj1dytd5SwdzwasaIlxD')"></div>
+<span class="text-sm font-semibold text-white">Michael Chen</span>
+</div>
+</td>
+<td class="px-8 py-5">
+<span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-400 uppercase">Attendee</span>
+</td>
+<td class="px-8 py-5 text-sm font-bold text-white">$120.00</td>
+<td class="px-8 py-5 text-sm text-[#a592c8]">VNPay</td>
+<td class="px-8 py-5 text-center">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Success
+                                        </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
