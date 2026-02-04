@@ -1,6 +1,6 @@
-import DashboardLayout from "./DashboardLayout";
+import DashboardLayout from "../../components/Organizer/DashboardLayout";
 import { FiSlash, FiVolumeX, FiShield } from "react-icons/fi";
-import LegalItem from "./LegalItem";
+import LegalItem from "../../components/Organizer/LegalItem";
 
 export default function Legal() {
     return (

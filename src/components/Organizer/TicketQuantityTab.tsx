@@ -1,7 +1,8 @@
 import { useState } from "react";
-import ManagementLayout from "../../components/Organizer/ManagementLayout";
-import TicketTypeList from "../../components/Organizer/TicketTypeList";
-import TicketSummary from "../../components/Organizer/TicketSummary";
+import ManagementLayout from "./ManagementLayout";
+import TicketTypeList from "./TicketTypeList";
+import TicketSummary from "./TicketSummary";
+import { FiCalendar } from "react-icons/fi";
 
 export default function TicketQuantityPage() {
     const [quantities, setQuantities] = useState<Record<string, number>>({
@@ -24,7 +25,7 @@ export default function TicketQuantityPage() {
                 <div className="flex-1 space-y-6">
                     <div className="flex items-center justify-between">
                         <span className="px-4 py-2 rounded-full bg-white/5 text-sm text-slate-300">
-                            📅 27 Tháng 01, 2026 – 00:00
+                            <FiCalendar className="mr-2 inline-block" /> 27 Tháng 01, 2026 – 00:00
                         </span>
 
                         <button className="text-primary text-sm">

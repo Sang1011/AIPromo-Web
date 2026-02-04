@@ -1,9 +1,9 @@
-import AnalyticsPage from './pages/Organizer/AnalyticsPage'
+import EventTicketPage from './pages/Organizer/EventTicketPage'
 
 function App() {
 
   return (
-    <AnalyticsPage />
+    <EventTicketPage />
   )
 }
 
