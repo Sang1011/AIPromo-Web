@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIPromo Events Advanced Search</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7c3bed",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#0B0B12",
+                        "card-dark": "#18122B",
+                        "border-dark": "#312447",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Spline Sans", sans-serif;
+            background-color: #0B0B12;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0B0B12;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #312447;
+            border-radius: 10px;
+        }
+        .glow-border:hover {
+            box-shadow: 0 0 15px rgba(124, 59, 237, 0.4);
+            border-color: #7c3bed;
+        }
+        .checkbox-tick {
+            --checkbox-tick-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(255,255,255)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3cpath d=%27M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e');
+        }
+        .glass-nav {
+            backdrop-filter: blur(16px);
+            background: rgba(11, 11, 18, 0.85);
+            border-bottom: 1px solid rgba(124, 59, 237, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-white font-display">
+<!-- Updated Navigation -->
+<nav class="fixed top-0 w-full z-50 glass-nav">
+<div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+<div class="flex items-center gap-10">
+<div class="flex items-center gap-2">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white">bolt</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight">AIPromo</h1>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Khám phá</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Sự kiện</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Giải pháp</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Giá cả</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-sm font-medium px-4 py-2 hover:text-primary transition-colors">Đăng nhập</button>
+<button class="bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-primary/20">
+                Tạo sự kiện
+            </button>
+</div>
+</div>
+</nav>
+
+<!-- Search Section Centered -->
+<div class="pt-28 pb-12 px-6 flex justify-center">
+  <div class="w-full max-w-xl">
+    <div class="bg-card-dark/50 backdrop-blur-xl border border-border-dark rounded-2xl p-6">
+
+      <!-- Title -->
+      <div class="text-center mb-5">
+        <h2 class="text-2xl font-bold text-white mb-1">
+          Tìm kiếm sự kiện
+        </h2>
+        <p class="text-gray-400 text-sm">
+          Nhập tên sự kiện hoặc địa điểm
+        </p>
+      </div>
+
+      <!-- Search Input -->
+      <div class="relative">
+        <span
+          class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+        >
+          search
+        </span>
+
+        <input
+          type="text"
+          placeholder="VD: Workshop AI, Concert, Tech Meetup..."
+          class="w-full bg-background-dark border border-border-dark rounded-xl 
+                 py-3 pl-11 pr-24 text-white text-sm
+                 placeholder:text-gray-600 focus:ring-2 focus:ring-primary 
+                 focus:border-primary transition-all"
+        />
+
+        <button
+          class="absolute right-2 top-1/2 -translate-y-1/2 
+                 bg-primary hover:bg-primary/90 text-white 
+                 px-4 py-2 rounded-lg text-sm font-semibold
+                 shadow-md shadow-primary/20 transition-all"
+        >
+          Tìm
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<main class="max-w-[1440px] mx-auto flex gap-6 px-6 pb-8">
+<!-- Sidebar Filter Column -->
+<aside class="w-72 shrink-0 flex flex-col gap-6 sticky top-24 h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar pr-2">
+<div class="flex items-center justify-between">
+<div>
+<h1 class="text-white text-lg font-bold">Filters</h1>
+<p class="text-gray-500 text-xs font-medium uppercase tracking-widest mt-1">Refine your hunt</p>
+</div>
+<button class="text-primary text-xs font-semibold hover:underline">Clear All</button>
+</div>
+<!-- Categories -->
+<div class="bg-card-dark rounded-xl border border-border-dark p-4">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary text-xl">category</span>
+<span class="text-sm font-bold">Categories</span>
+</div>
+<div class="flex flex-col gap-1 checkbox-tick">
+<label class="flex items-center gap-3 py-2 cursor-pointer group">
+<input checked="" class="h-5 w-5 rounded border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:outline-none transition-all" type="checkbox"/>
+<p class="text-gray-300 text-sm font-medium group-hover:text-white transition-colors">Electronic Music</p>
+</label>
+<label class="flex items-center gap-3 py-2 cursor-pointer group">
+<input class="h-5 w-5 rounded border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:outline-none transition-all" type="checkbox"/>
+<p class="text-gray-300 text-sm font-medium group-hover:text-white transition-colors">Tech Conferences</p>
+</label>
+<label class="flex items-center gap-3 py-2 cursor-pointer group">
+<input class="h-5 w-5 rounded border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:outline-none transition-all" type="checkbox"/>
+<p class="text-gray-300 text-sm font-medium group-hover:text-white transition-colors">AI Workshops</p>
+</label>
+<label class="flex items-center gap-3 py-2 cursor-pointer group">
+<input class="h-5 w-5 rounded border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:outline-none transition-all" type="checkbox"/>
+<p class="text-gray-300 text-sm font-medium group-hover:text-white transition-colors">NFT Networking</p>
+</label>
+</div>
+</div>
+<!-- Date Picker -->
+<div class="bg-card-dark rounded-xl border border-border-dark p-4">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary text-xl">calendar_today</span>
+<span class="text-sm font-bold">Date Range</span>
+</div>
+<div class="flex flex-col gap-4">
+<div class="p-2 border border-border-dark rounded-lg">
+<div class="flex items-center justify-between mb-2">
+<button class="p-1 hover:bg-border-dark rounded"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<span class="text-xs font-bold uppercase tracking-widest text-gray-400">October 2024</span>
+<button class="p-1 hover:bg-border-dark rounded"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+<div class="grid grid-cols-7 gap-1 text-[10px] text-center font-bold text-gray-500 mb-1">
+<div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+</div>
+<div class="grid grid-cols-7 gap-1">
+<button class="aspect-square flex items-center justify-center text-[11px] rounded hover:bg-primary/20">12</button>
+<button class="aspect-square flex items-center justify-center text-[11px] rounded hover:bg-primary/20">13</button>
+<button class="aspect-square flex items-center justify-center text-[11px] rounded bg-primary text-white font-bold">14</button>
+<button class="aspect-square flex items-center justify-center text-[11px] rounded bg-primary/30">15</button>
+<button class="aspect-square flex items-center justify-center text-[11px] rounded bg-primary/30">16</button>
+<button class="aspect-square flex items-center justify-center text-[11px] rounded bg-primary text-white font-bold">17</button>
+<button class="aspect-square flex items-center justify-center text-[11px] rounded hover:bg-primary/20">18</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Price Range -->
+<div class="bg-card-dark rounded-xl border border-border-dark p-4">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary text-xl">payments</span>
+<span class="text-sm font-bold">Price Range</span>
+</div>
+<div class="px-2">
+<div class="relative h-1 w-full rounded bg-border-dark">
+<div class="absolute left-1/4 right-1/4 h-full bg-primary rounded"></div>
+<div class="absolute left-1/4 -top-1.5 size-4 rounded-full bg-primary border-2 border-background-dark shadow-sm"></div>
+<div class="absolute right-1/4 -top-1.5 size-4 rounded-full bg-primary border-2 border-background-dark shadow-sm"></div>
+</div>
+<div class="flex justify-between mt-4 text-xs font-bold text-gray-400">
+<span>$50</span>
+<span>$500+</span>
+</div>
+</div>
+</div>
+<!-- Status -->
+<div class="bg-card-dark rounded-xl border border-border-dark p-4">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary text-xl">show_chart</span>
+<span class="text-sm font-bold">Event Status</span>
+</div>
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="size-4 text-primary bg-transparent border-border-dark focus:ring-primary focus:ring-offset-background-dark" name="status" type="radio"/>
+<span class="text-sm text-gray-300">Live Now</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="size-4 text-primary bg-transparent border-border-dark focus:ring-primary focus:ring-offset-background-dark" name="status" type="radio"/>
+<span class="text-sm text-gray-300">Upcoming Only</span>
+</label>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<section class="flex-1 flex flex-col gap-6">
+<!-- Results Header -->
+<div class="flex items-center justify-between bg-card-dark/50 p-4 rounded-xl border border-border-dark">
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold">124</span>
+<span class="text-gray-400 text-sm">Events matching your hunt</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                        Sort By:
+                        <select class="bg-background-dark border-border-dark rounded-lg text-white text-sm focus:ring-primary focus:border-primary py-1.5 pl-3 pr-8">
+<option>Newest First</option>
+<option>Price: Low to High</option>
+<option>Most Popular</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Event Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="group bg-card-dark rounded-xl border border-border-dark overflow-hidden glow-border transition-all flex flex-col">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Cyberpunk style DJ performance" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATVxly-IPNVbBcFQbfzsRyG7I6lWo4oIRcByGqU27fD0kcf9r52vhIbCIF_si0PEtf1jG6gmHGVRDxDWPzSSF4SxuH3PrkLbr6Hx1FAM5n557xOz72G5f3lq5FG-mnQwzJdUi-FcZ2G1bksunhPzs67hmJne8RjVIYTlV-DtLGRY-AYKgIga7i6uJkQbL0DNL6hYjNht0KXDtsGi0HfMw1tWs9TOr0luOVz2M_6Z0OAEy1BLJOkpVKBc-APyaUpBvngHSR71yUelNo"/>
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Music</div>
+<div class="absolute top-3 right-3 bg-background-dark/80 backdrop-blur-sm text-white size-8 rounded-full flex items-center justify-center hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-lg font-bold leading-tight group-hover:text-primary transition-colors">Neon Horizon: Electro Night</h3>
+<span class="text-primary font-bold">$45</span>
+</div>
+<div class="flex flex-col gap-2 mb-6 text-gray-400 text-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+<span>Oct 24, 2024 • 10:00 PM</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">location_on</span>
+<span>The Void District, CyberCity</span>
+</div>
+</div>
+<button class="mt-auto w-full py-2.5 bg-primary/10 border border-primary/30 text-primary text-sm font-bold rounded-lg hover:bg-primary hover:text-white transition-all">Book Tickets</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-card-dark rounded-xl border border-border-dark overflow-hidden glow-border transition-all flex flex-col">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Advanced robotics and AI interface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0rM7A_QrpE0fppBXooCx-jSZSS4dN7TLkhCA4aUxJ92aO51mU9X_j2QUDZcNFOEHPmmS-OQcv7uC4BuT5wtbcY3jE4th5NF3FSYUcX1cL2V44uDT6Qp_2q3bIvbn48OuEvwQDwRuHD9BIz__pOxyi14XAASL84YDl9FI0A1ufJnJHd-O7GDF3T-Xj3XMkylQ9EERESytwHoyJZNWMRLUbwee4akKnE7TlxLwpYHgF880R6_Wpze8d_b8U2Ef5VvFB_0_A8DUUXLl4"/>
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Tech</div>
+<div class="absolute top-3 right-3 bg-background-dark/80 backdrop-blur-sm text-white size-8 rounded-full flex items-center justify-center hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-lg font-bold leading-tight group-hover:text-primary transition-colors">AI &amp; Robotics Summit 2024</h3>
+<span class="text-primary font-bold">Free</span>
+</div>
+<div class="flex flex-col gap-2 mb-6 text-gray-400 text-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+<span>Nov 02, 2024 • 09:00 AM</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">location_on</span>
+<span>Innovation Hub Alpha</span>
+</div>
+</div>
+<button class="mt-auto w-full py-2.5 bg-primary/10 border border-primary/30 text-primary text-sm font-bold rounded-lg hover:bg-primary hover:text-white transition-all">Register Now</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group bg-card-dark rounded-xl border border-border-dark overflow-hidden glow-border transition-all flex flex-col">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Crowded networking event with neon lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDgDa0GDCzijNwJKdEYmlqrs1fxyUGZ_huskmaHELoG4ENOyjsGWh47Vco2RYe-Z3exmFgo1QUHRck4V8cT4SEQFv72TP7a6EGoUBwpUtoD6llzreKXZekUhzWHTj8Q9hjlfXs0BwU60UiVNc7kdduoJrxr2SkhC95sLyf6t9YLstuXnyHWzu4KeTxpL9OQwe4qGVyoJa2g2hpqUPHJvJ-8kAdhHdZ0nbd-48PMglCsUCbml6pYtYJctgyDOKQTvj2k-Su8OjC0uES"/>
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Networking</div>
+<div class="absolute top-3 right-3 bg-background-dark/80 backdrop-blur-sm text-white size-8 rounded-full flex items-center justify-center hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-lg font-bold leading-tight group-hover:text-primary transition-colors">Web3 Builders Mixer</h3>
+<span class="text-primary font-bold">$120</span>
+</div>
+<div class="flex flex-col gap-2 mb-6 text-gray-400 text-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+<span>Oct 30, 2024 • 06:30 PM</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">location_on</span>
+<span>Skyline Lounge, Level 88</span>
+</div>
+</div>
+<button class="mt-auto w-full py-2.5 bg-primary/10 border border-primary/30 text-primary text-sm font-bold rounded-lg hover:bg-primary hover:text-white transition-all">Buy VIP Pass</button>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="group bg-card-dark rounded-xl border border-border-dark overflow-hidden glow-border transition-all flex flex-col">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Concert stage lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_Uunrx1IUF1axNNJe5FUkcfes5fcBPUdMceGrxyqapG1YNcynrwxvskTp8nf-806o4R3u-OXNDd9pLvFiq6mT0rSqSR68Z8PlVMu0j9lH0r6797k0Ie6kOYVyzhbR89dIjOpAU1GTAb7CJkJssB3tbdwEUVyRenpM0KoGh7-tC_P8XWpbtIrx_2Ny4o2JWBmMJP0zOWsm1PTly-K1uLzv9mjl0NatUv11QgbPbomIe3-OsylQtIWcVyQ1dixleGavJX2VR8H-LYKq"/>
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Music</div>
+<div class="absolute top-3 right-3 bg-background-dark/80 backdrop-blur-sm text-white size-8 rounded-full flex items-center justify-center hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-lg font-bold leading-tight group-hover:text-primary transition-colors">Future Sound Underground</h3>
+<span class="text-primary font-bold">$25</span>
+</div>
+<div class="flex flex-col gap-2 mb-6 text-gray-400 text-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+<span>Nov 05, 2024 • 11:59 PM</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">location_on</span>
+<span>Substrata Basement</span>
+</div>
+</div>
+<button class="mt-auto w-full py-2.5 bg-primary/10 border border-primary/30 text-primary text-sm font-bold rounded-lg hover:bg-primary hover:text-white transition-all">Get Tickets</button>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="group bg-card-dark rounded-xl border border-border-dark overflow-hidden glow-border transition-all flex flex-col">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Team working on a digital project" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnVyKQw9LKcqQS9rORDkKagMLtgnx0h2grKT6nZqsZ1VMnaOMCkozp6YDJTnqGhD8Xp2m5sTUZnhZ6IlQpB4FjRIV_YdF2LP9CzvUjx_dtzOqtzBykZuQ4SZtii-8Q2hO_U4QMFDqzwaczmZAWfOhVcyBzQym_0ySmr57e5XtURTrtjEiHQJFW_RmdZWWmpLUX7i_MFQ7bjfKRq04_V_ajFFLvUZM9ixM9qNfqGpt5Pn3EZI4J97m7nrBW_MrC6n7FJCSL-n41zqfi"/>
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Workshop</div>
+<div class="absolute top-3 right-3 bg-background-dark/80 backdrop-blur-sm text-white size-8 rounded-full flex items-center justify-center hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-lg font-bold leading-tight group-hover:text-primary transition-colors">UI Design for the Metaverse</h3>
+<span class="text-primary font-bold">$75</span>
+</div>
+<div class="flex flex-col gap-2 mb-6 text-gray-400 text-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+<span>Nov 12, 2024 • 10:00 AM</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">location_on</span>
+<span>Virtual Campus</span>
+</div>
+</div>
+<button class="mt-auto w-full py-2.5 bg-primary/10 border border-primary/30 text-primary text-sm font-bold rounded-lg hover:bg-primary hover:text-white transition-all">Join Workshop</button>
+</div>
+</div>
+<!-- Card 6 -->
+<div class="group bg-card-dark rounded-xl border border-border-dark overflow-hidden glow-border transition-all flex flex-col">
+<div class="relative h-48 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Futuristic glowing interface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBe83siZh4QGNzQ7JkwXgZLXJ7CV7MVFnYqWAtPQZOr0bj6SSbgyEoLpH9RXGNYfdRzlOOoPrbZ2B8Y3038PTaXSazpuR1gpF1psdXwkWZzuSArLW3-A6tYB8w6ifpTpPFtyR-elzktLN1HUaXeroojxGKmMcJt8CfLSFq_oX49Lr0c_E3s118UxQipHX539FiEtB4Xa9aU3V2OHR_ZeBeoIaQWb_R7U3gU1w-92zSLzZ65U6sWs1SljVG4HhtiVWi1nf_Aim3rgIlN"/>
+<div class="absolute top-3 left-3 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Tech</div>
+<div class="absolute top-3 right-3 bg-background-dark/80 backdrop-blur-sm text-white size-8 rounded-full flex items-center justify-center hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</div>
+</div>
+<div class="p-5 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-lg font-bold leading-tight group-hover:text-primary transition-colors">Quantum Computing Demo</h3>
+<span class="text-primary font-bold">Free</span>
+</div>
+<div class="flex flex-col gap-2 mb-6 text-gray-400 text-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+<span>Nov 20, 2024 • 04:00 PM</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">location_on</span>
+<span>SciTech Arena</span>
+</div>
+</div>
+<button class="mt-auto w-full py-2.5 bg-primary/10 border border-primary/30 text-primary text-sm font-bold rounded-lg hover:bg-primary hover:text-white transition-all">Claim Seat</button>
+</div>
+</div>
+</div>
+<!-- Load More Button -->
+<div class="flex justify-center py-10">
+<button class="group relative px-8 py-3 bg-transparent border-2 border-primary rounded-xl text-primary font-bold overflow-hidden transition-all hover:text-white">
+<div class="absolute inset-0 w-0 bg-primary transition-all duration-300 group-hover:w-full -z-10"></div>
+<span class="relative flex items-center gap-2">
+                        Load More Events
+                        <span class="material-symbols-outlined animate-bounce">expand_more</span>
+</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Simple Footer -->
+<footer class="border-t border-border-dark bg-background-dark py-8 px-6 mt-12">
+<div class="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-3 opacity-60">
+<div class="size-6 bg-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm">bolt</span>
+</div>
+<span class="text-sm font-bold tracking-tight">AIPromo</span>
+</div>
+<p class="text-gray-500 text-xs">© 2024 AIPromo Event Discovery. Designed for the future of entertainment.</p>
+<div class="flex gap-6">
+<a class="text-gray-400 hover:text-primary text-xs uppercase font-bold tracking-widest" href="#">Privacy</a>
+<a class="text-gray-400 hover:text-primary text-xs uppercase font-bold tracking-widest" href="#">Terms</a>
+<a class="text-gray-400 hover:text-primary text-xs uppercase font-bold tracking-widest" href="#">Support</a>
+</div>
+</div>
+</footer>
+</body></html>

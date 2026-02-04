@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html class="dark" lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIPromo - Đăng nhập</title>
+
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        primary: "#7c3bed",
+        "background-light": "#f7f6f8",
+        "background-dark": "#0B0B12",
+        "card-dark": "#18122B",
+      },
+      fontFamily: {
+        display: ["Space Grotesk", "sans-serif"]
+      },
+      borderRadius: {
+        DEFAULT: "0.25rem",
+        lg: "0.5rem",
+        xl: "0.75rem",
+        full: "9999px"
+      },
+    },
+  },
+}
+</script>
+
+<style>
+body {
+  font-family: 'Space Grotesk', sans-serif;
+}
+.glass-card {
+  background: rgba(24, 18, 43, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(124, 59, 237, 0.2);
+}
+.neon-glow:focus {
+  box-shadow: 0 0 15px rgba(124, 59, 237, 0.4);
+  border-color: #7c3bed;
+  outline: none;
+}
+.btn-neon {
+  box-shadow: 0 0 20px rgba(124, 59, 237, 0.3);
+  transition: all 0.3s ease;
+}
+.btn-neon:hover {
+  box-shadow: 0 0 30px rgba(124, 59, 237, 0.5);
+  transform: translateY(-1px);
+}
+.radial-bg {
+  background: radial-gradient(circle at center,
+    rgba(124, 59, 237, 0.15) 0%,
+    rgba(11, 11, 18, 1) 70%);
+}
+</style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-white min-h-screen flex flex-col font-display">
+
+<!-- MAIN -->
+<main class="flex-1 flex items-center justify-center p-6 radial-bg relative overflow-hidden">
+
+  <!-- Background blur blobs -->
+  <div class="absolute top-1/4 -left-20 w-64 h-64 bg-primary/10 rounded-full blur-[100px]"></div>
+  <div class="absolute bottom-1/4 -right-20 w-64 h-64 bg-primary/10 rounded-full blur-[100px]"></div>
+
+  <!-- Login Card -->
+  <div class="glass-card w-full max-w-[460px] p-8 md:p-10 rounded-xl shadow-2xl relative z-10 border border-white/10">
+
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold mb-2">Chào mừng trở lại</h1>
+      <p class="text-white/60">Vui lòng đăng nhập để quản lý sự kiện của bạn.</p>
+    </div>
+
+    <!-- Google Login -->
+    <div class="space-y-4 mb-8">
+      <button class="w-full flex items-center justify-center gap-3 bg-[#312447] hover:bg-[#3d2d59] h-12 rounded-lg font-bold border border-white/5 transition">
+        <span>Tiếp tục với Google</span>
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div class="flex items-center mb-8">
+      <div class="flex-grow border-t border-white/10"></div>
+      <span class="mx-4 text-white/40 text-xs uppercase tracking-widest">
+        Hoặc đăng nhập bằng Email
+      </span>
+      <div class="flex-grow border-t border-white/10"></div>
+    </div>
+
+    <!-- Form -->
+    <form class="space-y-5">
+      <div>
+        <label class="text-sm text-white/80">Email</label>
+        <input
+          type="email"
+          placeholder="ten@congty.com"
+          class="w-full h-12 px-4 mt-2 rounded-lg bg-[#0B0B12]/50 border border-white/10 text-white neon-glow"
+        />
+      </div>
+
+      <div>
+        <label class="text-sm text-white/80">Mật khẩu</label>
+        <input
+          type="password"
+          placeholder="••••••••"
+          class="w-full h-12 px-4 mt-2 rounded-lg bg-[#0B0B12]/50 border border-white/10 text-white neon-glow"
+        />
+      </div>
+
+      <div class="flex justify-between items-center text-sm">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" class="accent-primary">
+          <span class="text-white/60">Ghi nhớ đăng nhập</span>
+        </label>
+        <a href="#" class="text-primary hover:underline">Quên mật khẩu?</a>
+      </div>
+
+      <button class="w-full h-12 bg-primary rounded-lg font-bold btn-neon">
+        Đăng nhập
+      </button>
+    </form>
+
+    <div class="text-center mt-8 text-sm text-white/60">
+      Chưa có tài khoản?
+      <a href="#" class="text-white font-bold hover:text-primary underline ml-1">
+        Đăng ký ngay
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="py-6 text-center border-t border-white/5">
+  <p class="text-white/40 text-xs">
+    © 2024 AIPromo. Mọi quyền được bảo lưu.
+  </p>
+</footer>
+
+</body>
+</html>
