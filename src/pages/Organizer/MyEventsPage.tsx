@@ -8,6 +8,7 @@ import type { DashboardLayoutConfig } from "../../types/organizer/dashboard.conf
 
 const EVENTS: EventItem[] = [
     {
+        id: "1",
         title: "Hội thảo AI & Future Marketing 2026",
         image:
             "https://lh3.googleusercontent.com/aida-public/AB6AXuBbqTPIvST5wyGH_GDv-StIHdwyxGkh-45_855gQ9zT64S5Cy8ojzu44Xlc5S2WB93Vu7uqYYlSCQfXBDvxYKjlhC15-S7GHjWMzHZN2eJyBUBgBeHGXHYx9RE0pnyPYQamfNxgXgu5-OLDVo_2AkcrO046Ilhyr7BwwuCINlO26Z1idLmMJZJLW2hVv9IX4vm6TQ_Y0HoCUwvXiLd38bmngAA650M2_ETYFxyOBrkFTEJbWT5FpQEPpOyEW_krtQs5ct2BPhPayj8",
@@ -18,6 +19,7 @@ const EVENTS: EventItem[] = [
         category: "Hội thảo",
     },
     {
+        id: "2",
         title: "Tech Summit 2026: The New Era",
         image:
             "https://lh3.googleusercontent.com/aida-public/AB6AXuBk9FZumaMgZCEALIbF-Jx3g7lvKtihKFRJP1SnwaHb0jjC7kD1D5lNUdv3DHOT7LgUSCuLDxSvlH8EKF8mVhi9AM1s6b_qvLcJcqjG1i2GUzAOrVh3T12ntEQ2e4UCzlcFM95QA6DcMl7Ze2fj5MCqpwcotOSZ-L5HGuLqJXAk8Q4_7aXpri8iTcQ8zEGiAJB8uIIdNUWftUpsutAjFULCf_XNQ-middtIpfZekxGHCPNfBMVs7amtmqjdacYjwvAHxYMDu-YFt0k",

@@ -67,11 +67,10 @@ export default function Sidebar({
 
                         <div className="space-y-1">
                             {group.headerGroup.map((item, idx) => {
-                                const isActive =
+                                const isActive = !!item.path && (
                                     location.pathname === item.path ||
-                                    location.pathname.startsWith(
-                                        item.path + "/"
-                                    );
+                                    location.pathname.startsWith(item.path + "/")
+                                );
 
                                 return (
                                     <MenuItem
@@ -81,7 +80,11 @@ export default function Sidebar({
                                         active={isActive}
                                         collapsed={collapsed}
                                         onClick={() => {
-                                            navigate(item.path ?? "/organizer/my-events");
+                                            if (item.path) {
+                                                navigate(item.path);
+                                            } else {
+                                                navigate("/organizer/my-events");
+                                            }
                                         }}
                                     />
                                 );

@@ -1,22 +1,21 @@
 import { useState } from "react";
 import {
-    FiArrowLeft,
-    FiBarChart2,
-    FiCheckSquare,
-    FiEdit,
-    FiGrid,
-    FiList,
-    FiPieChart,
-    FiTag,
-    FiUsers
+    FiArrowLeft
 } from "react-icons/fi";
-import { Outlet, useParams } from "react-router-dom";
+import { MdAnalytics, MdCampaign, MdConfirmationNumber, MdDashboard, MdEdit, MdEventSeat, MdGroup, MdQrCodeScanner, MdShoppingCart } from "react-icons/md";
+import { Outlet, useMatch, useNavigate, useParams } from "react-router-dom";
 import Header from "../navigations/Header";
 import Sidebar from "../navigations/Sidebar";
 
 export default function ManagementLayout() {
     const [collapsed, setCollapsed] = useState(false);
     const { eventId } = useParams<{ eventId: string }>();
+    const navigate = useNavigate();
+
+    const isMarketingDetail = useMatch(
+        "/organizer/my-events/:eventId/marketing/:marketingId"
+    );
+
     const buildEventPath = (sub: string) =>
         `/organizer/my-events/${eventId}/${sub}`;
 
@@ -26,7 +25,7 @@ export default function ManagementLayout() {
             headerGroup: [
                 {
                     icon: <FiArrowLeft />,
-                    label: "Quản trị sự kiện"
+                    label: "Danh sách sự kiện"
                 },
             ],
         },
@@ -34,22 +33,27 @@ export default function ManagementLayout() {
             headerTitle: "Báo cáo",
             headerGroup: [
                 {
-                    icon: <FiPieChart />,
+                    icon: <MdDashboard />,
                     label: "Tổng kết",
                     path: buildEventPath("overview"),
                 },
                 {
-                    icon: <FiBarChart2 />,
+                    icon: <MdAnalytics />,
                     label: "Phân tích",
                     path: buildEventPath("analytics"),
                 },
                 {
-                    icon: <FiList />,
+                    icon: <MdCampaign />,
+                    label: "Marketing",
+                    path: buildEventPath("marketing"),
+                },
+                {
+                    icon: <MdShoppingCart />,
                     label: "Danh sách đơn hàng",
                     path: buildEventPath("orders"),
                 },
                 {
-                    icon: <FiCheckSquare />,
+                    icon: <MdQrCodeScanner />,
                     label: "Check-in",
                     path: buildEventPath("check-in"),
                 },
@@ -59,17 +63,17 @@ export default function ManagementLayout() {
             headerTitle: "Cài đặt sự kiện",
             headerGroup: [
                 {
-                    icon: <FiUsers />,
+                    icon: <MdGroup />,
                     label: "Thành viên",
                     path: buildEventPath("members"),
                 },
                 {
-                    icon: <FiEdit />,
+                    icon: <MdEdit />,
                     label: "Chỉnh sửa",
                     path: buildEventPath("edit"),
                 },
                 {
-                    icon: <FiGrid />,
+                    icon: <MdEventSeat />,
                     label: "Sơ đồ ghế",
                     path: buildEventPath("seat-map"),
                 },
@@ -79,7 +83,7 @@ export default function ManagementLayout() {
             headerTitle: "Marketing",
             headerGroup: [
                 {
-                    icon: <FiTag />,
+                    icon: <MdConfirmationNumber />,
                     label: "Mã giảm giá (Voucher)",
                     path: buildEventPath("vouchers"),
                 },
@@ -90,14 +94,26 @@ export default function ManagementLayout() {
 
     return (
         <div className="min-h-screen flex bg-cinder text-white">
-            <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} menuGroups={menuGroups} />
+            <Sidebar
+                collapsed={collapsed}
+                setCollapsed={setCollapsed}
+                menuGroups={menuGroups}
+            />
+
             <div
                 className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"
                     }`}
             >
-                <Header eventName="Hội thảo AI & Future Marketing 2026" eventTime="27 Tháng 01, 2026 - 00:00" />
+                <Header
+                    eventName="Hội thảo AI & Future Marketing 2026"
+                    canGoBack={!!isMarketingDetail}
+                    onBack={() => navigate(buildEventPath("marketing"))}
+                />
+
                 <main className="p-8 flex gap-8">
-                    <div className="flex-1"><Outlet /></div>
+                    <div className="flex-1">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
         </div>

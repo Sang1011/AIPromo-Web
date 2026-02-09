@@ -1,31 +1,27 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import {
-    FiCalendar,
-    FiBarChart2,
-    FiFileText,
-} from "react-icons/fi";
 
-import Sidebar from "../navigations/Sidebar";
+import { MdAnalytics, MdDashboard, MdDescription } from "react-icons/md";
+import type { DashboardLayoutConfig } from "../../../types/organizer/dashboard.config";
 import Header from "../navigations/Header";
 import PromoSidebar from "../navigations/PromoSidebar";
-import type { DashboardLayoutConfig } from "../../../types/organizer/dashboard.config";
+import Sidebar from "../navigations/Sidebar";
 
 const menuGroups = [
     {
         headerGroup: [
             {
-                icon: <FiCalendar />,
+                icon: <MdDashboard />,
                 label: "Sự kiện của tôi",
                 path: "/organizer/my-events",
             },
             {
-                icon: <FiBarChart2 />,
+                icon: <MdAnalytics />,
                 label: "Quản lý báo cáo",
                 path: "/organizer/reports",
             },
             {
-                icon: <FiFileText />,
+                icon: <MdDescription />,
                 label: "Điều khoản",
                 path: "/organizer/legals",
             },

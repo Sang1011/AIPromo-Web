@@ -5,12 +5,13 @@ import {
     FiUsers,
     FiShoppingCart,
 } from "react-icons/fi";
-import { MdDashboard, MdEventSeat } from "react-icons/md";
+import { MdDashboard, MdEventSeat, MdGroup, MdShoppingCart } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 
 export type EventStatus = "live" | "upcoming" | "draft" | "ended";
 
 export interface EventItem {
+    id: string;
     title: string;
     image: string;
     time: string;
@@ -27,8 +28,9 @@ interface EventCardProps {
 export default function EventCard({ event }: EventCardProps) {
     const navigate = useNavigate();
 
-    const buildEventPath = (eventId: string, sub: string) =>
-        `/organizer/my-events/${eventId}/${sub}`;
+    const goToEvent = (eventId: string, sub: string) => {
+        navigate(`/organizer/my-events/${eventId}/${sub}`);
+    };
 
     return (
         <div className="glass rounded-3xl overflow-hidden group hover:border-primary/50 transition-all duration-300">
@@ -87,13 +89,13 @@ export default function EventCard({ event }: EventCardProps) {
 
             <div className="bg-white/5 dark:bg-black/20 border-t border-slate-200 dark:border-white/5 px-6 py-4 flex items-center justify-between">
                 <div className="flex gap-4">
-                    <FooterButton icon={<MdDashboard />} label="Tổng quan" onClick={() => buildEventPath} />
-                    <FooterButton icon={<FiUsers />} label="Thành viên" onClick={() => navigate("members")} />
-                    <FooterButton icon={<FiShoppingCart />} label="Đơn hàng" onClick={() => navigate("orders")} />
-                    <FooterButton icon={<MdEventSeat />} label="Sơ đồ" onClick={() => navigate("seat-map")} />
+                    <FooterButton icon={<MdDashboard />} label="Tổng quan" onClick={() => goToEvent(event.id, "overview")} />
+                    <FooterButton icon={<MdGroup />} label="Thành viên" onClick={() => goToEvent(event.id, "members")} />
+                    <FooterButton icon={<MdShoppingCart />} label="Đơn hàng" onClick={() => goToEvent(event.id, "orders")} />
+                    <FooterButton icon={<MdEventSeat />} label="Sơ đồ" onClick={() => goToEvent(event.id, "seat-map")} />
                 </div>
 
-                <button className="bg-slate-100 dark:bg-white/5 hover:bg-primary/20 text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                <button onClick={() => goToEvent(event.id, "edit")} className="bg-slate-100 dark:bg-white/5 hover:bg-primary/20 text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 rounded-xl transition-all flex items-center gap-2">
                     <FiEdit className="text-lg" />
                     <span className="text-sm font-semibold">Chỉnh sửa</span>
                 </button>

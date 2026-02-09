@@ -6,20 +6,21 @@ import {
 } from "recharts";
 
 const data = [
-    { name: "Facebook Ads", value: 42 },
-    { name: "Direct", value: 28 },
-    { name: "Email Marketing", value: 15 },
-    { name: "Others", value: 15 },
+    { name: "Facebook", value: 68 },
+    { name: "Instagram", value: 32 },
 ];
 
-const COLORS = ["#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE"];
+const COLORS = ["#8B5CF6", "#EC4899"];
 
 export default function TrafficSourceDonut() {
     return (
         <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white mb-6">
-                Số lượt truy cập theo kênh
+            <h3 className="text-lg font-semibold text-white mb-1">
+                Đóng góp Marketing
             </h3>
+            <p className="text-xs text-slate-400 mb-4">
+                Chỉ bao gồm Facebook & Instagram (ngoài nền tảng)
+            </p>
 
             <div className="h-[260px]">
                 <ResponsiveContainer>
