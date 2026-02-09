@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import Stepper from "../../components/Organizer/Stepper";
-import ManagementLayout from "../../components/Organizer/ManagementLayout";
 
 import Step1EventInfo from "../../components/Organizer/steps/Step1EventInfo";
 import Step2Schedule from "../../components/Organizer/steps/Step2Schedule";
@@ -16,55 +15,53 @@ export default function EditEventWizardPage() {
     const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
     return (
-        <ManagementLayout>
-            <div className="max-w-[1100px] mx-auto space-y-8 pb-16">
+        <div className="max-w-[1100px] mx-auto space-y-8 pb-16">
 
-                {/* Stepper */}
-                <Stepper currentStep={step} />
+            {/* Stepper */}
+            <Stepper currentStep={step} />
 
-                {/* ===== STEP 1 ===== */}
-                {step === 1 && (
-                    <Step1EventInfo
-                        onNext={nextStep}
-                        onCancel={() => console.log("Cancel step 1")}
-                    />
-                )}
+            {/* ===== STEP 1 ===== */}
+            {step === 1 && (
+                <Step1EventInfo
+                    onNext={nextStep}
+                    onCancel={() => console.log("Cancel step 1")}
+                />
+            )}
 
-                {/* ===== STEP 2 ===== */}
-                {step === 2 && (
-                    <Step2Schedule
-                        onNext={nextStep}
-                        onBack={prevStep}
-                    />
-                )}
+            {/* ===== STEP 2 ===== */}
+            {step === 2 && (
+                <Step2Schedule
+                    onNext={nextStep}
+                    onBack={prevStep}
+                />
+            )}
 
-                {/* ===== STEP 3 ===== */}
-                {step === 3 && (
-                    <Step3Settings
-                        onNext={nextStep}
-                        onBack={prevStep}
-                    />
-                )}
+            {/* ===== STEP 3 ===== */}
+            {step === 3 && (
+                <Step3Settings
+                    onNext={nextStep}
+                    onBack={prevStep}
+                />
+            )}
 
-                {/* ===== STEP 4 ===== */}
-                {step === 4 && (
-                    <Step4Registration
-                        onNext={nextStep}
-                        onBack={prevStep}
-                    />
-                )}
+            {/* ===== STEP 4 ===== */}
+            {step === 4 && (
+                <Step4Registration
+                    onNext={nextStep}
+                    onBack={prevStep}
+                />
+            )}
 
-                {/* ===== STEP 5 ===== */}
-                {step === 5 && (
-                    <Step5Payment
-                        onBack={prevStep}
-                        onFinish={() => {
-                            console.log("Submit toàn bộ event");
-                        }}
-                    />
-                )}
-            </div>
-        </ManagementLayout>
+            {/* ===== STEP 5 ===== */}
+            {step === 5 && (
+                <Step5Payment
+                    onBack={prevStep}
+                    onFinish={() => {
+                        console.log("Submit toàn bộ event");
+                    }}
+                />
+            )}
+        </div>
     );
 }
 

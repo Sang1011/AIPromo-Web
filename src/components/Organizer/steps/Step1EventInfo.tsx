@@ -30,14 +30,7 @@ export default function Step1EventInfo({
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Banner dọc */}
-                    <UploadBox
-                        label="Banner dọc (3:4)"
-                        aspect="3/4"
-                        file={bannerVertical}
-                        onChange={setBannerVertical}
-                    />
+                <div className="m-auto gap-6">
 
                     {/* Banner ngang */}
                     <UploadBox

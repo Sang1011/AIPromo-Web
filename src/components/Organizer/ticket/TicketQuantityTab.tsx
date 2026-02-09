@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ManagementLayout from "./ManagementLayout";
+import ManagementLayout from "../layouts/ManagementLayout";
 import TicketTypeList from "./TicketTypeList";
 import TicketSummary from "./TicketSummary";
 import { FiCalendar } from "react-icons/fi";

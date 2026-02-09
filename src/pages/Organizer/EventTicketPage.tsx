@@ -1,9 +1,8 @@
 import { useState } from "react";
-import ManagementLayout from "../../components/Organizer/ManagementLayout";
-import TicketTypeList from "../../components/Organizer/TicketTypeList";
-import TicketSummary from "../../components/Organizer/TicketSummary";
-import LockSeatTab from "../../components/Organizer/LockSeatTab";
 import { FiCalendar } from "react-icons/fi";
+import LockSeatTab from "../../components/Organizer/seating/LockSeatTab";
+import TicketSummary from "../../components/Organizer/ticket/TicketSummary";
+import TicketTypeList from "../../components/Organizer/ticket/TicketTypeList";
 
 type TabKey = "overview" | "lock-seat";
 
@@ -24,52 +23,50 @@ export default function EventTicketPage() {
     };
 
     return (
-        <ManagementLayout>
-            <div className="space-y-8">
-                {/* TAB HEADER */}
-                <div className="flex gap-2 border-b border-white/10">
-                    <TabButton
-                        active={tab === "overview"}
-                        onClick={() => setTab("overview")}
-                    >
-                        Tổng quan
-                    </TabButton>
+        <div className="space-y-8">
+            {/* TAB HEADER */}
+            <div className="flex gap-2 border-b border-white/10">
+                <TabButton
+                    active={tab === "overview"}
+                    onClick={() => setTab("overview")}
+                >
+                    Tổng quan
+                </TabButton>
 
-                    <TabButton
-                        active={tab === "lock-seat"}
-                        onClick={() => setTab("lock-seat")}
-                    >
-                        Khóa ghế
-                    </TabButton>
-                </div>
+                <TabButton
+                    active={tab === "lock-seat"}
+                    onClick={() => setTab("lock-seat")}
+                >
+                    Khóa ghế
+                </TabButton>
+            </div>
 
-                {/* TAB CONTENT */}
-                {tab === "overview" && (
-                    <div className="flex gap-8">
-                        <div className="flex-1 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <span className="px-4 py-2 rounded-full bg-white/5 text-sm text-slate-300">
-                                    <FiCalendar className="inline mr-2 my-auto" /> 27 Tháng 01, 2026 – 00:00
-                                </span>
+            {/* TAB CONTENT */}
+            {tab === "overview" && (
+                <div className="flex gap-8">
+                    <div className="flex-1 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <span className="px-4 py-2 rounded-full bg-white/5 text-sm text-slate-300">
+                                <FiCalendar className="inline mr-2 my-auto" /> 27 Tháng 01, 2026 – 00:00
+                            </span>
 
-                                <button className="text-primary text-sm">
-                                    Đổi suất diễn
-                                </button>
-                            </div>
-
-                            <TicketTypeList
-                                quantities={quantities}
-                                onChange={updateQuantity}
-                            />
+                            <button className="text-primary text-sm">
+                                Đổi suất diễn
+                            </button>
                         </div>
 
-                        <TicketSummary quantities={quantities} />
+                        <TicketTypeList
+                            quantities={quantities}
+                            onChange={updateQuantity}
+                        />
                     </div>
-                )}
 
-                {tab === "lock-seat" && <LockSeatTab />}
-            </div>
-        </ManagementLayout>
+                    <TicketSummary quantities={quantities} />
+                </div>
+            )}
+
+            {tab === "lock-seat" && <LockSeatTab />}
+        </div>
     );
 }
 

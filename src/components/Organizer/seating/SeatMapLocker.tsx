@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Stage, Layer, Rect, Line, Text as KonvaText, Group } from "react-konva";
-import type { SeatMapData } from "../../pages/Organizer/SeatMapEditorPage";
+import type { SeatMapData } from "../../../pages/Organizer/SeatMapEditorPage";
 
 const GRID_SIZE = 20;
 

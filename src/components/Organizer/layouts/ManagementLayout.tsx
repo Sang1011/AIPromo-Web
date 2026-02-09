@@ -1,25 +1,24 @@
-import { useState, type ReactNode } from "react";
-import Sidebar from "./Sidebar";
-import Header from "./Header";
+import { useState } from "react";
 import {
-    FiPieChart,
+    FiArrowLeft,
     FiBarChart2,
-    FiList,
     FiCheckSquare,
-    FiUsers,
     FiEdit,
     FiGrid,
+    FiList,
+    FiPieChart,
     FiTag,
-    FiArrowLeft
+    FiUsers
 } from "react-icons/fi";
+import { Outlet, useParams } from "react-router-dom";
+import Header from "../navigations/Header";
+import Sidebar from "../navigations/Sidebar";
 
-interface ManagementLayoutProps {
-    children: ReactNode;
-}
-
-export default function ManagementLayout({ children }: ManagementLayoutProps) {
+export default function ManagementLayout() {
     const [collapsed, setCollapsed] = useState(false);
-
+    const { eventId } = useParams<{ eventId: string }>();
+    const buildEventPath = (sub: string) =>
+        `/organizer/my-events/${eventId}/${sub}`;
 
     const menuGroups = [
         {
@@ -27,8 +26,7 @@ export default function ManagementLayout({ children }: ManagementLayoutProps) {
             headerGroup: [
                 {
                     icon: <FiArrowLeft />,
-                    label: "Quản trị sự kiện",
-                    path: "/organizer",
+                    label: "Quản trị sự kiện"
                 },
             ],
         },
@@ -38,22 +36,22 @@ export default function ManagementLayout({ children }: ManagementLayoutProps) {
                 {
                     icon: <FiPieChart />,
                     label: "Tổng kết",
-                    path: "/organizer/reports/overview",
+                    path: buildEventPath("overview"),
                 },
                 {
                     icon: <FiBarChart2 />,
                     label: "Phân tích",
-                    path: "/organizer/reports/analytics",
+                    path: buildEventPath("analytics"),
                 },
                 {
                     icon: <FiList />,
                     label: "Danh sách đơn hàng",
-                    path: "/organizer/orders",
+                    path: buildEventPath("orders"),
                 },
                 {
                     icon: <FiCheckSquare />,
                     label: "Check-in",
-                    path: "/organizer/check-in",
+                    path: buildEventPath("check-in"),
                 },
             ],
         },
@@ -63,17 +61,17 @@ export default function ManagementLayout({ children }: ManagementLayoutProps) {
                 {
                     icon: <FiUsers />,
                     label: "Thành viên",
-                    path: "/organizer/members",
+                    path: buildEventPath("members"),
                 },
                 {
                     icon: <FiEdit />,
                     label: "Chỉnh sửa",
-                    path: "/organizer/edit",
+                    path: buildEventPath("edit"),
                 },
                 {
                     icon: <FiGrid />,
                     label: "Sơ đồ ghế",
-                    path: "/organizer/seat-map",
+                    path: buildEventPath("seat-map"),
                 },
             ],
         },
@@ -83,7 +81,7 @@ export default function ManagementLayout({ children }: ManagementLayoutProps) {
                 {
                     icon: <FiTag />,
                     label: "Mã giảm giá (Voucher)",
-                    path: "/organizer/vouchers",
+                    path: buildEventPath("vouchers"),
                 },
             ],
         },
@@ -99,7 +97,7 @@ export default function ManagementLayout({ children }: ManagementLayoutProps) {
             >
                 <Header eventName="Hội thảo AI & Future Marketing 2026" eventTime="27 Tháng 01, 2026 - 00:00" />
                 <main className="p-8 flex gap-8">
-                    <div className="flex-1">{children}</div>
+                    <div className="flex-1"><Outlet /></div>
                 </main>
             </div>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import SeatMapLocker from "./SeatMapLocker";
-import type { SeatMapData } from "../../pages/Organizer/SeatMapEditorPage";
+import type { SeatMapData } from "../../../pages/Organizer/SeatMapEditorPage";
 import { FiLock, FiUnlock, FiX } from "react-icons/fi";
 import { FaCouch, FaStar } from "react-icons/fa";
 

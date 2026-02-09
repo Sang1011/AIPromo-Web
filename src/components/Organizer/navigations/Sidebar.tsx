@@ -1,12 +1,12 @@
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import { MenuItem } from "./MenuItem";
+import { MenuItem } from "../shared/MenuItem";
 import { type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 export interface MenuItemConfig {
     icon: ReactNode;
     label: string;
-    path: string;
+    path?: string;
 }
 
 export interface MenuGroupConfig {
@@ -35,7 +35,6 @@ export default function Sidebar({
         bg-white dark:bg-gradient-to-b dark:from-[#0B0B12] dark:to-[#18122B]
         border-r border-slate-200 dark:border-slate-800`}
         >
-            {/* Logo */}
             <div className="p-6 flex items-center gap-3">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">
                     A
@@ -47,7 +46,6 @@ export default function Sidebar({
                 )}
             </div>
 
-            {/* Menu */}
             <nav className="px-3 space-y-6 flex-1">
                 {menuGroups.map((group, index) => (
                     <div key={index} className="space-y-2">
@@ -82,7 +80,9 @@ export default function Sidebar({
                                         label={item.label}
                                         active={isActive}
                                         collapsed={collapsed}
-                                        onClick={() => navigate(item.path)}
+                                        onClick={() => {
+                                            navigate(item.path ?? "/organizer/my-events");
+                                        }}
                                     />
                                 );
                             })}
@@ -91,7 +91,6 @@ export default function Sidebar({
                 ))}
             </nav>
 
-            {/* Collapse button */}
             <div className="p-4">
                 <button
                     onClick={() => setCollapsed(!collapsed)}

@@ -1,21 +1,18 @@
-import ManagementLayout from "../../components/Organizer/ManagementLayout";
-import RevenueCards from "../../components/Organizer/RevenueCard";
-import RevenueChart from "../../components/Organizer/RevenueChart";
-import TicketSummaryTable from "../../components/Organizer/TicketSummaryTable";
+import RevenueCards from "../../components/Organizer/overview/RevenueCard";
+import RevenueChart from "../../components/Organizer/overview/RevenueChart";
+import TicketSummaryTable from "../../components/Organizer/ticket/TicketSummaryTable";
 
 export default function SummaryPage() {
     return (
-        <ManagementLayout>
-            <div className="space-y-8">
-                {/* KPI cards */}
-                <RevenueCards />
+        <div className="space-y-8">
+            {/* KPI cards */}
+            <RevenueCards />
 
-                {/* Chart */}
-                <RevenueChart />
+            {/* Chart */}
+            <RevenueChart />
 
-                {/* Detail table */}
-                <TicketSummaryTable />
-            </div>
-        </ManagementLayout>
+            {/* Detail table */}
+            <TicketSummaryTable />
+        </div>
     );
 }

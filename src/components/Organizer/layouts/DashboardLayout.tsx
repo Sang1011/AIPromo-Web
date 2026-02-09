@@ -1,13 +1,15 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
 import {
     FiCalendar,
     FiBarChart2,
     FiFileText,
 } from "react-icons/fi";
 
-import Sidebar from "./Sidebar";
-import Header from "./Header";
-import PromoSidebar from "./PromoSidebar";
+import Sidebar from "../navigations/Sidebar";
+import Header from "../navigations/Header";
+import PromoSidebar from "../navigations/PromoSidebar";
+import type { DashboardLayoutConfig } from "../../../types/organizer/dashboard.config";
 
 const menuGroups = [
     {
@@ -15,7 +17,7 @@ const menuGroups = [
             {
                 icon: <FiCalendar />,
                 label: "Sự kiện của tôi",
-                path: "/organizer/events",
+                path: "/organizer/my-events",
             },
             {
                 icon: <FiBarChart2 />,
@@ -25,24 +27,19 @@ const menuGroups = [
             {
                 icon: <FiFileText />,
                 label: "Điều khoản",
-                path: "/legal",
+                path: "/organizer/legals",
             },
         ],
     },
 ];
 
-interface DashboardLayoutProps {
-    children: ReactNode;
-    title: string;
-    havePromoSidebar?: boolean;
-}
-
-export default function DashboardLayout({
-    children,
-    title,
-    havePromoSidebar = false,
-}: DashboardLayoutProps) {
+export default function DashboardLayout() {
     const [collapsed, setCollapsed] = useState(false);
+
+    const [config, setConfig] = useState<DashboardLayoutConfig>({
+        title: "",
+        havePromoSidebar: false,
+    });
 
     return (
         <div className="min-h-screen flex bg-cinder text-white">
@@ -56,12 +53,12 @@ export default function DashboardLayout({
                 className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"
                     }`}
             >
-                <Header title={title} />
+                <Header title={config.title ?? ""} />
 
-                {havePromoSidebar ? (
+                {config.havePromoSidebar ? (
                     <main className="p-8 flex gap-8">
                         <div className="basis-full xl:basis-[70%]">
-                            {children}
+                            <Outlet context={{ setConfig }} />
                         </div>
 
                         <div className="hidden xl:block xl:basis-[30%]">
@@ -70,7 +67,9 @@ export default function DashboardLayout({
                     </main>
                 ) : (
                     <main className="p-8 flex gap-8">
-                        <div className="flex-1">{children}</div>
+                        <div className="flex-1">
+                            <Outlet context={{ setConfig }} />
+                        </div>
                     </main>
                 )}
             </div>

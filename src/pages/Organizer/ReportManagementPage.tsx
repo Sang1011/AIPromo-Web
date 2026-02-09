@@ -1,12 +1,26 @@
-import DashboardLayout from "../../components/Organizer/DashboardLayout";
-import ReportTable from "../../components/Organizer/ReportTable";
+import { useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
+import ReportTable from "../../components/Organizer/overview/ReportTable";
+import type { DashboardLayoutConfig } from "../../types/organizer/dashboard.config";
 
-export default function ReportManagement() {
+type DashboardContext = {
+    setConfig: (config: DashboardLayoutConfig) => void;
+};
+
+export default function ReportManagementPage() {
+    const { setConfig } = useOutletContext<DashboardContext>();
+
+    useEffect(() => {
+        setConfig({
+            title: "Quản lý báo cáo",
+        });
+
+        return () => setConfig({});
+    }, []);
+
     return (
-        <DashboardLayout title="Quản lý báo cáo">
-            <div className="space-y-6">
-                <ReportTable />
-            </div>
-        </DashboardLayout>
+        <div className="space-y-6">
+            <ReportTable />
+        </div>
     );
 }

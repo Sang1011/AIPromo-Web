@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import ScheduleCard from "../ScheduleCard";
-import TicketModal from "../TicketModal";
+import TicketModal from "../ticket/TicketModal";
 
 export default function Step2Schedule({
     onNext,

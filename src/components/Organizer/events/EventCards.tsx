@@ -6,6 +6,7 @@ import {
     FiShoppingCart,
 } from "react-icons/fi";
 import { MdDashboard, MdEventSeat } from "react-icons/md";
+import { useNavigate } from "react-router-dom";
 
 export type EventStatus = "live" | "upcoming" | "draft" | "ended";
 
@@ -24,11 +25,14 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event }: EventCardProps) {
+    const navigate = useNavigate();
+
+    const buildEventPath = (eventId: string, sub: string) =>
+        `/organizer/my-events/${eventId}/${sub}`;
+
     return (
         <div className="glass rounded-3xl overflow-hidden group hover:border-primary/50 transition-all duration-300">
-            {/* TOP SECTION */}
             <div className="p-6 flex gap-6">
-                {/* Event Image */}
                 <div className="w-48 h-32 rounded-2xl overflow-hidden relative">
                     <img
                         src={event.image}
@@ -43,7 +47,6 @@ export default function EventCard({ event }: EventCardProps) {
                     )}
                 </div>
 
-                {/* Event Details */}
                 <div className="flex-1 space-y-3">
                     <div className="flex justify-between items-start">
                         <h3 className="text-xl font-bold dark:text-white group-hover:text-primary transition-colors">
@@ -82,13 +85,12 @@ export default function EventCard({ event }: EventCardProps) {
                 </div>
             </div>
 
-            {/* FOOTER SECTION */}
             <div className="bg-white/5 dark:bg-black/20 border-t border-slate-200 dark:border-white/5 px-6 py-4 flex items-center justify-between">
                 <div className="flex gap-4">
-                    <FooterButton icon={<MdDashboard />} label="Tổng quan" />
-                    <FooterButton icon={<FiUsers />} label="Thành viên" />
-                    <FooterButton icon={<FiShoppingCart />} label="Đơn hàng" />
-                    <FooterButton icon={<MdEventSeat />} label="Sơ đồ" />
+                    <FooterButton icon={<MdDashboard />} label="Tổng quan" onClick={() => buildEventPath} />
+                    <FooterButton icon={<FiUsers />} label="Thành viên" onClick={() => navigate("members")} />
+                    <FooterButton icon={<FiShoppingCart />} label="Đơn hàng" onClick={() => navigate("orders")} />
+                    <FooterButton icon={<MdEventSeat />} label="Sơ đồ" onClick={() => navigate("seat-map")} />
                 </div>
 
                 <button className="bg-slate-100 dark:bg-white/5 hover:bg-primary/20 text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 rounded-xl transition-all flex items-center gap-2">
@@ -103,12 +105,14 @@ export default function EventCard({ event }: EventCardProps) {
 function FooterButton({
     icon,
     label,
+    onClick
 }: {
     icon: React.ReactNode;
     label: string;
+    onClick?: () => void;
 }) {
     return (
-        <button className="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-all group/btn">
+        <button onClick={onClick} className="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-all group/btn">
             <span className="text-xl group-hover/btn:scale-110 transition-transform">
                 {icon}
             </span>

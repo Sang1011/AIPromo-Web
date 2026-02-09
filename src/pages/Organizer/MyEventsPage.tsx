@@ -1,9 +1,10 @@
-import { useState } from "react";
-import DashboardLayout from "../../components/Organizer/DashboardLayout";
-import EventCard, { type EventItem } from "../../components/Organizer/EventCards";
-import SearchBar from "../../components/Organizer/SearchBar";
-import StatusFilters, { type FilterStatus } from "../../components/Organizer/StatusFilter";
-import Pagination from "../../components/Organizer/Pagination";
+import { useEffect, useState } from "react";
+import EventCard, { type EventItem } from "../../components/Organizer/events/EventCards";
+import SearchBar from "../../components/Organizer/shared/SearchBar";
+import StatusFilters, { type FilterStatus } from "../../components/Organizer/shared/StatusFilter";
+import Pagination from "../../components/Organizer/shared/Pagination";
+import { useOutletContext } from "react-router-dom";
+import type { DashboardLayoutConfig } from "../../types/organizer/dashboard.config";
 
 const EVENTS: EventItem[] = [
     {
@@ -28,40 +29,51 @@ const EVENTS: EventItem[] = [
     },
 ];
 
-export default function MyEvents() {
+type DashboardContext = {
+    setConfig: (config: DashboardLayoutConfig) => void;
+};
+
+export default function MyEventsPage() {
+    const { setConfig } = useOutletContext<DashboardContext>();
+
     const [searchQuery, setSearchQuery] = useState("");
     const [activeFilter, setActiveFilter] = useState<FilterStatus>("upcoming");
     const [currentPage, setCurrentPage] = useState(1);
 
+    useEffect(() => {
+        setConfig({
+            title: "Sự kiện của tôi",
+            havePromoSidebar: true,
+        });
+
+        return () => setConfig({});
+    }, []);
+
     return (
-        <DashboardLayout title="Sự kiện của tôi" havePromoSidebar={true}>
-            <div className="space-y-8">
-                {/* Search and Filters */}
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <SearchBar
-                        value={searchQuery}
-                        onChange={setSearchQuery}
-                        placeholder="Tìm kiếm sự kiện của bạn..."
-                    />
-                    <StatusFilters
-                        activeFilter={activeFilter}
-                        onFilterChange={setActiveFilter}
-                    />
-                </div>
-
-                {/* Event List */}
-                <div className="space-y-6">
-                    {EVENTS.map((event, index) => (
-                        <EventCard key={index} event={event} />
-                    ))}
-                </div>
-
-                <Pagination
-                    currentPage={currentPage}
-                    totalPages={3}
-                    onPageChange={setCurrentPage}
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <SearchBar
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Tìm kiếm sự kiện của bạn..."
+                />
+                <StatusFilters
+                    activeFilter={activeFilter}
+                    onFilterChange={setActiveFilter}
                 />
             </div>
-        </DashboardLayout>
+
+            <div className="space-y-6">
+                {EVENTS.map((event, index) => (
+                    <EventCard key={index} event={event} />
+                ))}
+            </div>
+
+            <Pagination
+                currentPage={currentPage}
+                totalPages={3}
+                onPageChange={setCurrentPage}
+            />
+        </div>
     );
 }

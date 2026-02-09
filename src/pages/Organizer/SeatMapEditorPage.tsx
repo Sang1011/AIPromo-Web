@@ -1,8 +1,8 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { Stage, Layer, Rect, Circle, Line, Text as KonvaText, Transformer, Group } from 'react-konva';
 import Konva from 'konva';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaCopy, FaMinus, FaPaste, FaPlus } from "react-icons/fa";
 import { IoMdLock, IoMdUnlock } from 'react-icons/io';
+import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -87,7 +87,7 @@ interface SelectionBox {
 }
 
 
-const SeatMapEditor: React.FC = () => {
+const SeatMapEditorPage: React.FC = () => {
     const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
     const [sections, setSections] = useState<Area[]>([
@@ -2956,9 +2956,8 @@ const SeatMapEditor: React.FC = () => {
                     </div>
                 </div>
             )}
-
         </div >
     );
 };
 
-export default SeatMapEditor;
+export default SeatMapEditorPage;

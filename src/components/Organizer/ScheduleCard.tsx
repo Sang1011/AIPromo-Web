@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FiCalendar, FiChevronDown, FiPlus } from "react-icons/fi";
-import TicketRow from "./TicketRow";
+import TicketRow from "./ticket/TicketRow";
 
 export default function ScheduleCard({
     schedule,
