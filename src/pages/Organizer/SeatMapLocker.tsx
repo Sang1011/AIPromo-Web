@@ -1,8 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Stage, Layer, Rect, Line, Text as KonvaText, Group } from "react-konva";
-import type { SeatMapData } from "./SeatMapEditorPage";
+import { Stage, Layer, Rect, Line, Text as KonvaText, Group, Circle } from "react-konva";
+import type { SeatMapData } from "../../types/organizer/seatmap";
 
-const GRID_SIZE = 20;
 
 interface Props {
     data: SeatMapData;
@@ -25,8 +24,9 @@ const SeatMapLocker: React.FC<Props> = ({
         offsetY: 0,
     });
 
-    const { stage, areas, texts } = data;
+    const { areas, texts } = data;
 
+    // Tính toán bounds của toàn bộ content
     const getContentBounds = () => {
         let minX = Infinity, minY = Infinity;
         let maxX = -Infinity, maxY = -Infinity;
@@ -48,41 +48,89 @@ const SeatMapLocker: React.FC<Props> = ({
         return { minX, minY, maxX, maxY };
     };
 
-
+    // Tự động fit content vào viewport
     useEffect(() => {
         if (!containerRef.current) return;
 
-        const el = containerRef.current;
-
-        const observer = new ResizeObserver(() => {
-            const width = el.clientWidth;
-            const height = el.clientHeight;
+        const updateViewport = () => {
+            const container = containerRef.current!;
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
 
             const bounds = getContentBounds();
-
             const contentWidth = bounds.maxX - bounds.minX;
             const contentHeight = bounds.maxY - bounds.minY;
 
-            const scale = Math.min(
-                width / contentWidth,
-                height / contentHeight
-            );
+            // Tính scale để fit content
+            const scaleX = (containerWidth * 0.9) / contentWidth;
+            const scaleY = (containerHeight * 0.9) / contentHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
 
-            const offsetX = (width - contentWidth * scale) / 2 - bounds.minX * scale;
-            const offsetY = (height - contentHeight * scale) / 2 - bounds.minY * scale;
+            // Tính offset để center content
+            const scaledWidth = contentWidth * scale;
+            const scaledHeight = contentHeight * scale;
+            const offsetX = (containerWidth - scaledWidth) / 2 - bounds.minX * scale;
+            const offsetY = (containerHeight - scaledHeight) / 2 - bounds.minY * scale;
 
             setViewport({
-                width,
-                height,
+                width: containerWidth,
+                height: containerHeight,
                 scale,
                 offsetX,
                 offsetY,
             });
-        });
+        };
 
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [stage.width, stage.height]);
+        updateViewport();
+
+        const resizeObserver = new ResizeObserver(updateViewport);
+        resizeObserver.observe(containerRef.current);
+
+        return () => resizeObserver.disconnect();
+    }, [data]);
+
+    // Render Area shape
+    const renderArea = (area: typeof areas[0]) => {
+        const commonProps = {
+            x: area.x,
+            y: area.y,
+            width: area.width,
+            height: area.height,
+            rotation: area.rotation,
+            stroke: area.stroke || 'white',
+            strokeWidth: 2,
+            listening: false,
+        };
+
+        if (area.type === 'circle') {
+            return (
+                <Circle
+                    key={area.id}
+                    x={area.x + area.width / 2}
+                    y={area.y + area.height / 2}
+                    radius={area.width / 2}
+                    stroke={area.stroke || 'white'}
+                    strokeWidth={2}
+                    listening={false}
+                />
+            );
+        }
+
+        if (area.type === 'polygon' && area.points) {
+            return (
+                <Line
+                    key={area.id}
+                    points={area.points}
+                    closed
+                    stroke={area.stroke || 'white'}
+                    strokeWidth={2}
+                    listening={false}
+                />
+            );
+        }
+
+        return <Rect key={area.id} {...commonProps} />;
+    };
 
     return (
         <div
@@ -95,48 +143,14 @@ const SeatMapLocker: React.FC<Props> = ({
                     height={viewport.height}
                 >
                     <Layer>
-                        {/* GROUP để scale + center */}
                         <Group
                             scaleX={viewport.scale}
                             scaleY={viewport.scale}
                             x={viewport.offsetX}
                             y={viewport.offsetY}
                         >
-                            {/* GRID */}
-                            {Array.from({ length: Math.ceil(stage.width / GRID_SIZE) }).map((_, i) => (
-                                <Line
-                                    key={`v-${i}`}
-                                    points={[i * GRID_SIZE, 0, i * GRID_SIZE, stage.height]}
-                                    stroke="#1f1f35"
-                                    strokeWidth={1}
-                                    listening={false}
-                                />
-                            ))}
-
-                            {Array.from({ length: Math.ceil(stage.height / GRID_SIZE) }).map((_, i) => (
-                                <Line
-                                    key={`h-${i}`}
-                                    points={[0, i * GRID_SIZE, stage.width, i * GRID_SIZE]}
-                                    stroke="#1f1f35"
-                                    strokeWidth={1}
-                                    listening={false}
-                                />
-                            ))}
-
                             {/* AREAS */}
-                            {areas.map(area => (
-                                <Rect
-                                    key={area.id}
-                                    x={area.x}
-                                    y={area.y}
-                                    width={area.width}
-                                    height={area.height}
-                                    rotation={area.rotation}
-                                    stroke={area.stroke}
-                                    strokeWidth={2}
-                                    listening={false}
-                                />
-                            ))}
+                            {areas.map(area => renderArea(area))}
 
                             {/* SEATS */}
                             {areas.flatMap(area =>
@@ -159,39 +173,53 @@ const SeatMapLocker: React.FC<Props> = ({
                                                         ? "#f59e0b"
                                                         : isSelected
                                                             ? "#8B5CF6"
-                                                            : "#10b981"
+                                                            : seat.fill || "#10b981"
                                             }
+                                            stroke={isSelected ? "#ec4899" : undefined}
+                                            strokeWidth={isSelected ? 2 : 0}
                                             onClick={() => {
                                                 if (seat.status === "available") {
                                                     onToggleSeat(seat.id);
+                                                    console.log("Toggled seat:", {
+                                                        id: seat.id,
+                                                        row: seat.row,
+                                                        number: seat.number,
+                                                        sectionId: seat.sectionId,
+                                                        isSelected: !isSelected
+                                                    });
                                                 }
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (seat.status === "available") {
+                                                    e.target.getStage()!.container().style.cursor = 'pointer';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.target.getStage()!.container().style.cursor = 'default';
                                             }}
                                         />
                                     );
                                 })
                             )}
 
-                            {/* AREA LABEL */}
-                            {areas.map(
-                                area =>
-                                    area.showLabel && (
-                                        <KonvaText
-                                            key={`label-${area.id}`}
-                                            x={area.x}
-                                            y={area.y + area.height / 2 - 10}
-                                            width={area.width}
-                                            text={area.name}
-                                            fontSize={14}
-                                            fill="#ffffff"
-                                            align="center"
-                                            listening={false}
-                                        />
-                                    )
-                            )}
-
                             {/* FREE TEXT */}
-                            {texts.map(text => (
-                                <KonvaText key={text.id} {...text} />
+                            {texts?.map(text => (
+                                <KonvaText
+                                    key={text.id}
+                                    x={text.x}
+                                    y={text.y}
+                                    text={text.text}
+                                    fontSize={text.fontSize}
+                                    fontFamily={text.fontFamily}
+                                    fontStyle={text.fontStyle}
+                                    fill={text.fill}
+                                    align={text.align}
+                                    verticalAlign={text.verticalAlign}
+                                    rotation={text.rotation}
+                                    width={text.width}
+                                    height={text.height}
+                                    listening={false}
+                                />
                             ))}
                         </Group>
                     </Layer>
