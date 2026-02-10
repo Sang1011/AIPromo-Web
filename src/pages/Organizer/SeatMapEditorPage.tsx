@@ -2,6 +2,7 @@ import Konva from 'konva';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaCopy, FaMinus, FaPaste, FaPlus } from "react-icons/fa";
 import { IoMdLock, IoMdUnlock } from 'react-icons/io';
+import { MdMenu, MdOutlineKeyboardArrowRight } from 'react-icons/md';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 
 const GRID_SIZE = 20;
@@ -59,12 +60,6 @@ interface TextEntity {
 }
 
 export interface SeatMapData {
-    stage: {
-        width: number;
-        height: number;
-        rotation: number;
-        scale: number;
-    };
     areas: Array<Area & {
         seats: Seat[];
     }>;
@@ -182,7 +177,7 @@ const SeatMapEditorPage: React.FC = () => {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [history, setHistory] = useState<HistoryState[]>([{ sections, seats, textEntities }]);
     const [historyStep, setHistoryStep] = useState(0);
-    const [activeTab, setActiveTab] = useState<'STAGE' | 'AREA' | 'SHAPE'>('AREA');
+    const [activeTab, setActiveTab] = useState<'AREA' | 'SHAPE'>('AREA');
     const [clipboard, setClipboard] = useState<Entity[]>([]);
     const [editorMode, setEditorMode] = useState<EditorMode>('SELECT');
     const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
@@ -405,8 +400,15 @@ const SeatMapEditorPage: React.FC = () => {
             node.scaleX(1);
             node.scaleY(1);
 
-            const newWidth = Math.max(20, area.width * scaleX);
-            const newHeight = Math.max(20, area.height * scaleY);
+            let newWidth = Math.max(20, area.width * scaleX);
+            let newHeight = Math.max(20, area.height * scaleY);
+
+            if (area.type === 'square') {
+                const size = Math.min(newWidth, newHeight);
+                newWidth = size;
+                newHeight = size;
+            }
+
 
             setSections(prev =>
                 prev.map(s =>
@@ -433,11 +435,55 @@ const SeatMapEditorPage: React.FC = () => {
     const changeShape = useCallback((shape: Area['type']) => {
         if (!isSingleSectionSelected || !selectedSection) return;
 
-        setSections(prev => prev.map(s =>
-            s.id === selectedSection.id ? { ...s, type: shape } : s
-        ));
+        const centerX = selectedSection.x + selectedSection.width / 2;
+        const centerY = selectedSection.y + selectedSection.height / 2;
+
+        let newWidth = selectedSection.width;
+        let newHeight = selectedSection.height;
+
+        if (shape === 'circle') {
+            const size = Math.max(selectedSection.width, selectedSection.height);
+            newWidth = size;
+            newHeight = size;
+        }
+
+        if (shape === 'square') {
+            const size = Math.min(selectedSection.width, selectedSection.height);
+            newWidth = size;
+            newHeight = size;
+        }
+
+        const newX = centerX - newWidth / 2;
+        const newY = centerY - newHeight / 2;
+
+        setSections(prev =>
+            prev.map(s =>
+                s.id === selectedSection.id
+                    ? {
+                        ...s,
+                        type: shape,
+                        width: newWidth,
+                        height: newHeight,
+                        x: newX,
+                        y: newY,
+                    }
+                    : s
+            )
+        );
+
         saveToHistory();
     }, [isSingleSectionSelected, selectedSection, saveToHistory]);
+
+    useEffect(() => {
+        if (!transformerRef.current || !layerRef.current) return;
+
+        const nodes = selectedIds
+            .map(id => layerRef.current!.findOne(`#${id}`))
+            .filter(Boolean) as Konva.Node[];
+
+        transformerRef.current.nodes(nodes);
+        transformerRef.current.getLayer()?.batchDraw();
+    }, [sections]);
 
     const updateSectionProperty = useCallback((property: keyof Area, value: any) => {
         if (!isSingleSectionSelected || !selectedSection) return;
@@ -772,12 +818,6 @@ const SeatMapEditorPage: React.FC = () => {
 
     const exportSeatMap = () => {
         const data: SeatMapData = {
-            stage: {
-                width: CANVAS_WIDTH,
-                height: CANVAS_HEIGHT,
-                rotation: stageRotation,
-                scale: stageScale,
-            },
             areas: sections.map(area => ({
                 ...area,
                 seats: seats.filter(seat => seat.sectionId === area.id),
@@ -987,7 +1027,6 @@ const SeatMapEditorPage: React.FC = () => {
                     handleTransformEnd(area.id, e);
                 }}
             >
-                {/* SHAPE */}
                 {area.type === 'circle' ? (
                     <Circle
                         id={area.id}
@@ -1047,12 +1086,13 @@ const SeatMapEditorPage: React.FC = () => {
 
                 {area.showLabel && (
                     <KonvaText
-                        ref={textRef}
                         text={area.name.toUpperCase()}
-                        x={area.width / 2}
-                        y={area.height / 2}
-                        offsetX={(textRef.current?.width() || 0) / 2}
-                        offsetY={(textRef.current?.height() || 14) / 2}
+                        x={0}
+                        y={0}
+                        width={area.width}
+                        height={area.height}
+                        align="center"
+                        verticalAlign="middle"
                         fontSize={14}
                         fontStyle="600"
                         fill="#F9FAFB"
@@ -1071,7 +1111,7 @@ const SeatMapEditorPage: React.FC = () => {
 
     return (
         <div style={{
-            width: '100vw',
+            width: '100%',
             height: '100vh',
             background: '#0f0f1e',
             display: 'flex',
@@ -1238,7 +1278,7 @@ const SeatMapEditorPage: React.FC = () => {
                         Export JSON
                     </button>
 
-                    <button style={{
+                    {/* <button style={{
                         background: 'transparent',
                         border: 'none',
                         color: '#9ca3af',
@@ -1246,7 +1286,7 @@ const SeatMapEditorPage: React.FC = () => {
                         cursor: 'pointer'
                     }}>
                         Xem trước
-                    </button>
+                    </button> */}
 
                     <button
                         onClick={() => { setSections([]); setSeats([]); setTextEntities([]); setSelectedIds([]); saveToHistory(); }}
@@ -1266,7 +1306,7 @@ const SeatMapEditorPage: React.FC = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minWidth: 0, position: 'relative' }}>
                 <div style={{
                     flex: 1,
                     background: '#16162a',
@@ -1315,13 +1355,15 @@ const SeatMapEditorPage: React.FC = () => {
                         )}
                     </div>
 
-                    <div style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden'
-                    }}>
+                    <div
+                        style={{
+                            flex: 1,
+                            overflow: 'hidden',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
                         <Stage
                             ref={stageRef}
                             width={CANVAS_WIDTH}
@@ -1662,15 +1704,28 @@ const SeatMapEditorPage: React.FC = () => {
                 </div>
 
                 {showPropertiesPanel && (
-                    <div style={{
-                        width: '320px',
-                        background: '#1a1a2e',
-                        borderLeft: '1px solid #2a2a3e',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        flexShrink: 0,
-                        transition: 'all 0.3s ease'
-                    }}>
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            height: '100%',
+                            width: '320px',
+                            background: '#1a1a2e',
+                            borderLeft: '1px solid #2a2a3e',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            zIndex: 20,
+
+                            /* animation */
+                            transform: showPropertiesPanel
+                                ? 'translateX(0)'
+                                : 'translateX(100%)',
+                            opacity: showPropertiesPanel ? 1 : 0,
+                            pointerEvents: showPropertiesPanel ? 'auto' : 'none',
+                            transition: 'transform 0.25s ease, opacity 0.2s ease',
+                        }}
+                    >
                         <div style={{
                             padding: '20px 20px 16px',
                             borderBottom: '1px solid #2a2a3e'
@@ -1696,19 +1751,17 @@ const SeatMapEditorPage: React.FC = () => {
                                         background: 'transparent',
                                         border: 'none',
                                         color: '#9ca3af',
-                                        fontSize: '16px',
                                         cursor: 'pointer',
-                                        padding: '4px'
                                     }}
                                 >
-                                    &lt;
+                                    <MdOutlineKeyboardArrowRight className='text-2xl' />
                                 </button>
                             </div>
                         </div>
 
                         {isSingleEntitySelected && (
                             <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                                {!isSingleTextSelected && (
+                                {!isSingleTextSelected && !isSingleSeatSelected && (
                                     <div style={{ marginBottom: '24px' }}>
                                         <label style={{
                                             display: 'block',
@@ -1728,23 +1781,6 @@ const SeatMapEditorPage: React.FC = () => {
                                             borderRadius: '8px',
                                             padding: '4px'
                                         }}>
-                                            <button
-                                                onClick={() => setActiveTab('STAGE')}
-                                                style={{
-                                                    flex: 1,
-                                                    background: activeTab === 'STAGE' ? '#8B5CF6' : 'transparent',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    padding: '8px 12px',
-                                                    color: activeTab === 'STAGE' ? 'white' : '#6b7280',
-                                                    fontSize: '13px',
-                                                    fontWeight: 500,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                STAGE
-                                            </button>
                                             <button
                                                 onClick={() => setActiveTab('AREA')}
                                                 style={{
@@ -1815,7 +1851,7 @@ const SeatMapEditorPage: React.FC = () => {
                                         </div>
                                         <div style={{ marginBottom: '24px' }}>
                                             <label>
-                                                <input
+                                                <input className='mr-2'
                                                     type="checkbox"
                                                     checked={!!selectedSection.locked}
                                                     onChange={(e) =>
@@ -2798,32 +2834,37 @@ const SeatMapEditorPage: React.FC = () => {
                 )}
 
                 {!showPropertiesPanel && (
-                    <div style={{
-                        width: '40px',
-                        background: '#1a1a2e',
-                        borderLeft: '1px solid #2a2a3e',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        flexShrink: 0,
-                        alignItems: 'center',
-                        paddingTop: '20px'
-                    }}>
-                        <button
-                            onClick={() => setShowPropertiesPanel(true)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#9ca3af',
-                                fontSize: '16px',
-                                cursor: 'pointer',
-                                padding: '4px',
-                                transform: 'rotate(180deg)'
-                            }}
-                        >
-                            &lt;
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => setShowPropertiesPanel(true)}
+                        style={{
+                            position: 'absolute',
+                            top: '30px',
+                            right: '16px',
+                            transform: 'translateY(-50%)',
+
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '12px',
+
+                            background: '#1a1a2e',
+                            border: '1px solid #2a2a3e',
+                            color: '#9ca3af',
+
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+
+                            cursor: 'pointer',
+                            zIndex: 30,
+
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                        }}
+                        title="Mở bảng thuộc tính"
+                    >
+                        <MdMenu />
+                    </button>
                 )}
+
             </div>
             {showLockModal && (
                 <div

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import SeatMapLocker from "./SeatMapLocker";
-import type { SeatMapData } from "../../../pages/Organizer/SeatMapEditorPage";
+import type { SeatMapData } from "./SeatMapEditorPage";
 import { FiLock, FiUnlock, FiX } from "react-icons/fi";
 import { FaCouch, FaStar } from "react-icons/fa";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const JSON_SEAT_MAP = {
     "stage": {
@@ -132,18 +133,6 @@ const JSON_SEAT_MAP = {
                     "y": 280,
                     "width": 30,
                     "height": 30,
-                    "rotation": 0,
-                    "status": "available"
-                },
-                {
-                    "id": "seat-A-10",
-                    "sectionId": "area-1",
-                    "row": "A",
-                    "number": 10,
-                    "x": 580,
-                    "y": 140,
-                    "width": 160,
-                    "height": 160,
                     "rotation": 0,
                     "status": "available"
                 },
@@ -300,7 +289,12 @@ export default function LockSeatTab() {
         : selectedSeatIds.slice(0, MAX_VISIBLE);
 
     const hiddenCount = selectedSeatIds.length - MAX_VISIBLE;
+    const navigate = useNavigate();
+    const location = useLocation();
 
+    const gotoEdit = () => {
+        navigate(`${location.pathname}/edit`);
+    };
     return (
         <div className="flex gap-6 h-[75vh] min-w-0 overflow-hidden">
 
@@ -466,6 +460,9 @@ export default function LockSeatTab() {
                     </button>
 
                     <button
+                        onClick={() => {
+                            gotoEdit()
+                        }}
                         className="
         w-full py-3 rounded-xl
         bg-gradient-to-r from-primary/30 to-primary/10
