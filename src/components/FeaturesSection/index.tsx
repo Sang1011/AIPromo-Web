@@ -273,7 +273,7 @@ const QRCheckinScene = () => (
         {/* App header */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
           <div style={{ fontSize:8, fontWeight:800, color:'#60a5fa', fontFamily:"'Be Vietnam Pro', sans-serif", letterSpacing:.5 }}>
-            QUICKOM
+          AIPromo
           </div>
           <div style={{ fontSize:7, color:'rgba(255,255,255,.4)' }}>Check-in</div>
         </div>
@@ -405,9 +405,7 @@ const QRCheckinScene = () => (
 const FeatureBlock: React.FC<FeatureBlockProps> = ({
   badgeIcon, badgeText, title, description, points,
   AnimatedScene, isReversed = false,
-  accentColorClass = 'text-purple-400',
-  blurColorClass = 'bg-purple-500/20'
-}) => {
+  accentColorClass = 'text-purple-400'}) => {
   const col1Style = { order: isReversed ? 2 : 1 };
   const col2Style = { order: isReversed ? 1 : 2 };
 
