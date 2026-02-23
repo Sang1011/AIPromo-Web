@@ -15,13 +15,14 @@ import DashboardLayout from "./components/Organizer/layouts/DashboardLayout";
 import MarketingPage from "./pages/Organizer/MarketingPage";
 import MarketingDetailPage from "./pages/Organizer/MarketingDetailPage";
 import HomePage from "./pages/HomePage";
+import EventDetail from "./pages/EventDetail";
 
 function App() {
   return (
     <Routes>
       {/*Attendee*/}
       <Route path="/" element={<HomePage />} />
-
+      <Route path="/event-detail" element={<EventDetail />} />
       {/* Dashboard group */}
       <Route path="/organizer" element={<DashboardLayout />}>
         <Route path="my-events" element={<MyEventsPage />} />
@@ -43,7 +44,7 @@ function App() {
         <Route path="vouchers" element={<VoucherManagementPage />} />
       </Route>
     </Routes>
-
+   
   );
 }
 
