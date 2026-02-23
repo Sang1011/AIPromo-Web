@@ -21,12 +21,11 @@ const HomePage: React.FC = () => {
         <StatsSection/>
         <CategorySection/>
         <EventListSection/>
- 
-      <FeaturesSection/>
-      <ProcessSection/>
-      <PartnersAndDestinations/>
-      <CallToActionSection/>
-           </main>
+        <FeaturesSection/>
+        <ProcessSection/>
+        <PartnersAndDestinations/>
+        <CallToActionSection/>
+      </main>
       {/* Footer ở dưới cùng */}
       <Footer />
     </div>
