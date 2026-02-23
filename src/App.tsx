@@ -14,10 +14,14 @@ import VoucherManagementPage from "./pages/Organizer/VoucherManagementPage";
 import DashboardLayout from "./components/Organizer/layouts/DashboardLayout";
 import MarketingPage from "./pages/Organizer/MarketingPage";
 import MarketingDetailPage from "./pages/Organizer/MarketingDetailPage";
+import HomePage from "./pages/HomePage";
 
 function App() {
   return (
     <Routes>
+      {/*Attendee*/}
+      <Route path="/" element={<HomePage />} />
+
       {/* Dashboard group */}
       <Route path="/organizer" element={<DashboardLayout />}>
         <Route path="my-events" element={<MyEventsPage />} />
