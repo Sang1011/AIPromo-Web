@@ -16,6 +16,8 @@ import MarketingPage from "./pages/Organizer/MarketingPage";
 import MarketingDetailPage from "./pages/Organizer/MarketingDetailPage";
 import HomePage from "./pages/HomePage";
 import EventDetail from "./pages/EventDetail";
+import AllEvent from "./pages/AllEvent";
+import HistoryEvent from "./pages/HistoryEvent";
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
       {/*Attendee*/}
       <Route path="/" element={<HomePage />} />
       <Route path="/event-detail" element={<EventDetail />} />
+        <Route path="/all-event" element={<AllEvent />} />
+         <Route path="/history-event" element={<HistoryEvent />} />
       {/* Dashboard group */}
       <Route path="/organizer" element={<DashboardLayout />}>
         <Route path="my-events" element={<MyEventsPage />} />
