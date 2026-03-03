@@ -1,0 +1,14 @@
+.glass-effect {
+    background: rgba(24, 18, 43, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.neon-glow:focus-within {
+    box-shadow: 0 0 15px rgba(121, 59, 237, 0.5);
+    border-color: #793bed;
+}
+
+.card-glow:hover {
+    box-shadow: 0 10px 30px -10px rgba(121, 59, 237, 0.4);
+}
