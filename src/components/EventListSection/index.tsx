@@ -171,7 +171,7 @@ const EventListSection: React.FC = () => {
             </div>
 
             <button className="px-6 py-3 rounded-xl bg-white/10 text-indigo-400 font-semibold hover:bg-white/20 transition">
-              Tất cả sự kiện ↗
+              Tất cả sự kiện 
             </button>
           </div>
 
