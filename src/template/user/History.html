@@ -1,12 +1,17 @@
 <!DOCTYPE html>
-<html class="dark" lang="vi"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>AIPromo - Lịch sử mua vé</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
+<html class="dark" lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AIPromo - Lịch sử mua vé</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
             theme: {
@@ -32,7 +37,7 @@
             },
         }
     </script>
-<style type="text/tailwindcss">
+    <style type="text/tailwindcss">
         body {
             font-family: 'Space Grotesk', sans-serif;
         }
@@ -71,233 +76,287 @@
         }
     </style>
 </head>
+
 <body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen">
-<header class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-white/10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-<div class="flex h-20 items-center justify-between">
-<div class="flex items-center gap-3">
-<div class="size-10 rounded-xl bg-primary flex items-center justify-center neon-glow">
-<span class="material-symbols-outlined text-white">auto_awesome</span>
-</div>
-<span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">AIPromo</span>
-</div>
-<nav class="hidden md:flex items-center gap-4">
-<a class="nav-link" href="#"><span class="material-symbols-outlined">home</span>Trang chủ</a>
-<a class="nav-link" href="#"><span class="material-symbols-outlined">explore</span>Khám phá</a>
-<a class="nav-link active" href="#"><span class="material-symbols-outlined">confirmation_number</span>Vé của tôi</a>
-<div class="h-6 w-[1px] bg-slate-200 dark:bg-white/10 mx-2"></div>
-<div class="flex items-center gap-3 pl-2">
-<div class="flex flex-col items-end">
-<span class="text-sm font-bold">Minh Nguyen</span>
-<span class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest">Premium Member</span>
-</div>
-<div class="size-10 rounded-full bg-slate-800 border-2 border-primary overflow-hidden">
-<img alt="User" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr_HhBu5-YxXU2cI0vwi0TIwVABFnNUHmmTmz-cJPTWp8gc62H5iFO8GqC5CGQXId7BQp_GRM5JmhDYoptuS4K6sNLXT-H7xJ2qR5ZFVmaQOIF5VTp9D5bkcI8tkHL2SUieNu7A_Qjh1WaAOWWwZbT4vl5D13O9hadHVRnPaNieyNjiOsugP6tC2isihpCtOYUGOpBiZsm3CnCnJaPDymkeYXJ--Dw2ynL09TD1IUuyF5llrAxxM6Y43OQ-GMVTcMN9x2hfjW8gGE2"/>
-</div>
-</div>
-</nav>
-<button class="md:hidden text-slate-900 dark:text-white">
-<span class="material-symbols-outlined">menu</span>
-</button>
-</div>
-</div>
-</header>
-<main class="w-full">
-<div class="max-w-6xl mx-auto px-6 py-12">
-<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-<div class="space-y-3">
-<h2 class="text-5xl font-bold tracking-tight text-slate-900 dark:text-white">Lịch sử mua vé</h2>
-<div class="flex items-center gap-2">
-<span class="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
-<p class="text-slate-500 dark:text-[#a692c8] text-lg">Hệ thống đang lưu trữ 5 vé của bạn</p>
-</div>
-</div>
-<div class="flex items-center gap-3">
-<div class="relative">
-<input class="bg-slate-100 dark:bg-card-dark border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary w-64 transition-all" placeholder="Tìm kiếm vé..." type="text"/>
-<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl">search</span>
-</div>
-<button class="flex items-center gap-2 px-6 py-2.5 bg-slate-100 dark:bg-card-dark text-slate-900 dark:text-white rounded-lg font-bold text-sm border border-slate-200 dark:border-slate-800 hover:border-primary/50 transition-all">
-<span class="material-symbols-outlined text-lg">filter_list</span>
+    <header
+        class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-white/10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex h-20 items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="size-10 rounded-xl bg-primary flex items-center justify-center neon-glow">
+                        <span class="material-symbols-outlined text-white">auto_awesome</span>
+                    </div>
+                    <span
+                        class="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">AIPromo</span>
+                </div>
+                <nav class="hidden md:flex items-center gap-4">
+                    <a class="nav-link" href="#"><span class="material-symbols-outlined">home</span>Trang chủ</a>
+                    <a class="nav-link" href="#"><span class="material-symbols-outlined">explore</span>Khám phá</a>
+                    <a class="nav-link active" href="#"><span
+                            class="material-symbols-outlined">confirmation_number</span>Vé của tôi</a>
+                    <div class="h-6 w-[1px] bg-slate-200 dark:bg-white/10 mx-2"></div>
+                    <div class="flex items-center gap-3 pl-2">
+                        <div class="flex flex-col items-end">
+                            <span class="text-sm font-bold">Minh Nguyen</span>
+                            <span
+                                class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest">Premium
+                                Member</span>
+                        </div>
+                        <div class="size-10 rounded-full bg-slate-800 border-2 border-primary overflow-hidden">
+                            <img alt="User" class="w-full h-full object-cover"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr_HhBu5-YxXU2cI0vwi0TIwVABFnNUHmmTmz-cJPTWp8gc62H5iFO8GqC5CGQXId7BQp_GRM5JmhDYoptuS4K6sNLXT-H7xJ2qR5ZFVmaQOIF5VTp9D5bkcI8tkHL2SUieNu7A_Qjh1WaAOWWwZbT4vl5D13O9hadHVRnPaNieyNjiOsugP6tC2isihpCtOYUGOpBiZsm3CnCnJaPDymkeYXJ--Dw2ynL09TD1IUuyF5llrAxxM6Y43OQ-GMVTcMN9x2hfjW8gGE2" />
+                        </div>
+                    </div>
+                </nav>
+                <button class="md:hidden text-slate-900 dark:text-white">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+            </div>
+        </div>
+    </header>
+    <main class="w-full">
+        <div class="max-w-6xl mx-auto px-6 py-12">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                <div class="space-y-3">
+                    <h2 class="text-5xl font-bold tracking-tight text-slate-900 dark:text-white">Lịch sử mua vé</h2>
+                    <div class="flex items-center gap-2">
+                        <span class="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+                        <p class="text-slate-500 dark:text-[#a692c8] text-lg">Hệ thống đang lưu trữ 5 vé của bạn</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <input
+                            class="bg-slate-100 dark:bg-card-dark border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary w-64 transition-all"
+                            placeholder="Tìm kiếm vé..." type="text" />
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xl">search</span>
+                    </div>
+                    <button
+                        class="flex items-center gap-2 px-6 py-2.5 bg-slate-100 dark:bg-card-dark text-slate-900 dark:text-white rounded-lg font-bold text-sm border border-slate-200 dark:border-slate-800 hover:border-primary/50 transition-all">
+                        <span class="material-symbols-outlined text-lg">filter_list</span>
                         Lọc nâng cao
                     </button>
-</div>
-</div>
-<div class="mb-10">
-<div class="flex border-b border-slate-200 dark:border-white/5 gap-10">
-<a class="relative flex items-center gap-2 py-4 group" href="#">
-<span class="text-base font-bold text-primary">Tất cả</span>
-<span class="px-2 py-0.5 rounded text-[10px] bg-primary/20 text-primary">05</span>
-<div class="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full"></div>
-</a>
-<a class="relative flex items-center gap-2 py-4 group text-slate-500 dark:text-[#a692c8] hover:text-white transition-colors" href="#">
-<span class="text-base font-bold">Sắp diễn ra</span>
-<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">01</span>
-</a>
-<a class="relative flex items-center gap-2 py-4 group text-slate-500 dark:text-[#a692c8] hover:text-white transition-colors" href="#">
-<span class="text-base font-bold">Đã hoàn thành</span>
-<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">03</span>
-</a>
-<a class="relative flex items-center gap-2 py-4 group text-slate-500 dark:text-[#a692c8] hover:text-white transition-colors" href="#">
-<span class="text-base font-bold">Đã hủy</span>
-<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">01</span>
-</a>
-</div>
-</div>
-<div class="space-y-8">
-<div class="glass-card rounded-2xl p-6 flex flex-col lg:flex-row gap-8 items-stretch">
-<div class="w-full lg:w-80 h-52 bg-center bg-no-repeat bg-cover rounded-xl shrink-0 overflow-hidden relative group" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD6sk8uLkavSoLkmjZjNxjyDshvKojy_nfrQtPDm-E_jTdzyy00Dk5GlBsHKMONYGFVPaTOoPa47P1RFGfTc8pbFxDQ5MWyEcH6oRGT-FcOlksiVzaNOSlcAarYn0OCY42To22xv33q63Fsd76rEqFhgISJqfUtPSxbl5SgygwmHdob7sIRSme-YMQF1jeYlfSTWJmMb7uZ6NfeT8zn2juuyZ9CFqQ7Z-HfBrCsgnJX-mn9hzRaaUH_dyUPfg4emW-w_i2lt8O_p-Gt");'>
-<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-<button class="bg-white/20 backdrop-blur-md p-3 rounded-full hover:bg-white/40 transition-colors">
-<span class="material-symbols-outlined text-white">zoom_in</span>
-</button>
-</div>
-</div>
-<div class="flex flex-1 flex-col justify-between">
-<div>
-<div class="flex justify-between items-start mb-4">
-<div class="flex gap-3">
-<span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider status-badge-upcoming">Sắp diễn ra</span>
-<span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/5 text-white/60">Vé VIP</span>
-</div>
-<span class="text-slate-500 text-sm font-mono">#AP-99231</span>
-</div>
-<h3 class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-3 leading-tight">AI Tech Summit 2024: Future is Now</h3>
-<div class="flex flex-wrap items-center gap-x-8 gap-y-3 text-slate-500 dark:text-[#a692c8]">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-primary">calendar_month</span>
-<span class="font-medium">Thứ 7, 12/10/2024</span>
-</div>
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-primary">location_on</span>
-<span class="font-medium">Trung tâm Hội nghị Quốc gia, Hà Nội</span>
-</div>
-</div>
-</div>
-<div class="flex flex-wrap items-center justify-between gap-6 mt-8 pt-6 border-t border-white/5">
-<div class="flex items-center gap-10">
-<div>
-<p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Số lượng</p>
-<p class="text-2xl font-bold dark:text-white text-slate-900">02 <span class="text-sm font-normal text-slate-500">Người</span></p>
-</div>
-<div>
-<p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Tổng tiền</p>
-<p class="text-2xl font-bold text-primary">1.200.000đ</p>
-</div>
-</div>
-<div class="flex items-center gap-4">
-<button class="px-6 py-3 text-slate-400 hover:text-white font-bold transition-all underline underline-offset-4 decoration-primary/30">Chi tiết đơn hàng</button>
-<button class="flex items-center gap-2 px-8 py-3.5 bg-primary text-white rounded-xl font-bold text-base neon-glow hover:brightness-110 hover:-translate-y-0.5 transition-all">
-<span class="material-symbols-outlined">qr_code_2</span>
+                </div>
+            </div>
+            <div class="mb-10">
+                <div class="flex border-b border-slate-200 dark:border-white/5 gap-10">
+                    <a class="relative flex items-center gap-2 py-4 group" href="#">
+                        <span class="text-base font-bold text-primary">Tất cả</span>
+                        <span class="px-2 py-0.5 rounded text-[10px] bg-primary/20 text-primary">05</span>
+                        <div class="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full"></div>
+                    </a>
+                    <a class="relative flex items-center gap-2 py-4 group text-slate-500 dark:text-[#a692c8] hover:text-white transition-colors"
+                        href="#">
+                        <span class="text-base font-bold">Sắp diễn ra</span>
+                        <span
+                            class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">01</span>
+                    </a>
+                    <a class="relative flex items-center gap-2 py-4 group text-slate-500 dark:text-[#a692c8] hover:text-white transition-colors"
+                        href="#">
+                        <span class="text-base font-bold">Đã hoàn thành</span>
+                        <span
+                            class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">03</span>
+                    </a>
+                    <a class="relative flex items-center gap-2 py-4 group text-slate-500 dark:text-[#a692c8] hover:text-white transition-colors"
+                        href="#">
+                        <span class="text-base font-bold">Đã hủy</span>
+                        <span
+                            class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">01</span>
+                    </a>
+                </div>
+            </div>
+            <div class="space-y-8">
+                <div class="glass-card rounded-2xl p-6 flex flex-col lg:flex-row gap-8 items-stretch">
+                    <div class="w-full lg:w-80 h-52 bg-center bg-no-repeat bg-cover rounded-xl shrink-0 overflow-hidden relative group"
+                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD6sk8uLkavSoLkmjZjNxjyDshvKojy_nfrQtPDm-E_jTdzyy00Dk5GlBsHKMONYGFVPaTOoPa47P1RFGfTc8pbFxDQ5MWyEcH6oRGT-FcOlksiVzaNOSlcAarYn0OCY42To22xv33q63Fsd76rEqFhgISJqfUtPSxbl5SgygwmHdob7sIRSme-YMQF1jeYlfSTWJmMb7uZ6NfeT8zn2juuyZ9CFqQ7Z-HfBrCsgnJX-mn9hzRaaUH_dyUPfg4emW-w_i2lt8O_p-Gt");'>
+                        <div
+                            class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button
+                                class="bg-white/20 backdrop-blur-md p-3 rounded-full hover:bg-white/40 transition-colors">
+                                <span class="material-symbols-outlined text-white">zoom_in</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-1 flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex gap-3">
+                                    <span
+                                        class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider status-badge-upcoming">Sắp
+                                        diễn ra</span>
+                                    <span
+                                        class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/5 text-white/60">Vé
+                                        VIP</span>
+                                </div>
+                                <span class="text-slate-500 text-sm font-mono">#AP-99231</span>
+                            </div>
+                            <h3
+                                class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-3 leading-tight">
+                                AI Tech Summit 2024: Future is Now</h3>
+                            <div class="flex flex-wrap items-center gap-x-8 gap-y-3 text-slate-500 dark:text-[#a692c8]">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary">calendar_month</span>
+                                    <span class="font-medium">Thứ 7, 12/10/2024</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary">location_on</span>
+                                    <span class="font-medium">Trung tâm Hội nghị Quốc gia, Hà Nội</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-6 mt-8 pt-6 border-t border-white/5">
+                            <div class="flex items-center gap-10">
+                                <div>
+                                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Số
+                                        lượng</p>
+                                    <p class="text-2xl font-bold dark:text-white text-slate-900">02 <span
+                                            class="text-sm font-normal text-slate-500">Người</span></p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Tổng
+                                        tiền</p>
+                                    <p class="text-2xl font-bold text-primary">1.200.000đ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button
+                                    class="px-6 py-3 text-slate-400 hover:text-white font-bold transition-all underline underline-offset-4 decoration-primary/30">Chi
+                                    tiết đơn hàng</button>
+                                <button
+                                    class="flex items-center gap-2 px-8 py-3.5 bg-primary text-white rounded-xl font-bold text-base neon-glow hover:brightness-110 hover:-translate-y-0.5 transition-all">
+                                    <span class="material-symbols-outlined">qr_code_2</span>
                                     Xem vé QR
                                 </button>
-</div>
-</div>
-</div>
-</div>
-<div class="glass-card rounded-2xl p-6 flex flex-col lg:flex-row gap-8 items-stretch opacity-90">
-<div class="w-full lg:w-80 h-52 bg-center bg-no-repeat bg-cover rounded-xl shrink-0 grayscale-[0.3]" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAUXKUDrRM-TDEbYjQEGvaoD0Bkk28aQGsAT28Cz6ACDMwqJcFUNMYrL6vNLMT3K-69Id0Lu479u2ZmHrNCiV0nbGEEJ7v3Ysl-77lt6B2JNAUlL8B4nXHYYEmlj8JfoKPNMBnt7uju1ZRqpSw2rPAFJUNzTTDk6N5WdR1hHTpn5FIFSRFnNw9EI6QSjFzyfQrAecZU6YbCDLSbZEjwWpDdi6MVKBn3cWTsv6CoE4HxJ0xXw_yrQcCbcHktiiaqa_FfSdw-7C7h6KGi");'>
-</div>
-<div class="flex flex-1 flex-col justify-between">
-<div>
-<div class="flex justify-between items-start mb-4">
-<span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider status-badge-completed">Đã hoàn thành</span>
-<span class="text-slate-500 text-sm font-mono">#AP-88412</span>
-</div>
-<h3 class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-3">Music Festival: Neon Night 2023</h3>
-<div class="flex flex-wrap items-center gap-x-8 gap-y-3 text-slate-500 dark:text-[#a692c8]">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined">calendar_month</span>
-<span>20/09/2023</span>
-</div>
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined">location_on</span>
-<span>Sân vận động Mỹ Đình, Hà Nội</span>
-</div>
-</div>
-</div>
-<div class="flex flex-wrap items-center justify-between gap-6 mt-8 pt-6 border-t border-white/5">
-<div class="flex items-center gap-10">
-<div>
-<p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Số lượng</p>
-<p class="text-2xl font-bold dark:text-white text-slate-900">01</p>
-</div>
-<div>
-<p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Tổng tiền</p>
-<p class="text-2xl font-bold text-primary">450.000đ</p>
-</div>
-</div>
-<div class="flex items-center gap-4">
-<button class="px-6 py-3 text-slate-400 hover:text-primary font-bold transition-all">Gửi đánh giá</button>
-<button class="flex items-center gap-2 px-8 py-3.5 bg-white/5 border border-white/10 text-white rounded-xl font-bold text-base hover:bg-white/10 transition-all">
-<span class="material-symbols-outlined">description</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card rounded-2xl p-6 flex flex-col lg:flex-row gap-8 items-stretch opacity-90">
+                    <div class="w-full lg:w-80 h-52 bg-center bg-no-repeat bg-cover rounded-xl shrink-0 grayscale-[0.3]"
+                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAUXKUDrRM-TDEbYjQEGvaoD0Bkk28aQGsAT28Cz6ACDMwqJcFUNMYrL6vNLMT3K-69Id0Lu479u2ZmHrNCiV0nbGEEJ7v3Ysl-77lt6B2JNAUlL8B4nXHYYEmlj8JfoKPNMBnt7uju1ZRqpSw2rPAFJUNzTTDk6N5WdR1hHTpn5FIFSRFnNw9EI6QSjFzyfQrAecZU6YbCDLSbZEjwWpDdi6MVKBn3cWTsv6CoE4HxJ0xXw_yrQcCbcHktiiaqa_FfSdw-7C7h6KGi");'>
+                    </div>
+                    <div class="flex flex-1 flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <span
+                                    class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider status-badge-completed">Đã
+                                    hoàn thành</span>
+                                <span class="text-slate-500 text-sm font-mono">#AP-88412</span>
+                            </div>
+                            <h3 class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-3">Music
+                                Festival: Neon Night 2023</h3>
+                            <div class="flex flex-wrap items-center gap-x-8 gap-y-3 text-slate-500 dark:text-[#a692c8]">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined">calendar_month</span>
+                                    <span>20/09/2023</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined">location_on</span>
+                                    <span>Sân vận động Mỹ Đình, Hà Nội</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-6 mt-8 pt-6 border-t border-white/5">
+                            <div class="flex items-center gap-10">
+                                <div>
+                                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Số
+                                        lượng</p>
+                                    <p class="text-2xl font-bold dark:text-white text-slate-900">01</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Tổng
+                                        tiền</p>
+                                    <p class="text-2xl font-bold text-primary">450.000đ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button class="px-6 py-3 text-slate-400 hover:text-primary font-bold transition-all">Gửi
+                                    đánh giá</button>
+                                <button
+                                    class="flex items-center gap-2 px-8 py-3.5 bg-white/5 border border-white/10 text-white rounded-xl font-bold text-base hover:bg-white/10 transition-all">
+                                    <span class="material-symbols-outlined">description</span>
                                     Chi tiết
                                 </button>
-</div>
-</div>
-</div>
-</div>
-<div class="glass-card rounded-2xl p-6 flex flex-col lg:flex-row gap-8 items-stretch opacity-70">
-<div class="w-full lg:w-80 h-52 bg-center bg-no-repeat bg-cover rounded-xl shrink-0 grayscale" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCy7oKXPgbD8MZMvB3Dlb1cFyTI72b15gI1z_COkhG7Bn_agklmbHwRWZrKrHX5nAsMuKWe4AZZsy2s0U0Z28YJvpsZI2HzPF7hZaNv0i9sJW7ET7rXIpKFLGs7_bY5Nabd31ARujK1cIX35WoqOt4iQRdW-H4eXoJG2OOaGCIxKmauTtrGZ8lsr2SRfFz5MqnKa9AtrgIuphz2GdhX2yrqQXoURIR4lRH54yf3QphixruDlwlRoJXMZgw1jmYUHamy078pBO54sA90");'>
-</div>
-<div class="flex flex-1 flex-col justify-between">
-<div>
-<div class="flex justify-between items-start mb-4">
-<span class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider status-badge-cancelled">Đã hủy</span>
-<span class="text-slate-500 text-sm font-mono">#AP-77610</span>
-</div>
-<h3 class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-3">Workshop: UI Design with AI</h3>
-<div class="flex flex-wrap items-center gap-x-8 gap-y-3 text-slate-500 dark:text-[#a692c8]">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined">calendar_month</span>
-<span>05/08/2023</span>
-</div>
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined">location_on</span>
-<span>Creative Hub, District 1, HCM</span>
-</div>
-</div>
-</div>
-<div class="flex flex-wrap items-center justify-between gap-6 mt-8 pt-6 border-t border-white/5">
-<div class="flex items-center gap-10">
-<div>
-<p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Số lượng</p>
-<p class="text-2xl font-bold text-slate-500">01</p>
-</div>
-<div>
-<p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Đã hoàn tiền</p>
-<p class="text-2xl font-bold text-slate-500">200.000đ</p>
-</div>
-</div>
-<div class="flex items-center gap-4">
-<button class="px-6 py-3 text-slate-400 hover:text-white font-bold transition-all">Lý do hủy</button>
-<button class="flex items-center gap-2 px-8 py-3.5 bg-white/5 text-slate-600 rounded-xl font-bold text-base cursor-not-allowed border border-white/5">
-<span class="material-symbols-outlined">close</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card rounded-2xl p-6 flex flex-col lg:flex-row gap-8 items-stretch opacity-70">
+                    <div class="w-full lg:w-80 h-52 bg-center bg-no-repeat bg-cover rounded-xl shrink-0 grayscale"
+                        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCy7oKXPgbD8MZMvB3Dlb1cFyTI72b15gI1z_COkhG7Bn_agklmbHwRWZrKrHX5nAsMuKWe4AZZsy2s0U0Z28YJvpsZI2HzPF7hZaNv0i9sJW7ET7rXIpKFLGs7_bY5Nabd31ARujK1cIX35WoqOt4iQRdW-H4eXoJG2OOaGCIxKmauTtrGZ8lsr2SRfFz5MqnKa9AtrgIuphz2GdhX2yrqQXoURIR4lRH54yf3QphixruDlwlRoJXMZgw1jmYUHamy078pBO54sA90");'>
+                    </div>
+                    <div class="flex flex-1 flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <span
+                                    class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider status-badge-cancelled">Đã
+                                    hủy</span>
+                                <span class="text-slate-500 text-sm font-mono">#AP-77610</span>
+                            </div>
+                            <h3 class="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white mb-3">Workshop: UI
+                                Design with AI</h3>
+                            <div class="flex flex-wrap items-center gap-x-8 gap-y-3 text-slate-500 dark:text-[#a692c8]">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined">calendar_month</span>
+                                    <span>05/08/2023</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined">location_on</span>
+                                    <span>Creative Hub, District 1, HCM</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-6 mt-8 pt-6 border-t border-white/5">
+                            <div class="flex items-center gap-10">
+                                <div>
+                                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Số
+                                        lượng</p>
+                                    <p class="text-2xl font-bold text-slate-500">01</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] mb-1">Đã
+                                        hoàn tiền</p>
+                                    <p class="text-2xl font-bold text-slate-500">200.000đ</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button class="px-6 py-3 text-slate-400 hover:text-white font-bold transition-all">Lý do
+                                    hủy</button>
+                                <button
+                                    class="flex items-center gap-2 px-8 py-3.5 bg-white/5 text-slate-600 rounded-xl font-bold text-base cursor-not-allowed border border-white/5">
+                                    <span class="material-symbols-outlined">close</span>
                                     Không khả dụng
                                 </button>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="mt-16 flex flex-col items-center gap-4">
-<button class="flex items-center gap-2 px-8 py-3 bg-card-dark border border-primary/20 hover:border-primary/60 text-white rounded-full font-bold transition-all">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-16 flex flex-col items-center gap-4">
+                <button
+                    class="flex items-center gap-2 px-8 py-3 bg-card-dark border border-primary/20 hover:border-primary/60 text-white rounded-full font-bold transition-all">
                     Xem thêm lịch sử
                     <span class="material-symbols-outlined">expand_more</span>
-</button>
-<p class="text-slate-500 text-sm mt-4 italic">Hiển thị 3 trên tổng số 5 vé</p>
-</div>
-</div>
-</main>
-<footer class="border-t border-white/5 py-10 mt-10">
-<div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-<p class="text-slate-500 text-sm">© 2024 AIPromo Event Platform. All rights reserved.</p>
-<div class="flex items-center gap-8">
-<a class="text-slate-500 hover:text-white text-sm" href="#">Điều khoản</a>
-<a class="text-slate-500 hover:text-white text-sm" href="#">Bảo mật</a>
-<a class="text-slate-500 hover:text-white text-sm" href="#">Hỗ trợ</a>
-</div>
-</div>
-</footer>
+                </button>
+                <p class="text-slate-500 text-sm mt-4 italic">Hiển thị 3 trên tổng số 5 vé</p>
+            </div>
+        </div>
+    </main>
+    <footer class="border-t border-white/5 py-10 mt-10">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p class="text-slate-500 text-sm">© 2024 AIPromo Event Platform. All rights reserved.</p>
+            <div class="flex items-center gap-8">
+                <a class="text-slate-500 hover:text-white text-sm" href="#">Điều khoản</a>
+                <a class="text-slate-500 hover:text-white text-sm" href="#">Bảo mật</a>
+                <a class="text-slate-500 hover:text-white text-sm" href="#">Hỗ trợ</a>
+            </div>
+        </div>
+    </footer>
 
-</body></html>
+</body>
+
+</html>

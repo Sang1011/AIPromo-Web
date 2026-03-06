@@ -1,0 +1,40 @@
+ .glass {
+     background: rgba(24, 18, 43, 0.7);
+     backdrop-filter: blur(12px);
+     border: 1px solid rgba(124, 59, 237, 0.2);
+ }
+
+ .glass-nav {
+     backdrop-filter: blur(16px);
+     background: rgba(11, 11, 18, 0.85);
+     border-bottom: 1px solid rgba(124, 59, 237, 0.2);
+ }
+
+ .neon-glow {
+     box-shadow: 0 0 15px rgba(124, 59, 237, 0.5);
+ }
+
+ .neon-border {
+     border: 1px solid rgba(124, 59, 237, 0.4);
+ }
+
+ .timeline-line {
+     background: linear-gradient(to bottom, #7c3bed, transparent);
+ }
+
+ ::-webkit-scrollbar {
+     width: 8px;
+ }
+
+ ::-webkit-scrollbar-track {
+     background: #0B0B12;
+ }
+
+ ::-webkit-scrollbar-thumb {
+     background: #312447;
+     border-radius: 10px;
+ }
+
+ ::-webkit-scrollbar-thumb:hover {
+     background: #7c3bed;
+ }

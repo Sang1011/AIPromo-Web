@@ -1,0 +1,40 @@
+  .glass-card {
+      background: #18122B;
+      border: 1px solid rgba(124, 59, 237, 0.1);
+      transition: all 0.3s ease;
+  }
+
+  .glass-card:hover {
+      border-color: rgba(124, 59, 237, 0.4);
+      box-shadow: 0 0 20px rgba(124, 59, 237, 0.15);
+  }
+
+  .neon-glow {
+      box-shadow: 0 0 15px rgba(124, 59, 237, 0.4);
+  }
+
+  .status-badge-upcoming {
+      background: rgba(124, 59, 237, 0.2);
+      color: #a78bfa;
+      border: 1px solid rgba(124, 59, 237, 0.3);
+  }
+
+  .status-badge-completed {
+      background: rgba(16, 185, 129, 0.1);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  .status-badge-cancelled {
+      background: rgba(239, 68, 68, 0.1);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .nav-link {
+      @apply flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-slate-400 hover:text-white hover:bg-white/5;
+  }
+
+  .nav-link.active {
+      @apply text-primary bg-primary/10;
+  }
