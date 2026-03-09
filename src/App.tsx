@@ -15,10 +15,19 @@ import ReportManagementPage from "./pages/Organizer/ReportManagementPage";
 import SummaryPage from "./pages/Organizer/SummaryPage";
 import VoucherManagementPage from "./pages/Organizer/VoucherManagementPage";
 import SeatMapEditorPage from "./pages/Organizer/SeatMapEditorPage";
+import HomePage from "./pages/HomePage";
+import EventDetail from "./pages/EventDetail";
+import AllEvent from "./pages/AllEvent";
+import HistoryEvent from "./pages/HistoryEvent";
 
 function App() {
   return (
     <Routes>
+      {/*Attendee*/}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/event-detail" element={<EventDetail />} />
+      <Route path="/all-event" element={<AllEvent />} />
+      <Route path="/history-event" element={<HistoryEvent />} />
       {/* Dashboard group */}
       <Route path="/organizer" element={<DashboardLayout />}>
         <Route path="my-events" element={<MyEventsPage />} />
@@ -26,7 +35,7 @@ function App() {
         <Route path="legals" element={<LegalPage />} />
       </Route>
 
-      {/* Management group */}
+      {/* Organizer group */}
       <Route path="/organizer/my-events/:eventId" element={<ManagementLayout />}>
         <Route path="overview" element={<SummaryPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
@@ -37,10 +46,9 @@ function App() {
         <Route path="members" element={<MemberManagementPage />} />
         <Route path="edit" element={<EditEventWizardPage />} />
         <Route path="seat-map" element={<EventTicketPage />} />
-
         <Route path="vouchers" element={<VoucherManagementPage />} />
+        <Route path="seat-map/edit" element={<SeatMapEditorPage />} />
       </Route>
-      <Route path="seat-map/edit" element={<SeatMapEditorPage />} />
     </Routes>
 
   );

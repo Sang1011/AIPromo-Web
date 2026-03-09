@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "hull.js": "^1.0.6",
+    "axios": "^1.13.5",
+    "framer-motion": "^12.34.0",
     "konva": "^10.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
