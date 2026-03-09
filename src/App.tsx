@@ -18,12 +18,13 @@ import HomePage from "./pages/HomePage";
 import EventDetail from "./pages/EventDetail";
 import AllEvent from "./pages/AllEvent";
 import HistoryEvent from "./pages/HistoryEvent";
-
+import Login from "./pages/LoginPage";
 function App() {
   return (
     <Routes>
       {/*Attendee*/}
       <Route path="/" element={<HomePage />} />
+       <Route path="/login" element={<Login/>} />
       <Route path="/event-detail" element={<EventDetail />} />
         <Route path="/all-event" element={<AllEvent />} />
          <Route path="/history-event" element={<HistoryEvent />} />
