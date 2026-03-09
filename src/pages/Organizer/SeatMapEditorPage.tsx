@@ -1,12 +1,13 @@
 import Konva from 'konva';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FaCopy, FaMinus, FaPaste, FaPlus } from "react-icons/fa";
+import { FaArrowLeft, FaCopy, FaMinus, FaPaste, FaPlus } from "react-icons/fa";
 import { IoMdLock, IoMdUnlock } from 'react-icons/io';
 import { MdMenu, MdOutlineKeyboardArrowRight, MdOutlinePalette } from 'react-icons/md';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 import { getWorldPointer } from '../../utils/getWorldPointer';
 import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity, TicketType } from '../../types/organizer/seatmap';
 import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -1189,6 +1190,9 @@ const SeatMapEditorPage: React.FC = () => {
         textEntities
     ]);
 
+    const navigate = useNavigate();
+    const { eventId } = useParams();
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Delete') {
@@ -1441,10 +1445,23 @@ const SeatMapEditorPage: React.FC = () => {
                 flexShrink: 0
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div>
-                        <div style={{ fontSize: '18px', fontWeight: 600 }}>AIPromo</div>
-                        <div style={{ fontSize: '14px', color: '#9ca3af' }}>Editor</div>
-                    </div>
+                    <button
+                        onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map`)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#cbd5e1',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                            fontWeight: 500
+                        }}
+                    >
+                        <FaArrowLeft />
+                        Trở về
+                    </button>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

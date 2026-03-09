@@ -13,7 +13,7 @@ export default function Step3Settings({
         <div className="space-y-8">
 
             {/* ===== Quyền riêng tư ===== */}
-            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
+            {/* <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                         <FiLock />
@@ -24,7 +24,6 @@ export default function Step3Settings({
                 </div>
 
                 <div className="space-y-4">
-                    {/* Public */}
                     <label className="flex items-start gap-4 p-4 rounded-xl bg-white/5 cursor-pointer border border-primary/40">
                         <input
                             type="radio"
@@ -41,8 +40,6 @@ export default function Step3Settings({
                             </p>
                         </div>
                     </label>
-
-                    {/* Private */}
                     <label className="flex items-start gap-4 p-4 rounded-xl bg-white/5 cursor-pointer">
                         <input
                             type="radio"
@@ -59,7 +56,7 @@ export default function Step3Settings({
                         </div>
                     </label>
                 </div>
-            </section>
+            </section> */}
 
             {/* ===== Hiển thị thông tin ===== */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
@@ -145,7 +142,6 @@ export default function Step3Settings({
     );
 }
 
-/* ===== Toggle component ===== */
 function Toggle({
     title,
     desc,
@@ -166,13 +162,22 @@ function Toggle({
                 type="checkbox"
                 defaultChecked={defaultChecked}
                 className="
-                    w-11 h-6 rounded-full appearance-none
-                    bg-white/10 checked:bg-primary
+                    peer sr-only
+                "
+            />
+
+            <div
+                className="
+                    w-11 h-6 rounded-full
+                    bg-white/10
+                    peer-checked:bg-primary
                     relative transition
                     after:content-['']
                     after:absolute after:top-0.5 after:left-0.5
-                    after:w-5 after:h-5 after:bg-white after:rounded-full
-                    after:transition checked:after:translate-x-5
+                    after:w-5 after:h-5
+                    after:bg-white after:rounded-full
+                    after:transition
+                    peer-checked:after:translate-x-5
                 "
             />
         </label>

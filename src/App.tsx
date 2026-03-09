@@ -19,8 +19,16 @@ import HomePage from "./pages/HomePage";
 import EventDetail from "./pages/EventDetail";
 import AllEvent from "./pages/AllEvent";
 import HistoryEvent from "./pages/HistoryEvent";
-
+import data from "../src/data/seat-map.json";
+import SeatMapViewerPage from "./pages/Organizer/SeatMapViewerPage";
 function App() {
+  const ticketTypes = [
+    { id: 'SVIP', name: 'SVIP', color: '#3b82f6', price: 5000000 },
+    { id: 'VIP', name: 'VIP', color: '#a855f7', price: 4250000 },
+    { id: 'PRE', name: 'PRE', color: 'lightblue', price: 3500000 },
+    { id: 'CAT1', name: 'CAT 1', color: '#f59e0b', price: 2750000 },
+    { id: 'CAT2', name: 'CAT 2', color: '#94a3b8', price: 1800000 },
+  ];
   return (
     <Routes>
       {/*Attendee*/}
@@ -33,9 +41,10 @@ function App() {
         <Route path="my-events" element={<MyEventsPage />} />
         <Route path="reports" element={<ReportManagementPage />} />
         <Route path="legals" element={<LegalPage />} />
+        <Route path="create-event" element={<EditEventWizardPage />} />
       </Route>
 
-      {/* Organizer group */}
+      {/* Organizer */}
       <Route path="/organizer/my-events/:eventId" element={<ManagementLayout />}>
         <Route path="overview" element={<SummaryPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
@@ -47,9 +56,15 @@ function App() {
         <Route path="edit" element={<EditEventWizardPage />} />
         <Route path="seat-map" element={<EventTicketPage />} />
         <Route path="vouchers" element={<VoucherManagementPage />} />
-        <Route path="seat-map/edit" element={<SeatMapEditorPage />} />
-      </Route>
-    </Routes>
+      </Route >
+      <Route path="/organizer/my-events/:eventId/seat-map/edit" element={<SeatMapEditorPage />} />
+      <Route path="/organizer/my-events/:eventId/seat-map/show" element={<SeatMapViewerPage
+        seatMapData={data as any}
+        mode="seat"
+        ticketTypes={ticketTypes}
+        onConfirm={(payload) => console.log(payload)}
+      />} />
+    </Routes >
 
   );
 }
