@@ -3,7 +3,7 @@ import "./login.css";
 import { useDispatch } from "react-redux";
 import { fetchLogin, fetchLoginGoogle } from "../../store/authSlice";
 import type { AppDispatch } from "../../store";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import type { LoginRequest } from "../../types/auth/auth";
 
@@ -147,12 +147,12 @@ function Login() {
               <path clipRule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fillRule="evenodd" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold tracking-tight">AIPromo</h2>
+          <h2 className="text-xl font-bold tracking-tight"><Link to="/">AIPromo</Link></h2>
         </div>
         <div className="flex items-center gap-4">
           <span className="hidden sm:inline text-sm text-slate-300">Chưa có tài khoản?</span>
           <button className="bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2 px-6 rounded-lg transition-all shadow-lg shadow-primary/20">
-            Đăng ký
+           <Link to="/register">Đăng ký</Link> 
           </button>
         </div>
       </header>
