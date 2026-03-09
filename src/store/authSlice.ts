@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import authService from "../services/authService";
-import type { LoginRequest } from "../types/auth/auth";
+import type { LoginRequest, RegisterRequest } from "../types/auth/auth";
 
 
 const name = "auth";
@@ -38,6 +38,22 @@ export const fetchLoginGoogle = createAsyncThunk(`${name}/fetchLoginGoogle`, asy
       return thunkAPI.rejectWithValue(error);
    }
 })
+
+export const fetchRegister = createAsyncThunk<
+   any,
+   RegisterRequest
+>(
+   `${name}/fetchLogin`,
+   async (params, thunkAPI) => {
+      try {
+         const response = await authService.register(params);
+         return response.data;
+      } catch (error) {
+         return thunkAPI.rejectWithValue(error);
+      }
+   }
+);
+
 
 const authSlice = createSlice({
    name,
