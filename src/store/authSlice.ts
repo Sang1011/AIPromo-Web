@@ -12,7 +12,7 @@ interface AuthState {
 
 const initialState: AuthState = {
    token: null,
-   currentInfor :{}
+   currentInfor: {}
 };
 
 export const fetchLogin = createAsyncThunk<
@@ -30,13 +30,13 @@ export const fetchLogin = createAsyncThunk<
    }
 );
 
-export const fetchLoginGoogle = createAsyncThunk(`${name}/fetchLoginGoogle`, async(data: object,thunkAPI)=>{
-     try {
-         const response = await authService.loginGoogle(data);
-         return response.data;
-      } catch (error) {
-         return thunkAPI.rejectWithValue(error);
-      }
+export const fetchLoginGoogle = createAsyncThunk(`${name}/fetchLoginGoogle`, async (data: object, thunkAPI) => {
+   try {
+      const response = await authService.loginGoogle(data);
+      return response.data;
+   } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+   }
 })
 
 const authSlice = createSlice({
@@ -44,11 +44,22 @@ const authSlice = createSlice({
    initialState,
    reducers: {},
    extraReducers: (builder) => {
-      builder.addCase(fetchLogin.fulfilled, (state, action: PayloadAction<any>) => {
-         const responseData = action.payload?.data;
-         if (responseData?.payload?.isSuccess === true) {
-            const token = responseData.accessToken;
-            state.currentInfor = action.payload?.user;
+     builder.addCase(fetchLogin.fulfilled, (state, action: PayloadAction<any>) => {
+         const responseData = action.payload;
+         if (responseData?.isSuccess) {
+            const token = responseData.data.accessToken;
+            state.currentInfor = responseData.data.user;
+            state.token = token;
+            if (token) {
+               localStorage.setItem("ACCESS_TOKEN", token);
+            }
+         }
+      });
+      builder.addCase(fetchLoginGoogle.fulfilled, (state, action: PayloadAction<any>) => {
+         const responseData = action.payload;
+         if (responseData?.isSuccess) {
+            const token = responseData.data.accessToken;
+            state.currentInfor = responseData.data.user;
             state.token = token;
             if (token) {
                localStorage.setItem("ACCESS_TOKEN", token);
