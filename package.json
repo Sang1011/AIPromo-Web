@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "hull.js": "^1.0.6",
     "axios": "^1.13.5",
     "framer-motion": "^12.34.0",
     "konva": "^10.2.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/hull.js": "^1.0.4",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
