@@ -45,22 +45,11 @@ const eventService = {
         });
     },
 
-    updateBanner: (eventId: string, file: File): Promise<AxiosResponse<any>> => {
+    upload: (folder: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
         const formData = new FormData();
+        formData.append("folder", folder);
         formData.append("file", file);
-
-        return API.call().put(`/events/${eventId}/banner`, formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-        });
-    },
-
-    uploadImage: (eventId: string, file: File): Promise<AxiosResponse<any>> => {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        return API.call().post(`/events/${eventId}/images`, formData, {
+        return API.call().post(`/events/upload`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
             },

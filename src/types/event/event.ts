@@ -63,6 +63,7 @@ export interface CreateEventRequest {
     mapUrl: string;
     description: string;
     actorImages: ActorImage[];
+    imageUrls: string[];
 }
 
 export interface UpdateEventInfoRequest extends Omit<CreateEventRequest, "organizerId"> { }
