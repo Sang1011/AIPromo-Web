@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiPlus } from "react-icons/fi";
 import ScheduleCard from "../ScheduleCard";
 import TicketModal from "../ticket/TicketModal";
+import CreateSessionModal from "../sessions/CreateSessionModal";
+import type { AppDispatch } from "../../../store";
+import { useDispatch } from "react-redux";
+import { fetchDeleteSession, fetchSessions } from "../../../store/eventSlice";
+import { useParams } from "react-router-dom";
 
 export default function Step2Schedule({
     onNext,
@@ -11,6 +16,25 @@ export default function Step2Schedule({
     onBack: () => void;
 }) {
     const [openTicketModal, setOpenTicketModal] = useState(false);
+    const [openCreateModal, setOpenCreateModal] = useState(false);
+    const dispatch = useDispatch<AppDispatch>();
+    const { eventId } = useParams<{ eventId: string }>();
+    useEffect(() => {
+        if (!eventId) return;
+        dispatch(fetchSessions(eventId));
+    }, [eventId]);
+
+    const handleDeleteSchedule = (sessionId: string) => {
+        if (!eventId) return;
+        dispatch(fetchDeleteSession({
+            eventId,
+            sessionId
+        }));
+    }
+
+    const handleUpdateSchedule = (sessionId: string, data: any) => {
+
+    }
 
     const schedules = [
         {
@@ -57,6 +81,7 @@ export default function Step2Schedule({
                 </div>
 
                 <button
+                    onClick={() => setOpenCreateModal(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-medium"
                 >
                     <FiPlus />
@@ -96,6 +121,14 @@ export default function Step2Schedule({
                 open={openTicketModal}
                 onClose={() => setOpenTicketModal(false)}
             />
+
+            {eventId && (
+                <CreateSessionModal
+                    open={openCreateModal}
+                    onClose={() => setOpenCreateModal(false)}
+                    eventId={eventId}
+                />
+            )}
         </div>
     );
 }

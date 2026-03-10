@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TiDelete } from "react-icons/ti";
 
 export default function UploadBox({
@@ -16,9 +16,51 @@ export default function UploadBox({
     className?: string;
     square?: boolean;
 }) {
-    const [preview, setPreview] = useState(false);
 
-    const imageUrl = file ? URL.createObjectURL(file) : null;
+    const [preview, setPreview] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+
+        if (!selectedFile) return;
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+        ];
+
+        if (!allowedTypes.includes(selectedFile.type)) {
+            setError("Chỉ cho phép ảnh JPEG, PNG, GIF, WebP");
+            e.target.value = "";
+            return;
+        }
+
+        const maxSize = 10 * 1024 * 1024;
+
+        if (selectedFile.size > maxSize) {
+            setError("Ảnh không được vượt quá 10MB");
+            e.target.value = "";
+            return;
+        }
+
+        onChange(selectedFile);
+    };
+
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!file) {
+            setImageUrl(null);
+            return;
+        }
+
+        const url = URL.createObjectURL(file);
+        setImageUrl(url);
+
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
 
     return (
         <>
@@ -34,11 +76,9 @@ export default function UploadBox({
             >
                 <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
                     className="hidden"
-                    onChange={(e) =>
-                        onChange(e.target.files?.[0] ?? null)
-                    }
+                    onChange={handleFileChange}
                 />
 
                 {file && imageUrl ? (
@@ -53,7 +93,6 @@ export default function UploadBox({
                             className="absolute inset-0 w-full h-full object-cover cursor-pointer"
                         />
 
-                        {/* delete */}
                         <button
                             type="button"
                             onClick={(e) => {
@@ -76,7 +115,6 @@ export default function UploadBox({
                 )}
             </label>
 
-            {/* Preview modal */}
             {preview && imageUrl && (
                 <div
                     className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
@@ -86,6 +124,20 @@ export default function UploadBox({
                         src={imageUrl}
                         className="max-h-[90vh] max-w-[90vw] rounded-lg"
                     />
+                </div>
+            )}
+
+            {error && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                    <div className="bg-[#1f1f1f] p-6 rounded-xl w-[300px] text-center">
+                        <p className="text-white mb-4">{error}</p>
+                        <button
+                            onClick={() => setError(null)}
+                            className="px-4 py-2 bg-blue-500 rounded text-white"
+                        >
+                            OK
+                        </button>
+                    </div>
                 </div>
             )}
         </>

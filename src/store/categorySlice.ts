@@ -20,12 +20,16 @@ const initialState: CategoryState = {
 };
 
 export const fetchAllCategories = createAsyncThunk<
-    GetAllCategoriesResponse
+    GetAllCategoriesResponse,
+    { name?: string; take?: number }
 >(
     `${name}/fetchAllCategories`,
-    async (_, thunkAPI) => {
+    async (params, thunkAPI) => {
         try {
-            const response = await categoryService.getAllCategories();
+            const response = await categoryService.getAllCategories(
+                params?.name,
+                params?.take
+            );
             return response.data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
@@ -49,7 +53,7 @@ export const fetchCategoryById = createAsyncThunk<
 );
 
 export const fetchCreateCategory = createAsyncThunk<
-    any,
+    number,
     CreateCategoryRequest
 >(
     `${name}/fetchCreateCategory`,
@@ -68,25 +72,21 @@ const categorySlice = createSlice({
     initialState,
     reducers: {},
     extraReducers: (builder) => {
+
         builder.addCase(
             fetchAllCategories.fulfilled,
             (state, action: PayloadAction<GetAllCategoriesResponse>) => {
-                state.categories = action.payload;
+                state.categories = action.payload.data;
             }
         );
 
         builder.addCase(
             fetchCategoryById.fulfilled,
             (state, action: PayloadAction<GetCategoryByIdResponse>) => {
-                state.currentCategory = action.payload;
+                state.currentCategory = action.payload.data;
             }
         );
 
-        builder.addCase(fetchCreateCategory.fulfilled, (state, action) => {
-            if (action.payload?.data) {
-                state.categories.push(action.payload.data);
-            }
-        });
     },
 });
 
