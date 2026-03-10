@@ -8,7 +8,9 @@ import type {
     UpdateEventInfoRequest,
     UpdateEventSettingsRequest,
     CreateEventSessionRequest,
-    GetAllRequest
+    GetAllRequest,
+    UpdateEventSessionRequest,
+    GetAllSessionResponse
 } from "../types/event/event";
 
 const name = "event";
@@ -90,6 +92,51 @@ export const fetchUpdateEvent = createAsyncThunk<
     }
 );
 
+export const fetchSessions = createAsyncThunk<
+    GetAllSessionResponse,
+    string
+>(
+    `${name}/fetchSessions`,
+    async (eventId, thunkAPI) => {
+        try {
+            const res = await eventService.getSessions(eventId);
+            return res.data;
+        } catch (err) {
+            return thunkAPI.rejectWithValue(err);
+        }
+    }
+);
+
+export const fetchDeleteSession = createAsyncThunk<
+    any,
+    { eventId: string; sessionId: string }
+>(
+    `${name}/deleteSession`,
+    async ({ eventId, sessionId }, thunkAPI) => {
+        try {
+            const res = await eventService.deleteSession(eventId, sessionId);
+            return res.data;
+        } catch (err) {
+            return thunkAPI.rejectWithValue(err);
+        }
+    }
+);
+
+export const fetchUpdateSession = createAsyncThunk<
+    any,
+    { eventId: string; sessionId: string; data: UpdateEventSessionRequest }
+>(
+    `${name}/updateSession`,
+    async ({ eventId, sessionId, data }, thunkAPI) => {
+        try {
+            const res = await eventService.updateSession(eventId, sessionId, data);
+            return res.data;
+        } catch (err) {
+            return thunkAPI.rejectWithValue(err);
+        }
+    }
+);
+
 export const fetchDeleteEvent = createAsyncThunk<
     any,
     string
@@ -121,7 +168,7 @@ export const fetchUpdateEventSettings = createAsyncThunk<
 );
 
 export const fetchCreateEventSessions = createAsyncThunk<
-    any,
+    string[],
     { eventId: string; data: CreateEventSessionRequest }
 >(
     `${name}/fetchCreateEventSessions`,
@@ -136,14 +183,14 @@ export const fetchCreateEventSessions = createAsyncThunk<
 );
 
 export const fetchUpload = createAsyncThunk<
-    { url: string },
+    string,
     { folder: string; file: File }
 >(
     `${name}/fetchUpload`,
     async ({ folder, file }, thunkAPI) => {
         try {
             const response = await eventService.upload(folder, file);
-            return response.data;
+            return response.data.url;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
         }
@@ -191,11 +238,6 @@ const eventSlice = createSlice({
         });
 
         builder.addCase(fetchUpdateEventSettings.fulfilled, (state, action) => {
-            const updatedEvent = action.payload;
-            state.currentEvent = updatedEvent;
-        });
-
-        builder.addCase(fetchCreateEventSessions.fulfilled, (state, action) => {
             const updatedEvent = action.payload;
             state.currentEvent = updatedEvent;
         });

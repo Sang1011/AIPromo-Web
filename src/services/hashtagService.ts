@@ -3,11 +3,19 @@ import type { CreateHashtagRequest, GetAllHashtagsResponse, GetHashtagByIdRespon
 import API from "./api";
 
 const hashtagService = {
-    createHashtag: (data: CreateHashtagRequest): Promise<AxiosResponse<any>> => {
+    createHashtag: (data: CreateHashtagRequest): Promise<AxiosResponse<number>> => {
         return API.call().post("/hashtags", data);
     },
-    getAllHashtags: (): Promise<AxiosResponse<GetAllHashtagsResponse>> => {
-        return API.call().get("/hashtags");
+    getAllHashtags: (
+        name?: string,
+        take?: number
+    ): Promise<AxiosResponse<GetAllHashtagsResponse>> => {
+        const params: any = {};
+
+        if (name) params.name = name;
+        if (take) params.take = take;
+
+        return API.call().get("/hashtags", { params });
     },
     getHashtagById: (id: number): Promise<AxiosResponse<GetHashtagByIdResponse>> => {
         return API.call().get(`/hashtags/${id}`);

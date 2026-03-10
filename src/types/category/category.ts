@@ -1,3 +1,5 @@
+import type { ApiResponse } from "../api";
+
 export interface Category {
     id: number;
     code: string;
@@ -6,8 +8,8 @@ export interface Category {
     isActive: boolean;
 }
 
-export type GetAllCategoriesResponse = Category[];
-export type GetCategoryByIdResponse = Category;
+export type GetAllCategoriesResponse = ApiResponse<Category[]>;
+export type GetCategoryByIdResponse = ApiResponse<Category>;
 
 export interface CreateCategoryRequest extends Omit<Category, "id" | "isActive"> { }
 

@@ -5,7 +5,9 @@ import type {
     GetEventDetailResponse,
     UpdateEventInfoRequest,
     UpdateEventSettingsRequest,
-    CreateEventSessionRequest
+    CreateEventSessionRequest,
+    UpdateEventSessionRequest,
+    GetAllSessionResponse
 } from "../types/event/event"
 
 import API from "./api"
@@ -31,17 +33,6 @@ const eventService = {
     getAllEvents: (request: GetAllRequest): Promise<AxiosResponse<GetAllEventResponse>> => {
         return API.call().get("/events", {
             params: request
-        });
-    },
-
-    uploadBanner: (file: File): Promise<AxiosResponse<any>> => {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        return API.call().post("/events/upload-banner", formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
         });
     },
 
@@ -81,8 +72,24 @@ const eventService = {
     createEventSessions: (
         eventId: string,
         data: CreateEventSessionRequest
-    ): Promise<AxiosResponse<any>> => {
+    ): Promise<AxiosResponse<string[]>> => {
         return API.call().post(`/events/${eventId}/sessions`, data);
+    },
+
+    getSessions: (eventId: string): Promise<AxiosResponse<GetAllSessionResponse>> => {
+        return API.call().get(`/events/${eventId}/sessions`);
+    },
+
+    deleteSession: (eventId: string, sessionId: string): Promise<AxiosResponse<any>> => {
+        return API.call().delete(`/events/${eventId}/sessions/${sessionId}`);
+    },
+
+    updateSession: (
+        eventId: string,
+        sessionId: string,
+        data: UpdateEventSessionRequest
+    ): Promise<AxiosResponse<any>> => {
+        return API.call().patch(`/events/${eventId}/sessions/${sessionId}`, data);
     },
 
     updateSeatmapSpec: (

@@ -20,12 +20,16 @@ const initialState: HashtagState = {
 };
 
 export const fetchAllHashtags = createAsyncThunk<
-    GetAllHashtagsResponse
+    GetAllHashtagsResponse,
+    { name?: string; take?: number }
 >(
     `${name}/fetchAllHashtags`,
-    async (_, thunkAPI) => {
+    async (params, thunkAPI) => {
         try {
-            const response = await hashtagService.getAllHashtags();
+            const response = await hashtagService.getAllHashtags(
+                params?.name,
+                params?.take
+            );
             return response.data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
@@ -49,7 +53,7 @@ export const fetchHashtagById = createAsyncThunk<
 );
 
 export const fetchCreateHashtag = createAsyncThunk<
-    any,
+    number,
     CreateHashtagRequest
 >(
     `${name}/fetchCreateHashtag`,
@@ -68,25 +72,21 @@ const hashtagSlice = createSlice({
     initialState,
     reducers: {},
     extraReducers: (builder) => {
+
         builder.addCase(
             fetchAllHashtags.fulfilled,
             (state, action: PayloadAction<GetAllHashtagsResponse>) => {
-                state.hashtags = action.payload;
+                state.hashtags = action.payload.data;
             }
         );
 
         builder.addCase(
             fetchHashtagById.fulfilled,
             (state, action: PayloadAction<GetHashtagByIdResponse>) => {
-                state.currentHashtag = action.payload;
+                state.currentHashtag = action.payload.data;
             }
         );
 
-        builder.addCase(fetchCreateHashtag.fulfilled, (state, action) => {
-            if (action.payload?.data) {
-                state.hashtags.push(action.payload.data);
-            }
-        });
     },
 });
 

@@ -3,11 +3,19 @@ import type { CreateCategoryRequest, GetAllCategoriesResponse, GetCategoryByIdRe
 import API from "./api";
 
 const categoryService = {
-    createCategory: (data: CreateCategoryRequest): Promise<AxiosResponse<any>> => {
+    createCategory: (data: CreateCategoryRequest): Promise<AxiosResponse<number>> => {
         return API.call().post("/categories", data);
     },
-    getAllCategories: (): Promise<AxiosResponse<GetAllCategoriesResponse>> => {
-        return API.call().get("/categories");
+    getAllCategories: (
+        name?: string,
+        take?: number
+    ): Promise<AxiosResponse<GetAllCategoriesResponse>> => {
+        const params: any = {};
+
+        if (name) params.name = name;
+        if (take) params.take = take;
+
+        return API.call().get("/categories", { params });
     },
     getCategoryById: (id: number): Promise<AxiosResponse<GetCategoryByIdResponse>> => {
         return API.call().get(`/categories/${id}`);

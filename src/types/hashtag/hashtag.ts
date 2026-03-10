@@ -1,3 +1,5 @@
+import type { ApiResponse } from "../api";
+
 export interface Hashtag {
     id: number;
     name: string;
@@ -8,7 +10,7 @@ export interface Hashtag {
 export interface CreateHashtagRequest extends Omit<Hashtag, "id" | "usageCount"> {
 }
 
-export type GetAllHashtagsResponse = Hashtag[];
-export type GetHashtagByIdResponse = Hashtag;
+export type GetAllHashtagsResponse = ApiResponse<Hashtag[]>;
+export type GetHashtagByIdResponse = ApiResponse<Hashtag>;
 
 // export interface UpdateHashtagRequest extends Pick<CreateHashtagRequest, "name"> {}

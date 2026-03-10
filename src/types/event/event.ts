@@ -5,6 +5,17 @@ export interface GetAllRequest {
     SortOrder?: string;
 }
 
+export interface EventTicketType {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    soldQuantity: number;
+    availableQuantity: number;
+    type: string;
+    areaId: string;
+}
+
 export interface EventCategory {
     id: number;
     name: string;
@@ -25,6 +36,7 @@ export interface EventSession {
     description: string;
     startTime: string;
     endTime: string;
+    ticketTypes?: EventTicketType[];
 }
 
 export interface ActorImage {
@@ -69,7 +81,7 @@ export interface CreateEventRequest {
 export interface UpdateEventInfoRequest extends Omit<CreateEventRequest, "organizerId"> { }
 
 export interface CreateEventSessionRequest {
-    sessions: EventSession[];
+    sessions: Omit<EventSession, "ticketTypes">[];
 }
 
 export interface UpdateEventSettingsRequest {
@@ -118,3 +130,6 @@ export interface GetEventDetailResponse {
     hashtags: EventHashtag[];
     actorImages: EventActorImage[];
 }
+
+export type GetAllSessionResponse = EventSession[];
+export type UpdateEventSessionRequest = Omit<EventSession, "ticketTypes">;
