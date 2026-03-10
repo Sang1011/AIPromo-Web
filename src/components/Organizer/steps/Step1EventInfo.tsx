@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import UploadBox from "../shared/UploadBox";
+import type { AppDispatch } from "../../../store";
+import { useDispatch } from "react-redux";
+import { fetchUpload } from "../../../store/eventSlice";
 
 interface Step1EventInfoProps {
     onNext: () => void;
@@ -23,7 +26,37 @@ export default function Step1EventInfo({
     const ifCreateEvent = window.location.pathname === "/organizer/create-event";
     const [hashtags, setHashtags] = useState<string>("");
     const [categories, setCategories] = useState<string>("");
+    const dispatch = useDispatch<AppDispatch>();
 
+    const handleUpload = (type: "banner" | "actors" | "images", file: File) => {
+        const bannerUrl = "events/banners";
+        const actorUrl = "events/actors";
+        const imageUrl = "events/images";
+        let folder = "";
+
+        switch (type) {
+            case "banner":
+                folder = bannerUrl;
+                dispatch(fetchUpload({ folder, file })).then((response) => {
+                    // const url = response.payload.url;
+                });
+                break;
+            case "actors":
+                folder = actorUrl;
+                break;
+            case "images":
+                folder = imageUrl;
+                break;
+        }
+    }
+
+    const handleCreateEvent = () => {
+
+    }
+
+    const handleUpdateEvent = () => {
+        // fetch thông tin event cần edit rồi set vào các state tương ứng
+    }
 
 
     useEffect(() => {

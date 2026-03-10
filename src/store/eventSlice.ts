@@ -135,6 +135,21 @@ export const fetchCreateEventSessions = createAsyncThunk<
     }
 );
 
+export const fetchUpload = createAsyncThunk<
+    { url: string },
+    { folder: string; file: File }
+>(
+    `${name}/fetchUpload`,
+    async ({ folder, file }, thunkAPI) => {
+        try {
+            const response = await eventService.upload(folder, file);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 const eventSlice = createSlice({
     name,
     initialState,
@@ -163,6 +178,26 @@ const eventSlice = createSlice({
         builder.addCase(fetchDeleteEvent.fulfilled, (state, action) => {
             const deletedId = action.meta.arg;
             state.events = state.events.filter(e => e.id !== deletedId);
+        });
+
+        builder.addCase(fetchCreateEvent.fulfilled, (state, action) => {
+            const newEvent = action.payload;
+            state.currentEvent = newEvent;
+        });
+
+        builder.addCase(fetchUpdateEvent.fulfilled, (state, action) => {
+            const updatedEvent = action.payload;
+            state.currentEvent = updatedEvent;
+        });
+
+        builder.addCase(fetchUpdateEventSettings.fulfilled, (state, action) => {
+            const updatedEvent = action.payload;
+            state.currentEvent = updatedEvent;
+        });
+
+        builder.addCase(fetchCreateEventSessions.fulfilled, (state, action) => {
+            const updatedEvent = action.payload;
+            state.currentEvent = updatedEvent;
         });
     }
 });
