@@ -10,6 +10,7 @@ interface HeaderProps {
     title?: string;
     eventName?: string;
     canGoBack?: boolean;
+    urlBack?: string;
     onBack?: () => void;
 }
 
@@ -17,10 +18,23 @@ export default function Header({
     title,
     eventName,
     canGoBack = false,
+    urlBack,
     onBack,
 }: HeaderProps) {
     const navigate = useNavigate();
     const isEventHeader = !!eventName;
+
+    const handleBack = () => {
+        if (onBack) {
+            onBack();
+        } else if (urlBack) {
+            navigate(urlBack);
+        } else {
+            navigate(-1);
+        }
+    }
+
+
 
     return (
         <header className="sticky top-0 z-40 h-20 bg-gradient-to-b from-black/40 to-black/20 backdrop-blur-xl border-b border-white/10">
@@ -29,10 +43,11 @@ export default function Header({
                 <div className="flex items-center gap-4">
                     {canGoBack && (
                         <button
-                            onClick={onBack ?? (() => navigate(-1))}
-                            className="p-2 rounded-full hover:bg-white/10 transition"
+                            onClick={handleBack}
+                            className="p-2 rounded-full hover:bg-white/10 transition flex items-center font-semibold gap-1 text-sm text-white"
                         >
                             <FiArrowLeft className="text-white text-lg" />
+                            <span>Trở về</span>
                         </button>
                     )}
 
@@ -51,7 +66,7 @@ export default function Header({
 
                 {/* RIGHT */}
                 <div className="flex items-center gap-6">
-                    <button className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30">
+                    <button onClick={() => navigate("/organizer/create-event")} className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30">
                         <FiPlus />
                         Tạo sự kiện mới
                     </button>

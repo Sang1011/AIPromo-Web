@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import UploadBox from "../shared/UploadBox";
 
 interface Step1EventInfoProps {
@@ -20,6 +20,21 @@ export default function Step1EventInfo({
     const [orgLogo, setOrgLogo] = useState<File | null>(null);
     const [extraImages, setExtraImages] = useState<File[]>([]);
     const [actors, setActors] = useState<Actor[]>([]);
+    const ifCreateEvent = window.location.pathname === "/organizer/create-event";
+    const [hashtags, setHashtags] = useState<string>("");
+    const [categories, setCategories] = useState<string>("");
+
+
+
+    useEffect(() => {
+        console.log(ifCreateEvent);
+        if (ifCreateEvent) {
+            setActors([{ name: "", major: "", image: null }]);
+        }
+    }, [ifCreateEvent]);
+
+    // nếu là tạo mới thì set sẵn 1 actor để người dùng điền thông tin luôn, còn edit thì để trống
+    // nếu là edit thì có sẵn các field do fetch từ 1 event cụ thể, còn create thì để trống hết và user tự điền vào
 
     const handleExtraImages = (files: FileList | null) => {
         if (!files) return;
@@ -54,10 +69,7 @@ export default function Step1EventInfo({
                 <div className="flex justify-between mb-4">
                     <h3 className="font-semibold text-white">
                         * Hình ảnh sự kiện
-                    </h3>
-                    <button className="text-primary text-sm">
-                        Xem vị trí hiển thị
-                    </button>
+                    </h3>|
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -76,33 +88,37 @@ export default function Step1EventInfo({
                             Ảnh bổ sung sự kiện
                         </label>
 
-                        <label className="relative cursor-pointer rounded-xl border border-dashed border-white/10 flex items-center justify-center text-slate-400 aspect-[16/9] overflow-hidden">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={(e) =>
-                                    handleExtraImages(e.target.files)
-                                }
-                            />
-                            <span className="text-sm text-center px-4">
-                                Click để thêm ảnh
-                            </span>
-                        </label>
+                        <div className="flex flex-wrap gap-3">
 
-                        {/* Preview extra images */}
-                        {extraImages.length > 0 && (
-                            <div className="grid grid-cols-3 gap-3">
-                                {extraImages.map((img, i) => (
-                                    <img
-                                        key={i}
-                                        src={URL.createObjectURL(img)}
-                                        className="rounded-lg object-cover aspect-square"
-                                    />
-                                ))}
-                            </div>
-                        )}
+                            {/* Add image */}
+                            <label className="w-24 h-24 cursor-pointer rounded-lg border border-dashed border-white/20 flex items-center justify-center text-slate-400 text-xs text-center">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="hidden"
+                                    onChange={(e) => handleExtraImages(e.target.files)}
+                                />
+                                + Thêm ảnh
+                            </label>
+
+                            {/* Images */}
+                            {extraImages.map((img, i) => (
+                                <UploadBox
+                                    key={i}
+                                    label=""
+                                    aspect="1/1"
+                                    file={img}
+                                    square
+                                    className="w-24"
+                                    onChange={(file) => {
+                                        if (!file) {
+                                            setExtraImages(prev => prev.filter((_, idx) => idx !== i));
+                                        }
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </div>
             </section>
@@ -229,9 +245,7 @@ export default function Step1EventInfo({
                                 label="Ảnh"
                                 aspect="1/1"
                                 file={actor.image}
-                                onChange={(file) =>
-                                    updateActor(index, "image", file)
-                                }
+                                onChange={(file) => updateActor(index, "image", file)}
                                 square
                             />
 
