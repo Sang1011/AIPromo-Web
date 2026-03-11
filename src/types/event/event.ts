@@ -103,16 +103,18 @@ export interface UpdateEventSettingsRequest {
 }
 
 export interface GetAllEventResponse {
-    items: EventItem[];
-    pageNumber: number;
-    pageSize: number;
-    totalCount: number;
-    currentPageSize: number;
-    currentStartIndex: number;
-    currentEndIndex: number;
-    totalPages: number;
-    hasPrevious: boolean;
-    hasNext: boolean;
+    data: {
+        items: EventItem[];
+        pageNumber: number;
+        pageSize: number;
+        totalCount: number;
+        currentPageSize: number;
+        currentStartIndex: number;
+        currentEndIndex: number;
+        totalPages: number;
+        hasPrevious: boolean;
+        hasNext: boolean;
+    }
 }
 
 export interface GetEventDetailResponse {

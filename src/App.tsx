@@ -29,6 +29,7 @@ import { fetchMe } from "./store/authSlice";
 import type { AppDispatch } from "./store";
 import CreateEventPage from "./pages/Organizer/CreateEventPage";
 
+import ForgotPassword from "./pages/ForgotPassword";
 function App() {
   const ticketTypes = [
     { id: 'SVIP', name: 'SVIP', color: '#3b82f6', price: 5000000 },
@@ -49,6 +50,9 @@ function App() {
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/event-detail" element={<EventDetail />} />
       <Route path="/all-event" element={<AllEvent />} />
       <Route path="/history-event" element={<HistoryEvent />} />
