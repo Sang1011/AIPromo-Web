@@ -21,6 +21,8 @@ interface EventState {
         pageSize: number;
         totalCount: number;
         totalPages: number;
+         hasPrevious: boolean;  
+         hasNext: boolean;
     } | null;
 }
 
@@ -143,12 +145,14 @@ const eventSlice = createSlice({
         builder.addCase(
             fetchAllEvents.fulfilled,
             (state, action: PayloadAction<GetAllEventResponse>) => {
-                state.events = action.payload.items;
+                state.events = action.payload.data.items;
                 state.pagination = {
-                    pageNumber: action.payload.pageNumber,
-                    pageSize: action.payload.pageSize,
-                    totalCount: action.payload.totalCount,
-                    totalPages: action.payload.totalPages
+                    pageNumber: action.payload.data.pageNumber,
+                    pageSize: action.payload.data.pageSize,
+                    totalCount: action.payload.data.totalCount,
+                    totalPages: action.payload.data.totalPages,
+                    hasPrevious: action.payload.data.hasPrevious,  
+                    hasNext:     action.payload.data.hasNext, 
                 };
             }
         );
