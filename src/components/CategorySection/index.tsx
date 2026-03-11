@@ -5,6 +5,7 @@ interface Category {
   title: string;
   desc: string;
   count: string;
+  gradient: string;
 }
 
 interface Feature {
@@ -15,102 +16,251 @@ interface Feature {
 
 const CategorySection: React.FC = () => {
   const categories: Category[] = [
-    { icon: "smart_toy", title: "Công nghệ", desc: "AI, Web3, Blockchain", count: "120+ sự kiện" },
-    { icon: "music_note", title: "Âm nhạc", desc: "Festival, Live show", count: "85+ sự kiện" },
-    { icon: "school", title: "Hội thảo", desc: "Chuyên môn, Học thuật", count: "95+ sự kiện" },
-    { icon: "palette", title: "Workshop", desc: "Kỹ năng, Sáng tạo", count: "72+ sự kiện" },
-    { icon: "sports_esports", title: "Giải trí", desc: "Game, Esports", count: "64+ sự kiện" },
-    { icon: "apps", title: "Khác", desc: "Cộng đồng, Meetup", count: "150+ sự kiện" },
+    { icon: "smart_toy", title: "Công nghệ", desc: "AI, Web3, Blockchain", count: "120+ sự kiện", gradient: "from-violet-500 to-indigo-500" },
+    { icon: "music_note", title: "Âm nhạc", desc: "Festival, Live show", count: "85+ sự kiện", gradient: "from-pink-500 to-rose-500" },
+    { icon: "school", title: "Hội thảo", desc: "Chuyên môn, Học thuật", count: "95+ sự kiện", gradient: "from-cyan-500 to-blue-500" },
+    { icon: "palette", title: "Workshop", desc: "Kỹ năng, Sáng tạo", count: "72+ sự kiện", gradient: "from-amber-500 to-orange-500" },
+    { icon: "sports_esports", title: "Giải trí", desc: "Game, Esports", count: "64+ sự kiện", gradient: "from-emerald-500 to-teal-500" },
+    { icon: "apps", title: "Khác", desc: "Cộng đồng, Meetup", count: "150+ sự kiện", gradient: "from-purple-500 to-violet-500" },
   ];
 
   const features: Feature[] = [
-    { icon: "verified", title: "Chất lượng đảm bảo", desc: "Mọi sự kiện được kiểm duyệt kỹ lưỡng bởi đội ngũ chuyên nghiệp" },
-    { icon: "update", title: "Cập nhật liên tục", desc: "Hàng trăm sự kiện mới được thêm vào mỗi tuần" },
-    { icon: "filter_alt", title: "Tìm kiếm thông minh", desc: "Bộ lọc AI giúp bạn tìm sự kiện phù hợp nhất trong vài giây" },
+    { icon: "verified", title: "Chất lượng đảm bảo", desc: "Mọi sự kiện được kiểm duyệt kỹ lưỡng bởi đội ngũ chuyên nghiệp của chúng tôi." },
+    { icon: "update", title: "Cập nhật liên tục", desc: "Hàng trăm sự kiện mới được thêm vào mỗi tuần trên khắp cả nước." },
+    { icon: "filter_alt", title: "Tìm kiếm thông minh", desc: "Bộ lọc AI giúp bạn tìm sự kiện phù hợp nhất trong vài giây." },
   ];
 
   return (
-    <section className="relative py-24 px-6 overflow-hidden">
+    <>
+      <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 
-      {/* Background giống file HTML */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 -z-10"></div>
+      <style>{`
+        .cat-section { font-family: 'Be Vietnam Pro', sans-serif; }
 
-      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl -z-10"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl -z-10"></div>
+        .cat-card {
+          position: relative;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 20px;
+          padding: 28px 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 0;
+          cursor: pointer;
+          transition: transform 0.35s cubic-bezier(.22,1,.36,1), background 0.3s, border-color 0.3s, box-shadow 0.3s;
+          overflow: hidden;
+        }
+        .cat-card::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          opacity: 0;
+          transition: opacity 0.3s;
+          border-radius: 20px;
+        }
+        .cat-card:hover::before { opacity: 1; }
+        .cat-card:hover {
+          transform: translateY(-6px);
+          border-color: rgba(255,255,255,0.18);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
 
-      <div className="max-w-7xl mx-auto">
+        .icon-wrap {
+          width: 64px;
+          height: 64px;
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 16px;
+          flex-shrink: 0;
+        }
 
-        {/* Header */}
-        <div className="mb-16 text-center">
-          <span className="text-indigo-400 text-sm font-bold uppercase tracking-widest">
-            Danh mục
-          </span>
-          <h2 className="text-5xl font-black text-white mt-4 mb-4">
-            Khám phá sự kiện theo sở thích
-          </h2>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Tìm kiếm và tham gia các sự kiện phù hợp nhất với đam mê của bạn
-          </p>
-        </div>
+        .feat-card {
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 20px;
+          padding: 32px 28px;
+          display: flex;
+          flex-direction: column;
+          transition: background 0.3s, border-color 0.3s, transform 0.3s;
+        }
+        .feat-card:hover {
+          background: rgba(255,255,255,0.07);
+          border-color: rgba(255,255,255,0.15);
+          transform: translateY(-4px);
+        }
 
-        {/* Categories */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-16">
-          {categories.map((cat, index) => (
-            <div
-              key={index}
-              className="bg-white/5 backdrop-blur-xl border border-white/10 
-                         rounded-3xl p-8 flex flex-col items-center text-center 
-                         gap-4 transition-all duration-500 
-                         hover:scale-105 hover:bg-white/10 cursor-pointer group"
-            >
-              <div className="relative mb-2">
-                <div className="absolute inset-0 bg-indigo-500/30 blur-xl rounded-full 
-                                opacity-0 group-hover:opacity-100 transition"></div>
-                <span className="material-symbols-outlined text-5xl text-indigo-400 relative">
-                  {cat.icon}
-                </span>
-              </div>
+        .badge {
+          display: inline-block;
+          background: rgba(99,102,241,0.15);
+          border: 1px solid rgba(99,102,241,0.3);
+          color: #818cf8;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          padding: 6px 14px;
+          border-radius: 100px;
+          margin-bottom: 16px;
+        }
 
-              <h4 className="font-bold text-white text-lg">
-                {cat.title}
-              </h4>
+        .divider-line {
+          width: 48px;
+          height: 3px;
+          background: linear-gradient(90deg, #6366f1, #8b5cf6);
+          border-radius: 2px;
+          margin: 0 auto 24px;
+        }
+      `}</style>
 
-              <p className="text-sm text-slate-400">
-                {cat.desc}
-              </p>
+      <section className="cat-section relative py-24 px-6 overflow-hidden" style={{ background: 'rgb(14, 14, 24)' }}>
 
-              <div className="mt-2 text-xs font-bold text-indigo-400">
-                {cat.count}
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Ambient glows */}
+        <div style={{
+          position: 'absolute', top: '-120px', left: '-120px',
+          width: '500px', height: '500px',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
+        <div style={{
+          position: 'absolute', bottom: '-120px', right: '-120px',
+          width: '500px', height: '500px',
+          background: 'radial-gradient(circle, rgba(139,92,246,0.10) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
 
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {features.map((feat, index) => (
-            <div
-              key={index}
-              className="bg-white/5 backdrop-blur-xl border border-white/10 
-                         rounded-3xl p-8 hover:bg-white/10 transition"
-            >
-              <span className="material-symbols-outlined text-4xl text-indigo-400 mb-4 block">
-                {feat.icon}
+        <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
+
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+            <div className="badge">Danh mục</div>
+            <h2 style={{
+              fontSize: 'clamp(2rem, 4vw, 3rem)',
+              fontWeight: 900,
+              color: '#fff',
+              lineHeight: 1.15,
+              marginBottom: '12px',
+              letterSpacing: '-0.02em'
+            }}>
+              Khám phá sự kiện<br />
+              <span style={{ background: 'linear-gradient(135deg, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                theo sở thích
               </span>
+            </h2>
+            <div className="divider-line" />
+            <p style={{ color: '#94a3b8', fontSize: '16px', maxWidth: '520px', margin: '0 auto', lineHeight: 1.7 }}>
+              Tìm kiếm và tham gia các sự kiện phù hợp nhất với đam mê của bạn
+            </p>
+          </div>
 
-              <h4 className="text-xl font-bold text-white mb-3">
-                {feat.title}
-              </h4>
+          {/* Categories Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px',
+            alignItems: 'stretch'
+          }}>
+            {categories.map((cat, index) => {
+              const gradients: Record<string, string> = {
+                'from-violet-500 to-indigo-500': 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                'from-pink-500 to-rose-500': 'linear-gradient(135deg, #ec4899, #f43f5e)',
+                'from-cyan-500 to-blue-500': 'linear-gradient(135deg, #06b6d4, #3b82f6)',
+                'from-amber-500 to-orange-500': 'linear-gradient(135deg, #f59e0b, #f97316)',
+                'from-emerald-500 to-teal-500': 'linear-gradient(135deg, #10b981, #14b8a6)',
+                'from-purple-500 to-violet-500': 'linear-gradient(135deg, #a855f7, #8b5cf6)',
+              };
+              const grad = gradients[cat.gradient];
+              return (
+                <div key={index} className="cat-card" style={{ height: '100%', minHeight: '200px', justifyContent: 'center' }}>
+                  <div className="icon-wrap" style={{ background: `${grad.replace('linear-gradient', 'linear-gradient').replace(')', ', 0.15)')}`, border: `1px solid ${grad.includes('violet') ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.1)'}` }}>
+                    <span className="material-symbols-outlined" style={{
+                      fontSize: '28px',
+                      background: grad,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}>
+                      {cat.icon}
+                    </span>
+                  </div>
 
-              <p className="text-slate-400 text-sm leading-relaxed">
-                {feat.desc}
-              </p>
-            </div>
-          ))}
+                  <h4 style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '15px', marginBottom: '6px' }}>
+                    {cat.title}
+                  </h4>
+
+                  <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px', lineHeight: 1.5 }}>
+                    {cat.desc}
+                  </p>
+
+                  <div style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '4px 12px',
+                    borderRadius: '100px',
+                    background: 'rgba(99,102,241,0.1)',
+                    color: '#818cf8',
+                    border: '1px solid rgba(99,102,241,0.2)',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {cat.count}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Features */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '16px',
+            marginTop: '40px',
+            alignItems: 'stretch'
+          }}>
+            {features.map((feat, index) => {
+              const featGrads = [
+                'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                'linear-gradient(135deg, #06b6d4, #6366f1)',
+                'linear-gradient(135deg, #8b5cf6, #ec4899)',
+              ];
+              return (
+                <div key={index} className="feat-card">
+                  <div style={{
+                    width: '48px', height: '48px', borderRadius: '14px',
+                    background: 'rgba(99,102,241,0.12)',
+                    border: '1px solid rgba(99,102,241,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: '20px', flexShrink: 0
+                  }}>
+                    <span className="material-symbols-outlined" style={{
+                      fontSize: '22px',
+                      background: featGrads[index],
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}>
+                      {feat.icon}
+                    </span>
+                  </div>
+
+                  <h4 style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '17px', marginBottom: '10px' }}>
+                    {feat.title}
+                  </h4>
+
+                  <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.75, margin: 0 }}>
+                    {feat.desc}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
         </div>
-
-      </div>
-    </section>
+      </section>
+    </>
   );
 };
 
