@@ -23,6 +23,11 @@ import Login from "./pages/LoginPage";
 import data from "../src/data/seat-map.json";
 import SeatMapViewerPage from "./pages/Organizer/SeatMapViewerPage";
 import Register from "./pages/RegisterPage";
+import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { fetchMe } from "./store/authSlice";
+import type { AppDispatch } from "./store";
+
 import ForgotPassword from "./pages/ForgotPassword";
 function App() {
   const ticketTypes = [
@@ -32,17 +37,27 @@ function App() {
     { id: 'CAT1', name: 'CAT 1', color: '#f59e0b', price: 2750000 },
     { id: 'CAT2', name: 'CAT 2', color: '#94a3b8', price: 1800000 },
   ];
+
+const dispatch = useDispatch<AppDispatch>();
+ useEffect(() => {
+  dispatch(fetchMe());
+}, [dispatch]);
+
   return (
     <Routes>
       {/*Attendee*/}
       <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login/>} />
       <Route path="/register" element={<Register/>} />
       <Route path="/forgot-password" element={<ForgotPassword/>} />
       <Route path="/event-detail" element={<EventDetail />} />
       <Route path="/all-event" element={<AllEvent />} />
       <Route path="/history-event" element={<HistoryEvent />} />
-      {/* Dashboard group */}
+
+      {/* Organizer */}
+      {/* Organizer - Dashboard group */}
       <Route path="/organizer" element={<DashboardLayout />}>
         <Route path="my-events" element={<MyEventsPage />} />
         <Route path="reports" element={<ReportManagementPage />} />
@@ -50,7 +65,7 @@ function App() {
         <Route path="create-event" element={<EditEventWizardPage />} />
       </Route>
 
-      {/* Organizer */}
+      {/* Organizer - Event group */}
       <Route path="/organizer/my-events/:eventId" element={<ManagementLayout />}>
         <Route path="overview" element={<SummaryPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
