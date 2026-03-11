@@ -23,6 +23,10 @@ import Login from "./pages/LoginPage";
 import data from "../src/data/seat-map.json";
 import SeatMapViewerPage from "./pages/Organizer/SeatMapViewerPage";
 import Register from "./pages/RegisterPage";
+import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { fetchMe } from "./store/authSlice";
+import type { AppDispatch } from "./store";
 
 function App() {
   const ticketTypes = [
@@ -32,6 +36,12 @@ function App() {
     { id: 'CAT1', name: 'CAT 1', color: '#f59e0b', price: 2750000 },
     { id: 'CAT2', name: 'CAT 2', color: '#94a3b8', price: 1800000 },
   ];
+
+const dispatch = useDispatch<AppDispatch>();
+ useEffect(() => {
+  dispatch(fetchMe());
+}, [dispatch]);
+
   return (
     <Routes>
       {/*Attendee*/}
