@@ -1,45 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-
-/* ================= TYPES ================= */
-
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface EventItem {
-  id: string;
-  title: string;
-  status: string;
-  bannerUrl: string;
-  location: string;
-  eventStartAt: string;
-  eventEndAt: string;
-  urlPath: string;
-  createdAt: string;
-  categories: Category[];
-}
-
-interface PaginatedData {
-  items: EventItem[];
-  pageNumber: number;
-  pageSize: number;
-  totalCount: number;
-  totalPages: number;
-  hasPrevious: boolean;
-  hasNext: boolean;
-}
-
-interface ApiResponse {
-  isSuccess: boolean;
-  data: PaginatedData;
-  message: string | null;
-}
+import React, { useState, useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../store";
+import { fetchAllEvents } from "../../store/eventSlice";
+import type { EventItem } from "../../types/event/event";
 
 /* ================= CONFIG ================= */
 
 const PAGE_SIZE = 6;
-const API_BASE = "https://localhost:7000/api/events";
 
 /* ================= HELPERS ================= */
 
@@ -114,7 +81,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
 
         {/* Category tags */}
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap z-10">
-          {item.categories.length > 0 ? (
+          {item.categories?.length > 0 ? (
             item.categories.map((cat) => {
               const color = getCategoryColor(cat.id);
               return (
@@ -355,22 +322,16 @@ const Pagination = ({
 /* ================= MAIN ================= */
 
 const EventListSection: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const events = useSelector((s: RootState) => s.EVENT?.events) ?? [];
+  console.log("event", events);
+  
+  const pagination = useSelector((s: RootState) => s.EVENT?.pagination) ?? null;
+
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [data, setData] = useState<PaginatedData | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Collect all unique categories from all loaded items
-  const allCategories = useMemo<Category[]>(() => {
-    if (!data) return [];
-    const map = new Map<number, Category>();
-    data.items.forEach((item) =>
-      item.categories.forEach((cat) => map.set(cat.id, cat))
-    );
-    return Array.from(map.values()).sort((a, b) => a.id - b.id);
-  }, [data]);
 
   /* ===== SEARCH DEBOUNCE ===== */
   useEffect(() => {
@@ -378,47 +339,37 @@ const EventListSection: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
-  /* ===== FETCH EVENTS ===== */
-  const fetchEvents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        PageNumber: String(pageNumber),
-        PageSize: String(PAGE_SIZE),
-      });
-      const res = await fetch(`${API_BASE}?${params.toString()}`);
-      const json: ApiResponse = await res.json();
-      if (json.isSuccess) setData(json.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [pageNumber]);
-
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    let cancelled = false;
+    setLoading(true);
+    dispatch(
+      fetchAllEvents({
+        PageNumber: pageNumber,
+        PageSize: PAGE_SIZE,
+      })
+    )
+      .unwrap()
+      .catch(() => {
+        // UI already handles "no events" state; keep it silent here.
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, pageNumber]);
 
   /* ===== FRONTEND FILTER (search + category) ===== */
   const filteredEvents = useMemo(() => {
-    if (!data) return [];
     const keyword = searchQuery.toLowerCase().trim();
-    return data.items.filter((event) => {
+    return events.filter((event) => {
       const matchSearch = keyword
         ? event.title.toLowerCase().includes(keyword)
         : true;
-      const matchCategory =
-        selectedCategory !== null
-          ? event.categories.some((c) => c.id === selectedCategory)
-          : true;
-      return matchSearch && matchCategory;
+      return matchSearch;
     });
-  }, [data, searchQuery, selectedCategory]);
-
-  const handleCategoryClick = (id: number | null) => {
-    setSelectedCategory((prev) => (prev === id ? null : id));
-  };
+  }, [events, searchQuery]);
 
   /* ================= UI ================= */
 
@@ -511,7 +462,7 @@ const EventListSection: React.FC = () => {
          
         </div>
 
-        {/* Search + Filter Bar */}
+        {/* Search */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-center">
           {/* Search input */}
           <div className="relative flex-1 max-w-sm">
@@ -555,65 +506,6 @@ const EventListSection: React.FC = () => {
               }
             />
           </div>
-
-          {/* Category filter pills */}
-          {allCategories.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {/* All */}
-              <button
-                onClick={() => handleCategoryClick(null)}
-                style={{
-                  padding: "7px 14px",
-                  borderRadius: 99,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  border:
-                    selectedCategory === null
-                      ? "1px solid rgba(124,59,237,0.8)"
-                      : "1px solid rgba(124,59,237,0.2)",
-                  background:
-                    selectedCategory === null
-                      ? "linear-gradient(135deg,#7c3bed,#a855f7)"
-                      : "rgba(124,59,237,0.06)",
-                  color: selectedCategory === null ? "#fff" : "rgba(167,139,250,0.8)",
-                  boxShadow:
-                    selectedCategory === null
-                      ? "0 4px 14px rgba(124,59,237,0.35)"
-                      : "none",
-                }}
-              >
-                Tất cả
-              </button>
-
-              {allCategories.map((cat) => {
-                const isActive = selectedCategory === cat.id;
-                const color = getCategoryColor(cat.id);
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleCategoryClick(cat.id)}
-                    style={{
-                      padding: "7px 14px",
-                      borderRadius: 99,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                      background: isActive ? color.bg : "rgba(255,255,255,0.04)",
-                      border: isActive
-                        ? `1px solid ${color.border}`
-                        : "1px solid rgba(255,255,255,0.1)",
-                      color: isActive ? color.text : "rgba(255,255,255,0.45)",
-                    }}
-                  >
-                    {cat.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* Grid */}
@@ -645,12 +537,12 @@ const EventListSection: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        {data && data.totalPages > 1 && (
+        {pagination && pagination.totalPages > 1 && (
           <Pagination
             current={pageNumber}
-            total={data.totalPages}
-            hasPrev={data.hasPrevious}
-            hasNext={data.hasNext}
+            total={pagination.totalPages}
+            hasPrev={pagination.hasPrevious}
+            hasNext={pagination.hasNext}
             onChange={(p) => {
               setPageNumber(p);
               // window.scrollTo({ top: 0, behavior: "smooth" });
