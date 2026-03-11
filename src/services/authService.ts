@@ -12,6 +12,9 @@ const authService = {
   register: (data: RegisterRequest): Promise<AxiosResponse<any>> => {
     return API.call().post("/auth/register", data)
   },
+   fetchWithMe: (token: string): Promise<AxiosResponse<any>> => {
+    return API.callWithToken(token).get("/users/current")
+  },
 }
 
 export default authService

@@ -54,13 +54,29 @@ export const fetchRegister = createAsyncThunk<
    }
 );
 
+export const fetchMe = createAsyncThunk(
+  `${name}/fetchMe`,
+  async (_, thunkAPI) => {
+    try {
+      const token = localStorage.getItem("ACCESS_TOKEN");
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Token not found");
+      }
+      const response = await authService.fetchWithMe(token);  
+      return response.data;
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
 
 const authSlice = createSlice({
    name,
    initialState,
    reducers: {},
    extraReducers: (builder) => {
-     builder.addCase(fetchLogin.fulfilled, (state, action: PayloadAction<any>) => {
+      builder.addCase(fetchLogin.fulfilled, (state, action: PayloadAction<any>) => {
          const responseData = action.payload;
          if (responseData?.isSuccess) {
             const token = responseData.data.accessToken;
@@ -80,6 +96,12 @@ const authSlice = createSlice({
             if (token) {
                localStorage.setItem("ACCESS_TOKEN", token);
             }
+         }
+      });
+      builder.addCase(fetchMe.fulfilled, (state, action: PayloadAction<any>) => {
+         const responseData = action.payload;
+         if (responseData?.isSuccess) {
+            state.currentInfor = responseData.data;
          }
       });
    },
