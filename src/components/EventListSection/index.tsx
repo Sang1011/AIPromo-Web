@@ -95,7 +95,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
         (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
         (e.currentTarget as HTMLDivElement).style.border = "1px solid rgba(124,59,237,0.12)";
         (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 24px rgba(0,0,0,0.3)";
-}}
+      }}
     >
       {/* Banner */}
       <div className="relative overflow-hidden" style={{ aspectRatio: "16/9" }}>
@@ -155,11 +155,10 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
                   ? "rgba(20,184,166,0.2)"
                   : "rgba(245,158,11,0.2)",
               color: item.status === "Published" ? "#2dd4bf" : "#fbbf24",
-              border: `1px solid ${
-                item.status === "Published"
+              border: `1px solid ${item.status === "Published"
                   ? "rgba(20,184,166,0.4)"
                   : "rgba(245,158,11,0.4)"
-              }`,
+                }`,
             }}
           >
             {item.status === "Published" ? "● Đang mở" : item.status}
@@ -174,7 +173,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
           <span className="flex items-center gap-1.5">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" />
-<line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="16" y1="2" x2="16" y2="6" />
               <line x1="8" y1="2" x2="8" y2="6" />
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
@@ -269,7 +268,7 @@ const Pagination = ({
   onChange: (p: number) => void;
 }) => {
   const getPages = () => {
-if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
     const pages: (number | "...")[] = [];
     pages.push(1);
     if (current > 3) pages.push("...");
@@ -325,11 +324,11 @@ if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
               ...btnBase,
               ...(p === current
                 ? {
-                    background: "linear-gradient(135deg,#7c3bed,#a855f7)",
-                    border: "1px solid transparent",
-                    color: "#fff",
-                    boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
-                  }
+                  background: "linear-gradient(135deg,#7c3bed,#a855f7)",
+                  border: "1px solid transparent",
+                  color: "#fff",
+                  boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
+                }
                 : {}),
             }}
           >
@@ -371,7 +370,7 @@ const EventListSection: React.FC = () => {
       item.categories.forEach((cat) => map.set(cat.id, cat))
     );
     return Array.from(map.values()).sort((a, b) => a.id - b.id);
-}, [data]);
+  }, [data]);
 
   /* ===== SEARCH DEBOUNCE ===== */
   useEffect(() => {
@@ -439,36 +438,81 @@ const EventListSection: React.FC = () => {
 
       <div className="max-w-7xl mx-auto relative">
         {/* Header */}
-        <div className="mb-10">
-          <p
-            className="text-xs font-bold tracking-[0.3em] uppercase mb-3"
-            style={{ color: "#a78bfa" }}
+        <div className="mb-10 flex flex-col items-center text-center">
+          {/* Top badge */}
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5"
+            style={{
+              background: "rgba(124,59,237,0.12)",
+              border: "1px solid rgba(124,59,237,0.3)",
+              boxShadow: "0 0 20px rgba(124,59,237,0.15)",
+            }}
           >
-            Khám phá
+            <span
+              className="w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ background: "#a78bfa" }}
+            />
+            <p
+              className="text-xs font-bold tracking-[0.25em] uppercase"
+              style={{ color: "#a78bfa" }}
+            >
+              Khám phá
+            </p>
+          </div>
+
+          {/* Title with gradient */}
+          <div className="relative inline-block mb-4">
+            <h2
+              className="text-5xl font-extrabold tracking-tight"
+              style={{
+                background: "linear-gradient(135deg, #f1f0ff 0%, #a78bfa 50%, #7c3bed 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                lineHeight: 1.15,
+              }}
+            >
+              Sự kiện nổi bật
+            </h2>
+            {/* Animated underline accent */}
+            <span
+              className="absolute -bottom-1 left-0 h-0.5 rounded-full"
+              style={{
+                width: "60%",
+                background: "linear-gradient(90deg, #7c3bed, #a855f7, transparent)",
+                animation: "expandWidth 1s ease-out forwards",
+              }}
+            />
+            <style>{`
+      @keyframes expandWidth {
+        from { width: 0%; opacity: 0; }
+        to { width: 60%; opacity: 1; }
+      }
+    `}</style>
+          </div>
+
+          {/* Subtitle */}
+          <p
+            className="max-w-lg text-base leading-relaxed"
+            style={{ color: "rgba(148,163,184,0.75)" }}
+          >
+            Tham gia những sự kiện đặc sắc nhất — âm nhạc, nghệ thuật, công nghệ và hơn thế nữa,
+            được tuyển chọn dành riêng cho bạn.
           </p>
-          <h2 className="text-4xl font-extrabold text-white mb-2 tracking-tight">
-            Sự kiện nổi bật
-          </h2>
-          <p style={{ color: "rgba(148,163,184,0.7)", fontSize: 15 }}>
-            {data ? (
-              <>
-                Tìm thấy{" "}
-                <span style={{ color: "#a78bfa", fontWeight: 700 }}>
-                  {filteredEvents.length}
-                </span>{" "}
-                sự kiện
-                {selectedCategory !== null || searchQuery
-                  ? " phù hợp"
-                  : ` trong trang này (tổng ${data.totalCount})`}
-              </>
-            ) : (
-              "Đang tải..."
-            )}
-          </p>
+
+          {/* Divider */}
+          <div
+            className="mt-6 w-16 h-px rounded-full"
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(124,59,237,0.5), transparent)",
+            }}
+          />
+
+         
         </div>
 
         {/* Search + Filter Bar */}
-<div className="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-center">
+        <div className="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-center">
           {/* Search input */}
           <div className="relative flex-1 max-w-sm">
             <svg
@@ -546,7 +590,7 @@ const EventListSection: React.FC = () => {
               {allCategories.map((cat) => {
                 const isActive = selectedCategory === cat.id;
                 const color = getCategoryColor(cat.id);
-return (
+                return (
                   <button
                     key={cat.id}
                     onClick={() => handleCategoryClick(cat.id)}
@@ -577,8 +621,8 @@ return (
           {loading
             ? Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
             : filteredEvents.length > 0
-            ? filteredEvents.map((item) => <EventCard key={item.id} item={item} />)
-            : !loading && (
+              ? filteredEvents.map((item) => <EventCard key={item.id} item={item} />)
+              : !loading && (
                 <div
                   className="col-span-3 flex flex-col items-center justify-center py-20 gap-4"
                   style={{ color: "rgba(148,163,184,0.5)" }}
