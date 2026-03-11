@@ -7,10 +7,9 @@ export interface Hashtag {
     usageCount: number;
 }
 
-export interface CreateHashtagRequest extends Omit<Hashtag, "id" | "usageCount"> {
-}
+export interface CreateHashtagRequest extends Pick<Hashtag, "name"> { }
 
 export type GetAllHashtagsResponse = ApiResponse<Hashtag[]>;
 export type GetHashtagByIdResponse = ApiResponse<Hashtag>;
 
-// export interface UpdateHashtagRequest extends Pick<CreateHashtagRequest, "name"> {}
+// export interface UpdateHashtagRequest extends CreateHashtagRequest {}

@@ -27,6 +27,7 @@ import { useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { fetchMe } from "./store/authSlice";
 import type { AppDispatch } from "./store";
+import CreateEventPage from "./pages/Organizer/CreateEventPage";
 
 function App() {
   const ticketTypes = [
@@ -37,10 +38,10 @@ function App() {
     { id: 'CAT2', name: 'CAT 2', color: '#94a3b8', price: 1800000 },
   ];
 
-const dispatch = useDispatch<AppDispatch>();
- useEffect(() => {
-  dispatch(fetchMe());
-}, [dispatch]);
+  const dispatch = useDispatch<AppDispatch>();
+  useEffect(() => {
+    dispatch(fetchMe());
+  }, [dispatch]);
 
   return (
     <Routes>
@@ -58,7 +59,7 @@ const dispatch = useDispatch<AppDispatch>();
         <Route path="my-events" element={<MyEventsPage />} />
         <Route path="reports" element={<ReportManagementPage />} />
         <Route path="legals" element={<LegalPage />} />
-        <Route path="create-event" element={<EditEventWizardPage />} />
+        <Route path="create-event" element={<CreateEventPage />} />
       </Route>
 
       {/* Organizer - Event group */}

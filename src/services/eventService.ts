@@ -7,7 +7,9 @@ import type {
     UpdateEventSettingsRequest,
     CreateEventSessionRequest,
     UpdateEventSessionRequest,
-    GetAllSessionResponse
+    GetAllSessionResponse,
+    GetAllRequestByMe,
+    GetAllEventByMeResponse
 } from "../types/event/event"
 
 import API from "./api"
@@ -36,6 +38,12 @@ const eventService = {
         });
     },
 
+    getAllEventsByMe: (request: GetAllRequestByMe): Promise<AxiosResponse<GetAllEventByMeResponse>> => {
+        return API.call().get("/events/me", {
+            params: request
+        });
+    },
+
     upload: (folder: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
         const formData = new FormData();
         formData.append("folder", folder);
@@ -47,10 +55,19 @@ const eventService = {
         });
     },
 
-    updateImage: (eventId: string, imageId: string, file: File): Promise<AxiosResponse<any>> => {
+    updateEventBanner: (eventId: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
         const formData = new FormData();
         formData.append("file", file);
+        return API.call().put(`/events/${eventId}/banner`, formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        });
+    },
 
+    updateImage: (eventId: string, imageId: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
+        const formData = new FormData();
+        formData.append("file", file);
         return API.call().put(`/events/${eventId}/images/${imageId}`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
@@ -113,7 +130,10 @@ const eventService = {
 
     unpublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
         return API.call().post(`/events/${eventId}/unpublish`);
-    }
+    },
+    requestPublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
+        return API.call().post(`/events/${eventId}/request-publish`);
+    },
 }
 
 export default eventService

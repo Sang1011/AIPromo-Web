@@ -8,6 +8,7 @@ export default function UploadBox({
     onChange,
     className = "",
     square = false,
+    error = false,
 }: {
     label: string;
     aspect: string;
@@ -15,10 +16,11 @@ export default function UploadBox({
     onChange: (f: File | null) => void;
     className?: string;
     square?: boolean;
+    error?: boolean;
 }) {
 
     const [preview, setPreview] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [modalError, setModalError] = useState<string | null>(null);
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
 
@@ -32,7 +34,7 @@ export default function UploadBox({
         ];
 
         if (!allowedTypes.includes(selectedFile.type)) {
-            setError("Chỉ cho phép ảnh JPEG, PNG, GIF, WebP");
+            setModalError("Chỉ cho phép ảnh JPEG, PNG, GIF, WebP");
             e.target.value = "";
             return;
         }
@@ -40,7 +42,7 @@ export default function UploadBox({
         const maxSize = 10 * 1024 * 1024;
 
         if (selectedFile.size > maxSize) {
-            setError("Ảnh không được vượt quá 10MB");
+            setModalError("Ảnh không được vượt quá 10MB");
             e.target.value = "";
             return;
         }
@@ -67,7 +69,8 @@ export default function UploadBox({
             <label
                 className={`
                 relative cursor-pointer rounded-xl
-                border border-dashed border-white/10
+                border border-dashed 
+${error ? "border-red-500" : "border-white/10"}
                 flex items-center justify-center
                 text-slate-400 overflow-hidden
                 ${square ? "aspect-square" : `aspect-[${aspect}]`}
@@ -127,12 +130,12 @@ export default function UploadBox({
                 </div>
             )}
 
-            {error && (
+            {modalError && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
                     <div className="bg-[#1f1f1f] p-6 rounded-xl w-[300px] text-center">
-                        <p className="text-white mb-4">{error}</p>
+                        <p className="text-white mb-4">{modalError}</p>
                         <button
-                            onClick={() => setError(null)}
+                            onClick={() => setModalError(null)}
                             className="px-4 py-2 bg-blue-500 rounded text-white"
                         >
                             OK

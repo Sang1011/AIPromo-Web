@@ -5,6 +5,15 @@ export interface GetAllRequest {
     SortOrder?: string;
 }
 
+export type EventStatus =
+    | "Draft"
+    | "PendingReview"
+    | "Published"
+    | "Unpublished"
+    | "PendingCancellation"
+    | "Cancelled"
+    | "Completed";
+
 export interface EventTicketType {
     id: string;
     name: string;
@@ -55,7 +64,7 @@ export interface EventActorImage {
 export interface EventItem {
     id: string;
     title: string;
-    status: string;
+    status: EventStatus;
     bannerUrl: string;
     location: string;
     eventStartAt: string;
@@ -110,7 +119,7 @@ export interface GetEventDetailResponse {
     id: string;
     organizerId: string;
     title: string;
-    status: string;
+    status: EventStatus;
     bannerUrl: string;
     location: string;
     mapUrl: string;
@@ -133,3 +142,8 @@ export interface GetEventDetailResponse {
 
 export type GetAllSessionResponse = EventSession[];
 export type UpdateEventSessionRequest = Omit<EventSession, "ticketTypes">;
+
+export interface GetAllRequestByMe extends GetAllRequest {
+    Status?: string;
+}
+export type GetAllEventByMeResponse = GetAllEventResponse;

@@ -10,7 +10,9 @@ import type {
     CreateEventSessionRequest,
     GetAllRequest,
     UpdateEventSessionRequest,
-    GetAllSessionResponse
+    GetAllSessionResponse,
+    GetAllEventByMeResponse,
+    GetAllRequestByMe
 } from "../types/event/event";
 
 const name = "event";
@@ -32,10 +34,7 @@ const initialState: EventState = {
     pagination: null
 };
 
-export const fetchAllEvents = createAsyncThunk<
-    GetAllEventResponse,
-    GetAllRequest
->(
+export const fetchAllEvents = createAsyncThunk<GetAllEventResponse, GetAllRequest>(
     `${name}/fetchAllEvents`,
     async (params, thunkAPI) => {
         try {
@@ -47,10 +46,19 @@ export const fetchAllEvents = createAsyncThunk<
     }
 );
 
-export const fetchEventById = createAsyncThunk<
-    GetEventDetailResponse,
-    string
->(
+export const fetchAllEventsByMe = createAsyncThunk<GetAllEventByMeResponse, GetAllRequestByMe>(
+    `${name}/fetchAllEventsByMe`,
+    async (params, thunkAPI) => {
+        try {
+            const response = await eventService.getAllEventsByMe(params);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchEventById = createAsyncThunk<GetEventDetailResponse, string>(
     `${name}/fetchEventById`,
     async (id, thunkAPI) => {
         try {
@@ -62,10 +70,7 @@ export const fetchEventById = createAsyncThunk<
     }
 );
 
-export const fetchCreateEvent = createAsyncThunk<
-    any,
-    CreateEventRequest
->(
+export const fetchCreateEvent = createAsyncThunk<any, CreateEventRequest>(
     `${name}/fetchCreateEvent`,
     async (data, thunkAPI) => {
         try {
@@ -77,10 +82,7 @@ export const fetchCreateEvent = createAsyncThunk<
     }
 );
 
-export const fetchUpdateEvent = createAsyncThunk<
-    any,
-    { id: string; data: UpdateEventInfoRequest }
->(
+export const fetchUpdateEvent = createAsyncThunk<any, { id: string; data: UpdateEventInfoRequest }>(
     `${name}/fetchUpdateEvent`,
     async ({ id, data }, thunkAPI) => {
         try {
@@ -92,10 +94,7 @@ export const fetchUpdateEvent = createAsyncThunk<
     }
 );
 
-export const fetchSessions = createAsyncThunk<
-    GetAllSessionResponse,
-    string
->(
+export const fetchSessions = createAsyncThunk<GetAllSessionResponse, string>(
     `${name}/fetchSessions`,
     async (eventId, thunkAPI) => {
         try {
@@ -107,10 +106,7 @@ export const fetchSessions = createAsyncThunk<
     }
 );
 
-export const fetchDeleteSession = createAsyncThunk<
-    any,
-    { eventId: string; sessionId: string }
->(
+export const fetchDeleteSession = createAsyncThunk<any, { eventId: string; sessionId: string }>(
     `${name}/deleteSession`,
     async ({ eventId, sessionId }, thunkAPI) => {
         try {
@@ -137,10 +133,7 @@ export const fetchUpdateSession = createAsyncThunk<
     }
 );
 
-export const fetchDeleteEvent = createAsyncThunk<
-    any,
-    string
->(
+export const fetchDeleteEvent = createAsyncThunk<any, string>(
     `${name}/fetchDeleteEvent`,
     async (id, thunkAPI) => {
         try {
@@ -182,10 +175,7 @@ export const fetchCreateEventSessions = createAsyncThunk<
     }
 );
 
-export const fetchUpload = createAsyncThunk<
-    string,
-    { folder: string; file: File }
->(
+export const fetchUpload = createAsyncThunk<string, { folder: string; file: File }>(
     `${name}/fetchUpload`,
     async ({ folder, file }, thunkAPI) => {
         try {
@@ -197,6 +187,81 @@ export const fetchUpload = createAsyncThunk<
     }
 );
 
+// ─── New thunks ───────────────────────────────────────────────────────────────
+
+export const fetchUpdateEventBanner = createAsyncThunk<
+    { url: string },
+    { eventId: string; file: File }
+>(
+    `${name}/fetchUpdateEventBanner`,
+    async ({ eventId, file }, thunkAPI) => {
+        try {
+            const response = await eventService.updateEventBanner(eventId, file);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchUpdateImage = createAsyncThunk<
+    { url: string },
+    { eventId: string; imageId: string; file: File }
+>(
+    `${name}/fetchUpdateImage`,
+    async ({ eventId, imageId, file }, thunkAPI) => {
+        try {
+            const response = await eventService.updateImage(eventId, imageId, file);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchDeleteImage = createAsyncThunk<
+    void,
+    { eventId: string; imageId: string }
+>(
+    `${name}/fetchDeleteImage`,
+    async ({ eventId, imageId }, thunkAPI) => {
+        try {
+            await eventService.deleteImage(eventId, imageId);
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchRequestCancelEvent = createAsyncThunk<
+    any,
+    { eventId: string; reason: string }
+>(
+    `${name}/fetchRequestCancelEvent`,
+    async ({ eventId, reason }, thunkAPI) => {
+        try {
+            const response = await eventService.requestCancelEvent(eventId, reason);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchRequestPublishEvent = createAsyncThunk<any, string>(
+    `${name}/fetchRequestPublishEvent`,
+    async (eventId, thunkAPI) => {
+        try {
+            const response = await eventService.requestPublishEvent(eventId);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const eventSlice = createSlice({
     name,
     initialState,
@@ -205,6 +270,19 @@ const eventSlice = createSlice({
         builder.addCase(
             fetchAllEvents.fulfilled,
             (state, action: PayloadAction<GetAllEventResponse>) => {
+                state.events = action.payload.items;
+                state.pagination = {
+                    pageNumber: action.payload.pageNumber,
+                    pageSize: action.payload.pageSize,
+                    totalCount: action.payload.totalCount,
+                    totalPages: action.payload.totalPages
+                };
+            }
+        );
+
+        builder.addCase(
+            fetchAllEventsByMe.fulfilled,
+            (state, action: PayloadAction<GetAllEventByMeResponse>) => {
                 state.events = action.payload.items;
                 state.pagination = {
                     pageNumber: action.payload.pageNumber,
@@ -228,18 +306,15 @@ const eventSlice = createSlice({
         });
 
         builder.addCase(fetchCreateEvent.fulfilled, (state, action) => {
-            const newEvent = action.payload;
-            state.currentEvent = newEvent;
+            state.currentEvent = action.payload;
         });
 
         builder.addCase(fetchUpdateEvent.fulfilled, (state, action) => {
-            const updatedEvent = action.payload;
-            state.currentEvent = updatedEvent;
+            state.currentEvent = action.payload;
         });
 
         builder.addCase(fetchUpdateEventSettings.fulfilled, (state, action) => {
-            const updatedEvent = action.payload;
-            state.currentEvent = updatedEvent;
+            state.currentEvent = action.payload;
         });
     }
 });

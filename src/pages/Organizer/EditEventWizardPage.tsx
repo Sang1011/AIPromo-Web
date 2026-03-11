@@ -23,6 +23,7 @@ export default function EditEventWizardPage() {
             {/* ===== STEP 1 ===== */}
             {step === 1 && (
                 <Step1EventInfo
+                    mode="edit"
                     onNext={nextStep}
                     onCancel={() => console.log("Cancel step 1")}
                 />

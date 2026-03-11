@@ -1,28 +1,26 @@
 import {
     FiCalendar,
     FiMapPin,
-    FiEdit,
-    FiUsers,
-    FiShoppingCart,
+    FiEdit
 } from "react-icons/fi";
 import { MdDashboard, MdEventSeat, MdGroup, MdShoppingCart } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 
-export type EventStatus = "live" | "upcoming" | "draft" | "ended";
+export type EventStatusUI = "live" | "upcoming" | "draft" | "ended";
 
-export interface EventItem {
+export interface EventItemMapUI {
     id: string;
     title: string;
     image: string;
     time: string;
     location: string;
-    status: EventStatus;
+    status: EventStatusUI;
     statusLabel: string;
     category?: string;
 }
 
 interface EventCardProps {
-    event: EventItem;
+    event: EventItemMapUI;
 }
 
 export default function EventCard({ event }: EventCardProps) {
