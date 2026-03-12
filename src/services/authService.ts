@@ -15,6 +15,9 @@ const authService = {
    fetchWithMe: (token: string): Promise<AxiosResponse<any>> => {
     return API.callWithToken(token).get("/user/current")
   },
+  refreshToken: (data: any): Promise<AxiosResponse<any>> => {
+    return API.callWithToken().post("/auth/refresh-token", data)
+  }
 }
 
 export default authService
