@@ -334,9 +334,13 @@ const eventSlice = createSlice({
             };
         });
 
-        builder.addCase(fetchEventById.fulfilled, (state, action: PayloadAction<GetEventDetailResponse>) => {
-            state.currentEvent = action.payload;
-        });
+         builder.addCase(
+            fetchEventById.fulfilled,
+            (state, action) => {
+                if (action.payload.isSuccess)
+                    state.currentEvent = action.payload.data;
+            }
+        );
 
         builder.addCase(fetchDeleteEvent.fulfilled, (state, action) => {
             state.events = state.events.filter(e => e.id !== action.meta.arg);
