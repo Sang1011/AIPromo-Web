@@ -13,7 +13,7 @@ const authService = {
     return API.call().post("/auth/register", data)
   },
    fetchWithMe: (token: string): Promise<AxiosResponse<any>> => {
-    return API.callWithToken(token).get("/users/current")
+    return API.callWithToken(token).get("/user/current")
   },
 }
 
