@@ -1,10 +1,10 @@
 import type { AxiosResponse } from "axios";
 import type { CreateHashtagRequest, GetAllHashtagsResponse, GetHashtagByIdResponse } from "../types/hashtag/hashtag";
-import API from "./api";
+import { interceptorAPI } from "../utils/attachInterceptors";
 
 const hashtagService = {
     createHashtag: (data: CreateHashtagRequest): Promise<AxiosResponse<number>> => {
-        return API.call().post("/hashtags", data);
+        return interceptorAPI().post("/hashtags", data);
     },
     getAllHashtags: (
         name?: string,
@@ -15,10 +15,10 @@ const hashtagService = {
         if (name) params.name = name;
         if (take) params.take = take;
 
-        return API.call().get("/hashtags", { params });
+        return interceptorAPI().get("/hashtags", { params });
     },
     getHashtagById: (id: number): Promise<AxiosResponse<GetHashtagByIdResponse>> => {
-        return API.call().get(`/hashtags/${id}`);
+        return interceptorAPI().get(`/hashtags/${id}`);
     },
 }
 

@@ -117,31 +117,21 @@ export default function Step5Payment({
 
             {/* ===== Footer ===== */}
             <div className="flex items-center justify-between pt-6 pb-10">
-                <button className="
-                    px-6 py-3 rounded-xl
-                    border border-white/10
-                    text-slate-300
-                    hover:bg-white/5
-                ">
-                    Lưu bản nháp
-                </button>
-
-                <div className="flex gap-4">
-                    <button
-                        onClick={onBack}
-                        className="
+                <button
+                    onClick={onBack}
+                    className="
                             px-6 py-3 rounded-xl
                             border border-primary
                             text-primary
-                            hover:bg-primary/10
-                        "
-                    >
-                        Quay lại
-                    </button>
+                            hover:border-white hover:text-white
 
-                    <button
-                        onClick={onFinish}
-                        className="
+                        "
+                >
+                    Quay lại
+                </button>
+                <button
+                    onClick={onFinish}
+                    className="
                             px-8 py-4 rounded-xl
                             bg-primary text-white
                             font-semibold
@@ -149,10 +139,9 @@ export default function Step5Payment({
                             hover:scale-[1.02] active:scale-[0.98]
                             transition
                         "
-                    >
-                        Hoàn tất & Xuất bản 🚀
-                    </button>
-                </div>
+                >
+                    Hoàn tất
+                </button>
             </div>
         </div>
     );
@@ -175,7 +164,7 @@ function Input({
                         w-full px-4 py-3 rounded-xl
                         bg-black/30 border border-white/10
                         text-white outline-none
-                        focus:border-primary
+                        focus:border-primary pr-[50px]
                     "
                 />
                 {maxLength && (

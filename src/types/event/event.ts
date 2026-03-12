@@ -1,3 +1,5 @@
+import type { ApiResponse } from "../api";
+
 export interface GetAllRequest {
     PageNumber?: number;
     PageSize?: number;
@@ -156,6 +158,34 @@ export type GetAllSessionResponse = EventSession[];
 export type UpdateEventSessionRequest = Omit<EventSession, "ticketTypes">;
 
 export interface GetAllRequestByMe extends GetAllRequest {
-    Status?: string;
+    Statuses?: string;
 }
-export type GetAllEventByMeResponse = GetAllEventResponse;
+
+export type GetAllCreateResponseForPrivate = {
+    items: EventItem[];
+    pageNumber: number;
+    pageSize: number;
+    totalCount: number;
+    currentPageSize: number;
+    currentStartIndex: number;
+    currentEndIndex: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+}
+
+export type GetAllEventByMeResponse = ApiResponse<GetAllCreateResponseForPrivate>
+
+export interface CreateTicketTypeRequest {
+    name: string;
+    price: number;
+    quantity: number;
+    type: "Zone" | "Seat";
+    areaId: string;
+}
+
+export interface UpdateTicketTypeRequest {
+    name: string;
+    price: number;
+    quantity: number;
+}

@@ -20,17 +20,17 @@ export default function SearchBar({
                 onChange={(e) => onChange?.(e.target.value)}
                 placeholder={placeholder}
                 className="
-  w-full pl-12 pr-4 py-3
-  bg-slate-50 dark:bg-card-dark
-  border border-slate-200 dark:border-slate-800
-  rounded-2xl
-  transition-all outline-none
+                    w-full pl-12 pr-4 py-3
+                    bg-slate-50 dark:bg-card-dark
+                    border border-slate-200 dark:border-slate-800
+                    rounded-2xl
+                    transition-all outline-none
 
-  text-slate-800
-  placeholder:text-slate-400 dark:placeholder:text-slate-500
+                    text-slate-800 dark:text-white
+                    placeholder:text-slate-400 dark:placeholder:text-slate-500
 
-  focus:ring-2 focus:ring-primary focus:border-transparent
-"
+                    focus:ring-2 focus:ring-primary focus:border-transparent
+                "
             />
         </div>
     );

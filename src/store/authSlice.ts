@@ -38,6 +38,7 @@ export const fetchLogin = createAsyncThunk<
 export const fetchLoginGoogle = createAsyncThunk(`${name}/fetchLoginGoogle`, async (data: object, thunkAPI) => {
    try {
       const response = await authService.loginGoogle(data);
+      console.log(response.data);
       return response.data;
    } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -74,8 +75,7 @@ export const fetchMe = createAsyncThunk(
          return thunkAPI.rejectWithValue(error.response?.data || error.message);
       }
    }
-);
-
+)
 
 export const fetchRefreshToken = createAsyncThunk(
    `${name}/refreshToken`,
@@ -83,14 +83,14 @@ export const fetchRefreshToken = createAsyncThunk(
       try {
          const accessToken = localStorage.getItem("ACCESS_TOKEN");
          const refreshToken = localStorage.getItem("REFRESH_TOKEN");
-         const deviceId =   localStorage.getItem("DEVICE_ID");
+         const deviceId = localStorage.getItem("DEVICE_ID");
          const response = await authService.refreshToken({
             accessToken,
             refreshToken,
             deviceId: deviceId,
          });
-             console.log(response);
-             
+         console.log(response);
+
          return response.data;
 
       } catch (error: any) {
@@ -123,7 +123,7 @@ const authSlice = createSlice({
       });
       builder.addCase(fetchLoginGoogle.fulfilled, (state, action: PayloadAction<any>) => {
          const responseData = action.payload;
-        if (responseData?.isSuccess) {
+         if (responseData?.isSuccess) {
             const token = responseData.data.accessToken;
             const refreshToken = responseData.data.refreshToken;
             const deviceId = responseData.data.deviceId;
@@ -147,7 +147,7 @@ const authSlice = createSlice({
       builder.addCase(fetchRefreshToken.fulfilled, (state, action: PayloadAction<any>) => {
 
          const responseData = action.payload;
-        if (responseData?.isSuccess) {
+         if (responseData?.isSuccess) {
             const token = responseData.data.accessToken;
             const refreshToken = responseData.data.refreshToken;
             const deviceId = responseData.data.deviceId;
@@ -156,7 +156,7 @@ const authSlice = createSlice({
             state.refreshToken = refreshToken;
             state.deviceId = deviceId;
             state.currentInfor = responseData.data.user;
-           
+
             localStorage.setItem("ACCESS_TOKEN", token);
             localStorage.setItem("REFRESH_TOKEN", refreshToken);
             localStorage.setItem("DEVICE_ID", deviceId);

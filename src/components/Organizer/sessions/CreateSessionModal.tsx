@@ -7,9 +7,10 @@ interface Props {
     open: boolean;
     onClose: () => void;
     eventId: string;
+    onCreated?: () => void;
 }
 
-export default function CreateSessionModal({ open, onClose, eventId }: Props) {
+export default function CreateSessionModal({ open, onClose, eventId, onCreated }: Props) {
     const dispatch = useDispatch<AppDispatch>();
 
     const [title, setTitle] = useState("");
@@ -20,31 +21,41 @@ export default function CreateSessionModal({ open, onClose, eventId }: Props) {
     if (!open) return null;
 
     const handleSubmit = async () => {
-        console.log({ title, description, startTime, endTime });
+        const formattedStartTime = new Date(startTime).toISOString();
+        const formattedEndTime = new Date(endTime).toISOString();
+
+        console.log(title, description, formattedStartTime, formattedEndTime);
+
         await dispatch(
             fetchCreateEventSessions({
                 eventId,
                 data: {
-                    sessions: [{ title, description, startTime, endTime }]
+                    sessions: [
+                        {
+                            title,
+                            description,
+                            startTime: formattedStartTime,
+                            endTime: formattedEndTime
+                        }
+                    ]
                 }
             })
         );
+
+        onCreated?.();
         onClose();
     };
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            {/* Modal Container */}
             <div className="bg-[#1C1633] border border-white/10 p-8 rounded-2xl w-full max-w-[540px] shadow-2xl transform transition-all">
 
-                {/* Header */}
                 <div className="mb-6">
                     <h3 className="text-2xl font-bold text-white tracking-tight">Tạo suất diễn</h3>
                     <p className="text-gray-400 text-sm mt-1">Điền thông tin chi tiết cho suất diễn mới của bạn.</p>
                 </div>
 
                 <div className="space-y-5">
-                    {/* Tên suất diễn */}
                     <div>
                         <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 ml-1">Tên suất diễn</label>
                         <input
@@ -56,7 +67,6 @@ export default function CreateSessionModal({ open, onClose, eventId }: Props) {
                         />
                     </div>
 
-                    {/* Mô tả */}
                     <div>
                         <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 ml-1">Mô tả</label>
                         <textarea
@@ -68,7 +78,6 @@ export default function CreateSessionModal({ open, onClose, eventId }: Props) {
                         />
                     </div>
 
-                    {/* Thời gian */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 ml-1">Bắt đầu</label>
@@ -91,7 +100,6 @@ export default function CreateSessionModal({ open, onClose, eventId }: Props) {
                     </div>
                 </div>
 
-                {/* Actions */}
                 <div className="flex justify-end gap-3 mt-8">
                     <button
                         onClick={onClose}

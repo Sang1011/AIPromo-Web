@@ -1,34 +1,34 @@
 import { useEffect, useRef, useState } from "react";
-import UploadBox from "../shared/UploadBox";
-import type { AppDispatch } from "../../../store";
-import { useDispatch } from "react-redux";
+import { FiPlus, FiX } from "react-icons/fi";
+import { useDispatch, useSelector } from "react-redux";
+import { useParams } from "react-router-dom";
+import type { AppDispatch, RootState } from "../../../store";
+import { fetchAllCategories } from "../../../store/categorySlice";
 import {
     fetchCreateEvent,
-    fetchUpdateEvent,
-    fetchUpload,
-    fetchUpdateEventBanner,
-    fetchUpdateImage,
+    fetchCreateImage,
     fetchDeleteImage,
+    fetchUpdateEvent,
+    fetchUpdateEventBanner,
+    fetchUpload
 } from "../../../store/eventSlice";
-import { fetchAllCategories } from "../../../store/categorySlice";
 import { fetchAllHashtags, fetchCreateHashtag } from "../../../store/hashtagSlice";
 import type {
     CreateEventRequest,
     EventCategory,
     EventHashtag,
+    GetEventDetailResponse,
     UpdateEventInfoRequest,
 } from "../../../types/event/event";
-import { useParams } from "react-router-dom";
 import ImagePreviewBox from "../shared/ImagePreviewBox";
-import { FiPlus, FiX } from "react-icons/fi";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import UploadBox from "../shared/UploadBox";
 
 interface Step1EventInfoProps {
     onNext?: () => void;
     onCancel?: () => void;
     mode?: "create" | "edit";
     onCreated?: (eventId: string) => void;
+    eventData: GetEventDetailResponse | null;
 }
 
 interface Actor {
@@ -37,13 +37,10 @@ interface Actor {
     image: File | null;
 }
 
-/**
- * id = string  → ảnh đã có trên server, cho phép delete & update
- * id = null    → ảnh vừa upload, chỉ hiển thị (không có nút X / Cập nhật)
- */
 interface EventImage {
     id: string | null;
     url: string;
+    file?: File | null;
 }
 
 interface EventFormState {
@@ -56,6 +53,8 @@ interface EventFormState {
     actors: Actor[];
     selectedHashtags: EventHashtag[];
     selectedCategories: EventCategory[];
+    deletedImageIds: string[];
+    bannerFile: File | null;
 }
 
 interface ActorError {
@@ -73,8 +72,6 @@ interface FormErrors {
     selectedCategories?: string;
     actors?: ActorError[];
 }
-
-// ─── Create Hashtag Modal ─────────────────────────────────────────────────────
 
 interface CreateHashtagModalProps {
     initialName: string;
@@ -151,9 +148,7 @@ function CreateHashtagModal({ initialName, onClose, onCreated }: CreateHashtagMo
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCreated }: Step1EventInfoProps) {
+export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCreated, eventData }: Step1EventInfoProps) {
     const [hashtagInput, setHashtagInput] = useState("");
     const [suggestions, setSuggestions] = useState<EventHashtag[]>([]);
     const [showCreateHashtagModal, setShowCreateHashtagModal] = useState(false);
@@ -163,7 +158,7 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
     const [errors, setErrors] = useState<FormErrors>({});
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
-
+    const { currentInfor } = useSelector((state: RootState) => state.AUTH);
     const [eventForm, setEventForm] = useState<EventFormState>({
         title: "",
         description: "",
@@ -174,13 +169,15 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         actors: [],
         selectedHashtags: [],
         selectedCategories: [],
+        deletedImageIds: [],
+        bannerFile: null
     });
 
     const updateForm = <K extends keyof EventFormState>(key: K, value: EventFormState[K]) => {
         setEventForm((prev) => ({ ...prev, [key]: value }));
     };
 
-    const buildEventPayload = (): UpdateEventInfoRequest => ({
+    const buildBaseEventPayload = () => ({
         title: eventForm.title,
         bannerUrl: eventForm.bannerUrl || "",
         description: eventForm.description,
@@ -196,7 +193,28 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         imageUrls: eventForm.images.map((img) => img.url),
     });
 
-    // ── Validation ────────────────────────────────────────────────────────────
+    const buildCreateEventPayload = (): CreateEventRequest => {
+        type User = {
+            userId: string;
+        }
+        let userInfo = currentInfor as User;
+        if (!userInfo?.userId) {
+            throw new Error("User information is required");
+        }
+
+        return {
+            ...buildBaseEventPayload(),
+            organizerId: userInfo.userId,
+        };
+    };
+
+    const buildUpdateEventPayload = (): UpdateEventInfoRequest => {
+        return buildBaseEventPayload();
+    };
+
+    useEffect(() => {
+        console.log("Current user info:", currentInfor);
+    }, [currentInfor])
 
     const validateAll = (): boolean => {
         const newErrors: FormErrors = {};
@@ -225,8 +243,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         return Object.keys(newErrors).length === 0;
     };
 
-    // ── Hashtag ───────────────────────────────────────────────────────────────
-
     const addHashtag = (tag: EventHashtag) => {
         if (eventForm.selectedHashtags.some((t) => t.id === tag.id)) return;
         updateForm("selectedHashtags", [...eventForm.selectedHashtags, tag]);
@@ -250,8 +266,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         hashtagInput.trim().length > 0 &&
         !suggestions.some((s) => s.name.toLowerCase() === hashtagInput.trim().toLowerCase());
 
-    // ── Category ──────────────────────────────────────────────────────────────
-
     const addCategory = (cat: EventCategory) => {
         if (eventForm.selectedCategories.some((c) => c.id === cat.id)) return;
         updateForm("selectedCategories", [...eventForm.selectedCategories, cat]);
@@ -264,8 +278,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         updateForm("selectedCategories", eventForm.selectedCategories.filter((c) => c.id !== id));
     };
 
-    // ── Actor ─────────────────────────────────────────────────────────────────
-
     const addActor = () => updateForm("actors", [...eventForm.actors, { name: "", major: "", image: null }]);
 
     const removeActor = (index: number) => updateForm("actors", eventForm.actors.filter((_, i) => i !== index));
@@ -274,31 +286,15 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         updateForm("actors", eventForm.actors.map((actor, i) => i === index ? { ...actor, [field]: value } : actor));
     };
 
-    // ── Image actions ─────────────────────────────────────────────────────────
-
-    /**
-     * Banner:
-     * - create → upload rồi set url
-     * - edit   → gọi updateEventBanner API
-     */
     const handleBannerChange = (file: File) => {
-        if (mode === "create" || !eventId) {
-            dispatch(fetchUpload({ folder: "events/banners", file }))
-                .unwrap()
-                .then((url) => updateForm("bannerUrl", url))
-                .catch(console.error);
-        } else {
-            dispatch(fetchUpdateEventBanner({ eventId, file }))
-                .unwrap()
-                .then(({ url }) => updateForm("bannerUrl", url))
-                .catch(console.error);
-        }
+        const previewUrl = URL.createObjectURL(file);
+        setEventForm((prev) => ({
+            ...prev,
+            bannerUrl: previewUrl,
+            bannerFile: file,
+        }));
     };
 
-    /**
-     * Thêm ảnh bổ sung mới → upload → push vào images với id = null.
-     * Ảnh id=null chỉ hiển thị, không có nút X / Cập nhật.
-     */
     const handleAddImages = (files: FileList | null) => {
         if (!files) return;
         const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -306,162 +302,142 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         Array.from(files).forEach((file) => {
             if (!allowedTypes.includes(file.type)) { alert(`${file.name} không phải định dạng hợp lệ`); return; }
             if (file.size > maxSize) { alert(`${file.name} vượt quá 10MB`); return; }
-            dispatch(fetchUpload({ folder: "events/images", file }))
-                .unwrap()
-                .then((url) => {
-                    setEventForm((prev) => ({
-                        ...prev,
-                        images: [...prev.images, { id: null, url }],
-                    }));
-                })
-                .catch(console.error);
+            const previewUrl = URL.createObjectURL(file);
+            setEventForm((prev) => ({
+                ...prev,
+                images: [...prev.images, { id: null, url: previewUrl, file }],
+            }));
         });
     };
 
-    /**
-     * Cập nhật ảnh bổ sung — chỉ gọi khi ảnh có id (từ API).
-     */
-    const handleUpdateImage = (index: number, file: File) => {
-        const img = eventForm.images[index];
-        if (!img.id || !eventId) return;
-        dispatch(fetchUpdateImage({ eventId, imageId: img.id, file }))
-            .unwrap()
-            .then(({ url }) => {
-                setEventForm((prev) => ({
-                    ...prev,
-                    images: prev.images.map((item, i) => i === index ? { ...item, url } : item),
-                }));
-            })
-            .catch(console.error);
-    };
-
-    /**
-     * Xoá ảnh bổ sung — chỉ gọi khi ảnh có id (từ API).
-     */
     const handleDeleteImage = (index: number) => {
         const img = eventForm.images[index];
-        if (!img.id || !eventId) return;
-        dispatch(fetchDeleteImage({ eventId, imageId: img.id }))
-            .unwrap()
-            .then(() => {
-                setEventForm((prev) => ({
-                    ...prev,
-                    images: prev.images.filter((_, i) => i !== index),
-                }));
-            })
-            .catch(console.error);
-    };
 
-    /** Upload ảnh actor */
-    const handleUploadActor = (file: File, index: number) => {
-        dispatch(fetchUpload({ folder: "events/actors", file }))
-            .unwrap()
-            .then((url) => {
-                setEventForm((prev) => {
-                    const updated = [...prev.actorUrls];
-                    updated[index] = url;
-                    return { ...prev, actorUrls: updated };
-                });
-            })
-            .catch(console.error);
-    };
+        setEventForm((prev) => {
+            const newDeletedIds = img.id
+                ? [...prev.deletedImageIds, img.id]
+                : prev.deletedImageIds;
 
-    // ── Event CRUD ────────────────────────────────────────────────────────────
+            if (!img.id) URL.revokeObjectURL(img.url);
 
-    const handleCreateEvent = async () => {
-        const testObjectCreate: CreateEventRequest = {
-            title: "Test Event AI Conference",
-            bannerUrl: "https://example.com/banner.jpg",
-            hashtagIds: [1],
-            actorImages: [
-                { name: "Nguyễn Văn A", major: "AI Engineer", image: "https://example.com/actor1.jpg" },
-                { name: "Trần Thị B", major: "CEO", image: "https://example.com/actor2.jpg" },
-            ],
-            description: "Đây là sự kiện test tạo event bằng API",
-            location: "FPT University HCM",
-            mapUrl: "",
-            categoryIds: [1],
-            organizerId: "a1c7799a-2bfd-4d94-801c-5d44bdfe6822",
-            imageUrls: ["https://example.com/image1.jpg"],
-        };
-        // const objectCreate: CreateEventRequest = buildEventPayload();
-        try {
-            const res = await dispatch(fetchCreateEvent(testObjectCreate)).unwrap();
-            if (mode === "create") onCreated?.(res.data.id);
-        } catch (err) {
-            console.error("Failed to create event:", err);
-        }
-    };
-
-    const handleUpdateEvent = async () => {
-        if (!eventId) return;
-        try {
-            await dispatch(fetchUpdateEvent({ id: eventId, data: buildEventPayload() })).unwrap();
-        } catch (err) {
-            console.error("Failed to update event:", err);
-        }
-    };
-
-    const fetchEventData = async () => {
-        if (!eventId) return;
-        try {
-            // const res = await dispatch(fetchEventById(eventId)).unwrap();
-            const eventData = {
-                title: "AI Conference 2026",
-                bannerUrl: "https://picsum.photos/800/450",
-                location: "FPT University HCM",
-                description: "Sự kiện về AI và công nghệ tương lai.",
-                categories: [{ id: 1, name: "Technology" }, { id: 2, name: "AI" }],
-                hashtags: [{ id: 1, name: "AI" }, { id: 2, name: "Tech" }],
-                images: [
-                    { id: "img1", imageUrl: "https://picsum.photos/200" },
-                    { id: "img2", imageUrl: "https://picsum.photos/201" },
-                ],
-                actorImages: [
-                    { id: "actor1", name: "Nguyễn Văn A", major: "AI Engineer", image: "https://picsum.photos/100" },
-                    { id: "actor2", name: "Trần Thị B", major: "CEO", image: "https://picsum.photos/101" },
-                ],
-            };
-            setEventForm((prev) => ({
+            return {
                 ...prev,
-                title: eventData.title,
-                description: eventData.description,
-                location: eventData.location,
-                bannerUrl: eventData.bannerUrl,
-                selectedHashtags: eventData.hashtags || [],
-                selectedCategories: eventData.categories || [],
-                actorUrls: (eventData.actorImages || []).map((a) => a.image),
-                // id có giá trị → cho phép delete & update
-                images: (eventData.images || []).map((img) => ({ id: img.id, url: img.imageUrl })),
-                actors: (eventData.actorImages || []).map((actor) => ({ name: actor.name, major: actor.major, image: null })),
-            }));
-        } catch (err) {
-            console.error("Failed to fetch event data:", err);
-        }
+                deletedImageIds: newDeletedIds,
+                images: prev.images.filter((_, i) => i !== index),
+            };
+        });
     };
 
-    const handleFetchStartupData = async () => {
-        try {
-            await dispatch(fetchAllCategories({ take: 20 })).unwrap();
-        } catch (error) {
-            console.error(error);
-        }
+    const handleActorFileChange = (file: File, index: number) => {
+        updateActor(index, "image", file);
+        const previewUrl = URL.createObjectURL(file);
+        setEventForm((prev) => {
+            const updated = [...prev.actorUrls];
+            updated[index] = previewUrl;
+            return { ...prev, actorUrls: updated };
+        });
     };
 
-    const handleNext = () => {
+    const flushUploads = async () => {
+        let finalBannerUrl = eventForm.bannerUrl || "";
+        if (eventForm.bannerFile) {
+            if (mode === "edit" && eventId) {
+                await dispatch(fetchUpdateEventBanner({ eventId, file: eventForm.bannerFile })).unwrap();
+            } else {
+                const res = await dispatch(fetchUpload({ folder: "events/banners", file: eventForm.bannerFile })).unwrap();
+                console.log(res);
+            }
+            URL.revokeObjectURL(eventForm.bannerUrl!);
+        }
+
+        if (mode === "edit" && eventId && eventForm.deletedImageIds.length > 0) {
+            await Promise.all(
+                eventForm.deletedImageIds.map((imageId) =>
+                    dispatch(fetchDeleteImage({ eventId, imageId })).unwrap()
+                )
+            );
+        }
+
+        const updatedImages = await Promise.all(
+            eventForm.images.map(async (img) => {
+                if (!img.file) return img;
+
+                const url = await dispatch(fetchUpload({ folder: "events/images", file: img.file })).unwrap();
+                URL.revokeObjectURL(img.url);
+
+                if (mode === "edit" && eventId) {
+                    const res = await dispatch(fetchCreateImage({ eventId, file: img.file })).unwrap();
+                    return { id: res.id, url: res.imageUrl, file: null };
+                } else {
+                    return { id: null, url, file: null };
+                }
+            })
+        );
+
+        const updatedActorUrls = await Promise.all(
+            eventForm.actors.map(async (actor, index) => {
+                if (!actor.image) return eventForm.actorUrls[index] ?? "";
+                const url = await dispatch(fetchUpload({ folder: "events/actors", file: actor.image })).unwrap();
+                return url;
+            })
+        );
+
+        const updatedActors = eventForm.actors.map((actor) => ({ ...actor, image: null }));
+
+        setEventForm((prev) => ({
+            ...prev,
+            bannerUrl: finalBannerUrl,
+            bannerFile: null,
+            images: updatedImages,
+            actorUrls: updatedActorUrls,
+            actors: updatedActors,
+            deletedImageIds: [],
+        }));
+
+        return { finalBannerUrl, updatedImages, updatedActorUrls };
+    };
+
+    const handleNext = async () => {
         if (!validateAll()) return;
-        if (mode === "create") { handleCreateEvent(); return; }
-        if (mode === "edit") { handleUpdateEvent(); onNext?.(); }
-    };
+        const { finalBannerUrl, updatedImages, updatedActorUrls } = await flushUploads();
 
-    // ── Effects ───────────────────────────────────────────────────────────────
+        const payload = {
+            title: eventForm.title,
+            bannerUrl: finalBannerUrl,
+            description: eventForm.description,
+            location: eventForm.location,
+            mapUrl: "",
+            hashtagIds: eventForm.selectedHashtags.map((t) => t.id),
+            categoryIds: eventForm.selectedCategories.map((c) => c.id),
+            actorImages: eventForm.actors.map((actor, i) => ({
+                name: actor.name,
+                major: actor.major,
+                image: updatedActorUrls[i] || "",
+            })),
+            imageUrls: updatedImages.map((img) => img.url),
+        };
+        console.log(payload);
+
+        if (mode === "create") {
+            const userInfo = currentInfor as { userId: string };
+            const result = await dispatch(fetchCreateEvent({ ...payload, organizerId: userInfo.userId }))
+                .unwrap()
+                .then((res) => onCreated?.(res.data));
+            console.log(result);
+        } else if (mode === "edit" && eventId) {
+            const result = await dispatch(fetchUpdateEvent({ id: eventId, data: payload })).unwrap();
+            console.log(result)
+            onNext?.();
+        }
+    };
 
     useEffect(() => {
         const delay = setTimeout(async () => {
             if (!hashtagInput.trim()) { setSuggestions([]); return; }
             try {
-                const res = await dispatch(fetchAllHashtags({ name: hashtagInput, take: 10 })).unwrap();
-                setSuggestions(res.data);
+                const res = await dispatch(fetchAllHashtags({ name: hashtagInput, take: 5 })).unwrap();
+                console.log("Fetched hashtag suggestions:", res);
+                setSuggestions(res);
             } catch (e) { console.error(e); }
         }, 300);
         return () => clearTimeout(delay);
@@ -472,7 +448,7 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         const delay = setTimeout(async () => {
             if (!categoryInput.trim()) { setCategorySuggestions([]); return; }
             try {
-                const res = await dispatch(fetchAllCategories({ name: categoryInput, take: 10 })).unwrap();
+                const res = await dispatch(fetchAllCategories({ name: categoryInput, take: 5 })).unwrap();
                 setCategorySuggestions(res.data);
             } catch (err) { console.error(err); }
         }, 300);
@@ -481,14 +457,35 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
 
     useEffect(() => {
         if (mode === "create") updateForm("actors", [{ name: "", major: "", image: null }]);
-    }, [mode]);
+        if (mode === "edit") {
+            setEventForm((prev) => ({
+                ...prev,
 
-    useEffect(() => {
-        handleFetchStartupData();
-        if (mode === "edit") fetchEventData();
-    }, []);
+                title: eventData?.title ?? "",
+                description: eventData?.description ?? "",
+                location: eventData?.location ?? "",
+                bannerUrl: eventData?.bannerUrl ?? null,
 
-    // ── Render ────────────────────────────────────────────────────────────────
+                selectedHashtags: eventData?.hashtags ?? [],
+                selectedCategories: eventData?.categories ?? [],
+
+                actorUrls: eventData?.actorImages?.map((a) => a.image) ?? [],
+
+                images:
+                    eventData?.images?.map((img) => ({
+                        id: img.id,
+                        url: img.imageUrl,
+                    })) ?? [],
+
+                actors:
+                    eventData?.actorImages?.map((actor) => ({
+                        name: actor.name,
+                        major: actor.major,
+                        image: null,
+                    })) ?? [],
+            }));
+        }
+    }, [mode, eventData]);
 
     return (
         <>
@@ -502,20 +499,16 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
 
             <div className="space-y-8">
 
-                {/* ── Hình ảnh sự kiện ──────────────────────────────────── */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                     <h3 className="font-semibold text-white mb-4">* Hình ảnh sự kiện</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                        {/* Banner — không có onRemove, chỉ có onUpdate */}
                         <div className="space-y-1">
                             {eventForm.bannerUrl ? (
                                 <ImagePreviewBox
                                     imageUrl={eventForm.bannerUrl}
                                     aspect="16/9"
                                     onUpdate={(file) => handleBannerChange(file)}
-                                // onRemove không truyền → không có nút X
                                 />
                             ) : (
                                 <UploadBox
@@ -529,7 +522,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                             {errors.bannerUrl && <p className="text-xs text-red-400 mt-1">{errors.bannerUrl}</p>}
                         </div>
 
-                        {/* Ảnh bổ sung */}
                         <div className="space-y-3">
                             <label className="text-sm text-slate-400">Ảnh bổ sung sự kiện</label>
                             <div className="flex flex-wrap gap-3">
@@ -551,10 +543,7 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                                         imageUrl={img.url}
                                         square
                                         className="w-24"
-                                        // id có giá trị → truyền onRemove & onUpdate
-                                        // id = null    → không truyền → chỉ xem, không X, không cập nhật
-                                        onRemove={img.id ? () => handleDeleteImage(i) : undefined}
-                                        onUpdate={img.id ? (file) => handleUpdateImage(i, file) : undefined}
+                                        onRemove={() => handleDeleteImage(i)}
                                     />
                                 ))}
                             </div>
@@ -562,7 +551,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                     </div>
                 </section>
 
-                {/* ── Thông tin cơ bản ──────────────────────────────────── */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
                     <h3 className="font-semibold text-white">* Thông tin cơ bản</h3>
 
@@ -578,8 +566,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                        {/* Hashtag */}
                         <div>
                             <div className="flex justify-between items-center">
                                 <label className="text-sm text-slate-400">Hashtag</label>
@@ -587,9 +573,9 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                             </div>
                             <div className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedHashtags ? "border-red-500" : "border-white/10"}`}>
                                 {eventForm.selectedHashtags.map((tag) => (
-                                    <div key={tag.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm">
+                                    <div key={tag.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors">
                                         <span>#{tag.name}</span>
-                                        <button onClick={() => removeHashtag(tag.id)} className="leading-none"><FiX size={12} /></button>
+                                        <button onClick={() => removeHashtag(tag.id)} className="leading-none"><FiX size={14} /></button>
                                     </div>
                                 ))}
                                 <input
@@ -628,7 +614,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                             )}
                         </div>
 
-                        {/* Category */}
                         <div>
                             <div className="flex justify-between items-center">
                                 <label className="text-sm text-slate-400">Thể loại</label>
@@ -636,9 +621,9 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                             </div>
                             <div className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedCategories ? "border-red-500" : "border-white/10"}`}>
                                 {eventForm.selectedCategories.map((cat) => (
-                                    <div key={cat.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm">
+                                    <div key={cat.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors">
                                         <span>{cat.name}</span>
-                                        <button onClick={() => removeCategory(cat.id)} className="leading-none"><FiX size={12} /></button>
+                                        <button onClick={() => removeCategory(cat.id)} className="leading-none"><FiX size={14} /></button>
                                     </div>
                                 ))}
                                 <input
@@ -673,7 +658,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                     </div>
                 </section>
 
-                {/* ── Mô tả ─────────────────────────────────────────────── */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                     <h3 className="font-semibold text-white mb-4">* Mô tả sự kiện</h3>
                     <textarea
@@ -685,7 +669,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                     {errors.description && <p className="text-xs text-red-400 mt-1">{errors.description}</p>}
                 </section>
 
-                {/* ── Diễn giả ──────────────────────────────────────────── */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
                     <div className="flex justify-between items-center">
                         <h3 className="font-semibold text-white">* Diễn giả / Khách mời</h3>
@@ -709,20 +692,19 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                                     key={index}
                                     className={`grid grid-cols-1 md:grid-cols-[120px_1fr_auto] gap-4 items-start border p-4 rounded-xl ${Object.keys(actorErrors).length > 0 ? "border-red-500/60 bg-red-500/5" : "border-white/5"}`}
                                 >
-                                    {/* Actor image — không có onRemove / onUpdate (không có API) */}
-                                    {eventForm.actorUrls[index] && !actor.image ? (
+                                    {eventForm.actorUrls[index] ? (
                                         <ImagePreviewBox
                                             imageUrl={eventForm.actorUrls[index]}
                                             square
-                                        // Không truyền gì → chỉ xem
+                                            onUpdate={(file) => handleActorFileChange(file, index)}
                                         />
                                     ) : (
                                         <div>
                                             <UploadBox
                                                 label="Ảnh" aspect="1/1" file={actor.image} error={!!actorErrors?.image} square
                                                 onChange={(file) => {
-                                                    updateActor(index, "image", file);
-                                                    if (file) handleUploadActor(file, index);
+                                                    if (file) handleActorFileChange(file, index);
+                                                    else updateActor(index, "image", null);
                                                 }}
                                             />
                                             {actorErrors.image && <p className="text-xs text-red-400 mt-1">{actorErrors.image}</p>}
@@ -750,7 +732,7 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                                         </div>
                                     </div>
 
-                                    <button onClick={() => removeActor(index)} className="text-red-400 text-sm">Xóa</button>
+                                    <button onClick={() => removeActor(index)} className="text-red-400 text-sm hover:underline">Xóa</button>
                                 </div>
                             );
                         })}

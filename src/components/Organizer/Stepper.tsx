@@ -6,7 +6,7 @@ const steps = [
     "Thông tin",
     "Về thời gian",
     "Cài đặt",
-    "Đăng ký",
+    "Điều khoản",
     "Thanh toán",
 ];
 

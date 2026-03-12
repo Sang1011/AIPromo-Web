@@ -9,23 +9,26 @@ import type {
     UpdateEventSessionRequest,
     GetAllSessionResponse,
     GetAllRequestByMe,
-    GetAllEventByMeResponse
+    GetAllEventByMeResponse,
+    UpdateTicketTypeRequest,
+    CreateTicketTypeRequest
 } from "../types/event/event"
-
-import API from "./api"
 import type { AxiosResponse } from "axios"
+import { interceptorAPI } from "../utils/attachInterceptors";
+import API from "./api";
+import type { ApiResponse } from "../types/api";
 
 const eventService = {
     createEvent: (data: CreateEventRequest): Promise<AxiosResponse<any>> => {
-        return API.call().post("/events", data);
+        return interceptorAPI().post("/events", data);
     },
 
     updateEvent: (id: string, data: UpdateEventInfoRequest): Promise<AxiosResponse<any>> => {
-        return API.call().put(`/events/${id}`, data);
+        return interceptorAPI().patch(`/events/${id}`, data);
     },
 
     deleteEvent: (id: string): Promise<AxiosResponse<any>> => {
-        return API.call().delete(`/events/${id}`);
+        return interceptorAPI().delete(`/events/${id}`);
     },
 
     getEventById: (id: string): Promise<AxiosResponse<GetEventDetailResponse>> => {
@@ -39,7 +42,7 @@ const eventService = {
     },
 
     getAllEventsByMe: (request: GetAllRequestByMe): Promise<AxiosResponse<GetAllEventByMeResponse>> => {
-        return API.call().get("/events/me", {
+        return interceptorAPI().get("/events/me", {
             params: request
         });
     },
@@ -48,7 +51,7 @@ const eventService = {
         const formData = new FormData();
         formData.append("folder", folder);
         formData.append("file", file);
-        return API.call().post(`/events/upload`, formData, {
+        return interceptorAPI().post(`/events/upload`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
             },
@@ -58,17 +61,25 @@ const eventService = {
     updateEventBanner: (eventId: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
         const formData = new FormData();
         formData.append("file", file);
-        return API.call().put(`/events/${eventId}/banner`, formData, {
+        return interceptorAPI().patch(`/events/${eventId}/banner`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
             },
         });
     },
 
+    createImage: (eventId: string, file: File): Promise<AxiosResponse<{ id: string; imageUrl: string }>> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        return interceptorAPI().post(`/events/${eventId}/images`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+    },
+
     updateImage: (eventId: string, imageId: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
         const formData = new FormData();
         formData.append("file", file);
-        return API.call().put(`/events/${eventId}/images/${imageId}`, formData, {
+        return interceptorAPI().put(`/events/${eventId}/images/${imageId}`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
             },
@@ -76,29 +87,29 @@ const eventService = {
     },
 
     deleteImage: (eventId: string, imageId: string): Promise<AxiosResponse<any>> => {
-        return API.call().delete(`/events/${eventId}/images/${imageId}`);
+        return interceptorAPI().delete(`/events/${eventId}/images/${imageId}`);
     },
 
     updateEventSettings: (
         eventId: string,
         data: UpdateEventSettingsRequest
     ): Promise<AxiosResponse<any>> => {
-        return API.call().patch(`/events/${eventId}/settings`, data);
+        return interceptorAPI().put(`/events/${eventId}/settings`, data);
     },
 
     createEventSessions: (
         eventId: string,
         data: CreateEventSessionRequest
     ): Promise<AxiosResponse<string[]>> => {
-        return API.call().post(`/events/${eventId}/sessions`, data);
+        return interceptorAPI().post(`/events/${eventId}/sessions`, data);
     },
 
-    getSessions: (eventId: string): Promise<AxiosResponse<GetAllSessionResponse>> => {
-        return API.call().get(`/events/${eventId}/sessions`);
+    getSessions: (eventId: string): Promise<AxiosResponse<ApiResponse<GetAllSessionResponse>>> => {
+        return interceptorAPI().get(`/events/${eventId}/sessions`);
     },
 
     deleteSession: (eventId: string, sessionId: string): Promise<AxiosResponse<any>> => {
-        return API.call().delete(`/events/${eventId}/sessions/${sessionId}`);
+        return interceptorAPI().delete(`/events/${eventId}/sessions/${sessionId}`);
     },
 
     updateSession: (
@@ -106,14 +117,44 @@ const eventService = {
         sessionId: string,
         data: UpdateEventSessionRequest
     ): Promise<AxiosResponse<any>> => {
-        return API.call().patch(`/events/${eventId}/sessions/${sessionId}`, data);
+        return interceptorAPI().patch(`/events/${eventId}/sessions/${sessionId}`, data);
+    },
+
+    createTicketType: (
+        eventId: string,
+        sessionId: string,
+        data: CreateTicketTypeRequest
+    ): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().post(`/events/${eventId}/sessions/${sessionId}/ticket-types`, data);
+    },
+
+    updateTicketType: (
+        eventId: string,
+        sessionId: string,
+        ticketTypeId: string,
+        data: UpdateTicketTypeRequest
+    ): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().patch(
+            `/events/${eventId}/sessions/${sessionId}/ticket-types/${ticketTypeId}`,
+            data
+        );
+    },
+
+    deleteTicketType: (
+        eventId: string,
+        sessionId: string,
+        ticketTypeId: string
+    ): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().delete(
+            `/events/${eventId}/sessions/${sessionId}/ticket-types/${ticketTypeId}`
+        );
     },
 
     updateSeatmapSpec: (
         eventId: string,
         spec: string
     ): Promise<AxiosResponse<any>> => {
-        return API.call().patch(`/events/${eventId}/spec`, spec, {
+        return interceptorAPI().patch(`/events/${eventId}/spec`, spec, {
             headers: {
                 "Content-Type": "application/json",
             },
@@ -121,18 +162,18 @@ const eventService = {
     },
 
     requestCancelEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
-        return API.call().post(`/events/${eventId}/request-cancellation`, { reason });
+        return interceptorAPI().patch(`/events/${eventId}/request-cancellation`, { reason });
     },
 
     publishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
-        return API.call().post(`/events/${eventId}/publish`);
+        return interceptorAPI().patch(`/events/${eventId}/publish`);
     },
 
     unpublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
-        return API.call().post(`/events/${eventId}/unpublish`);
+        return interceptorAPI().patch(`/events/${eventId}/unpublish`);
     },
     requestPublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
-        return API.call().post(`/events/${eventId}/request-publish`);
+        return interceptorAPI().patch(`/events/${eventId}/request-publish`);
     },
 }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     FiArrowLeft
 } from "react-icons/fi";
@@ -6,11 +6,16 @@ import { MdAnalytics, MdCampaign, MdConfirmationNumber, MdDashboard, MdEdit, MdE
 import { Outlet, useMatch, useNavigate, useParams } from "react-router-dom";
 import Header from "../navigations/Header";
 import Sidebar from "../navigations/Sidebar";
+import { useHandleOrganizer } from "../../../hooks/useHandleOrganizer";
 
 export default function ManagementLayout() {
+    useHandleOrganizer();
     const [collapsed, setCollapsed] = useState(false);
     const { eventId } = useParams<{ eventId: string }>();
     const navigate = useNavigate();
+    useEffect(() => {
+        // fetch eventDetail
+    }, [eventId])
 
     const isMarketingDetail = useMatch(
         "/organizer/my-events/:eventId/marketing/:marketingId"
@@ -105,7 +110,7 @@ export default function ManagementLayout() {
                     }`}
             >
                 <Header
-                    eventName="Hội thảo AI & Future Marketing 2026"
+                    eventName={"Hội thảo AI & Future Marketing 2026"}
                     canGoBack={!!isMarketingDetail}
                     onBack={() => navigate(buildEventPath("marketing"))}
                 />

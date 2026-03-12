@@ -20,7 +20,7 @@ const initialState: HashtagState = {
 };
 
 export const fetchAllHashtags = createAsyncThunk<
-    GetAllHashtagsResponse,
+    any,
     { name?: string; take?: number }
 >(
     `${name}/fetchAllHashtags`,
@@ -30,7 +30,7 @@ export const fetchAllHashtags = createAsyncThunk<
                 params?.name,
                 params?.take
             );
-            return response.data;
+            return response.data.data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
         }
@@ -60,6 +60,7 @@ export const fetchCreateHashtag = createAsyncThunk<
     async (data, thunkAPI) => {
         try {
             const response = await hashtagService.createHashtag(data);
+            console.log("Created Hashtag ID:", response);
             return response.data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);

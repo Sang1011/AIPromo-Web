@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
-import EventCard, { type EventItemMapUI, type EventStatusUI } from "../../components/Organizer/events/EventCards";
+import EventCard, {
+    type EventItemMapUI,
+    type EventStatusUI,
+} from "../../components/Organizer/events/EventCards";
 import SearchBar from "../../components/Organizer/shared/SearchBar";
-import StatusFilters, { type FilterStatus } from "../../components/Organizer/shared/StatusFilter";
+import StatusFilters, {
+    type FilterStatus,
+} from "../../components/Organizer/shared/StatusFilter";
 import Pagination from "../../components/Organizer/shared/Pagination";
 import { useOutletContext } from "react-router-dom";
 import type { DashboardLayoutConfig } from "../../types/organizer/dashboard.config";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchAllEventsByMe } from "../../store/eventSlice";
-import { mapStatus } from "../../utils/mapStatus";
-import type { EventStatus } from "../../types/event/event";
+import { convertFilterToApiStatus, mapStatus } from "../../utils/mapStatus";
+import type { EventItem } from "../../types/event/event";
 
 type DashboardContext = {
     setConfig: (config: DashboardLayoutConfig) => void;
@@ -17,15 +22,22 @@ type DashboardContext = {
 
 export default function MyEventsPage() {
     const { setConfig } = useOutletContext<DashboardContext>();
+    const [loading, setLoading] = useState(false);
+    const dispatch = useDispatch<AppDispatch>();
+    const { events, pagination } = useSelector(
+        (state: RootState) => state.EVENT
+    );
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [activeFilter, setActiveFilter] = useState<FilterStatus>("upcoming");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [activeFilter, setActiveFilter] = useState<FilterStatus>("Draft");
     const [currentPage, setCurrentPage] = useState(1);
 
-    const dispatch = useDispatch<AppDispatch>();
-    const { events, pagination } = useSelector((state: RootState) => state.EVENT);
+    const filteredEvents = events.filter((event) =>
+        event.title?.toLowerCase().includes(debouncedSearch.toLowerCase())
+    );
 
-    const mapEvent = (event: any): EventItemMapUI => {
+    const mapEvent = (event: EventItem): EventItemMapUI => {
         const status = mapStatus(event.status);
 
         return {
@@ -33,12 +45,29 @@ export default function MyEventsPage() {
             title: event.title,
             image: event.bannerUrl,
             location: event.location,
-            time: new Date(event.eventStartAt).toLocaleString("vi-VN"),
+            time: new Date(event.eventStartAt).toLocaleString("vi-VN") + " - " + new Date(event.eventEndAt).toLocaleString("vi-VN"),
             status: status.status as EventStatusUI,
             statusLabel: status.label,
-            category: event.categories?.[0]?.name
+            category: event.categories?.[0]?.name,
+            color: status.color
         };
     };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        setLoading(false);
+    }, [events]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearch]);
 
     useEffect(() => {
         setConfig({
@@ -47,17 +76,31 @@ export default function MyEventsPage() {
         });
 
         return () => setConfig({});
-    }, []);
+    }, [setConfig]);
 
     useEffect(() => {
+        setLoading(true);
+
         dispatch(
             fetchAllEventsByMe({
                 PageNumber: currentPage,
                 PageSize: 5,
-                Status: activeFilter
+                Statuses: convertFilterToApiStatus(activeFilter),
             })
         );
     }, [dispatch, currentPage, activeFilter]);
+
+    const EventCardSkeleton = () => (
+        <div className="flex gap-4 p-4 bg-white dark:bg-card-dark rounded-2xl border border-slate-200 dark:border-slate-800 animate-pulse">
+            <div className="w-40 h-28 bg-slate-200 dark:bg-slate-700 rounded-xl" />
+
+            <div className="flex-1 space-y-3">
+                <div className="h-4 w-2/3 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-3 w-1/2 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-3 w-1/3 bg-slate-200 dark:bg-slate-700 rounded" />
+            </div>
+        </div>
+    );
 
     return (
         <div className="space-y-8">
@@ -69,14 +112,25 @@ export default function MyEventsPage() {
                 />
                 <StatusFilters
                     activeFilter={activeFilter}
-                    onFilterChange={setActiveFilter}
+                    onFilterChange={(filter) => {
+                        setActiveFilter(filter);
+                        setCurrentPage(1);
+                    }}
                 />
             </div>
 
             <div className="space-y-6">
-                {events.map((event) => (
-                    <EventCard key={event.id} event={mapEvent(event)} />
-                ))}
+                {loading ? (
+                    [...Array(5)].map((_, i) => <EventCardSkeleton key={i} />)
+                ) : filteredEvents.length === 0 ? (
+                    <p className="text-slate-400 text-center">
+                        Không có sự kiện nào
+                    </p>
+                ) : (
+                    filteredEvents.map((event) => (
+                        <EventCard key={event.id} event={mapEvent(event)} />
+                    ))
+                )}
             </div>
 
             <Pagination
@@ -87,3 +141,4 @@ export default function MyEventsPage() {
         </div>
     );
 }
+
