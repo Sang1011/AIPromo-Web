@@ -89,8 +89,7 @@ export const fetchRefreshToken = createAsyncThunk(
             refreshToken,
             deviceId: deviceId,
          });
-         console.log(response);
-
+       
          return response.data;
 
       } catch (error: any) {
