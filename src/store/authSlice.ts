@@ -7,11 +7,16 @@ const name = "auth";
 
 interface AuthState {
    token: string | null;
+   refreshToken: string | null;
+   deviceId: string | null;
    currentInfor: object;
 }
 
+
 const initialState: AuthState = {
    token: null,
+   refreshToken: null,
+   deviceId: null,
    currentInfor: {}
 };
 
@@ -55,20 +60,43 @@ export const fetchRegister = createAsyncThunk<
 );
 
 export const fetchMe = createAsyncThunk(
-  `${name}/fetchMe`,
-  async (_, thunkAPI) => {
-    try {
-      const token = localStorage.getItem("ACCESS_TOKEN");
+   `${name}/fetchMe`,
+   async (_, thunkAPI) => {
+      try {
+         const token = localStorage.getItem("ACCESS_TOKEN");
 
-      if (!token) {
-        return thunkAPI.rejectWithValue("Token not found");
+         if (!token) {
+            return thunkAPI.rejectWithValue("Token not found");
+         }
+         const response = await authService.fetchWithMe(token);
+         return response.data;
+      } catch (error: any) {
+         return thunkAPI.rejectWithValue(error.response?.data || error.message);
       }
-      const response = await authService.fetchWithMe(token);  
-      return response.data;
-    } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.response?.data || error.message);
-    }
-  }
+   }
+);
+
+
+export const fetchRefreshToken = createAsyncThunk(
+   `${name}/refreshToken`,
+   async (_, thunkAPI) => {
+      try {
+         const accessToken = localStorage.getItem("ACCESS_TOKEN");
+         const refreshToken = localStorage.getItem("REFRESH_TOKEN");
+         const deviceId =   localStorage.getItem("DEVICE_ID");
+         const response = await authService.refreshToken({
+            accessToken,
+            refreshToken,
+            deviceId: deviceId,
+         });
+             console.log(response);
+             
+         return response.data;
+
+      } catch (error: any) {
+         return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      }
+   }
 );
 
 const authSlice = createSlice({
@@ -80,22 +108,34 @@ const authSlice = createSlice({
          const responseData = action.payload;
          if (responseData?.isSuccess) {
             const token = responseData.data.accessToken;
-            state.currentInfor = responseData.data.user;
+            const refreshToken = responseData.data.refreshToken;
+            const deviceId = responseData.data.deviceId;
+
             state.token = token;
-            if (token) {
-               localStorage.setItem("ACCESS_TOKEN", token);
-            }
+            state.refreshToken = refreshToken;
+            state.deviceId = deviceId;
+            state.currentInfor = responseData.data.user;
+
+            localStorage.setItem("ACCESS_TOKEN", token);
+            localStorage.setItem("REFRESH_TOKEN", refreshToken);
+            localStorage.setItem("DEVICE_ID", deviceId);
          }
       });
       builder.addCase(fetchLoginGoogle.fulfilled, (state, action: PayloadAction<any>) => {
          const responseData = action.payload;
-         if (responseData?.isSuccess) {
+        if (responseData?.isSuccess) {
             const token = responseData.data.accessToken;
-            state.currentInfor = responseData.data.user;
+            const refreshToken = responseData.data.refreshToken;
+            const deviceId = responseData.data.deviceId;
+
             state.token = token;
-            if (token) {
-               localStorage.setItem("ACCESS_TOKEN", token);
-            }
+            state.refreshToken = refreshToken;
+            state.deviceId = deviceId;
+            state.currentInfor = responseData.data.user;
+
+            localStorage.setItem("ACCESS_TOKEN", token);
+            localStorage.setItem("REFRESH_TOKEN", refreshToken);
+            localStorage.setItem("DEVICE_ID", deviceId);
          }
       });
       builder.addCase(fetchMe.fulfilled, (state, action: PayloadAction<any>) => {
@@ -103,6 +143,25 @@ const authSlice = createSlice({
          if (responseData?.isSuccess) {
             state.currentInfor = responseData.data;
          }
+      });
+      builder.addCase(fetchRefreshToken.fulfilled, (state, action: PayloadAction<any>) => {
+
+         const responseData = action.payload;
+        if (responseData?.isSuccess) {
+            const token = responseData.data.accessToken;
+            const refreshToken = responseData.data.refreshToken;
+            const deviceId = responseData.data.deviceId;
+
+            state.token = token;
+            state.refreshToken = refreshToken;
+            state.deviceId = deviceId;
+            state.currentInfor = responseData.data.user;
+           
+            localStorage.setItem("ACCESS_TOKEN", token);
+            localStorage.setItem("REFRESH_TOKEN", refreshToken);
+            localStorage.setItem("DEVICE_ID", deviceId);
+         }
+
       });
    },
 });
