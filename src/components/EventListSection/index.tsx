@@ -324,8 +324,6 @@ const Pagination = ({
 const EventListSection: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const events = useSelector((s: RootState) => s.EVENT?.events) ?? [];
-  console.log("event", events);
-  
   const pagination = useSelector((s: RootState) => s.EVENT?.pagination) ?? null;
 
   const [searchInput, setSearchInput] = useState("");
