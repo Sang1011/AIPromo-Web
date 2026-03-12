@@ -95,6 +95,15 @@ export interface GetAllEventResponse {
     }
 }
 
+export interface EventDetailTicketTypes{
+    id: string;
+    name: string;
+    price: number;
+    areaId: string;
+    areaName:  string;
+    areaType: string;
+}
+
 export interface GetEventDetailResponse {
     id: string;
     organizerId: string;
@@ -118,4 +127,5 @@ export interface GetEventDetailResponse {
     sessions: EventSession[];
     hashtags: EventHashtag[];
     actorImages: EventActorImage[];
+    ticketTypes: EventDetailTicketTypes[]
 }
