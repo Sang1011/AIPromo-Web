@@ -25,7 +25,7 @@ import SeatMapViewerPage from "./pages/Organizer/SeatMapViewerPage";
 import Register from "./pages/RegisterPage";
 import { useDispatch } from "react-redux";
 import { useEffect } from "react";
-import { fetchMe } from "./store/authSlice";
+import { fetchMe, fetchRefreshToken } from "./store/authSlice";
 import type { AppDispatch } from "./store";
 import CreateEventPage from "./pages/Organizer/CreateEventPage";
 
@@ -40,16 +40,19 @@ function App() {
   ];
 
   const dispatch = useDispatch<AppDispatch>();
+  const refreshToken = localStorage.getItem("REFRESH_TOKEN");
+
   useEffect(() => {
+    if (refreshToken) {
+      dispatch(fetchRefreshToken());
+    }
     dispatch(fetchMe());
-  }, [dispatch]);
+  }, []);
 
   return (
     <Routes>
       {/*Attendee*/}
       <Route path="/" element={<HomePage />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
