@@ -177,41 +177,6 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         setEventForm((prev) => ({ ...prev, [key]: value }));
     };
 
-    const buildBaseEventPayload = () => ({
-        title: eventForm.title,
-        bannerUrl: eventForm.bannerUrl || "",
-        description: eventForm.description,
-        location: eventForm.location,
-        mapUrl: "",
-        hashtagIds: eventForm.selectedHashtags.map((tag) => tag.id),
-        categoryIds: eventForm.selectedCategories.map((cat) => cat.id),
-        actorImages: eventForm.actors.map((actor, index) => ({
-            name: actor.name,
-            major: actor.major,
-            image: eventForm.actorUrls[index] || "",
-        })),
-        imageUrls: eventForm.images.map((img) => img.url),
-    });
-
-    const buildCreateEventPayload = (): CreateEventRequest => {
-        type User = {
-            userId: string;
-        }
-        let userInfo = currentInfor as User;
-        if (!userInfo?.userId) {
-            throw new Error("User information is required");
-        }
-
-        return {
-            ...buildBaseEventPayload(),
-            organizerId: userInfo.userId,
-        };
-    };
-
-    const buildUpdateEventPayload = (): UpdateEventInfoRequest => {
-        return buildBaseEventPayload();
-    };
-
     useEffect(() => {
         console.log("Current user info:", currentInfor);
     }, [currentInfor])
@@ -342,10 +307,10 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         let finalBannerUrl = eventForm.bannerUrl || "";
         if (eventForm.bannerFile) {
             if (mode === "edit" && eventId) {
-                await dispatch(fetchUpdateEventBanner({ eventId, file: eventForm.bannerFile })).unwrap();
+                const res = await dispatch(fetchUpdateEventBanner({ eventId, file: eventForm.bannerFile })).unwrap();
+                finalBannerUrl = res.url;
             } else {
-                const res = await dispatch(fetchUpload({ folder: "events/banners", file: eventForm.bannerFile })).unwrap();
-                console.log(res);
+                finalBannerUrl = await dispatch(fetchUpload({ folder: "events/banners", file: eventForm.bannerFile })).unwrap();
             }
             URL.revokeObjectURL(eventForm.bannerUrl!);
         }
@@ -362,13 +327,13 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
             eventForm.images.map(async (img) => {
                 if (!img.file) return img;
 
-                const url = await dispatch(fetchUpload({ folder: "events/images", file: img.file })).unwrap();
                 URL.revokeObjectURL(img.url);
 
                 if (mode === "edit" && eventId) {
                     const res = await dispatch(fetchCreateImage({ eventId, file: img.file })).unwrap();
                     return { id: res.id, url: res.imageUrl, file: null };
                 } else {
+                    const url = await dispatch(fetchUpload({ folder: "events/images", file: img.file })).unwrap();
                     return { id: null, url, file: null };
                 }
             })
@@ -420,13 +385,11 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
 
         if (mode === "create") {
             const userInfo = currentInfor as { userId: string };
-            const result = await dispatch(fetchCreateEvent({ ...payload, organizerId: userInfo.userId }))
+            await dispatch(fetchCreateEvent({ ...payload, organizerId: userInfo.userId }))
                 .unwrap()
                 .then((res) => onCreated?.(res.data));
-            console.log(result);
         } else if (mode === "edit" && eventId) {
-            const result = await dispatch(fetchUpdateEvent({ id: eventId, data: payload })).unwrap();
-            console.log(result)
+            await dispatch(fetchUpdateEvent({ id: eventId, data: payload })).unwrap();
             onNext?.();
         }
     };
