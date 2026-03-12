@@ -48,13 +48,13 @@ export const fetchAllEvents = createAsyncThunk<
 );
 
 export const fetchEventById = createAsyncThunk<
-    GetEventDetailResponse,
+    any,
     string
 >(
     `${name}/fetchEventById`,
     async (id, thunkAPI) => {
         try {
-            const response = await eventService.getEventById(id);
+            const response = await eventService.getEventById(id); 
             return response.data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
@@ -159,8 +159,9 @@ const eventSlice = createSlice({
 
         builder.addCase(
             fetchEventById.fulfilled,
-            (state, action: PayloadAction<GetEventDetailResponse>) => {
-                state.currentEvent = action.payload;
+            (state, action) => {
+                if(action.payload.isSuccess)
+                state.currentEvent = action.payload.data;
             }
         );
 
