@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FiPlus, FiEdit2, FiTrash2, FiCalendar, FiClock, FiTag, FiAlertTriangle } from "react-icons/fi";
+import {
+    FiPlus, FiEdit2, FiTrash2, FiCalendar, FiClock,
+    FiTag, FiAlertTriangle, FiLayers, FiZap
+} from "react-icons/fi";
 import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchDeleteSession, fetchSessions } from "../../../store/eventSlice";
 import type { EventSession, EventTicketType } from "../../../types/event/event";
 import CreateSessionModal from "../sessions/CreateSessionModal";
 import EditSessionModal from "../sessions/EditSessionModal";
-import TicketTypeModal from "../ticket/TicketTypeModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,87 +28,56 @@ const formatDateTime = (iso: string) => {
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
 
-// ─── Empty session placeholder ────────────────────────────────────────────────
+// ─── Section Header ───────────────────────────────────────────────────────────
 
-function EmptySessionPlaceholder({ onCreateSession }: { onCreateSession: () => void }) {
+function SectionHeader({
+    icon,
+    title,
+    subtitle,
+    count,
+    action,
+}: {
+    icon: React.ReactNode;
+    title: string;
+    subtitle: string;
+    count?: number;
+    action?: React.ReactNode;
+}) {
     return (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-5 space-y-4">
-
-            {/* Skeleton title row */}
-            <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2 flex-1">
-                    <div className="h-4 w-48 rounded-md bg-white/5" />
-                    <div className="h-3 w-32 rounded-md bg-white/5" />
+        <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center text-primary">
+                    {icon}
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <div className="h-7 w-14 rounded-lg bg-white/5" />
-                    <div className="h-7 w-14 rounded-lg bg-white/5" />
-                </div>
-            </div>
-
-            {/* Skeleton time row */}
-            <div className="flex gap-6">
-                <div className="h-3 w-36 rounded-md bg-white/5" />
-                <div className="h-3 w-36 rounded-md bg-white/5" />
-            </div>
-
-            {/* Ticket placeholder — amber themed */}
-            <div className="rounded-xl border border-amber-500/20 overflow-hidden">
-                {/* Table header */}
-                <div className="grid grid-cols-[1fr_auto_auto_auto] text-xs text-amber-400/50 px-4 py-2 border-b border-amber-500/10 bg-amber-500/5">
-                    <span>Loại vé</span>
-                    <span className="text-right pr-6">Giá</span>
-                    <span className="text-right pr-6">Đã bán</span>
-                    <span className="text-right">Còn lại</span>
-                </div>
-
-                {/* Skeleton rows */}
-                {[52, 36].map((w, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] items-center px-4 py-3 border-b border-white/5">
-                        <div className="space-y-1.5">
-                            <div className={`h-3 rounded-md bg-white/5`} style={{ width: w * 0.5 + "rem" }} />
-                            <div className="h-2.5 w-14 rounded-md bg-white/5" />
-                        </div>
-                        <div className="h-3 w-12 rounded-md bg-white/5 mr-6" />
-                        <div className="h-3 w-6 rounded-md bg-white/5 mr-6" />
-                        <div className="h-3 w-6 rounded-md bg-white/5" />
+                <div>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-white">{title}</h3>
+                        {count !== undefined && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+                                {count}
+                            </span>
+                        )}
                     </div>
-                ))}
-
-                {/* Warning */}
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-500/10 bg-amber-500/5">
-                    <FiAlertTriangle size={12} className="text-amber-400 flex-shrink-0" />
-                    <p className="text-xs text-amber-300">Cần ít nhất 1 suất diễn với loại vé trước khi tiếp tục</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
                 </div>
-
-                <button
-                    onClick={onCreateSession}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-ml font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors"
-                >
-                    <FiPlus size={13} />
-                    Tạo suất diễn để bắt đầu
-                </button>
             </div>
+            {action}
         </div>
     );
 }
 
-// ─── Session card ─────────────────────────────────────────────────────────────
+// ─── Session Card (compact) ───────────────────────────────────────────────────
 
 function SessionCard({
     session,
     onEdit,
     onDelete,
-    onManageTickets,
 }: {
     session: EventSession & { id: string };
     onEdit: () => void;
     onDelete: () => void;
-    onManageTickets: () => void;
 }) {
     const [deleting, setDeleting] = useState(false);
-    const tickets: EventTicketType[] = session.ticketTypes ?? [];
-    const hasTickets = tickets.length > 0;
 
     const handleDelete = async () => {
         if (!confirm(`Bạn có chắc muốn xoá suất diễn "${session.title}"?`)) return;
@@ -115,125 +86,145 @@ function SessionCard({
     };
 
     return (
-        <div className={`rounded-3xl border-2 transition-all duration-300 overflow-hidden shadow-2xl ${!hasTickets
-            ? "border-primary bg-card-dark shadow-primary-500/5"
-            : "border-white/5 bg-card-dark hover:border-primary/30 shadow-black/50"
-            }`}>
+        <div className="group relative flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-[#18122B] border border-white/5 hover:border-primary/25 hover:bg-[#1e1638] transition-all duration-200">
+            {/* Accent bar */}
+            <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-primary/30 group-hover:bg-primary/60 transition-colors" />
 
-            <div className="p-7 space-y-6">
-                {/* ── Header: Title & Actions ── */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                    <div className="space-y-2 flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <h4 className="text-2xl font-extrabold text-white tracking-tight">
-                                {session.title}
-                            </h4>
-                            {!hasTickets && (
-                                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-500/10 border border-primary-500/30 text-primary-400 text-[10px] font-bold uppercase">
-                                    <FiAlertTriangle size={12} />
-                                    Chưa có vé
-                                </span>
-                            )}
-                        </div>
-                        {session.description && (
-                            <p className="text-slate-400 text-sm leading-relaxed line-clamp-2 max-w-2xl">
-                                {session.description}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0 self-start lg:self-center">
-                        <button
-                            onClick={onEdit}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all border border-white/5"
-                        >
-                            <FiEdit2 size={16} />
-                            Sửa
-                        </button>
-                        <button
-                            onClick={handleDelete}
-                            disabled={deleting}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold text-sm transition-all border border-red-500/10 disabled:opacity-50"
-                        >
-                            <FiTrash2 size={16} />
-                            {deleting ? "..." : "Xoá"}
-                        </button>
-                    </div>
-                </div>
-
-                {/* ── Time Info: Tách biệt bằng Box Gradient ── */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0B0B12]/60 border border-white/5">
-                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                            <FiCalendar size={22} className="text-primary" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Bắt đầu lúc</p>
-                            <p className="text-lg text-slate-200 font-bold">{formatDateTime(session.startTime)}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0B0B12]/60 border border-white/5">
-                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                            <FiClock size={22} className="text-primary" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Kết thúc dự kiến</p>
-                            <p className="text-lg text-slate-200 font-bold">{formatDateTime(session.endTime)}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Ticket Table: Hiện đại & Font to ── */}
-                <div className={`rounded-2xl border overflow-hidden ${!hasTickets ? "border-primary-500/20" : "border-white/5"}`}>
-                    <div className="grid grid-cols-[1fr_120px_100px_100px] text-[10px] font-black uppercase tracking-[0.1em] px-6 py-3 bg-white/[0.03] text-slate-500">
-                        <span>Hạng vé</span>
-                        <span className="text-right">Giá tiền</span>
-                        <span className="text-right">Đã bán</span>
-                        <span className="text-right">Số lượng</span>
-                    </div>
-
-                    {hasTickets ? (
-                        <div className="divide-y divide-white/5">
-                            {tickets.map((t) => (
-                                <div key={t.id} className="grid grid-cols-[1fr_120px_100px_100px] items-center px-6 py-5 hover:bg-white/[0.02] transition-colors">
-                                    <div>
-                                        <p className="text-lg font-bold text-white">{t.name}</p>
-                                        <p className="text-xs text-slate-500 uppercase font-medium">{t.type}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-lg font-black text-primary">{formatPrice(t.price)}</span>
-                                    </div>
-                                    <div className="text-right text-slate-400 font-bold">{t.soldQuantity}</div>
-                                    <div className="text-right text-slate-400 font-bold">{t.availableQuantity}</div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="py-12 flex flex-col items-center justify-center text-center bg-primary-500/[0.02]">
-                            <FiAlertTriangle size={40} className="text-primary-500/30 mb-4" />
-                            <p className="text-primary-200/80 font-bold">Vui lòng thiết lập hạng vé</p>
-                            <p className="text-primary-500/40 text-xs mt-1">Thông tin vé là bắt buộc để mở bán sự kiện</p>
-                        </div>
-                    )}
+            {/* Info */}
+            <div className="flex-1 min-w-0 pl-3">
+                <p className="font-bold text-white text-sm truncate">{session.title}</p>
+                {session.description && (
+                    <p className="text-xs text-slate-500 truncate mt-0.5 max-w-sm">{session.description}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5">
+                    <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <FiCalendar size={11} className="text-primary/60" />
+                        {formatDateTime(session.startTime)}
+                    </span>
+                    <span className="text-slate-700 text-xs hidden sm:block">→</span>
+                    <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <FiClock size={11} className="text-primary/60" />
+                        {formatDateTime(session.endTime)}
+                    </span>
                 </div>
             </div>
 
-            {/* ── Footer Button: Full Width & Call to Action ── */}
+            {/* Actions */}
+            <div className="flex items-center gap-1.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                <button
+                    onClick={onEdit}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium text-xs transition-all border border-white/5"
+                >
+                    <FiEdit2 size={12} />
+                    Sửa
+                </button>
+                <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/8 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 font-medium text-xs transition-all border border-red-500/10 disabled:opacity-50"
+                >
+                    <FiTrash2 size={12} />
+                    {deleting ? "..." : "Xoá"}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ─── Empty Sessions ────────────────────────────────────────────────────────────
+
+function EmptySessions({ onCreate }: { onCreate: () => void }) {
+    return (
+        <div
+            onClick={onCreate}
+            className="group flex flex-col items-center justify-center gap-3 py-10 rounded-2xl border border-dashed border-white/8 bg-white/[0.015] hover:border-primary/30 hover:bg-primary/[0.02] transition-all cursor-pointer"
+        >
+            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                <FiPlus size={18} />
+            </div>
+            <div className="text-center">
+                <p className="text-sm font-semibold text-slate-300 group-hover:text-white transition-colors">Tạo suất diễn đầu tiên</p>
+                <p className="text-xs text-slate-600 mt-0.5">Nhấn để bắt đầu thiết lập lịch diễn</p>
+            </div>
+        </div>
+    );
+}
+
+// ─── Ticket Type Row ──────────────────────────────────────────────────────────
+
+function TicketTypeRow({ ticket }: { ticket: EventTicketType }) {
+    const soldPct = ticket.quantity > 0
+        ? Math.round((ticket.soldQuantity / ticket.quantity) * 100)
+        : 0;
+
+    return (
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-[#18122B] border border-white/5 hover:border-primary/20 transition-colors">
+            {/* Color dot */}
+            <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+
+            {/* Name & type */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-white truncate">{ticket.name}</span>
+                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 text-slate-500 shrink-0">{ticket.type}</span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="flex items-center gap-2 mt-1.5">
+                    <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
+                        <div
+                            className="h-full rounded-full bg-primary/60 transition-all"
+                            style={{ width: `${soldPct}%` }}
+                        />
+                    </div>
+                    <span className="text-[10px] text-slate-500 shrink-0">
+                        {ticket.soldQuantity}/{ticket.quantity}
+                    </span>
+                </div>
+            </div>
+
+            {/* Price */}
+            <div className="text-right shrink-0">
+                <span className="text-sm font-black text-primary">{formatPrice(ticket.price)}</span>
+                <p className="text-[10px] text-slate-600 mt-0.5">mỗi vé</p>
+            </div>
+        </div>
+    );
+}
+
+// ─── Empty Tickets ─────────────────────────────────────────────────────────────
+
+function EmptyTickets({ onManage }: { onManage: () => void }) {
+    return (
+        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-amber-500/10">
+                <FiAlertTriangle size={13} className="text-amber-400 shrink-0" />
+                <p className="text-xs text-amber-300/80">Sự kiện cần ít nhất 1 loại vé để có thể mở bán</p>
+            </div>
             <button
-                onClick={onManageTickets}
-                className={`w-full flex items-center justify-center gap-3 px-6 py-5 text-sm font-black uppercase tracking-widest transition-all ${!hasTickets
-                    ? "bg-primary text-white hover:bg-opacity-80 hover:cursor"
-                    : "bg-primary/10 text-primary hover:bg-primary hover:text-white border-t border-white/5"
-                    }`}
+                onClick={onManage}
+                className="w-full flex items-center justify-center gap-2 py-4 text-sm font-bold text-amber-400 hover:bg-amber-500/8 transition-colors"
             >
-                <FiTag size={18} />
-                {hasTickets ? "Cấu hình vé & Sơ đồ" : "Thêm vé ngay"}
+                <FiPlus size={14} />
+                Thiết lập loại vé ngay
             </button>
         </div>
     );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Divider ──────────────────────────────────────────────────────────────────
+
+function Divider() {
+    return (
+        <div className="flex items-center gap-4 my-2">
+            <div className="flex-1 h-px bg-white/5" />
+            <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+            <div className="flex-1 h-px bg-white/5" />
+        </div>
+    );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Step2Schedule({
     onNext,
@@ -244,14 +235,21 @@ export default function Step2Schedule({
 }) {
     const dispatch = useDispatch<AppDispatch>();
     const { eventId } = useParams<{ eventId: string }>();
+
+    // Sessions from Redux
     const sessions = (useSelector(
         (state: RootState) => state.EVENT.sessions
     ) ?? []) as (EventSession & { id: string })[];
 
+    // Global ticket types from Redux (now event-level, not session-level)
+    const ticketTypes = (useSelector(
+        (state: RootState) => state.TICKET_TYPE.ticketTypes
+    ))
+
     const [loading, setLoading] = useState(false);
     const [openCreateModal, setOpenCreateModal] = useState(false);
     const [editingSession, setEditingSession] = useState<(EventSession & { id: string }) | null>(null);
-    const [ticketSession, setTicketSession] = useState<(EventSession & { id: string }) | null>(null);
+    const [openTicketModal, setOpenTicketModal] = useState(false);
 
     const loadSessions = () => {
         if (!eventId) return;
@@ -266,82 +264,152 @@ export default function Step2Schedule({
         dispatch(fetchDeleteSession({ eventId, sessionId }));
     };
 
-    const hasIncompleteSession = sessions.some(
-        (s) => !s.ticketTypes || s.ticketTypes.length === 0
-    );
-    const canProceed = sessions.length > 0 && !hasIncompleteSession;
+    const hasSessions = sessions.length > 0;
+    const hasTickets = ticketTypes.length > 0;
+    const canProceed = hasSessions && hasTickets;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 max-w-3xl mx-auto">
 
-            {/* ── Header ── */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-bold text-white">Thời gian biểu</h2>
-                    <p className="text-sm text-slate-400">Quản lý các suất diễn và loại vé tương ứng.</p>
-                </div>
-                <button
-                    onClick={() => setOpenCreateModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl font-medium text-sm"
-                >
-                    <FiPlus size={16} />
-                    Tạo suất diễn
-                </button>
+            {/* ── Page header ── */}
+            <div>
+                <h2 className="text-xl font-extrabold text-white tracking-tight">Thời gian biểu & Loại vé</h2>
+                <p className="text-sm text-slate-500 mt-1">Thiết lập các suất diễn và hạng vé cho sự kiện.</p>
             </div>
 
-            {/* ── Content ── */}
-            {loading ? (
-                <div className="py-16 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-                </div>
-            ) : sessions.length === 0 ? (
-                <EmptySessionPlaceholder onCreateSession={() => setOpenCreateModal(true)} />
-            ) : (
-                <div className="space-y-4">
-                    {sessions.map((s) => (
-                        <SessionCard
-                            key={s.id}
-                            session={s}
-                            onEdit={() => setEditingSession(s)}
-                            onDelete={() => handleDelete(s.id)}
-                            onManageTickets={() => setTicketSession(s)}
-                        />
-                    ))}
-                </div>
-            )}
+            {/* ══════════════════════════════════════
+                SECTION 1 — SESSIONS
+            ══════════════════════════════════════ */}
+            <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
+                <SectionHeader
+                    icon={<FiLayers size={16} />}
+                    title="Suất diễn"
+                    subtitle="Các khung giờ diễn ra sự kiện"
+                    count={sessions.length}
+                    action={
+                        <button
+                            onClick={() => setOpenCreateModal(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white font-semibold text-xs hover:bg-primary/90 transition-colors"
+                        >
+                            <FiPlus size={13} />
+                            Tạo suất diễn
+                        </button>
+                    }
+                />
+
+                {loading ? (
+                    <div className="py-10 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    </div>
+                ) : hasSessions ? (
+                    <div className="space-y-2">
+                        {sessions.map((s) => (
+                            <SessionCard
+                                key={s.id}
+                                session={s}
+                                onEdit={() => setEditingSession(s)}
+                                onDelete={() => handleDelete(s.id)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <EmptySessions onCreate={() => setOpenCreateModal(true)} />
+                )}
+            </div>
+
+            <Divider />
+
+            {/* ══════════════════════════════════════
+                SECTION 2 — TICKET TYPES
+            ══════════════════════════════════════ */}
+            <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
+                <SectionHeader
+                    icon={<FiTag size={16} />}
+                    title="Loại vé"
+                    subtitle="Áp dụng chung cho toàn bộ sự kiện"
+                    count={ticketTypes.length}
+                    action={
+                        <button
+                            onClick={() => setOpenTicketModal(true)}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-semibold text-xs border border-white/8 transition-all"
+                        >
+                            <FiEdit2 size={12} />
+                            Quản lý vé
+                        </button>
+                    }
+                />
+
+                {hasTickets ? (
+                    <div className="space-y-2">
+                        {ticketTypes.map((t) => (
+                            // <TicketTypeRow key={t.id} ticket={t} />
+                            <></>
+                        ))}
+
+                        {/* Summary strip */}
+                        <div className="flex items-center justify-between px-4 py-3 mt-1 rounded-xl bg-white/[0.025] border border-white/5">
+                            <span className="text-xs text-slate-500">Tổng số vé phát hành</span>
+                            <span className="text-sm font-black text-white">
+                                {/* {ticketTypes.reduce((a, t) => a + t.quantity, 0).toLocaleString("vi-VN")} */}
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    <EmptyTickets onManage={() => setOpenTicketModal(true)} />
+                )}
+            </div>
 
             {/* ── Validation banner ── */}
-            {sessions.length > 0 && hasIncompleteSession && (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                    <FiAlertTriangle size={15} className="text-amber-400 flex-shrink-0" />
-                    <p className="text-sm text-amber-300">
-                        Một số suất diễn chưa có loại vé. Vui lòng hoàn tất trước khi tiếp tục.
+            {!canProceed && (hasSessions || hasTickets) && (
+                <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-amber-500/8 border border-amber-500/15">
+                    <FiAlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-300/80 leading-relaxed">
+                        {!hasSessions && !hasTickets
+                            ? "Vui lòng tạo ít nhất 1 suất diễn và 1 loại vé."
+                            : !hasSessions
+                                ? "Vui lòng tạo ít nhất 1 suất diễn."
+                                : "Vui lòng thiết lập ít nhất 1 loại vé để mở bán."}
                     </p>
                 </div>
             )}
 
-            {/* ── Footer ── */}
-            <div className="flex justify-between pt-6">
+            {/* ── Footer: ready state ── */}
+            {canProceed && (
+                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/15">
+                    <FiZap size={13} className="text-emerald-400" />
+                    <p className="text-xs text-emerald-300/80">
+                        {sessions.length} suất diễn &middot; {ticketTypes.length} hạng vé — Sẵn sàng tiếp tục
+                    </p>
+                </div>
+            )}
+
+            {/* ── Nav Buttons ── */}
+            <div className="flex items-center justify-between pt-2">
                 <button
                     onClick={onBack}
-                    className="px-6 py-3 rounded-xl border border-white/10 text-slate-400 hover:bg-white/5 transition-colors"
+                    className="px-5 py-2.5 rounded-xl border border-white/8 text-slate-400 hover:bg-white/5 hover:text-slate-200 transition-all text-sm font-medium"
                 >
-                    Quay lại
+                    ← Quay lại
                 </button>
-                <button
-                    onClick={onNext}
-                    className="px-6 py-3 rounded-xl border border-amber-400/40 text-amber-300 hover:bg-amber-400/10 font-semibold"
-                >
-                    Next (dev)
-                </button>
-                <button
-                    onClick={canProceed ? onNext : undefined}
-                    disabled={!canProceed}
-                    title={!canProceed ? "Hoàn tất tất cả suất diễn trước khi tiếp tục" : undefined}
-                    className="px-6 py-3 rounded-xl bg-primary text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                >
-                    Tiếp theo →
-                </button>
+
+                <div className="flex items-center gap-2">
+                    {/* Dev bypass */}
+                    <button
+                        onClick={onNext}
+                        className="px-4 py-2.5 rounded-xl border border-amber-400/20 text-amber-400/60 hover:bg-amber-400/8 text-xs font-medium transition-all"
+                    >
+                        Next (dev)
+                    </button>
+
+                    <button
+                        onClick={canProceed ? onNext : undefined}
+                        disabled={!canProceed}
+                        title={!canProceed ? "Hoàn tất suất diễn & loại vé trước khi tiếp tục" : undefined}
+                        className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm disabled:opacity-35 disabled:cursor-not-allowed hover:bg-primary/90 transition-all"
+                    >
+                        Tiếp theo →
+                    </button>
+                </div>
             </div>
 
             {/* ── Modals ── */}
@@ -364,15 +432,14 @@ export default function Step2Schedule({
                 />
             )}
 
-            {eventId && ticketSession && (
+            {/* {eventId && (
                 <TicketTypeModal
-                    open={true}
-                    onClose={() => setTicketSession(null)}
+                    open={openTicketModal}
+                    onClose={() => setOpenTicketModal(false)}
                     eventId={eventId}
-                    session={ticketSession}
-                    onUpdated={loadSessions}
+                    onUpdated={() => { }}
                 />
-            )}
+            )} */}
         </div>
     );
 }

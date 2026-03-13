@@ -119,12 +119,12 @@ export interface GetAllEventResponse {
     }
 }
 
-export interface EventDetailTicketTypes{
+export interface EventDetailTicketTypes {
     id: string;
     name: string;
     price: number;
     areaId: string;
-    areaName:  string;
+    areaName: string;
     areaType: string;
 }
 
@@ -175,17 +175,3 @@ export type GetAllCreateResponseForPrivate = {
 }
 
 export type GetAllEventByMeResponse = ApiResponse<GetAllCreateResponseForPrivate>
-
-export interface CreateTicketTypeRequest {
-    name: string;
-    price: number;
-    quantity: number;
-    type: "Zone" | "Seat";
-    areaId: string;
-}
-
-export interface UpdateTicketTypeRequest {
-    name: string;
-    price: number;
-    quantity: number;
-}
