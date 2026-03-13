@@ -1,4 +1,6 @@
 import { FiInfo, FiCreditCard, FiFileText } from "react-icons/fi";
+import BankSelect from "../bank/BankSelect";
+import { useState } from "react";
 
 interface Step5PaymentProps {
     onBack?: () => void;
@@ -9,6 +11,20 @@ export default function Step5Payment({
     onBack,
     onFinish,
 }: Step5PaymentProps) {
+    const BANKS = [
+        { code: "VCB", name: "Vietcombank" },
+        { code: "TCB", name: "Techcombank" },
+        { code: "ACB", name: "ACB" },
+        { code: "MB", name: "MB Bank" },
+        { code: "BIDV", name: "BIDV" },
+        { code: "VPB", name: "VPBank" },
+        { code: "STB", name: "Sacombank" },
+        { code: "TPB", name: "TPBank" },
+        { code: "HDB", name: "HDBank" },
+    ];
+    const [bankCode, setBankCode] = useState("");
+    const [businessType, setBusinessType] = useState<"personal" | "company">("personal");
+
     return (
         <div className="space-y-8">
 
@@ -48,23 +64,25 @@ export default function Step5Payment({
                         required
                         placeholder="Nhập tên chủ tài khoản"
                         maxLength={100}
+                        uppercase
+                        noAccent
+                        onlyLetter
                     />
 
                     <Input
                         label="Số tài khoản"
                         required
                         placeholder="Nhập số tài khoản"
+                        onlyNumber
                     />
 
-                    <Select
+
+                    <BankSelect
                         label="Tên ngân hàng"
                         required
-                        options={[
-                            "Vietcombank",
-                            "Techcombank",
-                            "MB Bank",
-                            "ACB",
-                        ]}
+                        banks={BANKS}
+                        value={bankCode}
+                        onChange={setBankCode}
                     />
 
                     <Input
@@ -88,9 +106,21 @@ export default function Step5Payment({
                 {/* Business type */}
                 <div>
                     <Label required>Loại hình kinh doanh</Label>
+
                     <div className="grid grid-cols-2 gap-4 mt-2">
-                        <RadioCard label="Cá nhân" checked />
-                        <RadioCard label="Công ty" />
+                        <RadioCard
+                            label="Cá nhân"
+                            value="personal"
+                            checked={businessType === "personal"}
+                            onChange={() => setBusinessType("personal")}
+                        />
+
+                        <RadioCard
+                            label="Công ty"
+                            value="company"
+                            checked={businessType === "company"}
+                            onChange={() => setBusinessType("company")}
+                        />
                     </div>
                 </div>
 
@@ -112,36 +142,27 @@ export default function Step5Payment({
                     label="Mã số thuế"
                     required
                     placeholder="Nhập mã số thuế"
+                    alphanumeric
                 />
             </section>
 
             {/* ===== Footer ===== */}
             <div className="flex items-center justify-between pt-6 pb-10">
-                <button className="
-                    px-6 py-3 rounded-xl
-                    border border-white/10
-                    text-slate-300
-                    hover:bg-white/5
-                ">
-                    Lưu bản nháp
-                </button>
-
-                <div className="flex gap-4">
-                    <button
-                        onClick={onBack}
-                        className="
+                <button
+                    onClick={onBack}
+                    className="
                             px-6 py-3 rounded-xl
                             border border-primary
                             text-primary
-                            hover:bg-primary/10
-                        "
-                    >
-                        Quay lại
-                    </button>
+                            hover:border-white hover:text-white
 
-                    <button
-                        onClick={onFinish}
-                        className="
+                        "
+                >
+                    Quay lại
+                </button>
+                <button
+                    onClick={onFinish}
+                    className="
                             px-8 py-4 rounded-xl
                             bg-primary text-white
                             font-semibold
@@ -149,10 +170,9 @@ export default function Step5Payment({
                             hover:scale-[1.02] active:scale-[0.98]
                             transition
                         "
-                    >
-                        Hoàn tất & Xuất bản 🚀
-                    </button>
-                </div>
+                >
+                    Hoàn tất
+                </button>
             </div>
         </div>
     );
@@ -163,21 +183,90 @@ function Input({
     required,
     placeholder,
     maxLength,
-}: any) {
+    uppercase,
+    noAccent,
+    onlyNumber,
+    onlyLetter,
+    alphanumeric
+}: {
+    label: string
+    required: boolean
+    placeholder: string
+    maxLength?: number
+    uppercase?: boolean
+    noAccent?: boolean
+    onlyNumber?: boolean
+    onlyLetter?: boolean
+    alphanumeric?: boolean
+}) {
+
+    function normalizeInput(value: string, options: {
+        noAccent?: boolean
+        uppercase?: boolean
+        onlyNumber?: boolean
+        onlyLetter?: boolean
+        alphanumeric?: boolean
+    }) {
+
+        if (options.noAccent) {
+            value = value
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/đ/g, "d")
+                .replace(/Đ/g, "D")
+        }
+
+        if (options.onlyNumber) {
+            value = value.replace(/[^0-9]/g, "")
+        }
+
+        if (options.onlyLetter) {
+            value = value.replace(/[^a-zA-Z\s]/g, "")
+        }
+
+        if (options.alphanumeric) {
+            value = value.replace(/[^a-zA-Z0-9\s]/g, "")
+        }
+
+        if (options.uppercase) {
+            value = value.toUpperCase()
+        }
+
+        return value
+    }
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+        const value = normalizeInput(e.target.value, {
+            uppercase,
+            noAccent,
+            onlyNumber,
+            onlyLetter,
+            alphanumeric
+        })
+
+        e.target.value = value
+    }
+
     return (
         <div className="space-y-2">
             <Label required={required}>{label}</Label>
+
             <div className="relative">
                 <input
                     placeholder={placeholder}
                     maxLength={maxLength}
-                    className="
+                    onChange={handleChange}
+                    className={`
                         w-full px-4 py-3 rounded-xl
                         bg-black/30 border border-white/10
                         text-white outline-none
                         focus:border-primary
-                    "
+                        ${maxLength ? "pr-[50px]" : ""}
+                        ${uppercase ? "uppercase" : ""}
+                    `}
                 />
+
                 {maxLength && (
                     <span className="absolute right-3 top-3 text-[10px] text-slate-500">
                         0 / {maxLength}
@@ -185,28 +274,7 @@ function Input({
                 )}
             </div>
         </div>
-    );
-}
-
-function Select({ label, required, options }: any) {
-    return (
-        <div className="space-y-2">
-            <Label required={required}>{label}</Label>
-            <select
-                className="
-                    w-full px-4 py-3 rounded-xl
-                    bg-black/30 border border-white/10
-                    text-white outline-none
-                    focus:border-primary
-                "
-            >
-                <option value="">Chọn ngân hàng</option>
-                {options.map((o: string) => (
-                    <option key={o}>{o}</option>
-                ))}
-            </select>
-        </div>
-    );
+    )
 }
 
 function Label({
@@ -226,10 +294,14 @@ function Label({
 
 function RadioCard({
     label,
+    value,
     checked,
+    onChange,
 }: {
-    label: string;
-    checked?: boolean;
+    label: string
+    value: string
+    checked: boolean
+    onChange: () => void
 }) {
     return (
         <label
@@ -244,9 +316,12 @@ function RadioCard({
             <input
                 type="radio"
                 name="business_type"
-                defaultChecked={checked}
+                value={value}
+                checked={checked}
+                onChange={onChange}
                 className="accent-primary"
             />
+
             <span className="text-sm font-medium text-white">
                 {label}
             </span>

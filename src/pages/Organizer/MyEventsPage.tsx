@@ -1,35 +1,20 @@
 import { useEffect, useState } from "react";
-import EventCard, { type EventItem } from "../../components/Organizer/events/EventCards";
+import EventCard, {
+    type EventItemMapUI,
+    type EventStatusUI,
+} from "../../components/Organizer/events/EventCards";
 import SearchBar from "../../components/Organizer/shared/SearchBar";
-import StatusFilters, { type FilterStatus } from "../../components/Organizer/shared/StatusFilter";
+import StatusFilters, {
+    type FilterStatus,
+} from "../../components/Organizer/shared/StatusFilter";
 import Pagination from "../../components/Organizer/shared/Pagination";
 import { useOutletContext } from "react-router-dom";
 import type { DashboardLayoutConfig } from "../../types/organizer/dashboard.config";
-
-const EVENTS: EventItem[] = [
-    {
-        id: "1",
-        title: "Hội thảo AI & Future Marketing 2026",
-        image:
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuBbqTPIvST5wyGH_GDv-StIHdwyxGkh-45_855gQ9zT64S5Cy8ojzu44Xlc5S2WB93Vu7uqYYlSCQfXBDvxYKjlhC15-S7GHjWMzHZN2eJyBUBgBeHGXHYx9RE0pnyPYQamfNxgXgu5-OLDVo_2AkcrO046Ilhyr7BwwuCINlO26Z1idLmMJZJLW2hVv9IX4vm6TQ_Y0HoCUwvXiLd38bmngAA650M2_ETYFxyOBrkFTEJbWT5FpQEPpOyEW_krtQs5ct2BPhPayj8",
-        time: "09:00, Thứ 3, 27 Tháng 01 2026",
-        location: "FPT University, D1, Thủ Đức, TP. Hồ Chí Minh",
-        status: "live",
-        statusLabel: "Đang diễn ra",
-        category: "Hội thảo",
-    },
-    {
-        id: "2",
-        title: "Tech Summit 2026: The New Era",
-        image:
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuBk9FZumaMgZCEALIbF-Jx3g7lvKtihKFRJP1SnwaHb0jjC7kD1D5lNUdv3DHOT7LgUSCuLDxSvlH8EKF8mVhi9AM1s6b_qvLcJcqjG1i2GUzAOrVh3T12ntEQ2e4UCzlcFM95QA6DcMl7Ze2fj5MCqpwcotOSZ-L5HGuLqJXAk8Q4_7aXpri8iTcQ8zEGiAJB8uIIdNUWftUpsutAjFULCf_XNQ-middtIpfZekxGHCPNfBMVs7amtmqjdacYjwvAHxYMDu-YFt0k",
-        time: "20:00, Thứ 7, 15 Tháng 02 2026",
-        location: "SECC, Quận 7, TP. Hồ Chí Minh",
-        status: "upcoming",
-        statusLabel: "Sắp diễn ra",
-        category: "Sự kiện",
-    },
-];
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../store";
+import { fetchAllEventsByMe } from "../../store/eventSlice";
+import { convertFilterToApiStatus, mapStatus } from "../../utils/mapStatus";
+import type { EventItem } from "../../types/event/event";
 
 type DashboardContext = {
     setConfig: (config: DashboardLayoutConfig) => void;
@@ -37,10 +22,52 @@ type DashboardContext = {
 
 export default function MyEventsPage() {
     const { setConfig } = useOutletContext<DashboardContext>();
+    const [loading, setLoading] = useState(false);
+    const dispatch = useDispatch<AppDispatch>();
+    const { events, pagination } = useSelector(
+        (state: RootState) => state.EVENT
+    );
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [activeFilter, setActiveFilter] = useState<FilterStatus>("upcoming");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [activeFilter, setActiveFilter] = useState<FilterStatus>("Draft");
     const [currentPage, setCurrentPage] = useState(1);
+
+    const filteredEvents = events.filter((event) =>
+        event.title?.toLowerCase().includes(debouncedSearch.toLowerCase())
+    );
+
+    const mapEvent = (event: EventItem): EventItemMapUI => {
+        const status = mapStatus(event.status);
+
+        return {
+            id: event.id,
+            title: event.title,
+            image: event.bannerUrl,
+            location: event.location,
+            time: new Date(event.eventStartAt).toLocaleString("vi-VN") + " - " + new Date(event.eventEndAt).toLocaleString("vi-VN"),
+            status: status.status as EventStatusUI,
+            statusLabel: status.label,
+            category: event.categories?.[0]?.name,
+            color: status.color
+        };
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 400);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        setLoading(false);
+    }, [events]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearch]);
 
     useEffect(() => {
         setConfig({
@@ -49,7 +76,31 @@ export default function MyEventsPage() {
         });
 
         return () => setConfig({});
-    }, []);
+    }, [setConfig]);
+
+    useEffect(() => {
+        setLoading(true);
+
+        dispatch(
+            fetchAllEventsByMe({
+                PageNumber: currentPage,
+                PageSize: 5,
+                Statuses: convertFilterToApiStatus(activeFilter),
+            })
+        );
+    }, [dispatch, currentPage, activeFilter]);
+
+    const EventCardSkeleton = () => (
+        <div className="flex gap-4 p-4 bg-white dark:bg-card-dark rounded-2xl border border-slate-200 dark:border-slate-800 animate-pulse">
+            <div className="w-40 h-28 bg-slate-200 dark:bg-slate-700 rounded-xl" />
+
+            <div className="flex-1 space-y-3">
+                <div className="h-4 w-2/3 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-3 w-1/2 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-3 w-1/3 bg-slate-200 dark:bg-slate-700 rounded" />
+            </div>
+        </div>
+    );
 
     return (
         <div className="space-y-8">
@@ -61,21 +112,33 @@ export default function MyEventsPage() {
                 />
                 <StatusFilters
                     activeFilter={activeFilter}
-                    onFilterChange={setActiveFilter}
+                    onFilterChange={(filter) => {
+                        setActiveFilter(filter);
+                        setCurrentPage(1);
+                    }}
                 />
             </div>
 
             <div className="space-y-6">
-                {EVENTS.map((event, index) => (
-                    <EventCard key={index} event={event} />
-                ))}
+                {loading ? (
+                    [...Array(5)].map((_, i) => <EventCardSkeleton key={i} />)
+                ) : filteredEvents.length === 0 ? (
+                    <p className="text-slate-400 text-center">
+                        Không có sự kiện nào
+                    </p>
+                ) : (
+                    filteredEvents.map((event) => (
+                        <EventCard key={event.id} event={mapEvent(event)} />
+                    ))
+                )}
             </div>
 
             <Pagination
                 currentPage={currentPage}
-                totalPages={3}
+                totalPages={pagination?.totalPages || 1}
                 onPageChange={setCurrentPage}
             />
         </div>
     );
 }
+

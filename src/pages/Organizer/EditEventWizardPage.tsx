@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Stepper from "../../components/Organizer/Stepper";
 
@@ -7,12 +7,40 @@ import Step2Schedule from "../../components/Organizer/steps/Step2Schedule";
 import Step3Settings from "../../components/Organizer/steps/Step3Settings";
 import Step4Registration from "../../components/Organizer/steps/Step4Registration";
 import Step5Payment from "../../components/Organizer/steps/Step5Payment";
+import { fetchMe } from "../../store/authSlice";
+import { useParams } from "react-router-dom";
+import type { GetEventDetailResponse } from "../../types/event/event";
+import { fetchEventById } from "../../store/eventSlice";
+import type { AppDispatch } from "../../store";
+import { useDispatch } from "react-redux";
 
 export default function EditEventWizardPage() {
     const [step, setStep] = useState(1);
 
     const nextStep = () => setStep((s) => Math.min(s + 1, 5));
     const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+    const { eventId } = useParams<{ eventId: string }>();
+    const dispatch = useDispatch<AppDispatch>();
+    const [event, setEvent] = useState<GetEventDetailResponse | null>(null);
+
+    const fetchEventData = async () => {
+        if (!eventId) return;
+        try {
+            const res = await dispatch(fetchEventById(eventId)).unwrap();
+            const eventData: GetEventDetailResponse = res.data;
+            setEvent(eventData);
+        } catch (err) {
+            console.error("Failed to fetch event data:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchMe();
+    }, [])
+
+    useEffect(() => {
+        fetchEventData();
+    }, [eventId])
 
     return (
         <div className="max-w-[1100px] mx-auto space-y-8 pb-16">
@@ -23,8 +51,10 @@ export default function EditEventWizardPage() {
             {/* ===== STEP 1 ===== */}
             {step === 1 && (
                 <Step1EventInfo
+                    mode="edit"
                     onNext={nextStep}
                     onCancel={() => console.log("Cancel step 1")}
+                    eventData={event}
                 />
             )}
 
@@ -41,6 +71,7 @@ export default function EditEventWizardPage() {
                 <Step3Settings
                     onNext={nextStep}
                     onBack={prevStep}
+                    eventData={event}
                 />
             )}
 

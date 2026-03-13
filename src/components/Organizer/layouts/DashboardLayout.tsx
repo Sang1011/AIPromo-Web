@@ -6,6 +6,7 @@ import type { DashboardLayoutConfig } from "../../../types/organizer/dashboard.c
 import Header from "../navigations/Header";
 import PromoSidebar from "../navigations/PromoSidebar";
 import Sidebar from "../navigations/Sidebar";
+import { useHandleOrganizer } from "../../../hooks/useHandleOrganizer";
 
 const menuGroups = [
     {
@@ -30,6 +31,7 @@ const menuGroups = [
 ];
 
 export default function DashboardLayout() {
+    useHandleOrganizer();
     const [collapsed, setCollapsed] = useState(false);
 
     const [config, setConfig] = useState<DashboardLayoutConfig>({
@@ -37,19 +39,23 @@ export default function DashboardLayout() {
         havePromoSidebar: false,
     });
 
+    const ifCreateEvent = window.location.pathname === "/organizer/create-event";
+
     return (
         <div className="min-h-screen flex bg-cinder text-white">
-            <Sidebar
-                collapsed={collapsed}
-                setCollapsed={setCollapsed}
-                menuGroups={menuGroups}
-            />
+            {ifCreateEvent ? null : (
+                <Sidebar
+                    collapsed={collapsed}
+                    setCollapsed={setCollapsed}
+                    menuGroups={menuGroups}
+                />
+            )}
 
             <div
-                className={`flex-1 transition-all duration-300 ${collapsed ? "ml-20" : "ml-64"
+                className={`flex-1 transition-all duration-300 ${ifCreateEvent ? "" : collapsed ? "ml-20" : "ml-64"
                     }`}
             >
-                <Header title={config.title ?? ""} />
+                <Header canGoBack={ifCreateEvent} urlBack="/organizer/my-events" title={config.title ?? ""} />
 
                 {config.havePromoSidebar ? (
                     <main className="p-8 flex gap-8">

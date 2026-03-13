@@ -1,244 +1,551 @@
-import React, { useMemo, useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../store";
+import { fetchAllEvents } from "../../store/eventSlice";
+import type { EventItem } from "../../types/event/event";
 
-interface EventCardProps {
-  category: string;
-  image: string;
-  date: string;
-  title: string;
-  location: string;
-  price: string;
-}
+/* ================= CONFIG ================= */
 
-const EventCard: React.FC<EventCardProps> = ({
-  category,
-  image,
-  date,
-  title,
-  location,
-  price,
-}) => {
+const PAGE_SIZE = 6;
+
+/* ================= HELPERS ================= */
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+const formatTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+/* ================= CATEGORY BADGE ================= */
+
+const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {};
+const PALETTE = [
+  { bg: "rgba(124,59,237,0.2)", text: "#c084fc", border: "rgba(124,59,237,0.5)" },
+  { bg: "rgba(236,72,153,0.2)", text: "#f472b6", border: "rgba(236,72,153,0.5)" },
+  { bg: "rgba(20,184,166,0.2)", text: "#2dd4bf", border: "rgba(20,184,166,0.5)" },
+  { bg: "rgba(245,158,11,0.2)", text: "#fbbf24", border: "rgba(245,158,11,0.5)" },
+  { bg: "rgba(59,130,246,0.2)", text: "#60a5fa", border: "rgba(59,130,246,0.5)" },
+];
+
+const getCategoryColor = (id: number) => {
+  if (!CATEGORY_COLORS[id]) {
+    CATEGORY_COLORS[id] = PALETTE[id % PALETTE.length];
+  }
+  return CATEGORY_COLORS[id];
+};
+
+/* ================= EVENT CARD ================= */
+
+const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
   return (
     <div
-      className="rounded-[2rem] overflow-hidden group cursor-pointer
-      transition-all duration-300 hover:-translate-y-1
-      flex flex-col h-full"
+      className="rounded-2xl overflow-hidden group cursor-pointer flex flex-col h-full transition-all duration-300"
       style={{
-        background: "#18122B",
-        border: "1px solid rgba(124,59,237,0.1)",
-        backdropFilter: "blur(16px)",
+        background: "linear-gradient(145deg, #1a1035, #120d28)",
+        border: "1px solid rgba(124,59,237,0.12)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.border = "1px solid rgba(124,59,237,0.4)";
-        e.currentTarget.style.boxShadow =
-          "0 0 30px rgba(124,59,237,0.15)";
+        (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
+        (e.currentTarget as HTMLDivElement).style.border = "1px solid rgba(124,59,237,0.45)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow =
+          "0 12px 40px rgba(124,59,237,0.18), 0 4px 24px rgba(0,0,0,0.4)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.border = "1px solid rgba(124,59,237,0.1)";
-        e.currentTarget.style.boxShadow = "none";
+        (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+        (e.currentTarget as HTMLDivElement).style.border = "1px solid rgba(124,59,237,0.12)";
+        (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 24px rgba(0,0,0,0.3)";
       }}
     >
-      <div className="relative aspect-[16/10] overflow-hidden shrink-0">
+      {/* Banner */}
+      <div className="relative overflow-hidden" style={{ aspectRatio: "16/9" }}>
         <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-          style={{ backgroundImage: `url('${image}')` }}
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+          style={{ backgroundImage: `url('${item.bannerUrl}')` }}
         />
-        <div
-          className="absolute top-6 left-6 text-white text-[10px] font-black tracking-widest px-3 py-1 rounded-full uppercase z-10"
-          style={{
-            background: "linear-gradient(135deg,#7c3bed,#a855f7)",
-          }}
-        >
-          {category}
-        </div>
+        {/* Gradient overlay */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to top, rgba(11,11,18,0.9), rgba(124,59,237,0.2))",
+              "linear-gradient(to top, rgba(18,13,40,0.95) 0%, rgba(18,13,40,0.4) 50%, transparent 100%)",
           }}
         />
-      </div>
 
-      <div className="p-8 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-indigo-400 text-sm font-bold mb-3">
-          <span className="material-symbols-outlined text-sm">
-            calendar_today
-          </span>
-          {date}
+        {/* Category tags */}
+        <div className="absolute top-3 left-3 flex gap-2 flex-wrap z-10">
+          {item.categories?.length > 0 ? (
+            item.categories.map((cat) => {
+              const color = getCategoryColor(cat.id);
+              return (
+                <span
+                  key={cat.id}
+                  className="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full uppercase backdrop-blur-sm"
+                  style={{
+                    background: color.bg,
+                    color: color.text,
+                    border: `1px solid ${color.border}`,
+                  }}
+                >
+                  {cat.name}
+                </span>
+              );
+            })
+          ) : (
+            <span
+              className="text-[10px] font-bold tracking-wider px-2.5 py-1 rounded-full uppercase backdrop-blur-sm"
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.5)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              Sự kiện
+            </span>
+          )}
         </div>
 
-        <h3 className="text-2xl font-bold text-white leading-snug mb-6 group-hover:text-indigo-400 transition-colors">
-          {title}
-        </h3>
-
-        <div className="mt-auto pt-6 border-t border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-slate-400">
-            <span className="material-symbols-outlined text-sm">
-              location_on
-            </span>
-            <span className="text-sm">{location}</span>
-          </div>
-
-          <div
-            className="text-xl font-black"
+        {/* Status badge */}
+        <div className="absolute top-3 right-3 z-10">
+          <span
+            className="text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wide"
             style={{
               background:
-                "linear-gradient(135deg,#7c3bed 0%, #a855f7 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+                item.status === "Published"
+                  ? "rgba(20,184,166,0.2)"
+                  : "rgba(245,158,11,0.2)",
+              color: item.status === "Published" ? "#2dd4bf" : "#fbbf24",
+              border: `1px solid ${item.status === "Published"
+                  ? "rgba(20,184,166,0.4)"
+                  : "rgba(245,158,11,0.4)"
+                }`,
             }}
           >
-            {price}
-          </div>
+            {item.status === "Published" ? "● Đang mở" : item.status}
+          </span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-5 flex flex-col flex-1 gap-3">
+        {/* Date + Time row */}
+        <div className="flex items-center gap-3 text-xs" style={{ color: "rgba(167,139,250,0.8)" }}>
+          <span className="flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            {formatDate(item.eventStartAt)}
+          </span>
+          <span
+            className="w-px h-3"
+            style={{ background: "rgba(255,255,255,0.15)" }}
+          />
+          <span className="flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            {formatTime(item.eventStartAt)} – {formatTime(item.eventEndAt)}
+          </span>
+        </div>
+
+        {/* Title */}
+        <h3
+          className="font-bold leading-snug transition-colors duration-200 line-clamp-2"
+          style={{
+            fontSize: "1rem",
+            color: "#f1f0ff",
+          }}
+        >
+          {item.title}
+        </h3>
+
+        {/* Footer */}
+        <div
+          className="mt-auto pt-3 flex items-center gap-2"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            style={{ color: "rgba(148,163,184,0.6)", flexShrink: 0 }}
+          >
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          <span
+            className="text-sm truncate"
+            style={{ color: "rgba(148,163,184,0.7)" }}
+          >
+            {item.location}
+          </span>
         </div>
       </div>
     </div>
   );
 };
 
-const EventListSection: React.FC = () => {
-  const [search, setSearch] = useState("");
-  const [timeFilter, setTimeFilter] = useState("Mọi lúc");
-  const [categoryFilter, setCategoryFilter] = useState("Tất cả thể tag");
-  const [locationFilter, setLocationFilter] = useState("Địa điểm");
+/* ================= SKELETON ================= */
 
-  const events: EventCardProps[] = [
-    {
-      category: "Tech AI",
-      image: "https://picsum.photos/600/400?1",
-      date: "15/12/2024",
-      title: "AI & Tương lai ngành Sáng tạo",
-      location: "Hồ Chí Minh",
-      price: "450.000đ",
-    },
-    {
-      category: "Music",
-      image: "https://picsum.photos/600/400?2",
-      date: "22/12/2024",
-      title: "Neon Night Music Festival",
-      location: "Hà Nội",
-      price: "1.200k",
-    },
-    {
-      category: "Workshop",
-      image: "https://picsum.photos/600/400?3",
-      date: "28/12/2024",
-      title: "Lớp vẽ màu nước căn bản",
-      location: "Đà Lạt",
-      price: "Miễn phí",
-    },
-  ];
+const SkeletonCard = () => (
+  <div
+    className="rounded-2xl overflow-hidden flex flex-col animate-pulse"
+    style={{
+      background: "linear-gradient(145deg, #1a1035, #120d28)",
+      border: "1px solid rgba(124,59,237,0.08)",
+    }}
+  >
+    <div style={{ aspectRatio: "16/9", background: "rgba(255,255,255,0.04)" }} />
+    <div className="p-5 flex flex-col gap-3">
+      <div className="h-3 rounded-full w-1/3" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="h-4 rounded-full w-full" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="h-4 rounded-full w-2/3" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="h-3 rounded-full w-1/2 mt-2" style={{ background: "rgba(255,255,255,0.04)" }} />
+    </div>
+  </div>
+);
 
-  const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
-      const matchSearch = event.title
-        .toLowerCase()
-        .includes(search.toLowerCase());
+/* ================= PAGINATION ================= */
 
-      const matchCategory =
-        categoryFilter === "Tất cả thể tag" ||
-        event.category === categoryFilter;
+const Pagination = ({
+  current,
+  total,
+  hasPrev,
+  hasNext,
+  onChange,
+}: {
+  current: number;
+  total: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+  onChange: (p: number) => void;
+}) => {
+  const getPages = () => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages: (number | "...")[] = [];
+    pages.push(1);
+    if (current > 3) pages.push("...");
+    for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+      pages.push(i);
+    }
+    if (current < total - 2) pages.push("...");
+    pages.push(total);
+    return pages;
+  };
 
-      const matchLocation =
-        locationFilter === "Địa điểm" ||
-        event.location === locationFilter;
-
-      return matchSearch && matchCategory && matchLocation;
-    });
-  }, [search, categoryFilter, locationFilter]);
+  const btnBase: React.CSSProperties = {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    border: "1px solid rgba(124,59,237,0.2)",
+    background: "rgba(124,59,237,0.06)",
+    color: "rgba(167,139,250,0.8)",
+    padding: "0 10px",
+  };
 
   return (
-    <section className="relative py-24 px-6 overflow-hidden">
-      <div
-        className="absolute inset-0 -z-10"
+    <div className="flex items-center justify-center gap-2 mt-12 flex-wrap">
+      <button
+        disabled={!hasPrev}
+        onClick={() => onChange(current - 1)}
         style={{
+          ...btnBase,
+          opacity: hasPrev ? 1 : 0.3,
+          cursor: hasPrev ? "pointer" : "not-allowed",
+        }}
+      >
+        ← Trước
+      </button>
+
+      {getPages().map((p, i) =>
+        p === "..." ? (
+          <span key={`dot-${i}`} style={{ color: "rgba(255,255,255,0.3)", padding: "0 4px" }}>
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onChange(p as number)}
+            style={{
+              ...btnBase,
+              ...(p === current
+                ? {
+                  background: "linear-gradient(135deg,#7c3bed,#a855f7)",
+                  border: "1px solid transparent",
+                  color: "#fff",
+                  boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
+                }
+                : {}),
+            }}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      <button
+        disabled={!hasNext}
+        onClick={() => onChange(current + 1)}
+        style={{
+          ...btnBase,
+          opacity: hasNext ? 1 : 0.3,
+          cursor: hasNext ? "pointer" : "not-allowed",
+        }}
+      >
+        Sau →
+      </button>
+    </div>
+  );
+};
+
+/* ================= MAIN ================= */
+
+const EventListSection: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const events = useSelector((s: RootState) => s.EVENT?.events) ?? [];
+  const pagination = useSelector((s: RootState) => s.EVENT?.pagination) ?? null;
+
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pageNumber, setPageNumber] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  /* ===== SEARCH DEBOUNCE ===== */
+  useEffect(() => {
+    const timeout = setTimeout(() => setSearchQuery(searchInput), 300);
+    return () => clearTimeout(timeout);
+  }, [searchInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    dispatch(
+      fetchAllEvents({
+        PageNumber: pageNumber,
+        PageSize: PAGE_SIZE,
+      })
+    )
+      .unwrap()
+      .catch(() => {
+        // UI already handles "no events" state; keep it silent here.
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, pageNumber]);
+
+  /* ===== FRONTEND FILTER (search + category) ===== */
+  const filteredEvents = useMemo(() => {
+    const keyword = searchQuery.toLowerCase().trim();
+    return events.filter((event) => {
+      const matchSearch = keyword
+        ? event.title.toLowerCase().includes(keyword)
+        : true;
+      return matchSearch;
+    });
+  }, [events, searchQuery]);
+
+  /* ================= UI ================= */
+
+  return (
+    <section className="relative py-20 px-6" style={{ minHeight: "100vh" }}>
+      {/* Background glow */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none"
+        style={{
+          width: 800,
+          height: 400,
           background:
-            "linear-gradient(135deg, #070a17 0%, #0b0f1f 50%, #070a17 100%)",
+            "radial-gradient(ellipse at center, rgba(124,59,237,0.12) 0%, transparent 70%)",
+          filter: "blur(40px)",
         }}
       />
 
-      <div className="max-w-7xl mx-auto">
-        {/* HEADER */}
-        <div className="bg-white/5 backdrop-blur-xl p-10 rounded-[2rem] border border-white/10 mb-16">
-          <div className="flex items-center justify-between flex-wrap gap-6 mb-10">
-            <div>
-              <h2 className="text-5xl font-black text-white mb-3">
-                Sự kiện nổi bật
-              </h2>
-              <p className="text-slate-400">
-                Khám phá và tham gia những sự kiện đỉnh cao nhất.
-              </p>
-            </div>
-
-            <button className="px-6 py-3 rounded-xl bg-white/10 text-indigo-400 font-semibold hover:bg-white/20 transition">
-              Tất cả sự kiện 
-            </button>
+      <div className="max-w-7xl mx-auto relative">
+        {/* Header */}
+        <div className="mb-10 flex flex-col items-center text-center">
+          {/* Top badge */}
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5"
+            style={{
+              background: "rgba(124,59,237,0.12)",
+              border: "1px solid rgba(124,59,237,0.3)",
+              boxShadow: "0 0 20px rgba(124,59,237,0.15)",
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ background: "#a78bfa" }}
+            />
+            <p
+              className="text-xs font-bold tracking-[0.25em] uppercase"
+              style={{ color: "#a78bfa" }}
+            >
+              Khám phá
+            </p>
           </div>
 
-          {/* FILTER BAR */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* SEARCH */}
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                search
-              </span>
-              <input
-                type="text"
-                placeholder="Tìm kiếm tên sự kiện..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-[#0f1326] border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            {/* TIME */}
-            <select
-              value={timeFilter}
-              onChange={(e) => setTimeFilter(e.target.value)}
-              className="bg-[#0f1326] border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-indigo-500"
+          {/* Title with gradient */}
+          <div className="relative inline-block mb-4">
+            <h2
+              className="text-5xl font-extrabold tracking-tight"
+              style={{
+                background: "linear-gradient(135deg, #f1f0ff 0%, #a78bfa 50%, #7c3bed 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                lineHeight: 1.15,
+              }}
             >
-              <option>Mọi lúc</option>
-              <option>Tuần này</option>
-              <option>Tháng này</option>
-            </select>
+              Sự kiện nổi bật
+            </h2>
+            {/* Animated underline accent */}
+            <span
+              className="absolute -bottom-1 left-0 h-0.5 rounded-full"
+              style={{
+                width: "60%",
+                background: "linear-gradient(90deg, #7c3bed, #a855f7, transparent)",
+                animation: "expandWidth 1s ease-out forwards",
+              }}
+            />
+            <style>{`
+      @keyframes expandWidth {
+        from { width: 0%; opacity: 0; }
+        to { width: 60%; opacity: 1; }
+      }
+    `}</style>
+          </div>
 
-            {/* CATEGORY */}
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-[#0f1326] border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-indigo-500"
-            >
-              <option>Tất cả thể tag</option>
-              <option>Tech AI</option>
-              <option>Music</option>
-              <option>Workshop</option>
-            </select>
+          {/* Subtitle */}
+          <p
+            className="max-w-lg text-base leading-relaxed"
+            style={{ color: "rgba(148,163,184,0.75)" }}
+          >
+            Tham gia những sự kiện đặc sắc nhất — âm nhạc, nghệ thuật, công nghệ và hơn thế nữa,
+            được tuyển chọn dành riêng cho bạn.
+          </p>
 
-            {/* LOCATION */}
-            <select
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className="bg-[#0f1326] border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-indigo-500"
+          {/* Divider */}
+          <div
+            className="mt-6 w-16 h-px rounded-full"
+            style={{
+              background: "linear-gradient(90deg, transparent, rgba(124,59,237,0.5), transparent)",
+            }}
+          />
+
+         
+        </div>
+
+        {/* Search */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-center">
+          {/* Search input */}
+          <div className="relative flex-1 max-w-sm">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ color: "rgba(167,139,250,0.5)" }}
             >
-              <option>Địa điểm</option>
-              <option>Hồ Chí Minh</option>
-              <option>Hà Nội</option>
-              <option>Đà Lạt</option>
-            </select>
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Tìm kiếm tên sự kiện..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              style={{
+                width: "100%",
+                paddingLeft: 40,
+                paddingRight: 16,
+                paddingTop: 10,
+                paddingBottom: 10,
+                borderRadius: 10,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(124,59,237,0.2)",
+                color: "#f1f0ff",
+                fontSize: 14,
+                outline: "none",
+                transition: "border 0.2s",
+              }}
+              onFocus={(e) =>
+                (e.target.style.border = "1px solid rgba(124,59,237,0.6)")
+              }
+              onBlur={(e) =>
+                (e.target.style.border = "1px solid rgba(124,59,237,0.2)")
+              }
+            />
           </div>
         </div>
 
-        {/* GRID */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10 items-stretch">
-          {filteredEvents.map((event, index) => (
-            <EventCard key={index} {...event} />
-          ))}
+        {/* Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading
+            ? Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
+            : filteredEvents.length > 0
+              ? filteredEvents.map((item) => <EventCard key={item.id} item={item} />)
+              : !loading && (
+                <div
+                  className="col-span-3 flex flex-col items-center justify-center py-20 gap-4"
+                  style={{ color: "rgba(148,163,184,0.5)" }}
+                >
+                  <svg
+                    width="48"
+                    height="48"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <p className="text-lg font-medium">Không tìm thấy sự kiện nào</p>
+                  <p className="text-sm">Thử thay đổi từ khóa hoặc bộ lọc danh mục</p>
+                </div>
+              )}
         </div>
 
-        {filteredEvents.length === 0 && (
-          <div className="text-center text-slate-400 mt-10">
-            Không tìm thấy sự kiện phù hợp.
-          </div>
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <Pagination
+            current={pageNumber}
+            total={pagination.totalPages}
+            hasPrev={pagination.hasPrevious}
+            hasNext={pagination.hasNext}
+            onChange={(p) => {
+              setPageNumber(p);
+              // window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         )}
       </div>
     </section>

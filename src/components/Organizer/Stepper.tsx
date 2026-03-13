@@ -4,9 +4,9 @@ interface StepperProps {
 
 const steps = [
     "Thông tin",
-    "Về thời gian",
+    "Suất diễn và vé",
     "Cài đặt",
-    "Đăng ký",
+    "Điều khoản",
     "Thanh toán",
 ];
 

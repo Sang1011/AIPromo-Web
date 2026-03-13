@@ -1,29 +1,39 @@
 import {
     FiCalendar,
     FiMapPin,
-    FiEdit,
-    FiUsers,
-    FiShoppingCart,
+    FiEdit
 } from "react-icons/fi";
 import { MdDashboard, MdEventSeat, MdGroup, MdShoppingCart } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 
-export type EventStatus = "live" | "upcoming" | "draft" | "ended";
+export type EventStatusUI = "draft" | "pending" | "upcoming" | "past";
 
-export interface EventItem {
+export interface EventItemMapUI {
     id: string;
     title: string;
     image: string;
     time: string;
     location: string;
-    status: EventStatus;
+    status: EventStatusUI;
     statusLabel: string;
     category?: string;
+    color?: string;
 }
 
 interface EventCardProps {
-    event: EventItem;
+    event: EventItemMapUI;
 }
+
+const COLOR_CLASS = {
+    slate: "text-slate-500 bg-slate-500/10",
+    cyan: "text-cyan-500 bg-cyan-500/10",
+    amber: "text-amber-500 bg-amber-500/10",
+    emerald: "text-emerald-500 bg-emerald-500/10",
+    red: "text-red-500 bg-red-500/10",
+    blue: "text-blue-500 bg-blue-500/10",
+    orange: "text-orange-500 bg-orange-500/10",
+    gray: "text-gray-500 bg-gray-500/10",
+};
 
 export default function EventCard({ event }: EventCardProps) {
     const navigate = useNavigate();
@@ -57,19 +67,16 @@ export default function EventCard({ event }: EventCardProps) {
 
                         <span
                             className={`flex items-center gap-1 text-xs font-bold uppercase px-3 py-1 rounded-full
-                                ${event.status === "live"
-                                    ? "text-emerald-500 bg-emerald-500/10"
-                                    : event.status === "upcoming"
-                                        ? "text-amber-500 bg-amber-500/10"
-                                        : "text-slate-500 bg-slate-500/10"
-                                }`}
+                                        ${COLOR_CLASS[event.color as keyof typeof COLOR_CLASS]}`}
                         >
-                            {event.status === "live" && (
+                            {event.status === "upcoming" && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             )}
-                            {event.status === "upcoming" && (
+
+                            {event.status === "pending" && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                             )}
+
                             {event.statusLabel}
                         </span>
                     </div>
