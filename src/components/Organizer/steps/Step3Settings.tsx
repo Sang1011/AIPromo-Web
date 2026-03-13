@@ -37,6 +37,7 @@ export default function Step3Settings({
         eventStartAt: "",
         eventEndAt: "",
     });
+    const [initialForm, setInitialForm] = useState<EventSettingsForm | null>(null);
     const [errors, setErrors] = useState<Partial<Record<keyof EventSettingsForm, string>>>({});
 
     const updateForm = <K extends keyof EventSettingsForm>(
@@ -117,12 +118,23 @@ export default function Step3Settings({
             .slice(0, 16);
     };
 
+    const isFormChanged = () => {
+        if (!initialForm) return true;
+
+        return JSON.stringify(initialForm) !== JSON.stringify(settingsForm);
+    };
+
     const toUTC = (local: string) => {
         return new Date(local).toISOString();
     };
 
     const handleSubmit = async () => {
         if (!validateForm()) return;
+
+        if (!isFormChanged()) {
+            onNext?.();
+            return;
+        }
 
         const payload = {
             ...settingsForm,
@@ -135,13 +147,8 @@ export default function Step3Settings({
         if (!eventId) return;
 
         await dispatch(fetchUpdateEventSettings({ eventId, data: payload }));
-        handleNext()
-    };
-
-    const handleNext = () => {
-        handleSubmit();
         onNext?.();
-    }
+    };
 
     useEffect(() => {
         if (!eventData) return;
@@ -162,7 +169,9 @@ export default function Step3Settings({
                 ? toLocalDateTime(eventData.eventEndAt)
                 : "",
         };
+
         setSettingsForm(newForm);
+        setInitialForm(newForm);
     }, [eventData]);
 
     return (
