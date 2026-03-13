@@ -81,7 +81,7 @@ function EmptySessionPlaceholder({ onCreateSession }: { onCreateSession: () => v
 
                 <button
                     onClick={onCreateSession}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-xs font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 text-ml font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors"
                 >
                     <FiPlus size={13} />
                     Tạo suất diễn để bắt đầu

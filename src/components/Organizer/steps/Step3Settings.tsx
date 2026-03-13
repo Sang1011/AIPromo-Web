@@ -37,6 +37,7 @@ export default function Step3Settings({
         eventStartAt: "",
         eventEndAt: "",
     });
+    const [errors, setErrors] = useState<Partial<Record<keyof EventSettingsForm, string>>>({});
 
     const updateForm = <K extends keyof EventSettingsForm>(
         key: K,
@@ -48,6 +49,65 @@ export default function Step3Settings({
         }));
     };
 
+    const validateForm = () => {
+        const newErrors: Partial<Record<keyof EventSettingsForm, string>> = {};
+
+        if (!settingsForm.ticketSaleStartAt)
+            newErrors.ticketSaleStartAt = "Vui lòng chọn thời gian bắt đầu bán vé";
+
+        if (!settingsForm.ticketSaleEndAt)
+            newErrors.ticketSaleEndAt = "Vui lòng chọn thời gian kết thúc bán vé";
+
+        if (!settingsForm.eventStartAt)
+            newErrors.eventStartAt = "Vui lòng chọn thời gian bắt đầu sự kiện";
+
+        if (!settingsForm.eventEndAt)
+            newErrors.eventEndAt = "Vui lòng chọn thời gian kết thúc sự kiện";
+
+        if (settingsForm.urlPath) {
+            const slugRegex = /^[a-z0-9-]+$/;
+
+            if (!slugRegex.test(settingsForm.urlPath)) {
+                newErrors.urlPath =
+                    "URL chỉ được chứa chữ thường, số và dấu gạch ngang";
+            }
+        }
+
+        if (
+            settingsForm.ticketSaleStartAt &&
+            settingsForm.ticketSaleEndAt &&
+            new Date(settingsForm.ticketSaleStartAt) >=
+            new Date(settingsForm.ticketSaleEndAt)
+        ) {
+            newErrors.ticketSaleEndAt =
+                "Thời gian kết thúc bán vé phải sau thời gian bắt đầu";
+        }
+
+        if (
+            settingsForm.ticketSaleEndAt &&
+            settingsForm.eventStartAt &&
+            new Date(settingsForm.ticketSaleEndAt) >
+            new Date(settingsForm.eventStartAt)
+        ) {
+            newErrors.eventStartAt =
+                "Sự kiện phải bắt đầu sau khi kết thúc bán vé";
+        }
+
+        if (
+            settingsForm.eventStartAt &&
+            settingsForm.eventEndAt &&
+            new Date(settingsForm.eventStartAt) >=
+            new Date(settingsForm.eventEndAt)
+        ) {
+            newErrors.eventEndAt =
+                "Thời gian kết thúc sự kiện phải sau thời gian bắt đầu";
+        }
+
+        setErrors(newErrors);
+
+        return Object.keys(newErrors).length === 0;
+    };
+
     const toLocalDateTime = (iso: string) => {
         return new Date(iso).toISOString().slice(0, 16);
     };
@@ -57,6 +117,8 @@ export default function Step3Settings({
     };
 
     const handleSubmit = async () => {
+        if (!validateForm()) return;
+
         const payload = {
             ...settingsForm,
             ticketSaleStartAt: toUTC(settingsForm.ticketSaleStartAt),
@@ -64,9 +126,10 @@ export default function Step3Settings({
             eventStartAt: toUTC(settingsForm.eventStartAt),
             eventEndAt: toUTC(settingsForm.eventEndAt),
         };
-        console.log(payload);
+
         if (!eventId) return;
-        await dispatch(fetchUpdateEventSettings({ eventId: eventId, data: payload }));
+
+        await dispatch(fetchUpdateEventSettings({ eventId, data: payload }));
     };
 
     const handleNext = () => {
@@ -141,11 +204,22 @@ export default function Step3Settings({
                         onChange={(v) => updateForm("ticketSaleStartAt", v)}
                     />
 
+                    {errors.ticketSaleStartAt && (
+                        <p className="text-red-400 text-xs mt-1">
+                            {errors.ticketSaleStartAt}
+                        </p>
+                    )}
+
                     <DateTimeInput
                         label="Kết thúc bán vé"
                         value={settingsForm.ticketSaleEndAt}
                         onChange={(v) => updateForm("ticketSaleEndAt", v)}
                     />
+                    {errors.ticketSaleEndAt && (
+                        <p className="text-red-400 text-xs mt-1">
+                            {errors.ticketSaleEndAt}
+                        </p>
+                    )}
                 </div>
             </section>
 
@@ -166,12 +240,22 @@ export default function Step3Settings({
                         value={settingsForm.eventStartAt}
                         onChange={(v) => updateForm("eventStartAt", v)}
                     />
+                    {errors.eventStartAt && (
+                        <p className="text-red-400 text-xs mt-1">
+                            {errors.eventStartAt}
+                        </p>
+                    )}
 
                     <DateTimeInput
                         label="Kết thúc sự kiện"
                         value={settingsForm.eventEndAt}
                         onChange={(v) => updateForm("eventEndAt", v)}
                     />
+                    {errors.eventEndAt && (
+                        <p className="text-red-400 text-xs mt-1">
+                            {errors.eventEndAt}
+                        </p>
+                    )}
                 </div>
             </section>
 
@@ -204,6 +288,11 @@ export default function Step3Settings({
         focus:border-primary
     "
                     />
+                    {errors.urlPath && (
+                        <p className="text-red-400 text-xs mt-1">
+                            {errors.urlPath}
+                        </p>
+                    )}
                 </div>
 
                 <p className="mt-2 text-xs text-slate-500">
