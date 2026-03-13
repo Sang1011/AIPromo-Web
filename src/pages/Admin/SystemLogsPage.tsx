@@ -1,6 +1,6 @@
-import AdminLogsHeader from "../../components/Admin/logs/AdminLogsHeader";
-import AdminLogsTable from "../../components/Admin/logs/AdminLogsTable";
-import AdminLogsSummaryCards from "../../components/Admin/logs/AdminLogsSummaryCards";
+import AdminLogsHeader from "../../components/Admin/systemlogs/AdminLogsHeader";
+import AdminLogsTable from "../../components/Admin/systemlogs/AdminLogsTable";
+import AdminLogsSummaryCards from "../../components/Admin/systemlogs/AdminLogsSummaryCards";
 
 export default function SystemLogsPage() {
     return (
