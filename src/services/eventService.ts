@@ -9,9 +9,7 @@ import type {
     UpdateEventSessionRequest,
     GetAllSessionResponse,
     GetAllRequestByMe,
-    GetAllEventByMeResponse,
-    UpdateTicketTypeRequest,
-    CreateTicketTypeRequest
+    GetAllEventByMeResponse
 } from "../types/event/event"
 import type { AxiosResponse } from "axios"
 import { interceptorAPI } from "../utils/attachInterceptors";
@@ -118,36 +116,6 @@ const eventService = {
         data: UpdateEventSessionRequest
     ): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch(`/events/${eventId}/sessions/${sessionId}`, data);
-    },
-
-    createTicketType: (
-        eventId: string,
-        sessionId: string,
-        data: CreateTicketTypeRequest
-    ): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().post(`/events/${eventId}/sessions/${sessionId}/ticket-types`, data);
-    },
-
-    updateTicketType: (
-        eventId: string,
-        sessionId: string,
-        ticketTypeId: string,
-        data: UpdateTicketTypeRequest
-    ): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(
-            `/events/${eventId}/sessions/${sessionId}/ticket-types/${ticketTypeId}`,
-            data
-        );
-    },
-
-    deleteTicketType: (
-        eventId: string,
-        sessionId: string,
-        ticketTypeId: string
-    ): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().delete(
-            `/events/${eventId}/sessions/${sessionId}/ticket-types/${ticketTypeId}`
-        );
     },
 
     updateSeatmapSpec: (

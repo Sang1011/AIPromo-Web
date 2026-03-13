@@ -13,9 +13,7 @@ import type {
     GetAllSessionResponse,
     GetAllRequestByMe,
     GetAllCreateResponseForPrivate,
-    EventSession,
-    CreateTicketTypeRequest,
-    UpdateTicketTypeRequest,
+    EventSession
 } from "../types/event/event";
 import type { ApiResponse } from "../types/api";
 
@@ -263,48 +261,6 @@ export const fetchDeleteSession = createAsyncThunk<any, { eventId: string; sessi
     }
 );
 
-export const fetchCreateTicketType = createAsyncThunk<
-    any,
-    { eventId: string; sessionId: string; data: CreateTicketTypeRequest }
->(
-    `${name}/fetchCreateTicketType`,
-    async ({ eventId, sessionId, data }, thunkAPI) => {
-        try {
-            return (await eventService.createTicketType(eventId, sessionId, data)).data;
-        } catch (error) {
-            return thunkAPI.rejectWithValue(error);
-        }
-    }
-);
-
-export const fetchUpdateTicketType = createAsyncThunk<
-    any,
-    { eventId: string; sessionId: string; ticketTypeId: string; data: UpdateTicketTypeRequest }
->(
-    `${name}/fetchUpdateTicketType`,
-    async ({ eventId, sessionId, ticketTypeId, data }, thunkAPI) => {
-        try {
-            return (await eventService.updateTicketType(eventId, sessionId, ticketTypeId, data)).data;
-        } catch (error) {
-            return thunkAPI.rejectWithValue(error);
-        }
-    }
-);
-
-export const fetchDeleteTicketType = createAsyncThunk<
-    void,
-    { eventId: string; sessionId: string; ticketTypeId: string }
->(
-    `${name}/fetchDeleteTicketType`,
-    async ({ eventId, sessionId, ticketTypeId }, thunkAPI) => {
-        try {
-            await eventService.deleteTicketType(eventId, sessionId, ticketTypeId);
-        } catch (error) {
-            return thunkAPI.rejectWithValue(error);
-        }
-    }
-);
-
 const eventSlice = createSlice({
     name,
     initialState,
@@ -334,7 +290,7 @@ const eventSlice = createSlice({
             };
         });
 
-         builder.addCase(
+        builder.addCase(
             fetchEventById.fulfilled,
             (state, action) => {
                 if (action.payload.isSuccess)
