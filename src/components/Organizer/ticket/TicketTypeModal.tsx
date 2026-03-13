@@ -240,17 +240,6 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
                     <option value="Zone">Zone</option>
                     <option value="Seat">Seat</option>
                 </select>
-
-                {/* Area ID */}
-                <div>
-                    <input
-                        value={form.areaId}
-                        onChange={(e) => { setForm((p) => ({ ...p, areaId: e.target.value })); if (errors.areaId) setErrors((p) => ({ ...p, areaId: undefined })); }}
-                        className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${errors.areaId ? "border-red-500" : "border-white/10"}`}
-                        placeholder="Area ID"
-                    />
-                    {errors.areaId && <p className="text-xs text-red-400 mt-1">{errors.areaId}</p>}
-                </div>
             </div>
 
             <button

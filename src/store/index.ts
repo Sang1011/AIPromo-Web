@@ -3,6 +3,7 @@ import authReducer from "./authSlice";
 import hashtagReducer from "./authSlice";
 import eventReducer from "./eventSlice";
 import categoryReducer from "./categorySlice";
+import ticketTypeReducer from "./ticketTypeSlice";
 
 const store = configureStore({
     reducer: {
@@ -10,6 +11,7 @@ const store = configureStore({
         EVENT: eventReducer,
         HASHTAG: hashtagReducer,
         CATEGORY: categoryReducer,
+        TICKET_TYPE: ticketTypeReducer
     }
 })
 

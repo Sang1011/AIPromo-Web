@@ -37,6 +37,8 @@ export default function Step3Settings({
         eventStartAt: "",
         eventEndAt: "",
     });
+    const [initialForm, setInitialForm] = useState<EventSettingsForm | null>(null);
+    const [errors, setErrors] = useState<Partial<Record<keyof EventSettingsForm, string>>>({});
 
     const updateForm = <K extends keyof EventSettingsForm>(
         key: K,
@@ -48,8 +50,78 @@ export default function Step3Settings({
         }));
     };
 
+    const validateForm = () => {
+        const newErrors: Partial<Record<keyof EventSettingsForm, string>> = {};
+
+        if (!settingsForm.ticketSaleStartAt)
+            newErrors.ticketSaleStartAt = "Vui lòng chọn thời gian bắt đầu bán vé";
+
+        if (!settingsForm.ticketSaleEndAt)
+            newErrors.ticketSaleEndAt = "Vui lòng chọn thời gian kết thúc bán vé";
+
+        if (!settingsForm.eventStartAt)
+            newErrors.eventStartAt = "Vui lòng chọn thời gian bắt đầu sự kiện";
+
+        if (!settingsForm.eventEndAt)
+            newErrors.eventEndAt = "Vui lòng chọn thời gian kết thúc sự kiện";
+
+        if (settingsForm.urlPath) {
+            const slugRegex = /^[a-z0-9-]+$/;
+
+            if (!slugRegex.test(settingsForm.urlPath)) {
+                newErrors.urlPath =
+                    "URL chỉ được chứa chữ thường, số và dấu gạch ngang";
+            }
+        }
+
+        if (
+            settingsForm.ticketSaleStartAt &&
+            settingsForm.ticketSaleEndAt &&
+            new Date(settingsForm.ticketSaleStartAt) >=
+            new Date(settingsForm.ticketSaleEndAt)
+        ) {
+            newErrors.ticketSaleEndAt =
+                "Thời gian kết thúc bán vé phải sau thời gian bắt đầu";
+        }
+
+        if (
+            settingsForm.ticketSaleEndAt &&
+            settingsForm.eventStartAt &&
+            new Date(settingsForm.ticketSaleEndAt) >
+            new Date(settingsForm.eventStartAt)
+        ) {
+            newErrors.eventStartAt =
+                "Sự kiện phải bắt đầu sau khi kết thúc bán vé";
+        }
+
+        if (
+            settingsForm.eventStartAt &&
+            settingsForm.eventEndAt &&
+            new Date(settingsForm.eventStartAt) >=
+            new Date(settingsForm.eventEndAt)
+        ) {
+            newErrors.eventEndAt =
+                "Thời gian kết thúc sự kiện phải sau thời gian bắt đầu";
+        }
+
+        setErrors(newErrors);
+
+        return Object.keys(newErrors).length === 0;
+    };
+
     const toLocalDateTime = (iso: string) => {
-        return new Date(iso).toISOString().slice(0, 16);
+        const date = new Date(iso);
+        const offset = date.getTimezoneOffset() * 60000;
+
+        return new Date(date.getTime() - offset)
+            .toISOString()
+            .slice(0, 16);
+    };
+
+    const isFormChanged = () => {
+        if (!initialForm) return true;
+
+        return JSON.stringify(initialForm) !== JSON.stringify(settingsForm);
     };
 
     const toUTC = (local: string) => {
@@ -57,6 +129,13 @@ export default function Step3Settings({
     };
 
     const handleSubmit = async () => {
+        if (!validateForm()) return;
+
+        if (!isFormChanged()) {
+            onNext?.();
+            return;
+        }
+
         const payload = {
             ...settingsForm,
             ticketSaleStartAt: toUTC(settingsForm.ticketSaleStartAt),
@@ -64,39 +143,35 @@ export default function Step3Settings({
             eventStartAt: toUTC(settingsForm.eventStartAt),
             eventEndAt: toUTC(settingsForm.eventEndAt),
         };
-        console.log(payload);
-        if (!eventId) return;
-        await dispatch(fetchUpdateEventSettings({ eventId: eventId, data: payload }));
-    };
 
-    const handleNext = () => {
-        handleSubmit();
+        if (!eventId) return;
+
+        await dispatch(fetchUpdateEventSettings({ eventId, data: payload }));
         onNext?.();
-    }
+    };
 
     useEffect(() => {
         if (!eventData) return;
 
-        setSettingsForm({
+        const newForm = {
             isEmailReminderEnabled: eventData.isEmailReminderEnabled ?? false,
             urlPath: eventData.urlPath ?? "",
-
             ticketSaleStartAt: eventData.ticketSaleStartAt
                 ? toLocalDateTime(eventData.ticketSaleStartAt)
                 : "",
-
             ticketSaleEndAt: eventData.ticketSaleEndAt
                 ? toLocalDateTime(eventData.ticketSaleEndAt)
                 : "",
-
             eventStartAt: eventData.eventStartAt
                 ? toLocalDateTime(eventData.eventStartAt)
                 : "",
-
             eventEndAt: eventData.eventEndAt
                 ? toLocalDateTime(eventData.eventEndAt)
                 : "",
-        });
+        };
+
+        setSettingsForm(newForm);
+        setInitialForm(newForm);
     }, [eventData]);
 
     return (
@@ -135,17 +210,35 @@ export default function Step3Settings({
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <DateTimeInput
-                        label="Bắt đầu bán vé"
-                        value={settingsForm.ticketSaleStartAt}
-                        onChange={(v) => updateForm("ticketSaleStartAt", v)}
-                    />
 
-                    <DateTimeInput
-                        label="Kết thúc bán vé"
-                        value={settingsForm.ticketSaleEndAt}
-                        onChange={(v) => updateForm("ticketSaleEndAt", v)}
-                    />
+                    <div className="flex flex-col">
+                        <DateTimeInput
+                            label="Bắt đầu bán vé"
+                            value={settingsForm.ticketSaleStartAt}
+                            onChange={(v) => updateForm("ticketSaleStartAt", v)}
+                        />
+
+                        {errors.ticketSaleStartAt && (
+                            <p className="text-red-400 text-xs mt-1">
+                                {errors.ticketSaleStartAt}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col">
+                        <DateTimeInput
+                            label="Kết thúc bán vé"
+                            value={settingsForm.ticketSaleEndAt}
+                            onChange={(v) => updateForm("ticketSaleEndAt", v)}
+                        />
+
+                        {errors.ticketSaleEndAt && (
+                            <p className="text-red-400 text-xs mt-1">
+                                {errors.ticketSaleEndAt}
+                            </p>
+                        )}
+                    </div>
+
                 </div>
             </section>
 
@@ -161,17 +254,31 @@ export default function Step3Settings({
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <DateTimeInput
-                        label="Bắt đầu sự kiện"
-                        value={settingsForm.eventStartAt}
-                        onChange={(v) => updateForm("eventStartAt", v)}
-                    />
 
-                    <DateTimeInput
-                        label="Kết thúc sự kiện"
-                        value={settingsForm.eventEndAt}
-                        onChange={(v) => updateForm("eventEndAt", v)}
-                    />
+                    <div className="flex flex-col">
+                        <DateTimeInput
+                            label="Bắt đầu sự kiện"
+                            value={settingsForm.eventStartAt}
+                            onChange={(v) => updateForm("eventStartAt", v)}
+                        />
+                        {errors.eventStartAt && (
+                            <p className="text-red-400 text-xs mt-1">
+                                {errors.eventStartAt}
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        <DateTimeInput
+                            label="Kết thúc sự kiện"
+                            value={settingsForm.eventEndAt}
+                            onChange={(v) => updateForm("eventEndAt", v)}
+                        />
+                        {errors.eventEndAt && (
+                            <p className="text-red-400 text-xs mt-1">
+                                {errors.eventEndAt}
+                            </p>
+                        )}
+                    </div>
                 </div>
             </section>
 
@@ -190,25 +297,38 @@ export default function Step3Settings({
                     Tạo đường dẫn ngắn gọn cho sự kiện của bạn
                 </p>
 
-                <div className="flex items-center gap-3">
-                    <div className="px-4 py-2 rounded-xl bg-white/5 text-slate-400 text-sm">
-                        aipromo.online/event-detail/
-                    </div>
-                    <input
-                        value={settingsForm.urlPath}
-                        onChange={(e) => updateForm("urlPath", e.target.value)}
-                        className="
-        flex-1 px-4 py-2 rounded-xl
-        bg-white/5 border border-white/10
-        text-white outline-none
-        focus:border-primary
-    "
-                    />
-                </div>
+                <div className="space-y-2">
 
-                <p className="mt-2 text-xs text-slate-500">
-                    Ví dụ: aipromo.online/event-detail/hoi-thao-ai-2024
-                </p>
+                    <div className="flex items-center gap-3">
+                        <div className="px-6 py-2 rounded-xl bg-white/5 text-slate-400 text-sm whitespace-nowrap">
+                            https://aipromo.online/event-detail/
+                        </div>
+
+                        <input
+                            value={settingsForm.urlPath}
+                            onChange={(e) => updateForm("urlPath", e.target.value)}
+                            className="
+                flex-1 px-4 py-2 rounded-xl
+                bg-white/5 border border-white/10
+                text-white outline-none
+                focus:border-primary
+            "
+                        />
+                    </div>
+
+                    <div className="flex justify-between">
+                        <p className="text-sm text-slate-500">
+                            Ví dụ: aipromo.online/event-detail/hoi-thao-ai-2024
+                        </p>
+
+                        {errors.urlPath && (
+                            <p className="text-red-400 text-sm">
+                                {errors.urlPath}
+                            </p>
+                        )}
+                    </div>
+
+                </div>
             </section>
 
             {/* ===== Footer action ===== */}
@@ -221,7 +341,7 @@ export default function Step3Settings({
                 </button>
 
                 <button
-                    onClick={() => handleNext()}
+                    onClick={() => handleSubmit()}
                     className="px-8 py-2.5 rounded-xl bg-primary text-white font-semibold shadow-lg shadow-primary/30"
                 >
                     Lưu và Tiếp tục →
