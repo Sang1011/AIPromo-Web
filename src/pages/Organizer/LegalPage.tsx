@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { FiSlash, FiVolumeX, FiShield } from "react-icons/fi";
 import LegalItem from "../../components/Organizer/legal/LegalItem";
-import type { DashboardLayoutConfig } from "../../types/organizer/dashboard.config";
+import type { DashboardLayoutConfig } from "../../types/config/dashboard.config";
 
 type DashboardContext = {
     setConfig: (config: DashboardLayoutConfig) => void;

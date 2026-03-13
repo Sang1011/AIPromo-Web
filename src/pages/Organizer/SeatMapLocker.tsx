@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Stage, Layer, Rect, Line, Text as KonvaText, Group, Circle } from "react-konva";
-import type { SeatMapData } from "../../types/organizer/seatmap";
+import type { SeatMapData } from "../../types/config/seatmap";
 
 
 interface Props {

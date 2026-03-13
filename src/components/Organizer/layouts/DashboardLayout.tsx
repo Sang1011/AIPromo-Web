@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import { MdAnalytics, MdDashboard, MdDescription } from "react-icons/md";
-import type { DashboardLayoutConfig } from "../../../types/organizer/dashboard.config";
+import type { DashboardLayoutConfig } from "../../../types/config/dashboard.config";
 import Header from "../navigations/Header";
 import PromoSidebar from "../navigations/PromoSidebar";
 import Sidebar from "../navigations/Sidebar";

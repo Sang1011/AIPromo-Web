@@ -9,7 +9,7 @@ import StatusFilters, {
 } from "../../components/Organizer/shared/StatusFilter";
 import Pagination from "../../components/Organizer/shared/Pagination";
 import { useOutletContext } from "react-router-dom";
-import type { DashboardLayoutConfig } from "../../types/organizer/dashboard.config";
+import type { DashboardLayoutConfig } from "../../types/config/dashboard.config";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchAllEventsByMe } from "../../store/eventSlice";

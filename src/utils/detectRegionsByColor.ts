@@ -1,5 +1,5 @@
 import type { CvMat } from "../types/opencv";
-import type { ColorPreset, DetectedRegion } from "../types/organizer/seatmap";
+import type { ColorPreset, DetectedRegion } from "../types/config/seatmap";
 import buildMask from "./buildMask";
 import findPolygons from "./findPolygons";
 

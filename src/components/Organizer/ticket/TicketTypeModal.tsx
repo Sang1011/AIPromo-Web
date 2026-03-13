@@ -20,7 +20,6 @@
 //     name?: string;
 //     price?: string;
 //     quantity?: string;
-//     areaId?: string;
 // }
 
 // // ─── Inline edit row ──────────────────────────────────────────────────────────

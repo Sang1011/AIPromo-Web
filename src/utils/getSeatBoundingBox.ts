@@ -1,4 +1,4 @@
-import type { Seat } from "../types/organizer/seatmap";
+import type { Seat } from "../types/config/seatmap";
 
 export const getSeatsBoundingBox = (seats: Seat[], sectionId: string) => {
     const sectionSeats = seats.filter(s => s.sectionId === sectionId);

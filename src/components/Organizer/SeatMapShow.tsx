@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Stage, Layer, Rect, Line, Text as KonvaText, Group, Circle } from "react-konva";
-import type { Area, SeatMapData, Seat } from "../../types/organizer/seatmap";
+import type { Area, SeatMapData, Seat } from "../../types/config/seatmap";
 import { FaMinus, FaPlus } from "react-icons/fa";
 
 interface Props {

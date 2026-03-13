@@ -1,4 +1,4 @@
-import type { TicketType } from "../types/organizer/seatmap";
+import type { TicketType } from "../types/config/seatmap";
 
 function normalize(color: string) {
     return color.toLowerCase().replace("#", "");
