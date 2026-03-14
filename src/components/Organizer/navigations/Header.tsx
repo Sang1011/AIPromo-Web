@@ -32,12 +32,11 @@ export default function Header({
         } else {
             navigate(-1);
         }
-    }
+    };
 
     return (
         <header className="sticky top-0 z-40 h-20 bg-gradient-to-b from-black/40 to-black/20 backdrop-blur-xl border-b border-white/10">
-            <div className="h-full max-w-[1400px] flex items-center justify-between mx-auto px-8">
-                {/* LEFT */}
+            <div className="h-full flex items-center justify-between px-10">
                 <div className="flex items-center gap-4">
                     {canGoBack && (
                         <button
@@ -62,15 +61,16 @@ export default function Header({
                     </div>
                 </div>
 
-                {/* RIGHT */}
                 <div className="flex items-center gap-6">
-                    <button onClick={() => {
-                        const current = window.location.pathname === "/organizer/create-event";
-                        if (!current) {
-                            navigate("/organizer/create-event");
-                        }
-                    }}
-                        className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30">
+                    <button
+                        onClick={() => {
+                            const current = window.location.pathname === "/organizer/create-event";
+                            if (!current) {
+                                navigate("/organizer/create-event");
+                            }
+                        }}
+                        className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30"
+                    >
                         <FiPlus />
                         Tạo sự kiện mới
                     </button>

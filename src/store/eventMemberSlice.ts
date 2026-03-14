@@ -11,10 +11,14 @@ const name = "eventMember";
 
 interface EventMemberState {
     members: EventMember[];
+    fetchingMembers: boolean;
+    addingMember: boolean;
 }
 
 const initialState: EventMemberState = {
     members: [],
+    fetchingMembers: false,
+    addingMember: false,
 };
 
 export const fetchEventMembers = createAsyncThunk<GetEventMembersResponse, string>(
@@ -31,15 +35,19 @@ export const fetchEventMembers = createAsyncThunk<GetEventMembersResponse, strin
 
 export const fetchAddEventMember = createAsyncThunk<
     any,
-    { eventId: string; data: AddEventMemberRequest }
+    { eventId: string; data: AddEventMemberRequest },
+    { rejectValue: { status: number; message: string } }
 >(
     `${name}/fetchAddEventMember`,
     async ({ eventId, data }, thunkAPI) => {
         try {
             const response = await eventMemberService.addMember(eventId, data);
             return response.data;
-        } catch (error) {
-            return thunkAPI.rejectWithValue(error);
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue({
+                status: error.response?.status,
+                message: error.response?.data?.message,
+            });
         }
     }
 );
@@ -79,14 +87,52 @@ const eventMemberSlice = createSlice({
     initialState,
     reducers: {},
     extraReducers: (builder) => {
-        builder.addCase(
-            fetchEventMembers.fulfilled,
-            (state, action: PayloadAction<GetEventMembersResponse>) => {
+        builder
+            .addCase(fetchEventMembers.pending, (state) => {
+                state.fetchingMembers = true;
+            })
+            .addCase(fetchEventMembers.fulfilled, (state, action: PayloadAction<GetEventMembersResponse>) => {
+                state.fetchingMembers = false;
                 if (action.payload?.isSuccess) {
                     state.members = action.payload.data;
                 }
-            }
-        );
+            })
+            .addCase(fetchEventMembers.rejected, (state) => {
+                state.fetchingMembers = false;
+            })
+
+            .addCase(fetchAddEventMember.pending, (state) => {
+                state.addingMember = true;
+            })
+            .addCase(fetchAddEventMember.fulfilled, (state, action) => {
+                state.addingMember = false;
+                if (action.payload?.isSuccess && action.payload.data) {
+                    state.members.unshift(action.payload.data);
+                }
+            })
+            .addCase(fetchAddEventMember.rejected, (state) => {
+                state.addingMember = false;
+            })
+
+            .addCase(fetchUpdateEventMemberPermissions.fulfilled, (state, action) => {
+                if (action.payload?.isSuccess) {
+                    const { staffId, data } = action.meta.arg;
+                    const index = state.members.findIndex((m) => m.id === staffId);
+                    if (index !== -1) {
+                        state.members[index] = {
+                            ...state.members[index],
+                            permissions: data.permissions,
+                        };
+                    }
+                }
+            })
+
+            .addCase(fetchRemoveEventMember.fulfilled, (state, action) => {
+                if (action.payload?.isSuccess) {
+                    const removedId = action.meta.arg.staffId;
+                    state.members = state.members.filter((m) => m.id !== removedId);
+                }
+            });
     },
 });
 

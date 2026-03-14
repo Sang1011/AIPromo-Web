@@ -28,7 +28,7 @@ interface Step1EventInfoProps {
     onCancel?: () => void;
     mode?: "create" | "edit";
     onCreated?: (eventId: string) => void;
-    eventData: GetEventDetailResponse | null;
+    eventData?: GetEventDetailResponse | null;
 }
 
 interface Actor {
