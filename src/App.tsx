@@ -56,7 +56,7 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/event-detail" element={<EventDetail />} />
+      <Route path="/event-detail/:id" element={<EventDetail />} />
       <Route path="/all-event" element={<AllEvent />} />
       <Route path="/history-event" element={<HistoryEvent />} />
 
