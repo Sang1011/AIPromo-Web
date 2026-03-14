@@ -10,6 +10,9 @@ import { fetchDeleteSession, fetchSessions } from "../../../store/eventSlice";
 import type { EventSession, EventTicketType } from "../../../types/event/event";
 import CreateSessionModal from "../sessions/CreateSessionModal";
 import EditSessionModal from "../sessions/EditSessionModal";
+import TicketTypeModal from "../ticket/TicketTypeModal";
+import { fetchGetAllTicketTypes } from "../../../store/ticketTypeSlice";
+import type { TicketTypeItem } from "../../../types/ticketType/ticketType";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -150,49 +153,34 @@ function EmptySessions({ onCreate }: { onCreate: () => void }) {
     );
 }
 
-// ─── Ticket Type Row ──────────────────────────────────────────────────────────
-
-function TicketTypeRow({ ticket }: { ticket: EventTicketType }) {
-    const soldPct = ticket.quantity > 0
-        ? Math.round((ticket.soldQuantity / ticket.quantity) * 100)
-        : 0;
-
+function TicketTypeRow({ ticket }: { ticket: TicketTypeItem }) {
     return (
         <div className="flex items-center gap-4 p-4 rounded-xl bg-[#18122B] border border-white/5 hover:border-primary/20 transition-colors">
             {/* Color dot */}
             <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
 
-            {/* Name & type */}
+            {/* Name */}
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-white truncate">{ticket.name}</span>
-                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 text-slate-500 shrink-0">{ticket.type}</span>
-                </div>
+                <span className="text-sm font-semibold text-white truncate">
+                    {ticket.name}
+                </span>
 
-                {/* Progress bar */}
-                <div className="flex items-center gap-2 mt-1.5">
-                    <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
-                        <div
-                            className="h-full rounded-full bg-primary/60 transition-all"
-                            style={{ width: `${soldPct}%` }}
-                        />
-                    </div>
-                    <span className="text-[10px] text-slate-500 shrink-0">
-                        {ticket.soldQuantity}/{ticket.quantity}
-                    </span>
-                </div>
+                {/* Quantity */}
+                <p className="text-[11px] text-slate-400 mt-1">
+                    Số lượng: <span className="text-white font-medium">{ticket.quantity}</span>
+                </p>
             </div>
 
             {/* Price */}
             <div className="text-right shrink-0">
-                <span className="text-sm font-black text-primary">{formatPrice(ticket.price)}</span>
+                <span className="text-sm font-black text-primary">
+                    {formatPrice(ticket.price)}
+                </span>
                 <p className="text-[10px] text-slate-600 mt-0.5">mỗi vé</p>
             </div>
         </div>
     );
 }
-
-// ─── Empty Tickets ─────────────────────────────────────────────────────────────
 
 function EmptyTickets({ onManage }: { onManage: () => void }) {
     return (
@@ -212,8 +200,6 @@ function EmptyTickets({ onManage }: { onManage: () => void }) {
     );
 }
 
-// ─── Divider ──────────────────────────────────────────────────────────────────
-
 function Divider() {
     return (
         <div className="flex items-center gap-4 my-2">
@@ -223,8 +209,6 @@ function Divider() {
         </div>
     );
 }
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Step2Schedule({
     onNext,
@@ -236,12 +220,10 @@ export default function Step2Schedule({
     const dispatch = useDispatch<AppDispatch>();
     const { eventId } = useParams<{ eventId: string }>();
 
-    // Sessions from Redux
     const sessions = (useSelector(
         (state: RootState) => state.EVENT.sessions
     ) ?? []) as (EventSession & { id: string })[];
 
-    // Global ticket types from Redux (now event-level, not session-level)
     const ticketTypes = (useSelector(
         (state: RootState) => state.TICKET_TYPE.ticketTypes
     ))
@@ -268,18 +250,18 @@ export default function Step2Schedule({
     const hasTickets = ticketTypes.length > 0;
     const canProceed = hasSessions && hasTickets;
 
+    useEffect(() => {
+        if (eventId) dispatch(fetchGetAllTicketTypes({ eventId }));
+    }, [eventId]);
+
     return (
         <div className="space-y-8 max-w-3xl mx-auto">
 
-            {/* ── Page header ── */}
             <div>
                 <h2 className="text-xl font-extrabold text-white tracking-tight">Thời gian biểu & Loại vé</h2>
                 <p className="text-sm text-slate-500 mt-1">Thiết lập các suất diễn và hạng vé cho sự kiện.</p>
             </div>
 
-            {/* ══════════════════════════════════════
-                SECTION 1 — SESSIONS
-            ══════════════════════════════════════ */}
             <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiLayers size={16} />}
@@ -319,9 +301,6 @@ export default function Step2Schedule({
 
             <Divider />
 
-            {/* ══════════════════════════════════════
-                SECTION 2 — TICKET TYPES
-            ══════════════════════════════════════ */}
             <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiTag size={16} />}
@@ -342,15 +321,13 @@ export default function Step2Schedule({
                 {hasTickets ? (
                     <div className="space-y-2">
                         {ticketTypes.map((t) => (
-                            // <TicketTypeRow key={t.id} ticket={t} />
-                            <></>
+                            <TicketTypeRow key={t.id} ticket={t} />
                         ))}
 
-                        {/* Summary strip */}
                         <div className="flex items-center justify-between px-4 py-3 mt-1 rounded-xl bg-white/[0.025] border border-white/5">
                             <span className="text-xs text-slate-500">Tổng số vé phát hành</span>
                             <span className="text-sm font-black text-white">
-                                {/* {ticketTypes.reduce((a, t) => a + t.quantity, 0).toLocaleString("vi-VN")} */}
+                                {ticketTypes.reduce((a, t) => a + t.quantity, 0).toLocaleString("vi-VN")}
                             </span>
                         </div>
                     </div>
@@ -359,7 +336,6 @@ export default function Step2Schedule({
                 )}
             </div>
 
-            {/* ── Validation banner ── */}
             {!canProceed && (hasSessions || hasTickets) && (
                 <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-amber-500/8 border border-amber-500/15">
                     <FiAlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
@@ -373,7 +349,6 @@ export default function Step2Schedule({
                 </div>
             )}
 
-            {/* ── Footer: ready state ── */}
             {canProceed && (
                 <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/15">
                     <FiZap size={13} className="text-emerald-400" />
@@ -383,7 +358,6 @@ export default function Step2Schedule({
                 </div>
             )}
 
-            {/* ── Nav Buttons ── */}
             <div className="flex items-center justify-between pt-2">
                 <button
                     onClick={onBack}
@@ -412,7 +386,6 @@ export default function Step2Schedule({
                 </div>
             </div>
 
-            {/* ── Modals ── */}
             {eventId && (
                 <CreateSessionModal
                     open={openCreateModal}
@@ -432,14 +405,13 @@ export default function Step2Schedule({
                 />
             )}
 
-            {/* {eventId && (
+            {eventId && (
                 <TicketTypeModal
                     open={openTicketModal}
                     onClose={() => setOpenTicketModal(false)}
                     eventId={eventId}
-                    onUpdated={() => { }}
                 />
-            )} */}
+            )}
         </div>
     );
 }
