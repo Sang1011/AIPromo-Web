@@ -3,7 +3,7 @@ import SeatMapLocker from "./SeatMapLocker";
 import { FiLock, FiUnlock, FiX } from "react-icons/fi";
 import { FaCouch, FaStar } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { SeatMapData } from "../../types/organizer/seatmap";
+import type { SeatMapData } from "../../types/config/seatmap";
 import JSON_SEAT_MAP from "../../data/seat-map.json";
 export default function LockSeatTab() {
     const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);

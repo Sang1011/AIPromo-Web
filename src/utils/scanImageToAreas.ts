@@ -1,4 +1,4 @@
-import type { Area, ColorPreset, TicketType } from "../types/organizer/seatmap";
+import type { Area, ColorPreset, TicketType } from "../types/config/seatmap";
 import buildHSVRange from "./buildHSVRange";
 import detectRegionsByColor from "./detectRegionsByColor";
 import { hexToHSV } from "./hexToHSV";

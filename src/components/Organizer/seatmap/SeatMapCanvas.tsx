@@ -1,6 +1,6 @@
 import { Group, Rect, Stage, Text as KonvaText } from "react-konva";
 import { Layer } from "recharts";
-import type { SeatMapData } from "../../../types/organizer/seatmap";
+import type { SeatMapData } from "../../../types/config/seatmap";
 
 interface SeatMapCanvasProps {
     data: SeatMapData;

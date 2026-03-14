@@ -5,7 +5,7 @@ import { IoMdLock, IoMdUnlock } from 'react-icons/io';
 import { MdMenu, MdOutlineKeyboardArrowRight, MdOutlinePalette } from 'react-icons/md';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 import { getWorldPointer } from '../../utils/getWorldPointer';
-import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity, TicketType } from '../../types/organizer/seatmap';
+import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity, TicketType } from '../../types/config/seatmap';
 import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
 import { useNavigate, useParams } from 'react-router-dom';
 

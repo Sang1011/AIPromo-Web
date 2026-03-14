@@ -13,14 +13,21 @@ export default function Step5Payment({
 }: Step5PaymentProps) {
     const BANKS = [
         { code: "VCB", name: "Vietcombank" },
+        { code: "VTB", name: "VietinBank" },
+        { code: "BIDV", name: "BIDV" },
+        { code: "AGRIBANK", name: "Agribank" },
+
         { code: "TCB", name: "Techcombank" },
         { code: "ACB", name: "ACB" },
         { code: "MB", name: "MB Bank" },
-        { code: "BIDV", name: "BIDV" },
         { code: "VPB", name: "VPBank" },
-        { code: "STB", name: "Sacombank" },
         { code: "TPB", name: "TPBank" },
-        { code: "HDB", name: "HDBank" },
+        { code: "STB", name: "Sacombank" },
+
+        { code: "VIB", name: "VIB" },
+        { code: "MSB", name: "MSB" },
+        { code: "SHB", name: "SHB" },
+        { code: "OCB", name: "OCB" },
     ];
     const [bankCode, setBankCode] = useState("");
     const [businessType, setBusinessType] = useState<"personal" | "company">("personal");
@@ -94,7 +101,6 @@ export default function Step5Payment({
                 </div>
             </section>
 
-            {/* ===== VAT ===== */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
                 <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
                     <span className="text-primary">

@@ -1,7 +1,7 @@
 import Konva from 'konva';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage } from 'react-konva';
-import type { Area, Seat, SeatMapData, TextEntity, TicketType } from '../../types/organizer/seatmap';
+import type { Area, Seat, SeatMapData, TextEntity, TicketType } from '../../types/config/seatmap';
 
 // ─────────────────────────────────────────────
 // Types

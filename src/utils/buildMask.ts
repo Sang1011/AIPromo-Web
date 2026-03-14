@@ -1,4 +1,4 @@
-import type { ColorPreset } from "../types/organizer/seatmap";
+import type { ColorPreset } from "../types/config/seatmap";
 
 export default function buildMask(hsv: any, preset: ColorPreset): any {
     const cv = window.cv;

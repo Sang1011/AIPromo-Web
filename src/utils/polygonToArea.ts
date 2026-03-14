@@ -1,4 +1,4 @@
-import type { Area, TicketType } from "../types/organizer/seatmap";
+import type { Area, TicketType } from "../types/config/seatmap";
 
 export default function polygonToArea({
     polygon,
