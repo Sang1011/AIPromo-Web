@@ -104,6 +104,14 @@ const ticketTypeSlice = createSlice({
         builder.addCase(fetchDeleteTicketType.fulfilled, (state, action: PayloadAction<string>) => {
             state.ticketTypes = state.ticketTypes.filter((t) => t.id !== action.payload);
         });
+
+        builder.addCase(fetchUpdateTicketType.fulfilled, (state, action) => {
+            const { ticketTypeId, data } = action.meta.arg;
+            const idx = state.ticketTypes.findIndex((t) => t.id === ticketTypeId);
+            if (idx !== -1) {
+                state.ticketTypes[idx] = { ...state.ticketTypes[idx], ...data };
+            }
+        });
     },
 });
 
