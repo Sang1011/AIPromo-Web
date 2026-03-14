@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchAllEvents } from "../../store/eventSlice";
 import type { EventItem } from "../../types/event/event";
+import { useNavigate } from "react-router-dom";
 
 /* ================= CONFIG ================= */
 
@@ -44,9 +45,15 @@ const getCategoryColor = (id: number) => {
 /* ================= EVENT CARD ================= */
 
 const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
+   const navigate = useNavigate();
+
+  const handleClick = () => {
+    navigate(`/event-detail/${item.id}`);
+  };
   return (
     <div
       className="rounded-2xl overflow-hidden group cursor-pointer flex flex-col h-full transition-all duration-300"
+        onClick={handleClick}
       style={{
         background: "linear-gradient(145deg, #1a1035, #120d28)",
         border: "1px solid rgba(124,59,237,0.12)",
