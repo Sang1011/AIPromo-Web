@@ -11,6 +11,7 @@ interface BankSelectProps {
     banks: Bank[];
     value?: string;
     onChange: (value: string) => void;
+    error?: boolean;
 }
 
 export default function BankSelect({
@@ -19,6 +20,7 @@ export default function BankSelect({
     banks,
     value,
     onChange,
+    error,
 }: BankSelectProps) {
     const [search, setSearch] = useState("");
     const [open, setOpen] = useState(false);
@@ -33,11 +35,12 @@ export default function BankSelect({
 
             <div
                 onClick={() => setOpen(!open)}
-                className="
-          w-full px-4 py-3 rounded-xl
-          bg-black/30 border border-white/10
-          text-white cursor-pointer
-        "
+                className={`
+                    w-full px-4 py-3 rounded-xl
+                    bg-black/30 border
+                    text-white cursor-pointer
+                    ${error ? "border-red-500" : "border-white/10"}
+                `}
             >
                 {value ? banks.find((b: any) => b.code === value)?.name : "Chọn ngân hàng"}
             </div>

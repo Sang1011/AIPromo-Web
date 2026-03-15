@@ -6,6 +6,7 @@ import type { AppDispatch } from "../../../store";
 import { useDispatch } from "react-redux";
 import { fetchUpdateEventSettings } from "../../../store/eventSlice";
 import type { GetEventDetailResponse } from "../../../types/event/event";
+import { notify } from "../../../utils/notify";
 
 interface Step3SettingsProps {
     onNext?: () => void;
@@ -146,8 +147,13 @@ export default function Step3Settings({
 
         if (!eventId) return;
 
-        await dispatch(fetchUpdateEventSettings({ eventId, data: payload }));
-        onNext?.();
+        try {
+            await dispatch(fetchUpdateEventSettings({ eventId, data: payload })).unwrap();
+            notify.success("Đã lưu cài đặt sự kiện");
+            onNext?.();
+        } catch {
+            notify.error("Không thể lưu cài đặt sự kiện");
+        }
     };
 
     useEffect(() => {
