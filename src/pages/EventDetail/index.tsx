@@ -128,6 +128,7 @@ function EventDetail() {
   const dispatch = useDispatch<AppDispatch>()
     const { id } = useParams<{ id: string }>();
   useEffect(() => {
+    window.scrollTo(0, 0);
        if (!id) return;
 
     dispatch(fetchEventById(id));
