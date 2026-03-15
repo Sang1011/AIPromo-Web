@@ -4,8 +4,7 @@ import { FiX } from "react-icons/fi";
 import type { AppDispatch } from "../../../store";
 import { fetchUpdateSession } from "../../../store/eventSlice";
 import type { EventSession } from "../../../types/event/event";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { notify } from "../../../utils/notify";
 
 interface SessionFormState {
     title: string;
@@ -20,12 +19,7 @@ interface SessionFormErrors {
     endTime?: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** ISO string → "yyyy-MM-ddTHH:mm" cho input[type=datetime-local] */
 const toDatetimeLocal = (iso: string) => (iso ? iso.slice(0, 16) : "");
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 interface EditSessionModalProps {
     open: boolean;
@@ -44,27 +38,22 @@ export default function EditSessionModal({
 }: EditSessionModalProps) {
     const dispatch = useDispatch<AppDispatch>();
 
-    const [form, setForm] = useState<SessionFormState>({
+    const initialForm = (): SessionFormState => ({
         title: session.title,
         description: session.description ?? "",
         startTime: toDatetimeLocal(session.startTime),
         endTime: toDatetimeLocal(session.endTime),
     });
+
+    const [form, setForm] = useState<SessionFormState>(initialForm);
     const [errors, setErrors] = useState<SessionFormErrors>({});
     const [saving, setSaving] = useState(false);
 
-    // Sync khi session prop thay đổi
     useEffect(() => {
-        setForm({
-            title: session.title,
-            description: session.description ?? "",
-            startTime: toDatetimeLocal(session.startTime),
-            endTime: toDatetimeLocal(session.endTime),
-        });
+        setForm(initialForm());
         setErrors({});
     }, [session]);
 
-    // Đóng bằng Escape
     useEffect(() => {
         if (!open) return;
         const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -85,8 +74,24 @@ export default function EditSessionModal({
         return Object.keys(e).length === 0;
     };
 
+    const hasChanged = (): boolean => {
+        const original = initialForm();
+        return (
+            form.title.trim() !== original.title.trim() ||
+            form.description.trim() !== original.description.trim() ||
+            form.startTime !== original.startTime ||
+            form.endTime !== original.endTime
+        );
+    };
+
     const handleSave = async () => {
         if (!validate()) return;
+
+        if (!hasChanged()) {
+            notify.warning("Không có thay đổi nào để lưu");
+            return;
+        }
+
         setSaving(true);
         try {
             await dispatch(fetchUpdateSession({
@@ -99,10 +104,12 @@ export default function EditSessionModal({
                     endTime: new Date(form.endTime).toISOString(),
                 },
             })).unwrap();
+
+            notify.success("Đã cập nhật suất diễn");
             onUpdated?.();
             onClose();
-        } catch (err) {
-            console.error(err);
+        } catch {
+            notify.error("Không thể cập nhật suất diễn");
         } finally {
             setSaving(false);
         }
@@ -165,7 +172,7 @@ export default function EditSessionModal({
                                 type="datetime-local"
                                 value={form.startTime}
                                 onChange={set("startTime")}
-                                className={`w-full rounded-xl bg-black/30 border px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${errors.startTime ? "border-red-500" : "border-white/10"}`}
+                                className={`w-full rounded-xl bg-black/30 border px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all [color-scheme:dark] ${errors.startTime ? "border-red-500" : "border-white/10"}`}
                             />
                             {errors.startTime && <p className="text-xs text-red-400 mt-1">{errors.startTime}</p>}
                         </div>
@@ -175,7 +182,7 @@ export default function EditSessionModal({
                                 type="datetime-local"
                                 value={form.endTime}
                                 onChange={set("endTime")}
-                                className={`w-full rounded-xl bg-black/30 border px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${errors.endTime ? "border-red-500" : "border-white/10"}`}
+                                className={`w-full rounded-xl bg-black/30 border px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all [color-scheme:dark] ${errors.endTime ? "border-red-500" : "border-white/10"}`}
                             />
                             {errors.endTime && <p className="text-xs text-red-400 mt-1">{errors.endTime}</p>}
                         </div>

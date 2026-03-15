@@ -3,7 +3,6 @@ import ticketTypeService from "../services/ticketTypeService";
 import type {
     AssignAreaRequest,
     CreateTicketTypeRequest,
-    GetAllTicketTypesResponse,
     TicketTypeItem,
     UpdateTicketTypeRequest,
 } from "../types/ticketType/ticketType";
@@ -33,13 +32,14 @@ export const fetchCreateTicketType = createAsyncThunk<
 );
 
 export const fetchGetAllTicketTypes = createAsyncThunk<
-    GetAllTicketTypesResponse,
+    TicketTypeItem[],
     { eventId: string }
 >(
     `${name}/fetchGetAllTicketTypes`,
     async ({ eventId }, thunkAPI) => {
         try {
-            return (await ticketTypeService.getAllTicketTypes(eventId)).data;
+            const res = await ticketTypeService.getAllTicketTypes(eventId);
+            return res.data.data;
         } catch (error: any) {
             return thunkAPI.rejectWithValue(error?.response?.data ?? error?.message);
         }
@@ -96,7 +96,7 @@ const ticketTypeSlice = createSlice({
     extraReducers: (builder) => {
         builder.addCase(
             fetchGetAllTicketTypes.fulfilled,
-            (state, action: PayloadAction<GetAllTicketTypesResponse>) => {
+            (state, action: PayloadAction<TicketTypeItem[]>) => {
                 state.ticketTypes = action.payload;
             }
         );
