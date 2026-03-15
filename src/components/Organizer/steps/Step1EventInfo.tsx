@@ -22,6 +22,7 @@ import type {
 } from "../../../types/event/event";
 import ImagePreviewBox from "../shared/ImagePreviewBox";
 import UploadBox from "../shared/UploadBox";
+import { notify } from "../../../utils/notify";
 
 interface Step1EventInfoProps {
     onNext?: () => void;
@@ -381,16 +382,23 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
             })),
             imageUrls: updatedImages.map((img) => img.url),
         };
-        console.log(payload);
 
-        if (mode === "create") {
-            const userInfo = currentInfor as { userId: string };
-            await dispatch(fetchCreateEvent({ ...payload, organizerId: userInfo.userId }))
-                .unwrap()
-                .then((res) => onCreated?.(res.data));
-        } else if (mode === "edit" && eventId) {
-            await dispatch(fetchUpdateEvent({ id: eventId, data: payload })).unwrap();
-            onNext?.();
+        try {
+            if (mode === "create") {
+                const userInfo = currentInfor as { userId: string };
+                await dispatch(fetchCreateEvent({ ...payload, organizerId: userInfo.userId }))
+                    .unwrap()
+                    .then((res) => {
+                        notify.success("Tạo sự kiện thành công");
+                        onCreated?.(res.data);
+                    });
+            } else if (mode === "edit" && eventId) {
+                await dispatch(fetchUpdateEvent({ id: eventId, data: payload })).unwrap();
+                notify.success("Đã lưu thông tin sự kiện");
+                onNext?.();
+            }
+        } catch {
+            notify.error(mode === "create" ? "Không thể tạo sự kiện" : "Không thể cập nhật sự kiện");
         }
     };
 
