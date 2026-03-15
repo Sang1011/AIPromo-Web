@@ -1,444 +1,575 @@
+import { useEffect, useState, useMemo, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import Footer from "../../components/Footer";
+import Header from "../../components/Header";
+import "./AllEvent.css";
+import { fetchAllEvents } from "../../store/eventSlice";
+import type { AppDispatch, RootState } from "../../store";
 
-import Footer from "../../components/Footer"
-import Header from "../../components/Header"
-import "./AllEvent.css"
-function AllEvent() {
-  return (
-    <>
-    <Header/>
-  <main className="max-w-[1440px] mx-auto px-6 py-8">
-  {/* Page Title & Header Section */}
-<div className="mb-8 flex flex-col items-center gap-4 text-center">
-  <h1 className="pt-10 text-4xl font-bold text-white mb-2">
-    Discover All Events
-  </h1>
+const INPUT_CLS =
+  "w-full py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-200 transition-all";
 
-  <p className="text-slate-400">
-    Find the next great experience curated just for you.
-  </p>
-</div>
-  {/* Filter Bar Section */}
-  <div className="glass-effect rounded-2xl p-4 mb-10 flex flex-wrap items-center gap-4">
-    {/* Filter Dropdowns */}
-    <div className="flex flex-wrap items-center gap-3">
-      <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface/80 border border-white/10 text-slate-200 hover:border-primary/50 transition-all text-sm font-medium">
-        <span className="material-symbols-outlined text-primary text-[20px]">
-          category
-        </span>
-        Category
-        <span className="material-symbols-outlined text-slate-500 text-[18px]">
-          expand_more
-        </span>
-      </button>
-      <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface/80 border border-white/10 text-slate-200 hover:border-primary/50 transition-all text-sm font-medium">
-        <span className="material-symbols-outlined text-primary text-[20px]">
-          calendar_month
-        </span>
-        Date
-        <span className="material-symbols-outlined text-slate-500 text-[18px]">
-          expand_more
-        </span>
-      </button>
-      <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface/80 border border-white/10 text-slate-200 hover:border-primary/50 transition-all text-sm font-medium">
-        <span className="material-symbols-outlined text-primary text-[20px]">
-          payments
-        </span>
-        Price
-        <span className="material-symbols-outlined text-slate-500 text-[18px]">
-          expand_more
-        </span>
-      </button>
-      <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface/80 border border-white/10 text-slate-200 hover:border-primary/50 transition-all text-sm font-medium">
-        <span className="material-symbols-outlined text-primary text-[20px]">
-          location_on
-        </span>
-        Location
-        <span className="material-symbols-outlined text-slate-500 text-[18px]">
-          expand_more
-        </span>
-      </button>
-      
-    </div>
-    <div className="h-8 w-px bg-white/10 hidden xl:block" />
-    {/* Active Filters / Tags */}
-    <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
-      <span className="bg-primary/20 text-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary/30 flex items-center gap-1">
-        Music{" "}
-        <span className="material-symbols-outlined text-[14px] cursor-pointer">
-          close
-        </span>
-      </span>
-      <span className="bg-white/5 text-slate-400 text-xs font-bold px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-1">
-        This Weekend{" "}
-        <span className="material-symbols-outlined text-[14px] cursor-pointer">
-          close
-        </span>
-      </span>
-      <button className="text-slate-500 text-xs font-bold hover:text-white transition-colors underline underline-offset-4 px-2">
-        Clear all
-      </button>
-    </div>
-  </div>
-  {/* Events Grid */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    {/* Event Card 1 */}
-    <div className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/50 card-glow flex flex-col h-full">
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          alt="Techno Night"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          data-alt="Vibrant night club music event with neon lights"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwC6ug6xw7ZAEzRPGWtLVaZAnUgRYzncfpvAQdwUmdCQ3Y37-REcondMOsXrSg-a-ITCY6248vgJglrAiHoM6xRHukbll5djgwAFxYId4cUkf5MsUddfAYWe17tCE-yOqKDmJGvtWE8SpCTVlRiZvNXoY_AbEZq466DjJgYSafJdsnP1sTRgQ6qg42BkczvdzVETwfNfll9fGybtU8Ghyc0upPuEBkvSFjZ5stdWAER3GuBfInE2i2y5zqTWSjgJOyjs4w-_woF8Yy"
-        />
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(121,59,237,0.8)]">
-          $45.00
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          Music • Techno
-        </div>
-        <h3 className="text-white text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
-          Neon Pulse: Underground Techno Night
-        </h3>
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              calendar_today
-            </span>
-            Oct 24, 2024 • 22:00
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              location_on
-            </span>
-            Berlin, DE
-          </div>
-        </div>
-        <div className="mt-auto">
-          <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.4)]">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-    </div>
-    {/* Event Card 2 */}
-    <div className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/50 card-glow flex flex-col h-full">
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          alt="Tech Conference"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          data-alt="Modern technology conference with large stage"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8OmsUNasDHr30Ocl6atpoXR4qeZOjeAaa7i6pd95R9f6gxH0TU1yd7torP6CXegmn2A74ANyp7M1-JoalnL4-sFCkBihwDDnrceD5i644Y7Hws04YXFju8_duh1RyrgzALA0dfzSRRy68Ld1SFYZ5MU10YgDWnVbpr3Vix5tFVHLeYlGl0ID3eKd5lyA6kMv9-Y4AcEEH-AlDKN6gJDUhEqTu1Ur2Adlvw41aNJKtVd52hdtdOtc2xyd2TeGjx_QCw8_iS7iJs6fo"
-        />
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(121,59,237,0.8)]">
-          FREE
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-2">
-          Tech • AI
-        </div>
-        <h3 className="text-white text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
-          AI Summit 2024: The Future of Automation
-        </h3>
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              calendar_today
-            </span>
-            Nov 12, 2024 • 09:00
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              location_on
-            </span>
-            Online
-          </div>
-        </div>
-        <div className="mt-auto">
-          <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.4)]">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-    </div>
-    {/* Event Card 3 */}
-    <div className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/50 card-glow flex flex-col h-full">
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          alt="Workshop"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          data-alt="Creative painting workshop with people collaborating"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAh3entg0zLWI1C6bAvMnFyJUmClEd-pJyVbcyux9FIAsZkLAVJwmkB2yU3zmWsFVRV89As18y9X8dwThVEuFAbSyB3Cj2Ny6J9W0pg7Xz1oz04zwCkOV022xjSsQ4ogysi6Hbur0HYPmoK1We7KzMmG29fsdqj_LTQMwzQpiOquAcalYU7bXYUQmP7RgvwTd6J7EiffVIDEvKlcJjem2LHMQTRyMgJxlM2-FNubpd5rPN2HnyOd-_wSNTHCtN1ggaZdjinqEcvrLDD"
-        />
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(121,59,237,0.8)]">
-          $25.00
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-2">
-          Workshop • Art
-        </div>
-        <h3 className="text-white text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
-          Abstract Neon Art: Painting Masterclass
-        </h3>
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              calendar_today
-            </span>
-            Oct 30, 2024 • 14:00
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              location_on
-            </span>
-            London, UK
-          </div>
-        </div>
-        <div className="mt-auto">
-          <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.4)]">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-    </div>
-    {/* Event Card 4 */}
-    <div className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/50 card-glow flex flex-col h-full">
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          alt="Rock Concert"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          data-alt="Concert stage with colorful floodlights and crowd"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHpBr9UD8X_QhLR1FKFFwNncvgST1miSkNfRFGQasIREN-dQEtFcIoUTNe1se7nZodbheJUvBI3N8Skv_WbYn3yDz6M7gMzPzjnIUEN9vt89onpS5NSjFbdFAPPxSoi7DVrnoSPRAHVPU4TCHXTaKQ5v6w1Ic3sY_E-_yh1P8xq4qsZbE75J4CbX5SbSSITQ9SQB_gv8omFexqFBMnCzaIjlFt9uB9li43-W_B7vxmCcMzRO0oTUtWxE8RatCE97mZhAFKrIFEYtdO"
-        />
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(121,59,237,0.8)]">
-          $120.00
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-2">
-          Music • Rock
-        </div>
-        <h3 className="text-white text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
-          Stellar Harmonies: Open Air Rock Fest
-        </h3>
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              calendar_today
-            </span>
-            Dec 05, 2024 • 18:30
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              location_on
-            </span>
-            Sydney, AU
-          </div>
-        </div>
-        <div className="mt-auto">
-          <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.4)]">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-    </div>
-    {/* Event Card 5 (Repeated for Grid Visual) */}
-    <div className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/50 card-glow flex flex-col h-full">
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          alt="Networking"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          data-alt="Professionals networking at a formal rooftop lounge"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIKx9wj3uWUgawlZiWKcX-SLrb9OnQMrEGjgV-aB8VRqYqaLhOMufubjrpfRIR-jwNOF0Za-m74IkXgcJC-UomLeDZU0CtondfARlZOcOBaEDCNYKgujEJ9MZmcybIbQgffs7BsDahQbRDg4rkocRX7xiPojZzEtnq04OReuPxxn_-crLJeanidoyjyex5kIF8pw6DVblDk76jPN_1syO241DsVPpM-O2jOaVN7i8UygD3a3wBvgXIRgZjd_TlEd7SFGJhPupUxfcd"
-        />
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(121,59,237,0.8)]">
-          $15.00
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-2">
-          Networking • Business
-        </div>
-        <h3 className="text-white text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
-          Creators Mixer: Rooftop Networking
-        </h3>
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              calendar_today
-            </span>
-            Oct 28, 2024 • 19:00
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              location_on
-            </span>
-            New York, NY
-          </div>
-        </div>
-        <div className="mt-auto">
-          <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.4)]">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-    </div>
-    {/* Event Card 6 (Repeated for Grid Visual) */}
-    <div className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/50 card-glow flex flex-col h-full">
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          alt="Jazz Night"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          data-alt="Close up of a jazz saxophonist in a moody lit bar"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNwxpfcpXWe6RxsiWxoZWxll8VnNq50KIgXXPbjhzsFrlwuNp2-7txbhnUHnDbzOJ36xBU0qkVeqyqAs7qkl0iBj38K5vJ3a8sIbG3CAVGuXuzEZqB1we6kTefYfA-uaDeLBaOG5CT6NUDv-twZcbesZCN6lLkA82mAAVZdVyrkpCQgrG-BxbGSrZNlCALXOhTGPZTDm7tR9i7-bO7zpehf977zRmdzXTUeAYUZ-6ia7dHsNpIpTI8U0Olbm6VMql41NKcQyT6ehjB"
-        />
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(121,59,237,0.8)]">
-          $30.00
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-2">
-          Music • Jazz
-        </div>
-        <h3 className="text-white text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
-          Midnight Jazz: Soulful Saxophone
-        </h3>
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              calendar_today
-            </span>
-            Nov 02, 2024 • 21:00
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              location_on
-            </span>
-            Paris, FR
-          </div>
-        </div>
-        <div className="mt-auto">
-          <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.4)]">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-    </div>
-    {/* Event Card 7 (Repeated for Grid Visual) */}
-    <div className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/50 card-glow flex flex-col h-full">
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          alt="Startup Workshop"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          data-alt="Group of young people brainstorm with post-it notes"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_EkpYMwZpLbs8ViEqmd52LE6w0f9-h-mu6UbXw8VKHWg8ua8WLgOO5BcH7sZPsAAEyF_4FYJfcnXjG2ayqzPSZ-McMdiAlQtMrN3crIEQORA0UrzbA72bD0GgZBkBGD4LyFc2PvCZp4cVCM20JHpB4tuTb66JyeEhByFt1RYly6M1ug4KPZUcOFrv_hRrcHfm7pouoPF8x5mDQ3dzvx4vye5XbCXBJsvLWwsBQMgurS8fOTQTuZ9rMHk_stclz5JFoIIatnqBn3GI"
-        />
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(121,59,237,0.8)]">
-          FREE
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-2">
-          Workshop • Startup
-        </div>
-        <h3 className="text-white text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
-          Startup Fundamentals: Pitching to VCs
-        </h3>
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              calendar_today
-            </span>
-            Nov 08, 2024 • 10:00
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              location_on
-            </span>
-            Singapore, SG
-          </div>
-        </div>
-        <div className="mt-auto">
-          <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.4)]">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-    </div>
-    {/* Event Card 8 (Repeated for Grid Visual) */}
-    <div className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/50 card-glow flex flex-col h-full">
-      <div className="relative aspect-video overflow-hidden">
-        <img
-          alt="Food Festival"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          data-alt="Variety of colorful street food stalls at night"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXZ_Xd21e-PwIVfTrcmQ70Q9gLYUY6bUTMYAZpt5yprlbNOD62iEs4jTJMVu57kF5TMjUbr_zYKZ6Xr58zOVlK98GBVWmogZbMij2IFr4RiqTMcYPyZ10qFSCPp2iU2_3cbMPd1a1lHLDnS-YxoO4onqqGDj5rTXN2Vxc4hb1LkNwD_77b9vkyIiLym2VSgwjzafRkY2uZUpjToHE5HtWHFzGEaTV6gOSB4JggIcpm1LBY7uF7twjcbw8WzMxuzdzm5CGGydvSCBX0"
-        />
-        <div className="absolute top-3 right-3 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-[0_0_10px_rgba(121,59,237,0.8)]">
-          $5.00
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-2">
-          Lifestyle • Food
-        </div>
-        <h3 className="text-white text-xl font-bold mb-3 group-hover:text-primary transition-colors line-clamp-2">
-          Global Street Food Festival 2024
-        </h3>
-        <div className="space-y-2 mb-6">
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              calendar_today
-            </span>
-            Oct 27, 2024 • 12:00
-          </div>
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
-            <span className="material-symbols-outlined text-[18px] text-primary">
-              location_on
-            </span>
-            Tokyo, JP
-          </div>
-        </div>
-        <div className="mt-auto">
-          <button className="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.4)]">
-            Xem chi tiết
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  {/* Pagination */}
-  <div className="mt-16 flex items-center justify-center gap-4">
-    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface border border-white/10 text-slate-400 hover:text-white hover:border-primary/50 transition-all">
-      <span className="material-symbols-outlined">chevron_left</span>
-    </button>
-    <div className="flex items-center gap-2">
-      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-primary text-white font-bold">
-        1
-      </button>
-      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface border border-white/10 text-slate-400 hover:text-white transition-all font-bold">
-        2
-      </button>
-      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface border border-white/10 text-slate-400 hover:text-white transition-all font-bold">
-        3
-      </button>
-      <span className="text-slate-600 px-2">...</span>
-      <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface border border-white/10 text-slate-400 hover:text-white transition-all font-bold">
-        12
-      </button>
-    </div>
-    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface border border-white/10 text-slate-400 hover:text-white hover:border-primary/50 transition-all">
-      <span className="material-symbols-outlined">chevron_right</span>
-    </button>
-  </div>
-</main>
-<Footer/>
-</>
-  )
+// Pastel color palette cycling for category badges
+const CATEGORY_COLORS = [
+  "bg-violet-100 text-violet-700 border-violet-200",
+  "bg-sky-100 text-sky-700 border-sky-200",
+  "bg-emerald-100 text-emerald-700 border-emerald-200",
+  "bg-rose-100 text-rose-700 border-rose-200",
+  "bg-amber-100 text-amber-700 border-amber-200",
+  "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
+  "bg-teal-100 text-teal-700 border-teal-200",
+];
+
+function getCategoryColor(id: number) {
+  return CATEGORY_COLORS[id % CATEGORY_COLORS.length];
 }
 
-export default AllEvent
+function AllEvent() {
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+
+  const events = useSelector((state: RootState) => state.EVENT.events);
+  const pagination = useSelector((state: RootState) => state.EVENT.pagination);
+
+  // Server-side params
+  const [sortOrder, setSortOrder] = useState<"Ascending" | "Descending">("Descending");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 8;
+
+  // Client-side filters
+  const [searchTitle, setSearchTitle] = useState("");
+  const [debouncedTitle, setDebouncedTitle] = useState("");
+  const [locationInput, setLocationInput] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleTitleChange = (val: string) => {
+    setSearchTitle(val);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setDebouncedTitle(val), 350);
+  };
+
+  useEffect(() => {
+    dispatch(
+      fetchAllEvents({
+        PageNumber: currentPage,
+        PageSize: PAGE_SIZE,
+        SortColumn: "eventStartAt",
+        SortOrder: sortOrder,
+      })
+    );
+  }, [dispatch, currentPage, sortOrder]);
+
+  const handleSortChange = (order: "Ascending" | "Descending") => {
+    setSortOrder(order);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (!pagination) return;
+    if (page < 1 || page > pagination.totalPages) return;
+    setCurrentPage(page);
+  };
+
+  const clearFilters = () => {
+    setSearchTitle("");
+    setDebouncedTitle("");
+    setLocationInput("");
+    setDateFrom("");
+    setDateTo("");
+    setSelectedCategoryIds([]);
+  };
+
+  const hasActiveFilters =
+    debouncedTitle.trim() !== "" ||
+    locationInput.trim() !== "" ||
+    dateFrom !== "" ||
+    dateTo !== "" ||
+    selectedCategoryIds.length > 0;
+
+  // Derive unique categories from all loaded events
+  const allCategories = useMemo(() => {
+    const map = new Map<number, string>();
+    events.forEach((e) => e.categories?.forEach((c) => map.set(c.id, c.name)));
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [events]);
+
+  const toggleCategory = (id: number) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+  };
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const titleMatch =
+        debouncedTitle.trim() === "" ||
+        event.title.toLowerCase().includes(debouncedTitle.toLowerCase().trim());
+      const locationMatch =
+        locationInput.trim() === "" ||
+        event.location?.toLowerCase().includes(locationInput.toLowerCase().trim());
+      const eventDate = event.eventStartAt ? new Date(event.eventStartAt) : null;
+      const fromMatch = dateFrom === "" || (eventDate !== null && eventDate >= new Date(dateFrom));
+      const toMatch = dateTo === "" || (eventDate !== null && eventDate <= new Date(dateTo + "T23:59:59"));
+      const categoryMatch =
+        selectedCategoryIds.length === 0 ||
+        event.categories?.some((c) => selectedCategoryIds.includes(c.id));
+      return titleMatch && locationMatch && fromMatch && toMatch && categoryMatch;
+    });
+  }, [events, debouncedTitle, locationInput, dateFrom, dateTo, selectedCategoryIds]);
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getPaginationPages = () => {
+    if (!pagination) return [];
+    const { totalPages } = pagination;
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    pages.push(1);
+    if (currentPage > 4) pages.push("...");
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 3) pages.push("...");
+    pages.push(totalPages);
+    return pages;
+  };
+
+  return (
+    <>
+      <Header />
+      <main className="max-w-[1440px] mx-auto px-6 py-8">
+
+        {/* ── Hero Title ── */}
+        <div className="mb-10 flex flex-col items-center gap-3 text-center pt-10">
+          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary text-xs font-bold px-4 py-1.5 rounded-full mb-1 tracking-widest uppercase">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            Khám phá sự kiện
+          </div>
+          <h1 className="text-5xl font-black text-white leading-tight">
+            Tất cả <span className="text-primary">Sự Kiện</span>
+          </h1>
+          <p className="text-slate-400 text-base max-w-md">
+            Tìm kiếm và khám phá những sự kiện thú vị được tuyển chọn dành riêng cho bạn.
+          </p>
+          {pagination && (
+            <p className="text-slate-500 text-sm mt-1">
+              <span className="text-white font-bold text-lg">{pagination.totalCount}</span> sự kiện đang chờ bạn
+            </p>
+          )}
+        </div>
+
+        {/* ── Filter Bar ── */}
+        <div className="glass-effect rounded-2xl p-5 mb-8 shadow-lg">
+          {/* Row 1 */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search title */}
+            <div className="relative flex-1 min-w-[220px]">
+              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[20px] pointer-events-none">
+                search
+              </span>
+              <input
+                type="text"
+                placeholder="Tìm kiếm tên sự kiện..."
+                value={searchTitle}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className={`${INPUT_CLS} pl-11 pr-9`}
+              />
+              {searchTitle && (
+                <button
+                  onClick={() => { setSearchTitle(""); setDebouncedTitle(""); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              )}
+            </div>
+
+            <div className="h-9 w-px bg-white/10 hidden sm:block" />
+
+            {/* Sort */}
+            <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/10">
+              <button
+                onClick={() => handleSortChange("Ascending")}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  sortOrder === "Ascending"
+                    ? "bg-primary text-white shadow-md"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
+                Ascending
+              </button>
+              <button
+                onClick={() => handleSortChange("Descending")}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  sortOrder === "Descending"
+                    ? "bg-primary text-white shadow-md"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
+                Descending
+              </button>
+            </div>
+
+            <div className="h-9 w-px bg-white/10 hidden sm:block" />
+
+            {/* Filter toggle */}
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                showFilters || hasActiveFilters
+                  ? "bg-primary text-white border-primary shadow-[0_0_16px_rgba(121,59,237,0.4)]"
+                  : "bg-white/5 border-white/10 text-slate-300 hover:border-primary/50 hover:text-white"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">tune</span>
+              Bộ lọc
+              {hasActiveFilters && (
+                <span className="bg-white text-primary text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  {[debouncedTitle, locationInput, dateFrom || dateTo].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+
+            {/* Result count */}
+            {pagination && (
+              <div className="ml-auto text-slate-400 text-sm shrink-0">
+                Hiển thị{" "}
+                <span className="text-white font-bold">{filteredEvents.length}</span>
+                {hasActiveFilters && (
+                  <span className="text-slate-500"> / {pagination.totalCount}</span>
+                )}{" "}
+                sự kiện
+              </div>
+            )}
+          </div>
+
+          {/* Row 2: Expanded */}
+          {showFilters && (
+            <div className="mt-5 pt-5 border-t border-white/10">
+              {/* Location + Dates grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Location */}
+                <div>
+                  <label className="block text-xs text-slate-400 font-semibold mb-2 ml-1 uppercase tracking-wide">
+                    Địa điểm
+                  </label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px] pointer-events-none">
+                      location_on
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Nhập tỉnh / thành phố..."
+                      value={locationInput}
+                      onChange={(e) => setLocationInput(e.target.value)}
+                      className={`${INPUT_CLS} pl-9 pr-9`}
+                    />
+                    {locationInput && (
+                      <button
+                        onClick={() => setLocationInput("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">close</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Date from */}
+                <div>
+                  <label className="block text-xs text-slate-400 font-semibold mb-2 ml-1 uppercase tracking-wide">
+                    Từ ngày
+                  </label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px] pointer-events-none">
+                      calendar_today
+                    </span>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      max={dateTo || undefined}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className={`${INPUT_CLS} pl-9`}
+                    />
+                  </div>
+                </div>
+
+                {/* Date to */}
+                <div>
+                  <label className="block text-xs text-slate-400 font-semibold mb-2 ml-1 uppercase tracking-wide">
+                    Đến ngày
+                  </label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px] pointer-events-none">
+                      event
+                    </span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      min={dateFrom || undefined}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className={`${INPUT_CLS} pl-9`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Category chips */}
+              {allCategories.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <label className="block text-xs text-slate-400 font-semibold mb-3 uppercase tracking-wide">
+                    Danh mục
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {allCategories.map((cat) => {
+                      const active = selectedCategoryIds.includes(cat.id);
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => toggleCategory(cat.id)}
+                          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                            active
+                              ? "bg-primary text-white border-primary shadow-[0_0_12px_rgba(121,59,237,0.4)]"
+                              : `${getCategoryColor(cat.id)} hover:opacity-80`
+                          }`}
+                        >
+                          {active && <span className="material-symbols-outlined text-[13px]">check</span>}
+                          {cat.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Active filter tags */}
+          {hasActiveFilters && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {debouncedTitle && (
+                <span className="bg-primary/15 text-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary/25 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[13px]">title</span>
+                  "{debouncedTitle}"
+                  <button onClick={() => { setSearchTitle(""); setDebouncedTitle(""); }}>
+                    <span className="material-symbols-outlined text-[13px] hover:opacity-70">close</span>
+                  </button>
+                </span>
+              )}
+              {locationInput && (
+                <span className="bg-primary/15 text-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary/25 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[13px]">location_on</span>
+                  {locationInput}
+                  <button onClick={() => setLocationInput("")}>
+                    <span className="material-symbols-outlined text-[13px] hover:opacity-70">close</span>
+                  </button>
+                </span>
+              )}
+              {(dateFrom || dateTo) && (
+                <span className="bg-primary/15 text-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary/25 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[13px]">date_range</span>
+                  {dateFrom || "..."} → {dateTo || "..."}
+                  <button onClick={() => { setDateFrom(""); setDateTo(""); }}>
+                    <span className="material-symbols-outlined text-[13px] hover:opacity-70">close</span>
+                  </button>
+                </span>
+              )}
+              {selectedCategoryIds.map((id) => {
+                const cat = allCategories.find((c) => c.id === id);
+                if (!cat) return null;
+                return (
+                  <span key={id} className="bg-primary/15 text-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary/25 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[13px]">label</span>
+                    {cat.name}
+                    <button onClick={() => toggleCategory(id)}>
+                      <span className="material-symbols-outlined text-[13px] hover:opacity-70">close</span>
+                    </button>
+                  </span>
+                );
+              })}
+              <button
+                onClick={clearFilters}
+                className="text-slate-500 text-xs font-semibold hover:text-white transition-colors flex items-center gap-1 ml-1"
+              >
+                <span className="material-symbols-outlined text-[14px]">delete_sweep</span>
+                Xoá tất cả
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Events Grid ── */}
+        {filteredEvents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-32 text-slate-500">
+            <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-5 border border-white/10">
+              <span className="material-symbols-outlined text-5xl text-slate-600">event_busy</span>
+            </div>
+            <p className="text-xl font-bold text-slate-400 mb-1">Không tìm thấy sự kiện</p>
+            <p className="text-sm text-slate-600 mb-5">Thử thay đổi bộ lọc để xem thêm kết quả</p>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary/20 text-primary border border-primary/30 text-sm font-bold hover:bg-primary/30 transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                Xoá bộ lọc
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredEvents.map((event) => (
+              <div
+                key={event.id}
+                className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/40 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(121,59,237,0.2)] flex flex-col h-full"
+              >
+                {/* Banner */}
+                <div className="relative aspect-video overflow-hidden bg-slate-800">
+                  {event.bannerUrl ? (
+                    <img
+                      alt={event.title}
+                      src={event.bannerUrl}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                      <span className="material-symbols-outlined text-slate-600 text-5xl">image</span>
+                    </div>
+                  )}
+                  {/* Gradient overlay always visible at bottom */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  {/* Categories on image */}
+                  {event.categories && event.categories.length > 0 && (
+                    <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
+                      {event.categories.map((cat) => (
+                        <span
+                          key={cat.id}
+                          className="text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm bg-black/40 text-white border border-white/20"
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="p-5 flex flex-col flex-1 gap-3">
+
+                  {/* Title */}
+                  <h3 className="text-white text-[17px] font-bold leading-snug group-hover:text-primary transition-colors line-clamp-2 flex-1">
+                    {event.title}
+                  </h3>
+
+                  {/* Divider */}
+                  <div className="h-px bg-white/5" />
+
+                  {/* Meta */}
+                  <div className="space-y-2">
+                    {event.eventStartAt && (
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[15px] text-primary">calendar_today</span>
+                        </div>
+                        <span className="text-slate-300 text-sm">
+                          {formatDate(event.eventStartAt)}
+                          <span className="text-slate-500 mx-1">•</span>
+                          <span className="text-slate-400">{formatTime(event.eventStartAt)}</span>
+                        </span>
+                      </div>
+                    )}
+                    {event.location && (
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
+                        </div>
+                        <span className="text-slate-300 text-sm line-clamp-1">{event.location}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CTA */}
+                  <button
+                    onClick={() => navigate(`/event-detail/${event.id}`)}
+                    className="mt-1 w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:border-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.35)] flex items-center justify-center gap-2"
+                  >
+                    Xem chi tiết
+                    <span className="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-0.5">
+                      arrow_forward
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Pagination ── */}
+        {pagination && pagination.totalPages > 1 && !hasActiveFilters && (
+          <div className="mt-16 flex items-center justify-center gap-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={!pagination.hasPrevious}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface border border-white/10 text-slate-400 hover:text-white hover:border-primary/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+            </button>
+
+            <div className="flex items-center gap-1.5">
+              {getPaginationPages().map((page, idx) =>
+                page === "..." ? (
+                  <span key={`ellipsis-${idx}`} className="text-slate-600 px-1">...</span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page as number)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold text-sm transition-all ${
+                      currentPage === page
+                        ? "bg-primary text-white shadow-[0_0_16px_rgba(121,59,237,0.5)]"
+                        : "bg-surface border border-white/10 text-slate-400 hover:text-white hover:border-primary/40"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={!pagination.hasNext}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface border border-white/10 text-slate-400 hover:text-white hover:border-primary/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+            </button>
+          </div>
+        )}
+      </main>
+      <Footer />
+    </>
+  );
+}
+
+export default AllEvent;

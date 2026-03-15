@@ -6,6 +6,7 @@ import type { AppDispatch, RootState } from "../../store"
 import { fetchEventById } from "../../store/eventSlice"
 import { useEffect } from "react"
 import type { GetEventDetailResponse } from "../../types/event/event"
+import { useParams } from "react-router-dom"
 
 // ─── Skeleton Components ───────────────────────────────────────────────────────
 
@@ -125,9 +126,12 @@ function formatPrice(price: number) {
 
 function EventDetail() {
   const dispatch = useDispatch<AppDispatch>()
-
+    const { id } = useParams<{ id: string }>();
   useEffect(() => {
-    dispatch(fetchEventById("39628d02-5797-4df8-af3c-7f16c1d536c6"))
+    window.scrollTo(0, 0);
+       if (!id) return;
+
+    dispatch(fetchEventById(id));
   }, [dispatch])
 
   const eventDetail = useSelector(
