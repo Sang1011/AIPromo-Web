@@ -2,19 +2,19 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
     FiPlus, FiEdit2, FiTrash2, FiCalendar, FiClock,
-    FiTag, FiAlertTriangle, FiLayers, FiZap
+    FiTag, FiLayers,
+    FiAlertTriangle
 } from "react-icons/fi";
 import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchDeleteSession, fetchSessions } from "../../../store/eventSlice";
-import type { EventSession, EventTicketType } from "../../../types/event/event";
+import type { EventSession } from "../../../types/event/event";
 import CreateSessionModal from "../sessions/CreateSessionModal";
 import EditSessionModal from "../sessions/EditSessionModal";
 import TicketTypeModal from "../ticket/TicketTypeModal";
 import { fetchGetAllTicketTypes } from "../../../store/ticketTypeSlice";
 import type { TicketTypeItem } from "../../../types/ticketType/ticketType";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+import { notify } from "../../../utils/notify";
 
 const formatDateTime = (iso: string) => {
     if (!iso) return "—";
@@ -30,8 +30,6 @@ const formatDateTime = (iso: string) => {
 
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
-
-// ─── Section Header ───────────────────────────────────────────────────────────
 
 function SectionHeader({
     icon,
@@ -68,8 +66,6 @@ function SectionHeader({
         </div>
     );
 }
-
-// ─── Session Card (compact) ───────────────────────────────────────────────────
 
 function SessionCard({
     session,
@@ -134,8 +130,6 @@ function SessionCard({
     );
 }
 
-// ─── Empty Sessions ────────────────────────────────────────────────────────────
-
 function EmptySessions({ onCreate }: { onCreate: () => void }) {
     return (
         <div
@@ -184,14 +178,22 @@ function TicketTypeRow({ ticket }: { ticket: TicketTypeItem }) {
 
 function EmptyTickets({ onManage }: { onManage: () => void }) {
     return (
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-amber-500/10">
-                <FiAlertTriangle size={13} className="text-amber-400 shrink-0" />
-                <p className="text-xs text-amber-300/80">Sự kiện cần ít nhất 1 loại vé để có thể mở bán</p>
+        <div className="rounded-2xl border border-border-dark-light bg-surface-dark/40 overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border-dark">
+
+                <FiAlertTriangle className="text-bg-white w-5 h-5 shrink-0" />
+
+                <p className="text-sm text-white font-semibold">
+                    Sự kiện cần ít nhất 1 loại vé để có thể mở bán
+                </p>
             </div>
+
             <button
                 onClick={onManage}
-                className="w-full flex items-center justify-center gap-2 py-4 text-sm font-bold text-amber-400 hover:bg-amber-500/8 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-4 text-sm font-semibold
+    bg-primary text-white
+    hover:bg-primary/90
+    transition-colors"
             >
                 <FiPlus size={14} />
                 Thiết lập loại vé ngay
@@ -224,9 +226,9 @@ export default function Step2Schedule({
         (state: RootState) => state.EVENT.sessions
     ) ?? []) as (EventSession & { id: string })[];
 
-    const ticketTypes = (useSelector(
+    const ticketTypes = useSelector(
         (state: RootState) => state.TICKET_TYPE.ticketTypes
-    ))
+    );
 
     const [loading, setLoading] = useState(false);
     const [openCreateModal, setOpenCreateModal] = useState(false);
@@ -241,14 +243,18 @@ export default function Step2Schedule({
 
     useEffect(() => { loadSessions(); }, [eventId]);
 
-    const handleDelete = (sessionId: string) => {
+    const handleDelete = async (sessionId: string) => {
         if (!eventId) return;
-        dispatch(fetchDeleteSession({ eventId, sessionId }));
+        try {
+            await dispatch(fetchDeleteSession({ eventId, sessionId })).unwrap();
+            notify.success("Đã xoá suất diễn");
+        } catch {
+            notify.error("Không thể xoá suất diễn");
+        }
     };
 
     const hasSessions = sessions.length > 0;
     const hasTickets = ticketTypes.length > 0;
-    const canProceed = hasSessions && hasTickets;
 
     useEffect(() => {
         if (eventId) dispatch(fetchGetAllTicketTypes({ eventId }));
@@ -336,28 +342,6 @@ export default function Step2Schedule({
                 )}
             </div>
 
-            {!canProceed && (hasSessions || hasTickets) && (
-                <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-amber-500/8 border border-amber-500/15">
-                    <FiAlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-300/80 leading-relaxed">
-                        {!hasSessions && !hasTickets
-                            ? "Vui lòng tạo ít nhất 1 suất diễn và 1 loại vé."
-                            : !hasSessions
-                                ? "Vui lòng tạo ít nhất 1 suất diễn."
-                                : "Vui lòng thiết lập ít nhất 1 loại vé để mở bán."}
-                    </p>
-                </div>
-            )}
-
-            {canProceed && (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/15">
-                    <FiZap size={13} className="text-emerald-400" />
-                    <p className="text-xs text-emerald-300/80">
-                        {sessions.length} suất diễn &middot; {ticketTypes.length} hạng vé — Sẵn sàng tiếp tục
-                    </p>
-                </div>
-            )}
-
             <div className="flex items-center justify-between pt-2">
                 <button
                     onClick={onBack}
@@ -366,24 +350,12 @@ export default function Step2Schedule({
                     ← Quay lại
                 </button>
 
-                <div className="flex items-center gap-2">
-                    {/* Dev bypass */}
-                    <button
-                        onClick={onNext}
-                        className="px-4 py-2.5 rounded-xl border border-amber-400/20 text-amber-400/60 hover:bg-amber-400/8 text-xs font-medium transition-all"
-                    >
-                        Next (dev)
-                    </button>
-
-                    <button
-                        onClick={canProceed ? onNext : undefined}
-                        disabled={!canProceed}
-                        title={!canProceed ? "Hoàn tất suất diễn & loại vé trước khi tiếp tục" : undefined}
-                        className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm disabled:opacity-35 disabled:cursor-not-allowed hover:bg-primary/90 transition-all"
-                    >
-                        Tiếp theo →
-                    </button>
-                </div>
+                <button
+                    onClick={onNext}
+                    className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-all"
+                >
+                    Tiếp theo →
+                </button>
             </div>
 
             {eventId && (

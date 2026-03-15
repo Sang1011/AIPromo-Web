@@ -1,3 +1,5 @@
+import type { ApiResponse } from "../api";
+
 export interface CreateTicketTypeRequest {
     name: string;
     price: number;
@@ -26,4 +28,4 @@ export interface TicketTypeItem {
 
 export type CreateTicketTypeResponse = string;
 
-export type GetAllTicketTypesResponse = TicketTypeItem[];
+export type GetAllTicketTypesResponse = ApiResponse<TicketTypeItem[]>;
