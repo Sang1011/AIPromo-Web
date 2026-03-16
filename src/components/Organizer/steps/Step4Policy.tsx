@@ -13,7 +13,6 @@ interface PolicySection {
 
 interface Step4PolicyProps {
     onBack?: () => void;
-    onNext?: () => void;
     eventData?: GetEventDetailResponse | null;
     reloadEvent?: () => Promise<void>;
 }
@@ -67,7 +66,7 @@ ${sec.items.map((item) => `<li>${item}</li>`).join("\n")}
 export default function Step4Policy({
     onBack,
     eventData,
-    reloadEvent,
+    reloadEvent
 }: Step4PolicyProps) {
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
@@ -165,6 +164,7 @@ export default function Step4Policy({
             await handleSave();
             await dispatch(fetchRequestPublishEvent(eventData.id)).unwrap();
             notify.success("Gửi yêu cầu duyệt thành công!");
+            localStorage.removeItem(`editEventStep_${eventData.id}`);
             navigate("/organizer/my-events");
         } catch {
             notify.error("Gửi yêu cầu duyệt thất bại");
@@ -270,7 +270,7 @@ export default function Step4Policy({
                             disabled={publishing}
                             className="px-8 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition"
                         >
-                            {publishing ? "Đang gửi..." : "Yêu cầu duyệt"}
+                            {publishing ? "Đang gửi..." : "Lưu và gửi yêu cầu duyệt"}
                         </button>
                     )}
                     <button

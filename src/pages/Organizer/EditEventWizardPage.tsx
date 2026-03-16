@@ -6,7 +6,7 @@ import Step1EventInfo from "../../components/Organizer/steps/Step1EventInfo";
 import Step2Schedule from "../../components/Organizer/steps/Step2Schedule";
 import Step3Settings from "../../components/Organizer/steps/Step3Settings";
 import Step4Policy from "../../components/Organizer/steps/Step4Policy";
-import Step5Payment from "../../components/Organizer/steps/Step5Payment";
+
 import { fetchMe } from "../../store/authSlice";
 import { useParams } from "react-router-dom";
 import type { GetEventDetailResponse } from "../../types/event/event";
@@ -15,13 +15,16 @@ import type { AppDispatch } from "../../store";
 import { useDispatch } from "react-redux";
 
 export default function EditEventWizardPage() {
+    const { eventId } = useParams<{ eventId: string }>();
+    const dispatch = useDispatch<AppDispatch>();
+
     const [step, setStep] = useState(1);
+    const [event, setEvent] = useState<GetEventDetailResponse | null>(null);
+
+    const key = eventId ? `editEventStep_${eventId}` : null;
 
     const nextStep = () => setStep((s) => Math.min(s + 1, 5));
     const prevStep = () => setStep((s) => Math.max(s - 1, 1));
-    const { eventId } = useParams<{ eventId: string }>();
-    const dispatch = useDispatch<AppDispatch>();
-    const [event, setEvent] = useState<GetEventDetailResponse | null>(null);
 
     const reloadEvent = async () => {
         if (!eventId) return;
@@ -37,6 +40,7 @@ export default function EditEventWizardPage() {
 
     const fetchEventData = async () => {
         if (!eventId) return;
+
         try {
             const res = await dispatch(fetchEventById(eventId)).unwrap();
             const eventData: GetEventDetailResponse = res.data;
@@ -46,13 +50,33 @@ export default function EditEventWizardPage() {
         }
     };
 
+    // Fetch user
     useEffect(() => {
-        fetchMe();
-    }, [])
+        dispatch(fetchMe());
+    }, [dispatch]);
 
+    // Fetch event
     useEffect(() => {
         fetchEventData();
-    }, [eventId])
+    }, [eventId]);
+
+    useEffect(() => {
+        if (!key) return;
+
+        const saved = localStorage.getItem(key);
+        if (saved) {
+            setStep(Number(saved));
+        }
+    }, [key]);
+
+    // Save step
+    useEffect(() => {
+        if (!key) return;
+
+        if (step > 1) {
+            localStorage.setItem(key, String(step));
+        }
+    }, [step, key]);
 
     return (
         <div className="max-w-[1100px] mx-auto space-y-8 pb-16">
@@ -60,7 +84,7 @@ export default function EditEventWizardPage() {
             {/* Stepper */}
             <Stepper currentStep={step} />
 
-            {/* ===== STEP 1 ===== */}
+            {/* STEP 1 */}
             {step === 1 && (
                 <Step1EventInfo
                     mode="edit"
@@ -70,7 +94,7 @@ export default function EditEventWizardPage() {
                 />
             )}
 
-            {/* ===== STEP 2 ===== */}
+            {/* STEP 2 */}
             {step === 2 && (
                 <Step2Schedule
                     onNext={nextStep}
@@ -80,7 +104,7 @@ export default function EditEventWizardPage() {
                 />
             )}
 
-            {/* ===== STEP 3 ===== */}
+            {/* STEP 3 */}
             {step === 3 && (
                 <Step3Settings
                     onNext={nextStep}
@@ -90,10 +114,9 @@ export default function EditEventWizardPage() {
                 />
             )}
 
-            {/* ===== STEP 4 ===== */}
+            {/* STEP 4 */}
             {step === 4 && (
                 <Step4Policy
-                    onNext={nextStep}
                     onBack={prevStep}
                     eventData={event}
                     reloadEvent={reloadEvent}
