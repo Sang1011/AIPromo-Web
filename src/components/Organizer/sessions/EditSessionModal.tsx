@@ -26,14 +26,14 @@ interface EditSessionModalProps {
     onClose: () => void;
     eventId: string;
     session: EventSession & { id: string };
+    eventStartAt?: string;
+    eventEndAt?: string;
     onUpdated?: () => void;
 }
 
 export default function EditSessionModal({
-    open,
-    onClose,
-    eventId,
-    session,
+    open, onClose, eventId, session,
+    eventStartAt, eventEndAt,
     onUpdated,
 }: EditSessionModalProps) {
     const dispatch = useDispatch<AppDispatch>();
@@ -70,9 +70,18 @@ export default function EditSessionModal({
         if (!form.endTime) e.endTime = "Vui lòng chọn thời gian kết thúc";
         else if (form.startTime && form.endTime <= form.startTime)
             e.endTime = "Thời gian kết thúc phải sau thời gian bắt đầu";
+
+        // Validate nằm trong khoảng sự kiện
+        if (form.startTime && eventStartAt && new Date(form.startTime) < new Date(eventStartAt))
+            e.startTime = `Suất diễn phải bắt đầu từ ${new Date(eventStartAt).toLocaleString("vi-VN")} trở đi`;
+
+        if (form.endTime && eventEndAt && new Date(form.endTime) > new Date(eventEndAt))
+            e.endTime = `Suất diễn phải kết thúc trước ${new Date(eventEndAt).toLocaleString("vi-VN")}`;
+
         setErrors(e);
         return Object.keys(e).length === 0;
     };
+
 
     const hasChanged = (): boolean => {
         const original = initialForm();
@@ -172,6 +181,8 @@ export default function EditSessionModal({
                                 type="datetime-local"
                                 value={form.startTime}
                                 onChange={set("startTime")}
+                                min={eventStartAt}
+                                max={eventEndAt}
                                 className={`w-full rounded-xl bg-black/30 border px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all [color-scheme:dark] ${errors.startTime ? "border-red-500" : "border-white/10"}`}
                             />
                             {errors.startTime && <p className="text-xs text-red-400 mt-1">{errors.startTime}</p>}
@@ -182,6 +193,8 @@ export default function EditSessionModal({
                                 type="datetime-local"
                                 value={form.endTime}
                                 onChange={set("endTime")}
+                                min={eventStartAt}
+                                max={eventEndAt}
                                 className={`w-full rounded-xl bg-black/30 border px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all [color-scheme:dark] ${errors.endTime ? "border-red-500" : "border-white/10"}`}
                             />
                             {errors.endTime && <p className="text-xs text-red-400 mt-1">{errors.endTime}</p>}

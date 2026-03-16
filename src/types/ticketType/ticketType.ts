@@ -24,6 +24,7 @@ export interface TicketTypeItem {
     areaId: string | null;
     areaName: string | null;
     areaType: string | null;
+    color?: string;
 }
 
 export type CreateTicketTypeResponse = string;
