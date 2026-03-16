@@ -11,7 +11,7 @@ export type EventStatus =
     | "Draft"
     | "PendingReview"
     | "Published"
-    | "Unpublished"
+    | "Suspended"
     | "PendingCancellation"
     | "Cancelled"
     | "Completed";
@@ -176,6 +176,40 @@ export type GetAllCreateResponseForPrivate = {
 
 export type GetAllEventByMeResponse = ApiResponse<GetAllCreateResponseForPrivate>
 
+export interface CreateTicketTypeRequest {
+    name: string;
+    price: number;
+    quantity: number;
+    type: "Zone" | "Seat";
+    areaId: string;
+}
+
+export interface UpdateTicketTypeRequest {
+    name: string;
+    price: number;
+    quantity: number;
+}
+
+
+export interface PendingEventsData {
+    items: EventItem[];
+    pageNumber: number;
+    pageSize: number;
+    totalCount: number;
+    currentPageSize: number;
+    currentStartIndex: number;
+    currentEndIndex: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+}
+
+export type GetPendingEventsResponse = ApiResponse<PendingEventsData>;
+
+export interface GetPendingEventsRequest extends GetAllRequest {
+    Title?: string;
+    Statuses?: string;
+}
 export type UpdateSeatMapRequest = {
     eventId: string;
     spec: string;
