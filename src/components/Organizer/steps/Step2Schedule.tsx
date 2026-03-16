@@ -228,19 +228,6 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }
     const [editingSession, setEditingSession] = useState<(EventSession & { id: string }) | null>(null);
     const [openTicketModal, setOpenTicketModal] = useState(false);
 
-    const ticketSaleStartAt = eventData?.ticketSaleStartAt
-        ? toLocalDateTime(eventData.ticketSaleStartAt)
-        : "";
-    const ticketSaleEndAt = eventData?.ticketSaleEndAt
-        ? toLocalDateTime(eventData.ticketSaleEndAt)
-        : "";
-    const eventStartAt = eventData?.eventStartAt
-        ? toLocalDateTime(eventData.eventStartAt)
-        : "";
-    const eventEndAt = eventData?.eventEndAt
-        ? toLocalDateTime(eventData.eventEndAt)
-        : "";
-
     const loadSessions = () => {
         if (!eventId) return;
         setLoading(true);
@@ -286,6 +273,24 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }
         if (!validateTimeForm()) return;
         if (!hasSessions) { notify.error("Sự kiện phải có ít nhất 1 suất diễn"); return; }
         if (!hasTickets) { notify.error("Sự kiện phải có ít nhất 1 loại vé"); return; }
+
+        if (timeForm.eventStartAt && timeForm.eventEndAt) {
+            const eventStart = new Date(timeForm.eventStartAt);
+            const eventEnd = new Date(timeForm.eventEndAt);
+
+            const invalidSession = sessions.find(s => {
+                const sStart = new Date(s.startTime);
+                const sEnd = new Date(s.endTime);
+                return sStart < eventStart || sEnd > eventEnd;
+            });
+
+            if (invalidSession) {
+                notify.error(
+                    `Suất diễn "${invalidSession.title}" nằm ngoài khoảng thời gian sự kiện`
+                );
+                return;
+            }
+        }
 
         if (isTimeFormChanged()) {
             if (!eventId) return;
@@ -498,6 +503,8 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }
                     open={openCreateModal}
                     onClose={() => setOpenCreateModal(false)}
                     eventId={eventId}
+                    eventStartAt={timeForm.eventStartAt}
+                    eventEndAt={timeForm.eventEndAt}
                     onCreated={async () => {
                         loadSessions();
                         await reloadEvent?.();
@@ -510,6 +517,8 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }
                     onClose={() => setEditingSession(null)}
                     eventId={eventId}
                     session={editingSession}
+                    eventStartAt={timeForm.eventStartAt}
+                    eventEndAt={timeForm.eventEndAt}
                     onUpdated={async () => {
                         loadSessions();
                         await reloadEvent?.();

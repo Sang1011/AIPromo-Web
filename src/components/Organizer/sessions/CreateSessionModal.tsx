@@ -14,10 +14,14 @@ interface Props {
     open: boolean;
     onClose: () => void;
     eventId: string;
+    eventStartAt?: string; // thêm
+    eventEndAt?: string;   // thêm
     onCreated?: () => void;
 }
 
-export default function CreateSessionModal({ open, onClose, eventId, onCreated }: Props) {
+export default function CreateSessionModal({
+    open, onClose, eventId, eventStartAt, eventEndAt, onCreated
+}: Props) {
     const dispatch = useDispatch<AppDispatch>();
 
     const [title, setTitle] = useState("");
@@ -29,6 +33,18 @@ export default function CreateSessionModal({ open, onClose, eventId, onCreated }
 
     if (!open) return null;
 
+    const formatDateTime = (iso: string) => {
+        if (!iso) return "—";
+        return new Date(iso).toLocaleString("vi-VN", {
+            weekday: "short",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
     const validate = (): boolean => {
         const e: SessionFormErrors = {};
         if (!title.trim()) e.title = "Tiêu đề không được để trống";
@@ -36,9 +52,21 @@ export default function CreateSessionModal({ open, onClose, eventId, onCreated }
         if (!endTime) e.endTime = "Vui lòng chọn thời gian kết thúc";
         else if (startTime && endTime <= startTime)
             e.endTime = "Thời gian kết thúc phải sau thời gian bắt đầu";
+
+        // Validate nằm trong khoảng sự kiện
+        if (startTime && eventStartAt && new Date(startTime) < new Date(eventStartAt))
+            e.startTime = `Suất diễn phải bắt đầu sau ${formatDateTime(new Date(eventStartAt).toISOString())}`;
+
+        if (endTime && eventEndAt && new Date(endTime) > new Date(eventEndAt))
+            e.endTime = `Suất diễn phải kết thúc trước ${formatDateTime(new Date(eventEndAt).toISOString())}`;
+
         setErrors(e);
         return Object.keys(e).length === 0;
     };
+
+    // hint min/max cho datetime-local input
+    const minDateTime = eventStartAt || undefined;
+    const maxDateTime = eventEndAt || undefined;
 
     const handleSubmit = async () => {
         if (!validate()) return;
@@ -90,8 +118,8 @@ export default function CreateSessionModal({ open, onClose, eventId, onCreated }
                             type="text"
                             placeholder="VD: Buổi sáng - Khai mạc"
                             className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-white/20 ${errors.title
-                                    ? "border-red-500/60 focus:border-red-500"
-                                    : "border-white/10 focus:border-primary"
+                                ? "border-red-500/60 focus:border-red-500"
+                                : "border-white/10 focus:border-primary"
                                 }`}
                             value={title}
                             onChange={(e) => {
@@ -126,9 +154,11 @@ export default function CreateSessionModal({ open, onClose, eventId, onCreated }
                             </label>
                             <input
                                 type="datetime-local"
+                                min={minDateTime}
+                                max={maxDateTime}
                                 className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:ring-2 focus:ring-primary/20 outline-none transition-all [color-scheme:dark] ${errors.startTime
-                                        ? "border-red-500/60 focus:border-red-500"
-                                        : "border-white/10 focus:border-primary"
+                                    ? "border-red-500/60 focus:border-red-500"
+                                    : "border-white/10 focus:border-primary"
                                     }`}
                                 value={startTime}
                                 onChange={(e) => {
@@ -146,9 +176,11 @@ export default function CreateSessionModal({ open, onClose, eventId, onCreated }
                             </label>
                             <input
                                 type="datetime-local"
+                                min={minDateTime}
+                                max={maxDateTime}
                                 className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:ring-2 focus:ring-primary/20 outline-none transition-all [color-scheme:dark] ${errors.endTime
-                                        ? "border-red-500/60 focus:border-red-500"
-                                        : "border-white/10 focus:border-primary"
+                                    ? "border-red-500/60 focus:border-red-500"
+                                    : "border-white/10 focus:border-primary"
                                     }`}
                                 value={endTime}
                                 onChange={(e) => {
