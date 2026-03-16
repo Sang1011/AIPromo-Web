@@ -142,7 +142,7 @@ export default function Step3Settings({
             </section>
 
             {/* ===== Sơ đồ chỗ ngồi ===== */}
-            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
+            {/* <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                         <FiMap />
@@ -205,7 +205,7 @@ export default function Step3Settings({
                         </button>
                     </div>
                 )}
-            </section>
+            </section> */}
 
             {/* ===== Đường dẫn tuỳ chỉnh ===== */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
