@@ -12,12 +12,16 @@ import {
     MdNotifications,
     MdSettings,
     MdDownload,
+    MdCategory,
+    MdLocalOffer,
 } from "react-icons/md";
 
 const adminMenuItems = [
     { icon: MdDashboard, label: "Tổng quan", path: "/admin" },
     { icon: MdGroup, label: "Quản lý Người dùng", path: "/admin/users" },
     { icon: MdGavel, label: "Duyệt Sự kiện", path: "/admin/events" },
+    { icon: MdCategory, label: "Quản lý Category", path: "/admin/categories" },
+    { icon: MdLocalOffer, label: "Quản lý Hashtags", path: "/admin/hashtags" },
     { icon: MdPayments, label: "Tài chính & Doanh thu", path: "/admin/finance" },
     { icon: MdTerminal, label: "Nhật ký Hệ thống", path: "/admin/logs" },
 ];
