@@ -18,10 +18,10 @@ import { notify } from "../../../utils/notify";
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
 
-const emptyForm = (): CreateTicketTypeRequest => ({
+const emptyForm = () => ({
     name: "",
     price: 0,
-    quantity: 1,
+    quantity: "1", // string để tránh leading zero
 });
 
 interface CreateFormErrors {
@@ -30,7 +30,7 @@ interface CreateFormErrors {
     quantity?: string;
 }
 
-// ─── Shared: FREE toggle ──────────────────────────────────────────────────────
+// ─── FREE toggle ──────────────────────────────────────────────────────────────
 
 function FreeToggle({ isFree, onToggle }: { isFree: boolean; onToggle: () => void }) {
     return (
@@ -38,8 +38,8 @@ function FreeToggle({ isFree, onToggle }: { isFree: boolean; onToggle: () => voi
             type="button"
             onClick={onToggle}
             className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all shrink-0 ${isFree
-                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
-                : "bg-white/[0.03] border-white/8 text-slate-500 hover:text-slate-300 hover:border-white/15"
+                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                    : "bg-white/[0.03] border-white/8 text-slate-500 hover:text-slate-300 hover:border-white/15"
                 }`}
         >
             <div
@@ -53,7 +53,7 @@ function FreeToggle({ isFree, onToggle }: { isFree: boolean; onToggle: () => voi
     );
 }
 
-// ─── Shared: Price input (user types "thousands", .000đ is fixed suffix) ─────
+// ─── Price input ──────────────────────────────────────────────────────────────
 
 function PriceInput({
     value,
@@ -65,25 +65,22 @@ function PriceInput({
     hasError?: boolean;
 }) {
     const [raw, setRaw] = useState<string>("");
-    const [isFocus, setIsFocus] = useState<boolean>(false);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    const format = (num: string) =>
-        num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const format = (num: string) => num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const digits = e.target.value.replace(/\D/g, "");
         setRaw(digits);
         onChange(digits === "" ? 0 : Number(digits));
     };
-    const inputRef = useRef<HTMLInputElement>(null);
 
     return (
         <div
             tabIndex={0}
             onClick={() => inputRef.current?.focus()}
-            className={`flex items-center rounded-xl bg-black/30 border px-4 py-2.5 transition-all
-focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-white/8
-${hasError ? "border-red-500/60" : "border-white/8"}`}
+            className={`flex items-center rounded-xl bg-black/30 border px-4 py-2.5 transition-all focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-white/8 ${hasError ? "border-red-500/60" : "border-white/8"
+                }`}
         >
             <input
                 ref={inputRef}
@@ -92,18 +89,14 @@ ${hasError ? "border-red-500/60" : "border-white/8"}`}
                 type="text"
                 inputMode="numeric"
                 placeholder="0"
-                className="bg-transparent text-white text-sm border-none p-0 m-0 flex-1 min-w-0
-                outline-none focus:outline-none focus:ring-0 focus:border-none"
+                className="bg-transparent text-white text-sm border-none p-0 m-0 flex-1 min-w-0 outline-none focus:outline-none focus:ring-0 focus:border-none"
             />
-
-            <span className="text-slate-500 text-sm select-none ml-2">
-                VND
-            </span>
+            <span className="text-slate-500 text-sm select-none ml-2">VND</span>
         </div>
     );
 }
 
-// ─── Shared: Price field (PriceInput + FREE toggle together) ─────────────────
+// ─── Price field ──────────────────────────────────────────────────────────────
 
 function PriceField({
     price,
@@ -149,6 +142,38 @@ function PriceField({
     );
 }
 
+// ─── Quantity input ───────────────────────────────────────────────────────────
+
+function QuantityInput({
+    value,
+    onChange,
+    hasError,
+    placeholder = "VD: 500",
+}: {
+    value: string;
+    onChange: (val: string) => void;
+    hasError?: boolean;
+    placeholder?: string;
+}) {
+    return (
+        <input
+            value={value}
+            onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "");
+                // bỏ leading zero: "070" → 70 → "70"
+                onChange(digits === "" ? "" : String(Number(digits)));
+            }}
+            onBlur={() => {
+                if (!value || Number(value) < 1) onChange("1");
+            }}
+            inputMode="numeric"
+            placeholder={placeholder}
+            className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${hasError ? "border-red-500/60" : "border-white/8"
+                }`}
+        />
+    );
+}
+
 // ─── Inline edit row ──────────────────────────────────────────────────────────
 
 function TicketEditRow({
@@ -166,6 +191,7 @@ function TicketEditRow({
     const [saving, setSaving] = useState(false);
 
     const handleSave = async () => {
+        if (!quantity || Number(quantity) < 1) return;
         setSaving(true);
         try {
             await onSave({
@@ -192,13 +218,10 @@ function TicketEditRow({
                     <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                         Số lượng
                     </label>
-                    <input
+                    <QuantityInput
                         value={quantity}
-                        onChange={(e) => setQuantity(e.target.value.replace(/\D/g, ""))}
-                        className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50"
+                        onChange={setQuantity}
                         placeholder="Số lượng"
-                        type="number"
-                        min={1}
                     />
                 </div>
                 <button
@@ -282,22 +305,26 @@ function TicketDisplayRow({
 
 function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Promise<void> }) {
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState<CreateTicketTypeRequest>(emptyForm());
+    const [name, setName] = useState("");
+    const [price, setPrice] = useState(0);
+    const [quantity, setQuantity] = useState("1");
     const [isFree, setIsFree] = useState(false);
     const [errors, setErrors] = useState<CreateFormErrors>({});
     const [saving, setSaving] = useState(false);
 
     const reset = () => {
-        setForm(emptyForm());
+        setName("");
+        setPrice(0);
+        setQuantity("1");
         setIsFree(false);
         setErrors({});
     };
 
     const validate = (): boolean => {
         const e: CreateFormErrors = {};
-        if (!form.name.trim()) e.name = "Tên vé không được để trống";
-        if (!isFree && form.price < 1000) e.price = "Giá tối thiểu 1.000đ";
-        if (form.quantity < 1) e.quantity = "Số lượng tối thiểu 1";
+        if (!name.trim()) e.name = "Tên vé không được để trống";
+        if (!isFree && price < 1000) e.price = "Giá tối thiểu 1.000đ";
+        if (!quantity || Number(quantity) < 1) e.quantity = "Số lượng tối thiểu 1";
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -306,7 +333,11 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
         if (!validate()) return;
         setSaving(true);
         try {
-            await onAdd({ ...form, name: form.name.trim(), price: isFree ? 0 : form.price });
+            await onAdd({
+                name: name.trim(),
+                price: isFree ? 0 : price,
+                quantity: Number(quantity),
+            });
             reset();
             setOpen(false);
         } finally {
@@ -331,7 +362,10 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
             {/* Header */}
             <div className="flex items-center justify-between">
                 <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">Thêm loại vé mới</p>
-                <button onClick={() => { setOpen(false); reset(); }} className="text-slate-500 hover:text-slate-300 transition-colors">
+                <button
+                    onClick={() => { setOpen(false); reset(); }}
+                    className="text-slate-500 hover:text-slate-300 transition-colors"
+                >
                     <FiX size={14} />
                 </button>
             </div>
@@ -342,9 +376,9 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
                     Tên vé
                 </label>
                 <input
-                    value={form.name}
+                    value={name}
                     onChange={(e) => {
-                        setForm((p) => ({ ...p, name: e.target.value }));
+                        setName(e.target.value);
                         if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
                     }}
                     className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${errors.name ? "border-red-500/60" : "border-white/8"
@@ -357,12 +391,12 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
 
             {/* Giá vé */}
             <PriceField
-                price={form.price}
+                price={price}
                 isFree={isFree}
-                onPriceChange={(val) => setForm((p) => ({ ...p, price: val }))}
+                onPriceChange={setPrice}
                 onFreeToggle={() => {
                     setIsFree((v) => !v);
-                    setForm((p) => ({ ...p, price: 0 }));
+                    setPrice(0);
                     if (errors.price) setErrors((p) => ({ ...p, price: undefined }));
                 }}
                 error={errors.price}
@@ -374,17 +408,13 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
                 <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                     Số lượng
                 </label>
-                <input
-                    value={form.quantity}
-                    onChange={(e) => {
-                        setForm((p) => ({ ...p, quantity: Number(e.target.value) }));
+                <QuantityInput
+                    value={quantity}
+                    onChange={(val) => {
+                        setQuantity(val);
                         if (errors.quantity) setErrors((p) => ({ ...p, quantity: undefined }));
                     }}
-                    className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${errors.quantity ? "border-red-500/60" : "border-white/8"
-                        }`}
-                    placeholder="VD: 500"
-                    type="number"
-                    min={1}
+                    hasError={!!errors.quantity}
                 />
                 {errors.quantity && <p className="text-xs text-red-400">{errors.quantity}</p>}
             </div>
