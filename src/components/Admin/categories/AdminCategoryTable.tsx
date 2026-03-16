@@ -4,8 +4,9 @@ import AdminEditCategoryModal from "./AdminEditCategoryModal";
 import AdminFloatingMenu from "./AdminFloatingMenu";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchAllCategories } from "../../../store/categorySlice";
+import { fetchAllCategories, fetchToggleCategoryStatus } from "../../../store/categorySlice";
 import type { Category } from "../../../types/category/category";
+import AdminConfirmStatusModal from "./AdminConfirmStatusModal";
 
 const glassCard =
     "bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.2)]";
@@ -16,6 +17,9 @@ export default function AdminCategoryTable() {
     const [loading, setLoading] = useState(false);
     const [openMenu, setOpenMenu] = useState<{ id: number; rect: DOMRect } | null>(null);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [openStatusMenu, setOpenStatusMenu] = useState<{ id: number; rect: DOMRect } | null>(null);
+    const [statusConfirm, setStatusConfirm] = useState<{ id: number; activate: boolean } | null>(null);
+    const [confirming, setConfirming] = useState(false);
 
     const load = async () => {
         try {
@@ -80,10 +84,10 @@ export default function AdminCategoryTable() {
                                     <td className="px-8 py-5 text-sm text-[#a592c8]">{c.code}</td>
                                     <td className="px-8 py-5 text-sm text-[#a592c8]">{c.description}</td>
                                     <td className="px-8 py-5 text-center">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${c.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full ${c.isActive ? "bg-emerald-400" : "bg-amber-400"}`} />
-                                            {c.isActive ? "Hoạt động" : "Vô hiệu hoá"}
-                                        </span>
+                                            <button onClick={(e) => { const btn = e.currentTarget as HTMLElement; const rect = btn.getBoundingClientRect(); setOpenStatusMenu(openStatusMenu && openStatusMenu.id === c.id ? null : { id: c.id, rect }); }} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${c.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${c.isActive ? "bg-emerald-400" : "bg-amber-400"}`} />
+                                                {c.isActive ? "Hoạt động" : "Tạm dừng"}
+                                            </button>
                                     </td>
                                     <td className="px-8 py-5 text-right relative">
                                         <button onClick={(e) => { const btn = e.currentTarget as HTMLElement; const rect = btn.getBoundingClientRect(); setOpenMenu(openMenu && openMenu.id === c.id ? null : { id: c.id, rect }); }} className="p-1.5 rounded-lg text-[#a592c8] hover:text-white hover:bg-white/5 transition-colors">
@@ -102,6 +106,40 @@ export default function AdminCategoryTable() {
             {editingId !== null && (
                 // modal lazy load
                 <AdminEditCategoryModal categoryId={editingId} onClose={() => setEditingId(null)} />
+            )}
+            {openStatusMenu && (() => {
+                const cat = (categories || []).find((x) => x.id === openStatusMenu.id);
+                return (
+                    <AdminFloatingMenu
+                        rect={openStatusMenu.rect}
+                        items={[
+                            { key: 'active', label: 'Hoạt động', onClick: () => { setStatusConfirm({ id: openStatusMenu.id, activate: true }); }, active: !!cat?.isActive },
+                            { key: 'paused', label: 'Tạm dừng', onClick: () => { setStatusConfirm({ id: openStatusMenu.id, activate: false }); }, active: !cat?.isActive }
+                        ]}
+                        onClose={() => setOpenStatusMenu(null)}
+                    />
+                );
+            })()}
+
+            {statusConfirm && (
+                <AdminConfirmStatusModal
+                    title="Xác nhận thay đổi trạng thái"
+                    message={`Bạn có chắc muốn chuyển category #${statusConfirm.id} sang trạng thái "${statusConfirm.activate ? 'Hoạt động' : 'Tạm dừng'}"?`}
+                    onCancel={() => setStatusConfirm(null)}
+                    confirming={confirming}
+                    onConfirm={async () => {
+                        setConfirming(true);
+                        try {
+                            await dispatch(fetchToggleCategoryStatus({ id: statusConfirm.id, activate: statusConfirm.activate })).unwrap();
+                            await dispatch(fetchAllCategories({})).unwrap();
+                            setStatusConfirm(null);
+                        } catch (e) {
+                            console.error(e);
+                        } finally {
+                            setConfirming(false);
+                        }
+                    }}
+                />
             )}
             {openMenu && (
                 <AdminFloatingMenu rect={openMenu.rect} items={[{ key: 'edit', label: 'Cập nhật', onClick: () => setEditingId(openMenu.id) }, { key: 'delete', label: 'Xoá', onClick: () => { /* TODO: implement delete */ } }]} onClose={() => setOpenMenu(null)} />

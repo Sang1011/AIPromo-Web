@@ -82,6 +82,21 @@ export const fetchUpdateCategory = createAsyncThunk<
     }
 );
 
+export const fetchToggleCategoryStatus = createAsyncThunk<
+    void,
+    { id: number; activate: boolean }
+>(
+    `${name}/fetchToggleCategoryStatus`,
+    async (params, thunkAPI) => {
+        try {
+            const response = await categoryService.toggleCategoryStatus(params.id, params.activate);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 const categorySlice = createSlice({
     name,
     initialState,
@@ -106,6 +121,13 @@ const categorySlice = createSlice({
             fetchUpdateCategory.fulfilled,
             () => {
                 // after successful update we'll rely on UI to re-fetch list or fetchCategoryById
+            }
+        );
+
+        builder.addCase(
+            fetchToggleCategoryStatus.fulfilled,
+            () => {
+                // no-op: UI will re-fetch
             }
         );
 
