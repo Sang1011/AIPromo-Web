@@ -16,6 +16,8 @@ import type {
     EventSession,
     CreateTicketTypeRequest,
     UpdateTicketTypeRequest,
+    GetPendingEventsRequest,
+    PendingEventsData,
 } from "../types/event/event";
 import type { ApiResponse } from "../types/api";
 
@@ -305,6 +307,21 @@ export const fetchDeleteTicketType = createAsyncThunk<
     }
 );
 
+export const fetchPendingEvents = createAsyncThunk<
+    PendingEventsData,
+    GetPendingEventsRequest
+>(
+    `${name}/fetchPendingEvents`,
+    async (params, thunkAPI) => {
+        try {
+            const res = await eventService.getPendingEvents(params);
+            return res.data.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 const eventSlice = createSlice({
     name,
     initialState,
@@ -365,6 +382,22 @@ const eventSlice = createSlice({
         builder.addCase(fetchDeleteSession.fulfilled, (state, action) => {
             const { sessionId } = action.meta.arg;
             state.sessions = state.sessions.filter((s: any) => s.id !== sessionId);
+        });
+        builder.addCase(fetchPendingEvents.fulfilled, (state, action) => {
+
+        if (!action.payload) return
+
+        state.events = action.payload.items
+
+        state.pagination = {
+            pageNumber: action.payload.pageNumber,
+            pageSize: action.payload.pageSize,
+            totalCount: action.payload.totalCount,
+            totalPages: action.payload.totalPages,
+            hasPrevious: action.payload.hasPrevious,
+            hasNext: action.payload.hasNext
+        }
+
         });
     },
 });

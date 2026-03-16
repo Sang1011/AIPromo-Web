@@ -11,7 +11,9 @@ import type {
     GetAllRequestByMe,
     GetAllEventByMeResponse,
     UpdateTicketTypeRequest,
-    CreateTicketTypeRequest
+    CreateTicketTypeRequest,
+    GetPendingEventsResponse,
+    GetPendingEventsRequest
 } from "../types/event/event"
 import type { AxiosResponse } from "axios"
 import { interceptorAPI } from "../utils/attachInterceptors";
@@ -175,6 +177,11 @@ const eventService = {
     requestPublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch(`/events/${eventId}/request-publish`);
     },
+    getPendingEvents: (request: GetPendingEventsRequest): Promise<AxiosResponse<GetPendingEventsResponse>> => {
+        return interceptorAPI().get("/events/pending", {
+        params: request
+    });
+},
 }
 
 export default eventService
