@@ -10,8 +10,10 @@ import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../store';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
+import { fetchAssignAreas, fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
 import { notify } from '../../utils/notify';
+import type { TicketTypeItem } from '../../types/ticketType/ticketType';
+import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -35,6 +37,23 @@ const SEAT_COLOR_PRESET = [
     '#D97706', // amber-600
     '#DC2626', // red-600
     '#6B7280', // gray-500
+];
+
+const TICKET_TYPE_COLORS = [
+    '#3b82f6', // blue
+    '#a855f7', // purple
+    '#ADD8E6', // lightblue
+    '#f59e0b', // amber
+    '#94a3b8', // slate
+    '#10b981', // emerald
+    '#ec4899', // pink
+    '#ef4444', // red
+    '#f97316', // orange
+    '#84cc16', // lime
+    '#06b6d4', // cyan
+    '#8b5cf6', // violet
+    '#d97706', // yellow-orange
+    '#6366f1', // indigo
 ];
 
 
@@ -66,11 +85,7 @@ const SeatMapEditorPage: React.FC = () => {
     const [arcTotalSeats, setArcTotalSeats] = useState(20);
     const [arcCurvature, setArcCurvature] = useState(180);
     const groupDragAnchorRef = useRef<Konva.Node | null>(null);
-    const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
-        { id: 'VIP', name: 'Vé VIP Premium', color: '#8B5CF6', price: 500000 },
-        { id: 'STANDARD', name: 'Vé Standard', color: '#3b82f6', price: 300000 },
-        { id: 'ECONOMY', name: 'Vé Economy', color: '#10b981', price: 150000 },
-    ]);
+    const [ticketTypes, setTicketTypes] = useState<TicketTypeItem[]>([]);
     const stageRef = useRef<Konva.Stage>(null);
     const transformerRef = useRef<Konva.Transformer>(null);
     const selectionRectRef = useRef<Konva.Rect>(null);
@@ -123,6 +138,22 @@ const SeatMapEditorPage: React.FC = () => {
             setSelectedIds([id]);
         }
     }, []);
+
+    // trong component — thay useState ticketTypes cũ
+    const reduxTicketTypes = useSelector((state: RootState) => state.TICKET_TYPE.ticketTypes);
+
+    useEffect(() => {
+        if (reduxTicketTypes.length === 0) return;
+        setTicketTypes(prev =>
+            reduxTicketTypes.map((t, index) => {
+                const existing = prev.find(p => p.id === t.id);
+                return {
+                    ...t,
+                    color: existing?.color ?? TICKET_TYPE_COLORS[index % TICKET_TYPE_COLORS.length],
+                };
+            })
+        );
+    }, [reduxTicketTypes]);
 
     const searchSectionName = (sectionId: string) => {
         const section = sections.find(s => s.id === sectionId);
@@ -717,7 +748,7 @@ const SeatMapEditorPage: React.FC = () => {
             const newId = crypto.randomUUID();
             const newSection: Area = {
                 id: newId,
-                name: "",
+                name: ticketTypes[0]?.name,
                 type: shape,
                 x: snapToGrid(x),
                 y: snapToGrid(y),
@@ -725,8 +756,8 @@ const SeatMapEditorPage: React.FC = () => {
                 height: 150,
                 rotation: 0,
                 stroke: 'white',
-                ticketTypeId: 'VIP',
-                price: 500000,
+                ticketTypeId: ticketTypes[0]?.id ?? '',
+                price: ticketTypes[0]?.price ?? 0,
                 draggable: true,
                 isAreaType: isArea,
             };
@@ -1257,6 +1288,8 @@ const SeatMapEditorPage: React.FC = () => {
     useEffect(() => {
         if (!eventId) return;
 
+        dispatch(fetchGetAllTicketTypes({ eventId }));
+
         dispatch(fetchGetSeatMap(eventId))
             .unwrap()
             .then((spec) => {
@@ -1613,23 +1646,8 @@ const SeatMapEditorPage: React.FC = () => {
                         {areAllSelectedAreasLocked ? <IoMdUnlock /> : <IoMdLock />}
                     </button>
 
-
                     <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className={baseBtn}
-                    >
-                        Import JSON
-                    </button>
-
-                    <button
-                        onClick={exportSeatMap}
-                        className={baseBtn}
-                    >
-                        Export JSON
-                    </button>
-
-                    <button
-                        onClick={() => {
+                        onClick={async () => {
                             const data: SeatMapData = {
                                 areas: sections.map(area => ({
                                     ...area,
@@ -1640,20 +1658,34 @@ const SeatMapEditorPage: React.FC = () => {
 
                             const spec = JSON.stringify(data, null, 2);
 
-                            dispatch(fetchUpdateSeatMap({ eventId: eventId!, spec }))
-                                .unwrap()
-                                .then(() => {
-                                    notify.success('Lưu sơ đồ thành công!');
-                                    if (location.state?.from === "edit") {
-                                        navigate(`/organizer/my-events/${eventId}/edit`);
-                                    } else {
-                                        navigate(`/organizer/my-events/${eventId}/seat-map`);
-                                    }
-                                })
-                                .catch((err) => {
-                                    notify.error(`Lưu thất bại`);
-                                });
+                            try {
+                                console.log(spec);
+                                await dispatch(fetchUpdateSeatMap({ eventId: eventId!, spec })).unwrap();
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                const mappings = sections
+                                    .filter(area => area.isAreaType && area.ticketTypeId)
+                                    .map(area => ({
+                                        ticketTypeId: area.ticketTypeId!,
+                                        areaId: area.id,
+                                    }));
+                                console.log(mappings);
 
+                                if (mappings.length > 0) {
+                                    await dispatch(fetchAssignAreas({
+                                        eventId: eventId!,
+                                        data: { mappings },
+                                    })).unwrap();
+                                }
+
+                                notify.success('Lưu sơ đồ thành công!');
+                                if (location.state?.from === "edit") {
+                                    navigate(`/organizer/my-events/${eventId}/edit`);
+                                } else {
+                                    navigate(`/organizer/my-events/${eventId}/seat-map`);
+                                }
+                            } catch {
+                                notify.error('Lưu thất bại');
+                            }
                         }}
                         disabled={seatMapLoading}
                         style={{
@@ -3274,17 +3306,100 @@ const SeatMapEditorPage: React.FC = () => {
                         )}
 
                         {selectedIds.length === 0 && (
-                            <div style={{
-                                flex: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '40px',
-                                textAlign: 'center'
-                            }}>
-                                <div style={{ color: '#6b7280', fontSize: '14px' }}>
-                                    Chọn một đối tượng để xem thuộc tính
-                                </div>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                                <label style={{
+                                    display: 'block',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    color: '#9ca3af',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em',
+                                    marginBottom: '16px'
+                                }}>
+                                    LOẠI VÉ
+                                </label>
+
+                                {ticketTypes.length === 0 ? (
+                                    <div style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center' }}>
+                                        Chưa có loại vé nào
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {ticketTypes.map((t) => (
+                                            <div
+                                                key={t.id}
+                                                style={{
+                                                    background: '#16162a',
+                                                    border: '1px solid #2a2a3e',
+                                                    borderRadius: '10px',
+                                                    padding: '12px 14px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '12px',
+                                                }}
+                                            >
+                                                {/* Color dot */}
+                                                <div style={{
+                                                    width: '14px',
+                                                    height: '14px',
+                                                    borderRadius: '50%',
+                                                    background: t.color ?? '#6b7280',
+                                                    flexShrink: 0,
+                                                    border: '2px solid rgba(255,255,255,0.15)',
+                                                }} />
+
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{
+                                                        fontSize: '14px',
+                                                        fontWeight: 600,
+                                                        color: '#e5e7eb',
+                                                        whiteSpace: 'nowrap',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                    }}>
+                                                        {t.name}
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>
+                                                        {t.price?.toLocaleString('vi-VN')} ₫
+                                                    </div>
+                                                </div>
+
+                                                {/* Color picker */}
+                                                <label
+                                                    style={{
+                                                        width: '28px',
+                                                        height: '28px',
+                                                        borderRadius: '6px',
+                                                        border: '1px dashed rgba(255,255,255,0.3)',
+                                                        background: t.color ?? '#6b7280',
+                                                        cursor: 'pointer',
+                                                        position: 'relative',
+                                                        flexShrink: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#e5e7eb',
+                                                        fontSize: '14px',
+                                                    }}
+                                                    title="Đổi màu"
+                                                >
+                                                    <MdOutlinePalette />
+                                                    <input
+                                                        type="color"
+                                                        value={t.color ?? '#6b7280'}
+                                                        onChange={(e) => updateTicketTypeColor(t.id, e.target.value)}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            inset: 0,
+                                                            opacity: 0,
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    />
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 

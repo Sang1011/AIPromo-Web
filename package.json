@@ -20,6 +20,7 @@
     "framer-motion": "^12.34.0",
     "hull.js": "^1.0.6",
     "konva": "^10.2.0",
+    "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",

@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import eventService from "../services/eventService";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import seatmapService from "../services/seatmapService";
+import type { AssignAreasRequest } from "../types/seatmap/seatmap";
 
 interface SeatMapState {
     spec: string | null;
@@ -35,6 +35,19 @@ export const fetchUpdateSeatMap = createAsyncThunk(
             return spec;
         } catch (err: any) {
             return rejectWithValue(err?.response?.data?.message ?? "Không thể cập nhật seatmap");
+        }
+    }
+);
+
+
+
+export const fetchAssignAreas = createAsyncThunk(
+    "SEAT_MAP/assignAreas",
+    async ({ eventId, data }: { eventId: string; data: AssignAreasRequest }, { rejectWithValue }) => {
+        try {
+            await seatmapService.assignAreas(eventId, data);
+        } catch (err: any) {
+            return rejectWithValue(err?.response?.data?.message ?? "Không thể gán khu vực");
         }
     }
 );
