@@ -7,6 +7,7 @@ import type { AppDispatch, RootState } from "../../../store";
 import { fetchAllCategories, fetchToggleCategoryStatus } from "../../../store/categorySlice";
 import type { Category } from "../../../types/category/category";
 import AdminConfirmStatusModal from "./AdminConfirmStatusModal";
+import AdminCreateCategoryModal from "./AdminCreateCategoryModal";
 
 const glassCard =
     "bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.2)]";
@@ -20,6 +21,7 @@ export default function AdminCategoryTable() {
     const [openStatusMenu, setOpenStatusMenu] = useState<{ id: number; rect: DOMRect } | null>(null);
     const [statusConfirm, setStatusConfirm] = useState<{ id: number; activate: boolean } | null>(null);
     const [confirming, setConfirming] = useState(false);
+    const [openCreate, setOpenCreate] = useState(false);
 
     const load = async () => {
         try {
@@ -47,7 +49,7 @@ export default function AdminCategoryTable() {
                     <button onClick={() => {}} className="bg-[#302447] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-white/10 transition-colors">
                         <MdFilterList className="text-base" /> Lọc
                     </button>
-                    <button className="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(124,59,237,0.4)]">
+                    <button onClick={() => setOpenCreate(true)} className="bg-primary text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(124,59,237,0.4)] text-white">
                         <MdAdd className="text-base" /> Thêm Category
                     </button>
                     <button onClick={load} className="bg-[#1b1230] text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center gap-2 hover:bg-white/10 transition-colors">
@@ -106,6 +108,9 @@ export default function AdminCategoryTable() {
             {editingId !== null && (
                 // modal lazy load
                 <AdminEditCategoryModal categoryId={editingId} onClose={() => setEditingId(null)} />
+            )}
+            {openCreate && (
+                <AdminCreateCategoryModal onClose={() => setOpenCreate(false)} />
             )}
             {openStatusMenu && (() => {
                 const cat = (categories || []).find((x) => x.id === openStatusMenu.id);
