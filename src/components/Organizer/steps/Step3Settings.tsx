@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { FiEye, FiLink } from "react-icons/fi";
+import { FiEye, FiLink, FiMap, FiPlus, FiEdit2 } from "react-icons/fi";
 import { useDispatch } from "react-redux";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch } from "../../../store";
 import { fetchUpdateEventSettings } from "../../../store/eventSlice";
+import { fetchGetSeatMap } from "../../../store/seatMapSlice";
 import type { GetEventDetailResponse } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
 
@@ -24,6 +25,7 @@ export default function Step3Settings({
 }: Step3SettingsProps) {
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
+    const navigate = useNavigate();
 
     const [settingsForm, setSettingsForm] = useState<EventSettingsForm>({
         isEmailReminderEnabled: false,
@@ -32,22 +34,37 @@ export default function Step3Settings({
     const [initialForm, setInitialForm] = useState<EventSettingsForm | null>(null);
     const [errors, setErrors] = useState<Partial<Record<keyof EventSettingsForm, string>>>({});
 
+    // ── Seatmap state ─────────────────────────────────────────────────────────
+    const [seatMapSpec, setSeatMapSpec] = useState<string | null>(null);
+    const [seatMapLoading, setSeatMapLoading] = useState(false);
+
+    useEffect(() => {
+        if (!eventId) return;
+        setSeatMapLoading(true);
+        dispatch(fetchGetSeatMap(eventId))
+            .unwrap()
+            .then((spec) => setSeatMapSpec(spec ?? null))
+            .catch(() => setSeatMapSpec(null))
+            .finally(() => setSeatMapLoading(false));
+    }, [eventId]);
+
+    const hasSeatMap = !!seatMapSpec;
+
+    // ── Form helpers ──────────────────────────────────────────────────────────
+
     const updateForm = <K extends keyof EventSettingsForm>(key: K, value: EventSettingsForm[K]) => {
         setSettingsForm(prev => ({ ...prev, [key]: value }));
     };
 
     const validateForm = () => {
         const newErrors: Partial<Record<keyof EventSettingsForm, string>> = {};
-
         if (!settingsForm.urlPath) {
             newErrors.urlPath = "Vui lòng nhập đường dẫn tùy chỉnh";
         } else {
             const slugRegex = /^[a-z0-9-]+$/;
-            if (!slugRegex.test(settingsForm.urlPath)) {
+            if (!slugRegex.test(settingsForm.urlPath))
                 newErrors.urlPath = "URL chỉ được chứa chữ thường, số và dấu gạch ngang";
-            }
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -122,6 +139,72 @@ export default function Step3Settings({
                     checked={settingsForm.isEmailReminderEnabled}
                     onChange={(v) => updateForm("isEmailReminderEnabled", v)}
                 />
+            </section>
+
+            {/* ===== Sơ đồ chỗ ngồi ===== */}
+            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                        <FiMap />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-white">Sơ đồ chỗ ngồi</h2>
+                        <p className="text-xs text-slate-500 mt-0.5">Thiết lập sơ đồ ghế cho sự kiện của bạn</p>
+                    </div>
+                </div>
+
+                {seatMapLoading ? (
+                    <div className="flex items-center gap-2 text-slate-500 text-sm py-2">
+                        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        Đang tải...
+                    </div>
+                ) : hasSeatMap ? (
+                    // ── Đã có seatmap ────────────────────────────────────────
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                                <FiMap size={15} className="text-emerald-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-white">Sơ đồ đã được thiết lập</p>
+                                <p className="text-xs text-slate-500 mt-0.5">Nhấn để chỉnh sửa cấu hình ghế ngồi</p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map/edit`, {
+                                state: { from: "edit" }
+                            })}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 text-sm text-white font-medium transition-all"
+                        >
+                            <FiEdit2 size={14} />
+                            Chỉnh sửa
+                        </button>
+                    </div>
+                ) : (
+                    // ── Chưa có seatmap ──────────────────────────────────────
+                    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] p-6 flex flex-col items-center gap-4 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
+                            <FiMap size={22} className="text-slate-500" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-slate-300">Chưa có sơ đồ chỗ ngồi</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                Bạn có muốn tạo sơ đồ ghế ngồi cho sự kiện này không?
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map/edit`, {
+                                state: { from: "edit" }
+                            })}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all"
+                        >
+                            <FiPlus size={15} />
+                            Thêm sơ đồ chỗ ngồi
+                        </button>
+                    </div>
+                )}
             </section>
 
             {/* ===== Đường dẫn tuỳ chỉnh ===== */}

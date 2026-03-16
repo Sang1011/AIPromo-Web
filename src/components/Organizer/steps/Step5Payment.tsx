@@ -1,4 +1,4 @@
-import { FiInfo, FiCreditCard, FiFileText } from "react-icons/fi";
+import { FiInfo, FiCreditCard } from "react-icons/fi";
 import BankSelect from "../bank/BankSelect";
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -6,13 +6,15 @@ import type { AppDispatch, RootState } from "../../../store";
 import {
     fetchOrganizerProfile,
     fetchUpdateOrganizerBank,
-    fetchUpdateOrganizerProfile,
 } from "../../../store/organizerProfileSlice";
 import { notify } from "../../../utils/notify";
+import type { GetEventDetailResponse } from "../../../types/event/event";
 
 interface Step5PaymentProps {
     onBack?: () => void;
     onFinish?: () => void;
+    eventData: GetEventDetailResponse | null;
+    reloadEvent?: () => Promise<void>;
 }
 
 interface BankErrors {
@@ -29,7 +31,7 @@ interface VatErrors {
     identityNumber?: string;
 }
 
-export default function Step5Payment({ onBack, onFinish }: Step5PaymentProps) {
+export default function Step5Payment({ onBack, onFinish, eventData, reloadEvent }: Step5PaymentProps) {
     const BANKS = [
         { code: "VCB", name: "Vietcombank" },
         { code: "VTB", name: "VietinBank" },
@@ -142,6 +144,7 @@ export default function Step5Payment({ onBack, onFinish }: Step5PaymentProps) {
         const bankResult = await dispatch(
             fetchUpdateOrganizerBank({ accountName, accountNumber, bankCode, branch })
         );
+        console.log(bankResult);
 
         if (fetchUpdateOrganizerBank.rejected.match(bankResult)) {
             notify.error("Không thể cập nhật tài khoản ngân hàng");

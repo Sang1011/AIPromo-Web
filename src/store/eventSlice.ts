@@ -236,6 +236,17 @@ export const fetchCreateEventSessions = createAsyncThunk<
     }
 );
 
+export const fetchUpdateEventPolicy = createAsyncThunk<any, string>(
+    `${name}/fetchUpdateEventPolicy`,
+    async (eventId, thunkAPI) => {
+        try {
+            return (await eventService.updateEventPolicy(eventId)).data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 export const fetchUpdateSession = createAsyncThunk<
     any,
     { eventId: string; sessionId: string; data: UpdateEventSessionRequest }

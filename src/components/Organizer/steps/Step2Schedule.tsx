@@ -6,7 +6,7 @@ import {
 } from "react-icons/fi";
 import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchDeleteSession, fetchSessions } from "../../../store/eventSlice";
+import { fetchDeleteSession, fetchSessions, fetchUpdateEventSettings } from "../../../store/eventSlice";
 import type { EventSession, GetEventDetailResponse } from "../../../types/event/event";
 import CreateSessionModal from "../sessions/CreateSessionModal";
 import EditSessionModal from "../sessions/EditSessionModal";
@@ -15,6 +15,7 @@ import { fetchGetAllTicketTypes } from "../../../store/ticketTypeSlice";
 import type { TicketTypeItem } from "../../../types/ticketType/ticketType";
 import { notify } from "../../../utils/notify";
 import DateTimeInput from "../shared/DateTimeInput";
+import "../shared/datetime.css";
 
 const formatDateTime = (iso: string) => {
     if (!iso) return "—";
@@ -187,20 +188,33 @@ function Divider() {
     );
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+type TimeForm = {
+    ticketSaleStartAt: string;
+    ticketSaleEndAt: string;
+    eventStartAt: string;
+    eventEndAt: string;
+};
+
+type TimeFormErrors = Partial<Record<keyof TimeForm, string>>;
 
 interface Step2ScheduleProps {
     onNext: () => void;
     onBack: () => void;
-    eventData: GetEventDetailResponse | null; // 👈 thêm mới
+    eventData: GetEventDetailResponse | null;
+    reloadEvent?: () => Promise<void>;
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-export default function Step2Schedule({ onNext, onBack, eventData }: Step2ScheduleProps) {
+export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }: Step2ScheduleProps) {
     const dispatch = useDispatch<AppDispatch>();
     const { eventId } = useParams<{ eventId: string }>();
-
+    const [timeForm, setTimeForm] = useState<TimeForm>({
+        ticketSaleStartAt: "",
+        ticketSaleEndAt: "",
+        eventStartAt: "",
+        eventEndAt: "",
+    });
+    const [initialTimeForm, setInitialTimeForm] = useState<TimeForm | null>(null);
+    const [timeErrors, setTimeErrors] = useState<TimeFormErrors>({});
     const sessions = (useSelector(
         (state: RootState) => state.EVENT.sessions
     ) ?? []) as (EventSession & { id: string })[];
@@ -214,7 +228,6 @@ export default function Step2Schedule({ onNext, onBack, eventData }: Step2Schedu
     const [editingSession, setEditingSession] = useState<(EventSession & { id: string }) | null>(null);
     const [openTicketModal, setOpenTicketModal] = useState(false);
 
-    // ── Thời gian (read-only, lấy từ eventData) ──────────────────────────────
     const ticketSaleStartAt = eventData?.ticketSaleStartAt
         ? toLocalDateTime(eventData.ticketSaleStartAt)
         : "";
@@ -240,9 +253,62 @@ export default function Step2Schedule({ onNext, onBack, eventData }: Step2Schedu
     const hasSessions = sessions.length > 0;
     const hasTickets = ticketTypes.length > 0;
 
-    const handleNext = () => {
+    const validateTimeForm = (): boolean => {
+        const e: TimeFormErrors = {};
+        if (!timeForm.ticketSaleStartAt) e.ticketSaleStartAt = "Vui lòng chọn thời gian bắt đầu bán vé";
+        if (!timeForm.ticketSaleEndAt) e.ticketSaleEndAt = "Vui lòng chọn thời gian kết thúc bán vé";
+        if (!timeForm.eventStartAt) e.eventStartAt = "Vui lòng chọn thời gian bắt đầu sự kiện";
+        if (!timeForm.eventEndAt) e.eventEndAt = "Vui lòng chọn thời gian kết thúc sự kiện";
+
+        if (timeForm.ticketSaleStartAt && timeForm.ticketSaleEndAt &&
+            new Date(timeForm.ticketSaleStartAt) >= new Date(timeForm.ticketSaleEndAt))
+            e.ticketSaleEndAt = "Thời gian kết thúc bán vé phải sau thời gian bắt đầu";
+
+        if (timeForm.ticketSaleEndAt && timeForm.eventStartAt &&
+            new Date(timeForm.ticketSaleEndAt) > new Date(timeForm.eventStartAt))
+            e.eventStartAt = "Sự kiện phải bắt đầu sau khi kết thúc bán vé";
+
+        if (timeForm.eventStartAt && timeForm.eventEndAt &&
+            new Date(timeForm.eventStartAt) >= new Date(timeForm.eventEndAt))
+            e.eventEndAt = "Thời gian kết thúc sự kiện phải sau thời gian bắt đầu";
+
+        setTimeErrors(e);
+        return Object.keys(e).length === 0;
+    };
+
+    const toUTC = (local: string) => new Date(local).toISOString();
+
+    const isTimeFormChanged = () =>
+        initialTimeForm === null ||
+        JSON.stringify(initialTimeForm) !== JSON.stringify(timeForm);
+
+    const handleNext = async () => {
+        if (!validateTimeForm()) return;
         if (!hasSessions) { notify.error("Sự kiện phải có ít nhất 1 suất diễn"); return; }
         if (!hasTickets) { notify.error("Sự kiện phải có ít nhất 1 loại vé"); return; }
+
+        if (isTimeFormChanged()) {
+            if (!eventId) return;
+            try {
+                await dispatch(fetchUpdateEventSettings({
+                    eventId,
+                    data: {
+                        ticketSaleStartAt: toUTC(timeForm.ticketSaleStartAt),
+                        ticketSaleEndAt: toUTC(timeForm.ticketSaleEndAt),
+                        eventStartAt: toUTC(timeForm.eventStartAt),
+                        eventEndAt: toUTC(timeForm.eventEndAt),
+                        isEmailReminderEnabled: eventData?.isEmailReminderEnabled ?? false,
+                        urlPath: eventData?.urlPath ?? "",
+                    },
+                })).unwrap();
+                await reloadEvent?.();
+                notify.success("Đã lưu thời gian sự kiện");
+            } catch {
+                notify.error("Không thể lưu thời gian sự kiện");
+                return;
+            }
+        }
+
         onNext();
     };
 
@@ -255,6 +321,18 @@ export default function Step2Schedule({ onNext, onBack, eventData }: Step2Schedu
             notify.error("Không thể xoá suất diễn");
         }
     };
+
+    useEffect(() => {
+        if (!eventData || initialTimeForm) return;
+        const form: TimeForm = {
+            ticketSaleStartAt: eventData.ticketSaleStartAt ? toLocalDateTime(eventData.ticketSaleStartAt) : "",
+            ticketSaleEndAt: eventData.ticketSaleEndAt ? toLocalDateTime(eventData.ticketSaleEndAt) : "",
+            eventStartAt: eventData.eventStartAt ? toLocalDateTime(eventData.eventStartAt) : "",
+            eventEndAt: eventData.eventEndAt ? toLocalDateTime(eventData.eventEndAt) : "",
+        };
+        setTimeForm(form);
+        setInitialTimeForm(form);
+    }, [eventData]);
 
     return (
         <div className="space-y-8 max-w-3xl mx-auto">
@@ -272,24 +350,27 @@ export default function Step2Schedule({ onNext, onBack, eventData }: Step2Schedu
                     subtitle="Khoảng thời gian cho phép mua vé"
                 />
                 <div className="grid grid-cols-2 gap-4">
-                    <DateTimeInput
-                        label="Bắt đầu bán vé"
-                        value={ticketSaleStartAt}
-                        onChange={() => { }}
-                        disabled
-                    />
-                    <DateTimeInput
-                        label="Kết thúc bán vé"
-                        value={ticketSaleEndAt}
-                        onChange={() => { }}
-                        disabled
-                    />
+                    <div className="flex flex-col">
+                        <DateTimeInput
+                            label="Bắt đầu bán vé"
+                            value={timeForm.ticketSaleStartAt}
+                            onChange={(v) => setTimeForm(p => ({ ...p, ticketSaleStartAt: v }))}
+                        />
+                        {timeErrors.ticketSaleStartAt && (
+                            <p className="text-red-400 text-xs mt-1">{timeErrors.ticketSaleStartAt}</p>
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        <DateTimeInput
+                            label="Kết thúc bán vé"
+                            value={timeForm.ticketSaleEndAt}
+                            onChange={(v) => setTimeForm(p => ({ ...p, ticketSaleEndAt: v }))}
+                        />
+                        {timeErrors.ticketSaleEndAt && (
+                            <p className="text-red-400 text-xs mt-1">{timeErrors.ticketSaleEndAt}</p>
+                        )}
+                    </div>
                 </div>
-                {!ticketSaleStartAt && !ticketSaleEndAt && (
-                    <p className="text-xs text-slate-500 mt-3">
-                        Chưa thiết lập — vui lòng cấu hình ở bước Cài đặt.
-                    </p>
-                )}
             </section>
 
             {/* ===== Thời gian sự kiện ===== */}
@@ -300,24 +381,27 @@ export default function Step2Schedule({ onNext, onBack, eventData }: Step2Schedu
                     subtitle="Khung giờ chính thức của sự kiện"
                 />
                 <div className="grid grid-cols-2 gap-4">
-                    <DateTimeInput
-                        label="Bắt đầu sự kiện"
-                        value={eventStartAt}
-                        onChange={() => { }}
-                        disabled
-                    />
-                    <DateTimeInput
-                        label="Kết thúc sự kiện"
-                        value={eventEndAt}
-                        onChange={() => { }}
-                        disabled
-                    />
+                    <div className="flex flex-col">
+                        <DateTimeInput
+                            label="Bắt đầu sự kiện"
+                            value={timeForm.eventStartAt}
+                            onChange={(v) => setTimeForm(p => ({ ...p, eventStartAt: v }))}
+                        />
+                        {timeErrors.eventStartAt && (
+                            <p className="text-red-400 text-xs mt-1">{timeErrors.eventStartAt}</p>
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        <DateTimeInput
+                            label="Kết thúc sự kiện"
+                            value={timeForm.eventEndAt}
+                            onChange={(v) => setTimeForm(p => ({ ...p, eventEndAt: v }))}
+                        />
+                        {timeErrors.eventEndAt && (
+                            <p className="text-red-400 text-xs mt-1">{timeErrors.eventEndAt}</p>
+                        )}
+                    </div>
                 </div>
-                {!eventStartAt && !eventEndAt && (
-                    <p className="text-xs text-slate-500 mt-3">
-                        Chưa thiết lập — vui lòng cấu hình ở bước Cài đặt.
-                    </p>
-                )}
             </section>
 
             <Divider />
@@ -414,7 +498,10 @@ export default function Step2Schedule({ onNext, onBack, eventData }: Step2Schedu
                     open={openCreateModal}
                     onClose={() => setOpenCreateModal(false)}
                     eventId={eventId}
-                    onCreated={loadSessions}
+                    onCreated={async () => {
+                        loadSessions();
+                        await reloadEvent?.();
+                    }}
                 />
             )}
             {eventId && editingSession && (
@@ -423,13 +510,19 @@ export default function Step2Schedule({ onNext, onBack, eventData }: Step2Schedu
                     onClose={() => setEditingSession(null)}
                     eventId={eventId}
                     session={editingSession}
-                    onUpdated={loadSessions}
+                    onUpdated={async () => {
+                        loadSessions();
+                        await reloadEvent?.();
+                    }}
                 />
             )}
             {eventId && (
                 <TicketTypeModal
                     open={openTicketModal}
-                    onClose={() => setOpenTicketModal(false)}
+                    onClose={async () => {
+                        setOpenTicketModal(false);
+                        await reloadEvent?.();
+                    }}
                     eventId={eventId}
                 />
             )}

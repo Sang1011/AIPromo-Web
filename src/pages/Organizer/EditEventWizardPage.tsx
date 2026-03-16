@@ -75,6 +75,8 @@ export default function EditEventWizardPage() {
                 <Step2Schedule
                     onNext={nextStep}
                     onBack={prevStep}
+                    eventData={event}
+                    reloadEvent={reloadEvent}
                 />
             )}
 
@@ -97,14 +99,16 @@ export default function EditEventWizardPage() {
             )}
 
             {/* ===== STEP 5 ===== */}
-            {step === 5 && (
+            {/* {step === 5 && (
                 <Step5Payment
                     onBack={prevStep}
+                    reloadEvent={reloadEvent}
+                    eventData={event}
                     onFinish={() => {
-                        console.log("Submit toàn bộ event");
+
                     }}
                 />
-            )}
+            )} */}
         </div>
     );
 }

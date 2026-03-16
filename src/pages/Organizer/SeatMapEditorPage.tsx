@@ -7,7 +7,11 @@ import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage, Transformer
 import { getWorldPointer } from '../../utils/getWorldPointer';
 import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity, TicketType } from '../../types/config/seatmap';
 import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import type { AppDispatch, RootState } from '../../store';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
+import { notify } from '../../utils/notify';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -268,7 +272,7 @@ const SeatMapEditorPage: React.FC = () => {
 
     const handleDragEnd = useCallback(
         (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
-            if (isGroupDragging) return; // 👈 CHỐT CỬA AN TOÀN
+            if (isGroupDragging) return;
 
             const node = e.target;
             const startPos = dragStartPosRef.current[id];
@@ -966,6 +970,10 @@ const SeatMapEditorPage: React.FC = () => {
         saveToHistory();
     };
 
+    const dispatch = useDispatch<AppDispatch>();
+    const { loading: seatMapLoading, error: seatMapError } = useSelector(
+        (state: RootState) => state.SEATMAP
+    );
 
     const finalizeSelectionBox = useCallback(() => {
         if (!isSelecting || !selectionBox || !layerRef.current) return;
@@ -1180,6 +1188,8 @@ const SeatMapEditorPage: React.FC = () => {
         forceUpdate({});
     }, []);
 
+    const location = useLocation();
+
     const multiSelectBox = useMemo(() => {
         if (selectedIds.length <= 1 || !layerRef.current) return null;
         return getMultiSelectBoundingBox(layerRef.current, selectedIds);
@@ -1244,7 +1254,39 @@ const SeatMapEditorPage: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        if (!eventId) return;
 
+        dispatch(fetchGetSeatMap(eventId))
+            .unwrap()
+            .then((spec) => {
+                try {
+                    const data: SeatMapData = JSON.parse(spec);
+
+                    const importedSections: Area[] = [];
+                    const importedSeats: Seat[] = [];
+
+                    data.areas.forEach(area => {
+                        const { seats: areaSeats, ...section } = area;
+                        importedSections.push({ ...section, draggable: true });
+                        areaSeats.forEach(seat => {
+                            importedSeats.push({ ...seat, sectionId: section.id });
+                        });
+                    });
+
+                    setSections(importedSections);
+                    setSeats(importedSeats);
+                    setTextEntities(data.texts || []);
+                    setSelectedIds([]);
+                    saveToHistory();
+                } catch {
+                    console.error('Invalid seatmap spec from server');
+                }
+            })
+            .catch((err) => {
+                console.warn('No seatmap found or failed to load:', err);
+            });
+    }, [eventId]);
 
 
     const renderSection = (area: Area) => {
@@ -1446,7 +1488,13 @@ const SeatMapEditorPage: React.FC = () => {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <button
-                        onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map`)}
+                        onClick={() => {
+                            if (location.state?.from === "edit") {
+                                navigate(`/organizer/my-events/${eventId}/edit`);
+                            } else {
+                                navigate(`/organizer/my-events/${eventId}/seat-map`);
+                            }
+                        }}
                         style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -1458,11 +1506,14 @@ const SeatMapEditorPage: React.FC = () => {
                             fontSize: '16px',
                             fontWeight: 500
                         }}
+                        className="px-3 py-1 rounded-md hover:bg-white/10 transition"
                     >
                         <FaArrowLeft />
                         Trở về
                     </button>
                 </div>
+
+
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <button
@@ -1578,19 +1629,46 @@ const SeatMapEditorPage: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => { setSections([]); setSeats([]); setTextEntities([]); setSelectedIds([]); saveToHistory(); }}
+                        onClick={() => {
+                            const data: SeatMapData = {
+                                areas: sections.map(area => ({
+                                    ...area,
+                                    seats: seats.filter(seat => seat.sectionId === area.id),
+                                })),
+                                texts: textEntities,
+                            };
+
+                            const spec = JSON.stringify(data, null, 2);
+
+                            dispatch(fetchUpdateSeatMap({ eventId: eventId!, spec }))
+                                .unwrap()
+                                .then(() => {
+                                    notify.success('Lưu sơ đồ thành công!');
+                                    if (location.state?.from === "edit") {
+                                        navigate(`/organizer/my-events/${eventId}/edit`);
+                                    } else {
+                                        navigate(`/organizer/my-events/${eventId}/seat-map`);
+                                    }
+                                })
+                                .catch((err) => {
+                                    notify.error(`Lưu thất bại`);
+                                });
+
+                        }}
+                        disabled={seatMapLoading}
                         style={{
-                            background: '#8B5CF6',
+                            background: seatMapLoading ? '#6d28d9' : '#8B5CF6',
                             border: 'none',
                             borderRadius: '8px',
                             padding: '10px 24px',
                             color: 'white',
                             fontSize: '14px',
                             fontWeight: 600,
-                            cursor: 'pointer'
+                            cursor: seatMapLoading ? 'not-allowed' : 'pointer',
+                            opacity: seatMapLoading ? 0.7 : 1,
                         }}
                     >
-                        Lưu sơ đồ
+                        {seatMapLoading ? 'Đang lưu...' : 'Lưu sơ đồ'}
                     </button>
                 </div>
             </div>

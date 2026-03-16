@@ -175,3 +175,8 @@ export type GetAllCreateResponseForPrivate = {
 }
 
 export type GetAllEventByMeResponse = ApiResponse<GetAllCreateResponseForPrivate>
+
+export type UpdateSeatMapRequest = {
+    eventId: string;
+    spec: string;
+}

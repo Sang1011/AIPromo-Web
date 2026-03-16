@@ -7,7 +7,7 @@ const steps = [
     "Suất diễn và vé",
     "Cài đặt",
     "Điều khoản",
-    "Thanh toán",
+    // "Thanh toán",
 ];
 
 export default function Stepper({ currentStep }: StepperProps) {
