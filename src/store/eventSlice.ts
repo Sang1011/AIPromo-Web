@@ -236,11 +236,11 @@ export const fetchCreateEventSessions = createAsyncThunk<
     }
 );
 
-export const fetchUpdateEventPolicy = createAsyncThunk<any, string>(
+export const fetchUpdateEventPolicy = createAsyncThunk<any, { eventId: string; policy: string }>(
     `${name}/fetchUpdateEventPolicy`,
-    async (eventId, thunkAPI) => {
+    async ({ eventId, policy }, thunkAPI) => {
         try {
-            return (await eventService.updateEventPolicy(eventId)).data;
+            return (await eventService.updateEventPolicy(eventId, policy)).data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
         }

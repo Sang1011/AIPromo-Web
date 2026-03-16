@@ -143,8 +143,8 @@ const eventService = {
             },
         })
     },
-    updateEventPolicy: (eventId: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/policy`);
+    updateEventPolicy: (eventId: string, policy: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().patch(`/events/${eventId}/policy`, { policy });
     },
 }
 

@@ -95,6 +95,8 @@ export default function EditEventWizardPage() {
                 <Step4Policy
                     onNext={nextStep}
                     onBack={prevStep}
+                    eventData={event}
+                    reloadEvent={reloadEvent}
                 />
             )}
 
