@@ -17,7 +17,6 @@ export default function CreateEventPage() {
             <Step1EventInfo
                 mode="create"
                 onCreated={handleCreated}
-                onCancel={() => navigate("/organizer/my-events")}
             />
 
         </div>
