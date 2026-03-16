@@ -67,6 +67,21 @@ export const fetchCreateCategory = createAsyncThunk<
     }
 );
 
+export const fetchUpdateCategory = createAsyncThunk<
+    void,
+    { id: number; data: Partial<CreateCategoryRequest> }
+>(
+    `${name}/fetchUpdateCategory`,
+    async (params, thunkAPI) => {
+        try {
+            const response = await categoryService.updateCategory(params.id, params.data);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 const categorySlice = createSlice({
     name,
     initialState,
@@ -84,6 +99,13 @@ const categorySlice = createSlice({
             fetchCategoryById.fulfilled,
             (state, action: PayloadAction<GetCategoryByIdResponse>) => {
                 state.currentCategory = action.payload.data;
+            }
+        );
+
+        builder.addCase(
+            fetchUpdateCategory.fulfilled,
+            () => {
+                // after successful update we'll rely on UI to re-fetch list or fetchCategoryById
             }
         );
 

@@ -18,6 +18,9 @@ const categoryService = {
     getCategoryById: (id: number): Promise<AxiosResponse<GetCategoryByIdResponse>> => {
         return interceptorAPI().get(`/categories/${id}`);
     },
+    updateCategory: (id: number, data: { code?: string; name?: string; description?: string }): Promise<AxiosResponse<void>> => {
+        return interceptorAPI().put(`/categories/${id}`, data);
+    },
 }
 
 export default categoryService
