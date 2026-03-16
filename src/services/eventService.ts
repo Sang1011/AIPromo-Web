@@ -171,6 +171,10 @@ const eventService = {
         return interceptorAPI().patch(`/events/${eventId}/publish`);
     },
 
+    rejectPublishEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().patch(`/events/${eventId}/reject-publish`, { reason });
+    },
+
     cancelEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
     return interceptorAPI().patch(`/events/${eventId}/cancel`, {reason});
     },

@@ -360,6 +360,23 @@ export const fetchCancelEvent = createAsyncThunk<any,{ eventId: string; reason: 
     }
 )
 
+export const fetchRejectPublishEvent = createAsyncThunk<any, { eventId: string; reason: string }>(
+    `${name}/rejectPublishEvent`,
+    async ({ eventId, reason }, thunkAPI) => {
+        try {
+            const getRes = await eventService.getEventById(eventId);
+            const eventObj = ((getRes.data as any)?.data) ?? (getRes.data as any) ?? null;
+            const id = (eventObj && (eventObj.id ?? eventObj.eventId)) ?? eventId;
+
+            await eventService.rejectPublishEvent(id, reason);
+
+            return { id, reason };
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+)
+
 const eventSlice = createSlice({
     name,
     initialState,
@@ -428,6 +445,17 @@ const eventSlice = createSlice({
 
             if (state.currentEvent && ((state.currentEvent as any).id === id || (state.currentEvent as any).eventId === id)) {
                 (state.currentEvent as any).status = "Published";
+            }
+        });
+
+        builder.addCase(fetchRejectPublishEvent.fulfilled, (state, action: PayloadAction<{ id: string; reason: string }>) => {
+            const { id } = action.payload;
+
+            // mark event status back to Draft after rejection
+            state.events = state.events.map((e: any) => (e.id === id ? { ...e, status: "Draft" } : e));
+
+            if (state.currentEvent && ((state.currentEvent as any).id === id || (state.currentEvent as any).eventId === id)) {
+                (state.currentEvent as any).status = "Draft";
             }
         });
 

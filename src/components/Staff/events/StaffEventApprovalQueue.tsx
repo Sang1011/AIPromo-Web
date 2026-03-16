@@ -4,7 +4,8 @@ import type { RootState, AppDispatch } from "../../../store"
 import {
   fetchPendingEvents,
   fetchPublishEvent,
-  fetchCancelEvent
+  fetchCancelEvent,
+  fetchRejectPublishEvent
 } from "../../../store/eventSlice"
 import toast from "react-hot-toast"
 
@@ -190,12 +191,26 @@ export default function StaffEventApprovalQueue() {
       return
     }
 
-    // TODO: CALL API REJECT EVENT
-    console.log("Reject event:", rejectEventId, rejectReason)
+    if (loadingId) return
 
-    toast.success("Đã ghi nhận từ chối (chưa gọi API)")
+    setLoadingId(rejectEventId)
 
-    setShowRejectModal(false)
+    try {
+      await dispatch(
+        // call reject-publish thunk
+        (fetchRejectPublishEvent as any)({ eventId: rejectEventId, reason: rejectReason })
+      ).unwrap()
+
+      toast.success("Đã từ chối yêu cầu phê duyệt")
+      setShowRejectModal(false)
+      refresh()
+    } catch (err) {
+      console.error("reject publish failed", err)
+      const msg = (err as any)?.response?.data?.detail ?? (err as any)?.message ?? "Từ chối thất bại"
+      toast.error(msg)
+    }
+
+    setLoadingId(null)
 
   }
 

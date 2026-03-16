@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import DashboardLayout from "./components/Organizer/layouts/DashboardLayout";
 import ManagementLayout from "./components/Organizer/layouts/ManagementLayout";
 import AnalyticsPage from "./pages/Organizer/AnalyticsPage";
@@ -60,7 +61,9 @@ function App() {
   }, []);
 
   return (
-    <Routes>
+    <>
+      <Toaster position="top-right" />
+      <Routes>
       {/*Attendee*/}
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<Login />} />
@@ -115,7 +118,8 @@ function App() {
         <Route path="event-approval" element={<EventApprovalPage />} />
         <Route path="organizer-profile" element={<OrganizerProfilePage />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   );
 }
 
