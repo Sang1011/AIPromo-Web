@@ -171,6 +171,10 @@ const eventService = {
         return interceptorAPI().patch(`/events/${eventId}/publish`);
     },
 
+    cancelEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
+    return interceptorAPI().patch(`/events/${eventId}/cancel`, {reason});
+    },
+
     unpublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch(`/events/${eventId}/unpublish`);
     },
@@ -181,6 +185,7 @@ const eventService = {
         return interceptorAPI().get("/events/pending", {
         params: request
     });
+    
 },
 }
 

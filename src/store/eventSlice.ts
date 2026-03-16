@@ -322,6 +322,44 @@ export const fetchPendingEvents = createAsyncThunk<
     }
 );
 
+export const fetchPublishEvent = createAsyncThunk<any, string>(
+    `${name}/publishEvent`,
+    async (eventId, thunkAPI) => {
+        try {
+            const getRes = await eventService.getEventById(eventId);
+            const eventObj = ((getRes.data as any)?.data) ?? (getRes.data as any) ?? null;
+            const id = (eventObj && (eventObj.id ?? eventObj.eventId)) ?? eventId;
+            const sessions = (eventObj as any)?.sessions ?? [];
+            if (!sessions || sessions.length === 0) {
+                return thunkAPI.rejectWithValue({ message: "Cannot publish event. At least one session is required." });
+            }
+
+            await eventService.publishEvent(id);
+
+            return id;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error)
+        }
+    }
+)
+
+export const fetchCancelEvent = createAsyncThunk<any,{ eventId: string; reason: string }>(
+    `${name}/cancelEvent`,
+    async ({ eventId, reason }, thunkAPI) => {
+        try {
+            const getRes = await eventService.getEventById(eventId);
+            const eventObj = ((getRes.data as any)?.data) ?? (getRes.data as any) ?? null;
+            const id = (eventObj && (eventObj.id ?? eventObj.eventId)) ?? eventId;
+
+            await eventService.cancelEvent(id, reason);
+
+            return { id, reason };
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error)
+        }
+    }
+)
+
 const eventSlice = createSlice({
     name,
     initialState,
@@ -382,6 +420,25 @@ const eventSlice = createSlice({
         builder.addCase(fetchDeleteSession.fulfilled, (state, action) => {
             const { sessionId } = action.meta.arg;
             state.sessions = state.sessions.filter((s: any) => s.id !== sessionId);
+        });
+        builder.addCase(fetchPublishEvent.fulfilled, (state, action: PayloadAction<string>) => {
+            const id = action.payload;
+
+            state.events = state.events.map((e: any) => (e.id === id ? { ...e, status: "Published" } : e));
+
+            if (state.currentEvent && ((state.currentEvent as any).id === id || (state.currentEvent as any).eventId === id)) {
+                (state.currentEvent as any).status = "Published";
+            }
+        });
+
+        builder.addCase(fetchCancelEvent.fulfilled, (state, action: PayloadAction<{ id: string; reason: string }>) => {
+            const { id } = action.payload;
+
+            state.events = state.events.map((e: any) => (e.id === id ? { ...e, status: "Cancelled" } : e));
+
+            if (state.currentEvent && ((state.currentEvent as any).id === id || (state.currentEvent as any).eventId === id)) {
+                (state.currentEvent as any).status = "Cancelled";
+            }
         });
         builder.addCase(fetchPendingEvents.fulfilled, (state, action) => {
 

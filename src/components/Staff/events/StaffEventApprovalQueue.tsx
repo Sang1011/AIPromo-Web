@@ -1,18 +1,41 @@
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import type { RootState, AppDispatch } from "../../../store"
-import { fetchPendingEvents } from "../../../store/eventSlice"
+import {
+  fetchPendingEvents,
+  fetchPublishEvent,
+  fetchCancelEvent
+} from "../../../store/eventSlice"
+import toast from "react-hot-toast"
+
+import {
+  Check,
+  X,
+  Trash2,
+  Loader2
+} from "lucide-react"
 
 export default function StaffEventApprovalQueue() {
 
   const dispatch = useDispatch<AppDispatch>()
 
   const events = useSelector((state: RootState) => state.EVENT.events)
-  const pagination = useSelector((state: RootState) => state.EVENT.pagination)
 
-  const [activeTab, setActiveTab] = useState("all")
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelEventId, setCancelEventId] = useState<string | null>(null)
+  const [cancelReason, setCancelReason] = useState("")
+
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [rejectEventId, setRejectEventId] = useState<string | null>(null)
+  const [rejectReason, setRejectReason] = useState("")
+  
+  const [showApproveModal, setShowApproveModal] = useState(false)
+  const [approveEventId, setApproveEventId] = useState<string | null>(null)
 
   useEffect(() => {
+
     dispatch(
       fetchPendingEvents({
         PageNumber: 1,
@@ -20,12 +43,23 @@ export default function StaffEventApprovalQueue() {
         Statuses: "PendingReview,PendingCancellation"
       })
     )
+
   }, [dispatch])
+
+  const refresh = () => {
+
+    dispatch(
+      fetchPendingEvents({
+        PageNumber: 1,
+        PageSize: 5,
+        Statuses: "PendingReview,PendingCancellation"
+      })
+    )
+
+  }
 
   const glassCard =
     "bg-gradient-to-br from-slate-900/70 to-slate-800/40 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20 hover:shadow-primary/20 hover:border-primary/20 transition-all duration-300"
-
-  /* ---------------- STATUS MAP ---------------- */
 
   const statusMap: any = {
     PendingReview: {
@@ -50,8 +84,6 @@ export default function StaffEventApprovalQueue() {
     }
   }
 
-  /* ---------------- CATEGORY COLOR ---------------- */
-
   const categoryColor: any = {
     MUSIC: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
     TECH: "bg-green-500/20 text-green-300 border-green-500/30",
@@ -59,8 +91,6 @@ export default function StaffEventApprovalQueue() {
     FINANCE: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
     OTHER: "bg-gray-500/20 text-gray-300 border-gray-500/30"
   }
-
-  /* ---------------- DATE FORMAT ---------------- */
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString("vi-VN", {
@@ -70,10 +100,109 @@ export default function StaffEventApprovalQueue() {
     })
   }
 
+  const openApproveModal = (eventId: string) => {
+    setApproveEventId(eventId)
+    setShowApproveModal(true)
+  }
+
+  const handleApprove = async () => {
+    if (!approveEventId) return
+
+    if (loadingId) return
+
+    setLoadingId(approveEventId)
+
+    try {
+      await dispatch(fetchPublishEvent(approveEventId)).unwrap()
+
+      toast.success("Đã phê duyệt sự kiện")
+      setShowApproveModal(false)
+      refresh()
+    } catch (err: any) {
+      console.error("publish failed", err)
+      const msg = err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message ?? (err?.message ?? "Phê duyệt thất bại")
+      toast.error(msg)
+    }
+
+    setLoadingId(null)
+  }
+
+  const openCancelModal = (eventId: string) => {
+
+    setCancelEventId(eventId)
+    setCancelReason("")
+    setShowCancelModal(true)
+
+  }
+
+  const handleCancel = async () => {
+
+    console.log("handleCancel called", cancelEventId)
+
+    if (!cancelEventId) return
+
+    if (!cancelReason.trim()) {
+      toast.error("Vui lòng nhập lý do huỷ")
+      return
+    }
+
+    setLoadingId(cancelEventId)
+
+    try {
+
+      await dispatch(
+        fetchCancelEvent({
+          eventId: cancelEventId,
+          reason: cancelReason
+        })
+      ).unwrap()
+
+      toast.success("Đã huỷ sự kiện")
+
+      setShowCancelModal(false)
+
+      refresh()
+
+    } catch {
+
+      toast.error("Huỷ sự kiện thất bại")
+
+    }
+
+    setLoadingId(null)
+
+  }
+
+  const openRejectModal = (eventId: string) => {
+
+    setRejectEventId(eventId)
+    setRejectReason("")
+    setShowRejectModal(true)
+
+  }
+
+  const handleReject = async () => {
+
+    if (!rejectEventId) return
+
+    if (!rejectReason.trim()) {
+      toast.error("Vui lòng nhập lý do từ chối")
+      return
+    }
+
+    // TODO: CALL API REJECT EVENT
+    console.log("Reject event:", rejectEventId, rejectReason)
+
+    toast.success("Đã ghi nhận từ chối (chưa gọi API)")
+
+    setShowRejectModal(false)
+
+  }
+
   return (
+
     <div className="flex flex-col gap-10 w-full">
 
-      {/* HEADER */}
       <div className="flex flex-col gap-3">
 
         <h1 className="text-3xl font-black text-white">
@@ -81,87 +210,14 @@ export default function StaffEventApprovalQueue() {
         </h1>
 
         <p className="text-sm text-slate-400">
-          Bảng điều khiển kiểm duyệt toàn hệ thống cho các đăng ký sự kiện và đề xuất hợp tác mới.
+          Bảng điều khiển kiểm duyệt toàn hệ thống cho các đăng ký sự kiện.
         </p>
 
       </div>
 
-      {/* FILTER */}
-      <div className="flex items-center justify-between">
-
-        <div className="flex gap-3">
-
-          <button
-            onClick={() => {
-              setActiveTab("all")
-              dispatch(
-                fetchPendingEvents({
-                  PageNumber: 1,
-                  PageSize: 5,
-                  Statuses: "PendingReview,PendingCancellation"
-                })
-              )
-            }}
-            className={`px-4 py-2 text-xs rounded-full font-bold ${
-              activeTab === "all"
-                ? "bg-primary text-white"
-                : "bg-white/5 text-slate-400"
-            }`}
-          >
-            Tất cả
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("priority")
-              dispatch(
-                fetchPendingEvents({
-                  PageNumber: 1,
-                  PageSize: 5,
-                  Statuses: "PendingReview"
-                })
-              )
-            }}
-            className={`px-4 py-2 text-xs rounded-full font-bold ${
-              activeTab === "priority"
-                ? "bg-primary text-white"
-                : "bg-white/5 text-slate-400"
-            }`}
-          >
-            Ưu tiên
-          </button>
-
-        </div>
-
-        <div className="text-xs text-slate-400">
-          Đang hiển thị{" "}
-          <span className="text-white font-bold">
-            {events.length}
-          </span>{" "}
-          trên{" "}
-          <span className="text-white font-bold">
-            {pagination?.totalCount ?? 0}
-          </span>{" "}
-          sự kiện
-        </div>
-
-      </div>
-
-      {/* TABLE HEADER */}
-      <div className="grid grid-cols-12 px-5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-
-        <div className="col-span-5">Chi tiết sự kiện</div>
-        <div className="col-span-2">Ngày đăng ký</div>
-        <div className="col-span-2">Danh mục</div>
-        <div className="col-span-1">Trạng thái</div>
-        <div className="col-span-2 text-right">Thao tác</div>
-
-      </div>
-
-      {/* EVENT LIST */}
       <div className="flex flex-col gap-4">
 
-        {events.map((evt) => {
+        {events.map((evt: any) => {
 
           const category =
             evt.categories?.[0]?.name?.toUpperCase() ?? "OTHER"
@@ -177,7 +233,6 @@ export default function StaffEventApprovalQueue() {
               className={`grid grid-cols-12 items-center gap-4 p-5 ${glassCard} rounded-2xl`}
             >
 
-              {/* EVENT INFO */}
               <div className="col-span-5 flex items-center gap-5">
 
                 <div className="size-16 rounded-2xl overflow-hidden border border-white/10">
@@ -204,7 +259,6 @@ export default function StaffEventApprovalQueue() {
 
               </div>
 
-              {/* DATE */}
               <div className="col-span-2">
 
                 <span className="text-sm font-semibold text-slate-300">
@@ -213,7 +267,6 @@ export default function StaffEventApprovalQueue() {
 
               </div>
 
-              {/* CATEGORY */}
               <div className="col-span-2">
 
                 <span
@@ -226,7 +279,6 @@ export default function StaffEventApprovalQueue() {
 
               </div>
 
-              {/* STATUS */}
               <div className="col-span-1 flex items-center gap-2">
 
                 <span
@@ -241,23 +293,55 @@ export default function StaffEventApprovalQueue() {
 
               </div>
 
-              {/* ACTION */}
-              <div className="col-span-2 flex justify-end gap-3">
+              <div className="col-span-2 flex justify-end gap-2">
 
                 <button className="text-xs text-slate-400 hover:text-white">
                   Chi tiết
                 </button>
 
                 {evt.status === "PendingReview" && (
-                  <button className="px-5 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:opacity-90">
-                    Phê duyệt nhanh
-                  </button>
+
+                  <div className="flex gap-2">
+
+                    <button
+                      disabled={loadingId === evt.id}
+                      onClick={() => openApproveModal(evt.id ?? evt.eventId)}
+                      title="Phê duyệt"
+                      className="p-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400"
+                    >
+                      {loadingId === evt.id
+                        ? <Loader2 className="w-4 h-4 animate-spin"/>
+                        : <Check className="w-4 h-4"/>
+                      }
+                    </button>
+
+                    <button
+                      disabled={loadingId === evt.id}
+                      onClick={() => openRejectModal(evt.id ?? evt.eventId)}
+                      title="Từ chối"
+                      className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400"
+                    >
+                      <X className="w-4 h-4"/>
+                    </button>
+
+                  </div>
+
                 )}
 
                 {evt.status === "PendingCancellation" && (
-                  <button className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-xl">
-                    Xác nhận huỷ
+
+                  <button
+                    disabled={loadingId === evt.id}
+                    onClick={() => openCancelModal(evt.id ?? evt.eventId)}
+                    title="Xác nhận huỷ"
+                    className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400"
+                  >
+                    {loadingId === evt.id
+                      ? <Loader2 className="w-4 h-4 animate-spin"/>
+                      : <Trash2 className="w-4 h-4"/>
+                    }
                   </button>
+
                 )}
 
               </div>
@@ -269,36 +353,127 @@ export default function StaffEventApprovalQueue() {
 
       </div>
 
-      {/* PAGINATION */}
-      <div className="flex justify-center gap-2 pt-4">
+      {showCancelModal && (
 
-        {Array.from({ length: pagination?.totalPages ?? 1 }).map((_, i) => (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
 
-          <button
-            key={i}
-            className={`size-9 rounded-lg text-xs font-bold ${
-              pagination?.pageNumber === i + 1
-                ? "bg-primary text-white"
-                : "bg-white/5 text-slate-400"
-            }`}
-            onClick={() =>
-              dispatch(
-                fetchPendingEvents({
-                  PageNumber: i + 1,
-                  PageSize: 5,
-                  Statuses: "PendingReview,PendingCancellation"
-                })
-              )
-            }
-          >
-            {i + 1}
-          </button>
+          <div className="bg-slate-900 border border-white/10 p-6 rounded-xl w-[400px]">
 
-        ))}
+            <h2 className="text-white font-bold mb-3">
+              Lý do huỷ sự kiện
+            </h2>
 
-      </div>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="w-full bg-slate-800 border border-white/10 rounded-lg p-3 text-white text-sm"
+              rows={4}
+              placeholder="Nhập lý do huỷ..."
+            />
+
+            <div className="flex justify-end gap-3 mt-4">
+
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="px-4 py-2 text-sm text-slate-300"
+              >
+                Huỷ
+              </button>
+
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg"
+              >
+                Xác nhận
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {showApproveModal && (
+
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+
+          <div className="bg-slate-900 border border-white/10 p-6 rounded-xl w-[400px]">
+
+            <h2 className="text-white font-bold mb-3">
+              Xác nhận phê duyệt
+            </h2>
+
+            <p className="text-sm text-slate-300">Bạn có chắc muốn phê duyệt sự kiện này?</p>
+
+            <div className="flex justify-end gap-3 mt-4">
+
+              <button
+                onClick={() => setShowApproveModal(false)}
+                className="px-4 py-2 text-sm text-slate-300"
+              >
+                Huỷ
+              </button>
+
+              <button
+                onClick={handleApprove}
+                className="px-4 py-2 bg-green-500 text-white text-sm rounded-lg"
+              >
+                Xác nhận
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {showRejectModal && (
+
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+
+          <div className="bg-slate-900 border border-white/10 p-6 rounded-xl w-[400px]">
+
+            <h2 className="text-white font-bold mb-3">
+              Lý do từ chối sự kiện
+            </h2>
+
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full bg-slate-800 border border-white/10 rounded-lg p-3 text-white text-sm"
+              rows={4}
+              placeholder="Nhập lý do từ chối..."
+            />
+
+            <div className="flex justify-end gap-3 mt-4">
+
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="px-4 py-2 text-sm text-slate-300"
+              >
+                Huỷ
+              </button>
+
+              <button
+                onClick={handleReject}
+                className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg"
+              >
+                Xác nhận từ chối
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
     </div>
+
   )
 }
-
