@@ -7,7 +7,7 @@ import { fetchEventById } from "../../store/eventSlice"
 import { useEffect } from "react"
 import type { GetEventDetailResponse } from "../../types/event/event"
 import { useParams } from "react-router-dom"
-
+import DOMPurify from 'dompurify'
 // ─── Skeleton Components ───────────────────────────────────────────────────────
 
 function SkeletonBox({ className = "" }: { className?: string }) {
@@ -40,6 +40,7 @@ function EventDetailSkeleton() {
                 <SkeletonBox className="h-6 w-56" />
               </div>
             </div>
+            
           </div>
         </section>
 
@@ -244,9 +245,10 @@ function EventDetail() {
                     <span className="w-1.5 h-8 bg-primary rounded-full" />
                     Chính sách sự kiện
                   </h2>
-                  <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
-                    <p className="whitespace-pre-line">{eventDetail.policy}</p>
-                  </div>
+               <div
+                  className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(eventDetail.policy) }}
+                />
                 </section>
               )}
 
