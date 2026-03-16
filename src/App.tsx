@@ -56,6 +56,7 @@ function App() {
 
   return (
     <>
+      <Toaster position="top-right" />
       <Routes>
         {/*Attendee*/}
         <Route path="/" element={<HomePage />} />
