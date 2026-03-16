@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FiPlus, FiX } from "react-icons/fi";
+import { FiChevronDown, FiPlus, FiX } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
@@ -153,7 +153,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
     const [showCreateHashtagModal, setShowCreateHashtagModal] = useState(false);
     const [categoryInput, setCategoryInput] = useState("");
     const [categorySuggestions, setCategorySuggestions] = useState<EventCategory[]>([]);
-    const [isSelectingCategory, setIsSelectingCategory] = useState(false);
+    const [isCategoryOpen, setIsCategoryOpen] = useState(false);
     const [errors, setErrors] = useState<FormErrors>({});
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
@@ -177,6 +177,20 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
         setEventForm((prev) => ({ ...prev, [key]: value }));
     };
 
+    const categoryRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) {
+                setIsCategoryOpen(false);
+                setCategoryInput("");
+                setCategorySuggestions([]);
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
     useEffect(() => {
         console.log("Current user info:", currentInfor);
     }, [currentInfor])
@@ -188,6 +202,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
         else if (eventForm.title.length < 5) newErrors.title = "Tên sự kiện tối thiểu 5 ký tự";
         else if (eventForm.title.length > 150) newErrors.title = "Tên sự kiện tối đa 150 ký tự";
         if (!eventForm.description.trim()) newErrors.description = "Mô tả sự kiện không được để trống";
+        if (eventForm.description.length > 500) newErrors.description = "Mô tả sự kiện tối đa 500 ký tự";
         if (!eventForm.location.trim()) newErrors.location = "Địa điểm không được để trống";
         else if (eventForm.location.length > 500) newErrors.location = "Địa điểm tối đa 500 ký tự";
         if (eventForm.selectedHashtags.length < 1) newErrors.selectedHashtags = "Phải chọn ít nhất 1 hashtag";
@@ -426,11 +441,10 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
     }, [hashtagInput]);
 
     useEffect(() => {
-        if (isSelectingCategory) { setIsSelectingCategory(false); return; }
         const delay = setTimeout(async () => {
             if (!categoryInput.trim()) { setCategorySuggestions([]); return; }
             try {
-                const res = await dispatch(fetchAllCategories({ name: categoryInput, take: 5 })).unwrap();
+                const res = await dispatch(fetchAllCategories({ name: categoryInput, take: 10 })).unwrap();
                 setCategorySuggestions(res.data);
             } catch (err) { console.error(err); }
         }, 300);
@@ -608,33 +622,111 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                             )}
                         </div>
 
-                        <div>
-                            <div className="flex justify-between items-center">
+                        <div ref={categoryRef} className="relative">
+                            <div className="flex justify-between items-center mb-2">
                                 <label className="text-sm text-slate-400">Thể loại</label>
-                                {categoryInput.trim() && <span className="text-xs text-slate-500">{categorySuggestions.length} results</span>}
                             </div>
-                            <div className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedCategories ? "border-red-500" : "border-white/10"}`}>
-                                {eventForm.selectedCategories.map((cat) => (
-                                    <div key={cat.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors">
-                                        <span>{cat.name}</span>
-                                        <button onClick={() => removeCategory(cat.id)} className="leading-none"><FiX size={14} /></button>
-                                    </div>
-                                ))}
-                                <input
-                                    value={categoryInput}
-                                    onChange={(e) => setCategoryInput(e.target.value)}
-                                    className="flex-1 bg-transparent outline-none border-none focus:outline-none focus:ring-0 text-white px-2 py-1 min-w-[120px]"
-                                    placeholder="Gõ để tìm thể loại..."
-                                />
-                            </div>
-                            {errors.selectedCategories && <p className="text-xs text-red-400 mt-1">{errors.selectedCategories}</p>}
-                            {categorySuggestions.length > 0 && (
-                                <div className="mt-2 bg-[#140f2a] border border-white/10 rounded-lg overflow-hidden">
-                                    {categorySuggestions.map((cat) => (
-                                        <div key={cat.id} onClick={() => addCategory(cat)} className="px-4 py-2 hover:bg-white/5 cursor-pointer text-sm text-white">
-                                            {cat.name}
+
+                            {/* Tags đã chọn */}
+                            {eventForm.selectedCategories.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {eventForm.selectedCategories.map((cat) => (
+                                        <div
+                                            key={cat.id}
+                                            className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors"
+                                        >
+                                            <span>{cat.name}</span>
+                                            <button
+                                                onClick={() => removeCategory(cat.id)}
+                                                className="leading-none"
+                                            >
+                                                <FiX size={14} />
+                                            </button>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* Trigger button */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsCategoryOpen((prev) => !prev);
+                                    setCategoryInput("");
+                                    setCategorySuggestions([]);
+                                }}
+                                className={`
+            w-full flex items-center justify-between
+            px-4 py-3 rounded-xl
+            bg-black/30 border text-left
+            transition-colors
+            ${errors.selectedCategories ? "border-red-500" : isCategoryOpen ? "border-primary/60" : "border-white/10"}
+        `}
+                            >
+                                <span className="text-sm text-slate-400">
+                                    {eventForm.selectedCategories.length > 0
+                                        ? `${eventForm.selectedCategories.length} thể loại đã chọn`
+                                        : "Chọn thể loại..."}
+                                </span>
+                                <FiChevronDown
+                                    size={16}
+                                    className={`text-slate-400 transition-transform ${isCategoryOpen ? "rotate-180" : ""}`}
+                                />
+                            </button>
+
+                            {errors.selectedCategories && (
+                                <p className="text-xs text-red-400 mt-1">{errors.selectedCategories}</p>
+                            )}
+
+                            {/* Dropdown */}
+                            {isCategoryOpen && (
+                                <div className="absolute z-20 top-full mt-1 w-full rounded-xl bg-[#1a1330] border border-white/10 shadow-2xl overflow-hidden">
+                                    {/* Search input */}
+                                    <div className="p-2 border-b border-white/8">
+                                        <input
+                                            autoFocus
+                                            value={categoryInput}
+                                            onChange={(e) => setCategoryInput(e.target.value)}
+                                            className="w-full bg-white/5 rounded-lg px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:ring-1 focus:ring-primary/40"
+                                            placeholder="Tìm thể loại..."
+                                        />
+                                    </div>
+
+                                    {/* Options */}
+                                    <div className="max-h-48 overflow-y-auto">
+                                        {categorySuggestions.length > 0 ? (
+                                            categorySuggestions.map((cat) => {
+                                                const isSelected = eventForm.selectedCategories.some((c) => c.id === cat.id);
+                                                return (
+                                                    <div
+                                                        key={cat.id}
+                                                        onClick={() => {
+                                                            addCategory(cat);
+                                                        }}
+                                                        className={`
+                                    flex items-center justify-between
+                                    px-4 py-2.5 cursor-pointer text-sm
+                                    transition-colors
+                                    ${isSelected
+                                                                ? "bg-primary/15 text-primary"
+                                                                : "text-white hover:bg-white/5"}
+                                `}
+                                                    >
+                                                        <span>{cat.name}</span>
+                                                        {isSelected && (
+                                                            <span className="text-xs font-semibold text-primary/80">✓</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="px-4 py-4 text-sm text-slate-500 text-center">
+                                                {categoryInput.trim()
+                                                    ? "Không tìm thấy thể loại nào"
+                                                    : "Gõ để tìm kiếm thể loại"}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>

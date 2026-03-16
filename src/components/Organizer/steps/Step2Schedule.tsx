@@ -2,19 +2,19 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
     FiPlus, FiEdit2, FiTrash2, FiCalendar, FiClock,
-    FiTag, FiLayers,
-    FiAlertTriangle
+    FiTag, FiLayers, FiAlertTriangle, FiLock, FiInfo
 } from "react-icons/fi";
 import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchDeleteSession, fetchSessions } from "../../../store/eventSlice";
-import type { EventSession } from "../../../types/event/event";
+import type { EventSession, GetEventDetailResponse } from "../../../types/event/event";
 import CreateSessionModal from "../sessions/CreateSessionModal";
 import EditSessionModal from "../sessions/EditSessionModal";
 import TicketTypeModal from "../ticket/TicketTypeModal";
 import { fetchGetAllTicketTypes } from "../../../store/ticketTypeSlice";
 import type { TicketTypeItem } from "../../../types/ticketType/ticketType";
 import { notify } from "../../../utils/notify";
+import DateTimeInput from "../shared/DateTimeInput";
 
 const formatDateTime = (iso: string) => {
     if (!iso) return "—";
@@ -31,12 +31,14 @@ const formatDateTime = (iso: string) => {
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
 
+const toLocalDateTime = (iso: string) => {
+    const date = new Date(iso);
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+};
+
 function SectionHeader({
-    icon,
-    title,
-    subtitle,
-    count,
-    action,
+    icon, title, subtitle, count, action,
 }: {
     icon: React.ReactNode;
     title: string;
@@ -68,9 +70,7 @@ function SectionHeader({
 }
 
 function SessionCard({
-    session,
-    onEdit,
-    onDelete,
+    session, onEdit, onDelete,
 }: {
     session: EventSession & { id: string };
     onEdit: () => void;
@@ -86,10 +86,7 @@ function SessionCard({
 
     return (
         <div className="group relative flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-[#18122B] border border-white/5 hover:border-primary/25 hover:bg-[#1e1638] transition-all duration-200">
-            {/* Accent bar */}
             <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-primary/30 group-hover:bg-primary/60 transition-colors" />
-
-            {/* Info */}
             <div className="flex-1 min-w-0 pl-3">
                 <p className="font-bold text-white text-sm truncate">{session.title}</p>
                 {session.description && (
@@ -107,23 +104,19 @@ function SessionCard({
                     </span>
                 </div>
             </div>
-
-            {/* Actions */}
             <div className="flex items-center gap-1.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button
                     onClick={onEdit}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium text-xs transition-all border border-white/5"
                 >
-                    <FiEdit2 size={12} />
-                    Sửa
+                    <FiEdit2 size={12} /> Sửa
                 </button>
                 <button
                     onClick={handleDelete}
                     disabled={deleting}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/8 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 font-medium text-xs transition-all border border-red-500/10 disabled:opacity-50"
                 >
-                    <FiTrash2 size={12} />
-                    {deleting ? "..." : "Xoá"}
+                    <FiTrash2 size={12} /> {deleting ? "..." : "Xoá"}
                 </button>
             </div>
         </div>
@@ -150,26 +143,15 @@ function EmptySessions({ onCreate }: { onCreate: () => void }) {
 function TicketTypeRow({ ticket }: { ticket: TicketTypeItem }) {
     return (
         <div className="flex items-center gap-4 p-4 rounded-xl bg-[#18122B] border border-white/5 hover:border-primary/20 transition-colors">
-            {/* Color dot */}
             <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
-
-            {/* Name */}
             <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold text-white truncate">
-                    {ticket.name}
-                </span>
-
-                {/* Quantity */}
+                <span className="text-sm font-semibold text-white truncate">{ticket.name}</span>
                 <p className="text-[11px] text-slate-400 mt-1">
                     Số lượng: <span className="text-white font-medium">{ticket.quantity}</span>
                 </p>
             </div>
-
-            {/* Price */}
             <div className="text-right shrink-0">
-                <span className="text-sm font-black text-primary">
-                    {formatPrice(ticket.price)}
-                </span>
+                <span className="text-sm font-black text-primary">{formatPrice(ticket.price)}</span>
                 <p className="text-[10px] text-slate-600 mt-0.5">mỗi vé</p>
             </div>
         </div>
@@ -180,23 +162,16 @@ function EmptyTickets({ onManage }: { onManage: () => void }) {
     return (
         <div className="rounded-2xl border border-border-dark-light bg-surface-dark/40 overflow-hidden">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border-dark">
-
                 <FiAlertTriangle className="text-bg-white w-5 h-5 shrink-0" />
-
                 <p className="text-sm text-white font-semibold">
                     Sự kiện cần ít nhất 1 loại vé để có thể mở bán
                 </p>
             </div>
-
             <button
                 onClick={onManage}
-                className="w-full flex items-center justify-center gap-2 py-4 text-sm font-semibold
-    bg-primary text-white
-    hover:bg-primary/90
-    transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-4 text-sm font-semibold bg-primary text-white hover:bg-primary/90 transition-colors"
             >
-                <FiPlus size={14} />
-                Thiết lập loại vé ngay
+                <FiPlus size={14} /> Thiết lập loại vé ngay
             </button>
         </div>
     );
@@ -212,13 +187,17 @@ function Divider() {
     );
 }
 
-export default function Step2Schedule({
-    onNext,
-    onBack,
-}: {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Step2ScheduleProps {
     onNext: () => void;
     onBack: () => void;
-}) {
+    eventData: GetEventDetailResponse | null; // 👈 thêm mới
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function Step2Schedule({ onNext, onBack, eventData }: Step2ScheduleProps) {
     const dispatch = useDispatch<AppDispatch>();
     const { eventId } = useParams<{ eventId: string }>();
 
@@ -235,6 +214,20 @@ export default function Step2Schedule({
     const [editingSession, setEditingSession] = useState<(EventSession & { id: string }) | null>(null);
     const [openTicketModal, setOpenTicketModal] = useState(false);
 
+    // ── Thời gian (read-only, lấy từ eventData) ──────────────────────────────
+    const ticketSaleStartAt = eventData?.ticketSaleStartAt
+        ? toLocalDateTime(eventData.ticketSaleStartAt)
+        : "";
+    const ticketSaleEndAt = eventData?.ticketSaleEndAt
+        ? toLocalDateTime(eventData.ticketSaleEndAt)
+        : "";
+    const eventStartAt = eventData?.eventStartAt
+        ? toLocalDateTime(eventData.eventStartAt)
+        : "";
+    const eventEndAt = eventData?.eventEndAt
+        ? toLocalDateTime(eventData.eventEndAt)
+        : "";
+
     const loadSessions = () => {
         if (!eventId) return;
         setLoading(true);
@@ -242,18 +235,14 @@ export default function Step2Schedule({
     };
 
     useEffect(() => { loadSessions(); }, [eventId]);
+    useEffect(() => { if (eventId) dispatch(fetchGetAllTicketTypes({ eventId })); }, [eventId]);
+
+    const hasSessions = sessions.length > 0;
+    const hasTickets = ticketTypes.length > 0;
 
     const handleNext = () => {
-        if (!hasSessions) {
-            notify.error("Sự kiện phải có ít nhất 1 suất diễn");
-            return;
-        }
-
-        if (!hasTickets) {
-            notify.error("Sự kiện phải có ít nhất 1 loại vé");
-            return;
-        }
-
+        if (!hasSessions) { notify.error("Sự kiện phải có ít nhất 1 suất diễn"); return; }
+        if (!hasTickets) { notify.error("Sự kiện phải có ít nhất 1 loại vé"); return; }
         onNext();
     };
 
@@ -267,13 +256,6 @@ export default function Step2Schedule({
         }
     };
 
-    const hasSessions = sessions.length > 0;
-    const hasTickets = ticketTypes.length > 0;
-
-    useEffect(() => {
-        if (eventId) dispatch(fetchGetAllTicketTypes({ eventId }));
-    }, [eventId]);
-
     return (
         <div className="space-y-8 max-w-3xl mx-auto">
 
@@ -282,6 +264,65 @@ export default function Step2Schedule({
                 <p className="text-sm text-slate-500 mt-1">Thiết lập các suất diễn và hạng vé cho sự kiện.</p>
             </div>
 
+            {/* ===== Thời gian bán vé ===== */}
+            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
+                <SectionHeader
+                    icon={<FiLock size={16} />}
+                    title="Thời gian bán vé"
+                    subtitle="Khoảng thời gian cho phép mua vé"
+                />
+                <div className="grid grid-cols-2 gap-4">
+                    <DateTimeInput
+                        label="Bắt đầu bán vé"
+                        value={ticketSaleStartAt}
+                        onChange={() => { }}
+                        disabled
+                    />
+                    <DateTimeInput
+                        label="Kết thúc bán vé"
+                        value={ticketSaleEndAt}
+                        onChange={() => { }}
+                        disabled
+                    />
+                </div>
+                {!ticketSaleStartAt && !ticketSaleEndAt && (
+                    <p className="text-xs text-slate-500 mt-3">
+                        Chưa thiết lập — vui lòng cấu hình ở bước Cài đặt.
+                    </p>
+                )}
+            </section>
+
+            {/* ===== Thời gian sự kiện ===== */}
+            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
+                <SectionHeader
+                    icon={<FiInfo size={16} />}
+                    title="Thời gian sự kiện"
+                    subtitle="Khung giờ chính thức của sự kiện"
+                />
+                <div className="grid grid-cols-2 gap-4">
+                    <DateTimeInput
+                        label="Bắt đầu sự kiện"
+                        value={eventStartAt}
+                        onChange={() => { }}
+                        disabled
+                    />
+                    <DateTimeInput
+                        label="Kết thúc sự kiện"
+                        value={eventEndAt}
+                        onChange={() => { }}
+                        disabled
+                    />
+                </div>
+                {!eventStartAt && !eventEndAt && (
+                    <p className="text-xs text-slate-500 mt-3">
+                        Chưa thiết lập — vui lòng cấu hình ở bước Cài đặt.
+                    </p>
+                )}
+            </section>
+
+            <Divider />
+
+            {/* ===== Suất diễn ===== */}
             <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiLayers size={16} />}
@@ -293,12 +334,10 @@ export default function Step2Schedule({
                             onClick={() => setOpenCreateModal(true)}
                             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white font-semibold text-xs hover:bg-primary/90 transition-colors"
                         >
-                            <FiPlus size={13} />
-                            Tạo suất diễn
+                            <FiPlus size={13} /> Tạo suất diễn
                         </button>
                     }
                 />
-
                 {loading ? (
                     <div className="py-10 flex items-center justify-center">
                         <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -321,6 +360,7 @@ export default function Step2Schedule({
 
             <Divider />
 
+            {/* ===== Loại vé ===== */}
             <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiTag size={16} />}
@@ -332,18 +372,15 @@ export default function Step2Schedule({
                             onClick={() => setOpenTicketModal(true)}
                             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-semibold text-xs border border-white/8 transition-all"
                         >
-                            <FiEdit2 size={12} />
-                            Quản lý vé
+                            <FiEdit2 size={12} /> Quản lý vé
                         </button>
                     }
                 />
-
                 {hasTickets ? (
                     <div className="space-y-2">
                         {ticketTypes.map((t) => (
                             <TicketTypeRow key={t.id} ticket={t} />
                         ))}
-
                         <div className="flex items-center justify-between px-4 py-3 mt-1 rounded-xl bg-white/[0.025] border border-white/5">
                             <span className="text-xs text-slate-500">Tổng số vé phát hành</span>
                             <span className="text-sm font-black text-white">
@@ -356,6 +393,7 @@ export default function Step2Schedule({
                 )}
             </div>
 
+            {/* ===== Footer ===== */}
             <div className="flex items-center justify-between pt-2">
                 <button
                     onClick={onBack}
@@ -363,7 +401,6 @@ export default function Step2Schedule({
                 >
                     ← Quay lại
                 </button>
-
                 <button
                     onClick={handleNext}
                     className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-all"
@@ -380,7 +417,6 @@ export default function Step2Schedule({
                     onCreated={loadSessions}
                 />
             )}
-
             {eventId && editingSession && (
                 <EditSessionModal
                     open={true}
@@ -390,7 +426,6 @@ export default function Step2Schedule({
                     onUpdated={loadSessions}
                 />
             )}
-
             {eventId && (
                 <TicketTypeModal
                     open={openTicketModal}

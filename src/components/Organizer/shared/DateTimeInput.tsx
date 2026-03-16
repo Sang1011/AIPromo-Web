@@ -1,12 +1,12 @@
-import { FiCalendar } from "react-icons/fi";
 import { useRef } from "react";
-import "./datetime.css";
+import { FiCalendar } from "react-icons/fi";
 
 interface DateTimeInputProps {
     label: string;
     value?: string;
     onChange?: (value: string) => void;
     required?: boolean;
+    disabled?: boolean; // 👈 thêm
 }
 
 export default function DateTimeInput({
@@ -14,13 +14,15 @@ export default function DateTimeInput({
     value,
     onChange,
     required,
+    disabled,
 }: DateTimeInputProps) {
 
     const inputRef = useRef<HTMLInputElement>(null);
 
     const openPicker = () => {
+        if (disabled) return;
         if (inputRef.current) {
-            inputRef.current.showPicker?.(); // Chrome / Edge
+            inputRef.current.showPicker?.();
             inputRef.current.focus();
         }
     };
@@ -39,7 +41,8 @@ export default function DateTimeInput({
                     lang="vi"
                     value={value}
                     onChange={(e) => onChange?.(e.target.value)}
-                    className="
+                    disabled={disabled} // 👈
+                    className={`
                         w-full px-4 py-2 pr-10
                         rounded-xl
                         bg-white/5
@@ -48,19 +51,19 @@ export default function DateTimeInput({
                         outline-none
                         focus:border-primary
                         transition
-                    "
+                        ${disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}
+                    `}
                 />
 
                 <FiCalendar
                     onClick={openPicker}
-                    className="
+                    className={`
                         absolute right-3 top-1/2
                         -translate-y-1/2
                         text-slate-400
-                        cursor-pointer
-                        hover:text-white
                         transition
-                    "
+                        ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:text-white"}
+                    `}
                 />
             </div>
         </div>
