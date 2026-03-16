@@ -172,7 +172,9 @@ const eventService = {
     },
 
     rejectPublishEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/reject-publish`, { reason });
+        return interceptorAPI().patch(`/events/${eventId}/reject-publish`, { reason }, {
+            headers: { "Content-Type": "application/json" }
+        });
     },
 
     cancelEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {

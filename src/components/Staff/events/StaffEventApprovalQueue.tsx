@@ -196,10 +196,8 @@ export default function StaffEventApprovalQueue() {
     setLoadingId(rejectEventId)
 
     try {
-      await dispatch(
-        // call reject-publish thunk
-        (fetchRejectPublishEvent as any)({ eventId: rejectEventId, reason: rejectReason })
-      ).unwrap()
+      console.log("dispatching reject-publish", { eventId: rejectEventId, reason: rejectReason })
+      await dispatch(fetchRejectPublishEvent({ eventId: rejectEventId, reason: rejectReason })).unwrap()
 
       toast.success("Đã từ chối yêu cầu phê duyệt")
       setShowRejectModal(false)
@@ -230,7 +228,30 @@ export default function StaffEventApprovalQueue() {
 
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">     
+      <div className="grid grid-cols-12 px-5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+
+        <div className="col-span-5">
+          Chi tiết sự kiện
+        </div>
+
+        <div className="col-span-2">
+          Ngày đăng ký
+        </div>
+
+        <div className="col-span-2">
+          Danh mục
+        </div>
+
+        <div className="col-span-1">
+          Trạng thái
+        </div>
+
+        <div className="col-span-2 text-right">
+          Thao tác
+        </div>
+
+      </div>
 
         {events.map((evt: any) => {
 
