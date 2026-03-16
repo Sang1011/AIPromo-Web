@@ -1,17 +1,18 @@
-import { FiEye, FiLock, FiLink, FiInfo } from "react-icons/fi";
-import DateTimeInput from "../shared/DateTimeInput";
-import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import type { AppDispatch } from "../../../store";
+import { FiEye, FiInfo, FiLink, FiLock } from "react-icons/fi";
 import { useDispatch } from "react-redux";
+import { useParams } from "react-router-dom";
+import type { AppDispatch } from "../../../store";
 import { fetchUpdateEventSettings } from "../../../store/eventSlice";
 import type { GetEventDetailResponse } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
+import DateTimeInput from "../shared/DateTimeInput";
 
 interface Step3SettingsProps {
     onNext?: () => void;
     onBack?: () => void;
     eventData: GetEventDetailResponse | null;
+    reloadEvent?: () => Promise<void>;
 }
 
 type EventSettingsForm = {
@@ -26,7 +27,8 @@ type EventSettingsForm = {
 export default function Step3Settings({
     onNext,
     onBack,
-    eventData
+    eventData,
+    reloadEvent
 }: Step3SettingsProps) {
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
@@ -65,6 +67,10 @@ export default function Step3Settings({
 
         if (!settingsForm.eventEndAt)
             newErrors.eventEndAt = "Vui lòng chọn thời gian kết thúc sự kiện";
+
+        if (!settingsForm.urlPath) {
+            newErrors.urlPath = "Vui lòng nhập đường dẫn tùy chỉnh";
+        }
 
         if (settingsForm.urlPath) {
             const slugRegex = /^[a-z0-9-]+$/;
@@ -149,6 +155,7 @@ export default function Step3Settings({
 
         try {
             await dispatch(fetchUpdateEventSettings({ eventId, data: payload })).unwrap();
+            await reloadEvent?.();
             notify.success("Đã lưu cài đặt sự kiện");
             onNext?.();
         } catch {
@@ -156,8 +163,29 @@ export default function Step3Settings({
         }
     };
 
+    const generateUrl = () => {
+        if (!eventData?.title) {
+            notify.error("Không tìm thấy tên sự kiện để tạo URL");
+            return;
+        }
+
+        const slug = eventData.title
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d")
+            .replace(/[^a-z0-9\s-]/g, "")
+            .trim()
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-");
+
+        updateForm("urlPath", slug);
+    };
+
     useEffect(() => {
         if (!eventData) return;
+
+        if (initialForm) return;
 
         const newForm = {
             isEmailReminderEnabled: eventData.isEmailReminderEnabled ?? false,
@@ -306,6 +334,7 @@ export default function Step3Settings({
                 <div className="space-y-2">
 
                     <div className="flex items-center gap-3">
+
                         <div className="px-6 py-2 rounded-xl bg-white/5 text-slate-400 text-sm whitespace-nowrap">
                             https://aipromo.online/event-detail/
                         </div>
@@ -314,12 +343,26 @@ export default function Step3Settings({
                             value={settingsForm.urlPath}
                             onChange={(e) => updateForm("urlPath", e.target.value)}
                             className="
-                flex-1 px-4 py-2 rounded-xl
-                bg-white/5 border border-white/10
-                text-white outline-none
-                focus:border-primary
-            "
+            flex-1 px-4 py-2 rounded-xl
+            bg-white/5 border border-white/10
+            text-white outline-none
+            focus:border-primary
+        "
                         />
+
+                        <button
+                            type="button"
+                            onClick={generateUrl}
+                            className="
+            px-4 py-2 rounded-xl
+            bg-white/10 hover:bg-white/20
+            text-sm text-white
+            transition
+        "
+                        >
+                            Tạo
+                        </button>
+
                     </div>
 
                     <div className="flex justify-between">
@@ -350,7 +393,7 @@ export default function Step3Settings({
                     onClick={() => handleSubmit()}
                     className="px-8 py-2.5 rounded-xl bg-primary text-white font-semibold shadow-lg shadow-primary/30"
                 >
-                    Lưu và Tiếp tục →
+                    {isFormChanged() ? "Lưu và Tiếp tục →" : "Tiếp theo"}
                 </button>
             </div>
         </div>

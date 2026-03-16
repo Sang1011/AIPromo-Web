@@ -136,8 +136,8 @@ export default function Step5Payment({ onBack, onFinish }: Step5PaymentProps) {
 
     const handleFinish = async () => {
         const bankValid = validateBank();
-        const vatValid = validateVat();
-        if (!bankValid || !vatValid) return;
+        // const vatValid = validateVat();
+        if (!bankValid) return;
 
         const bankResult = await dispatch(
             fetchUpdateOrganizerBank({ accountName, accountNumber, bankCode, branch })
@@ -148,26 +148,26 @@ export default function Step5Payment({ onBack, onFinish }: Step5PaymentProps) {
             return;
         }
 
-        const profileResult = await dispatch(
-            fetchUpdateOrganizerProfile({
-                logo: profile?.logo ?? "",
-                displayName: profile?.displayName ?? "",
-                description: profile?.description ?? "",
-                socialLink: profile?.socialLink ?? "",
-                businessType,
-                companyName,
-                address,
-                taxCode,
-                identityNumber,
-            })
-        );
+        // const profileResult = await dispatch(
+        //     fetchUpdateOrganizerProfile({
+        //         logo: profile?.logo ?? "",
+        //         displayName: profile?.displayName ?? "",
+        //         description: profile?.description ?? "",
+        //         socialLink: profile?.socialLink ?? "",
+        //         businessType,
+        //         companyName,
+        //         address,
+        //         taxCode,
+        //         identityNumber,
+        //     })
+        // );
 
-        if (fetchUpdateOrganizerProfile.rejected.match(profileResult)) {
-            notify.error("Không thể cập nhật thông tin hoá đơn");
-            return;
-        }
+        // if (fetchUpdateOrganizerProfile.rejected.match(profileResult)) {
+        //     notify.error("Không thể cập nhật thông tin hoá đơn");
+        //     return;
+        // }
 
-        notify.success("Đã lưu thông tin hồ sơ Organizer");
+        notify.success("Đã lưu thông tin thanh toán");
         onFinish?.();
     };
 
@@ -241,7 +241,7 @@ export default function Step5Payment({ onBack, onFinish }: Step5PaymentProps) {
                 </div>
             </section>
 
-            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
+            {/* <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
                 <h2 className="flex items-center gap-3 text-lg font-semibold text-white">
                     <span className="text-primary"><FiFileText /></span>
                     Thông tin hoá đơn đỏ (VAT)
@@ -341,7 +341,7 @@ export default function Step5Payment({ onBack, onFinish }: Step5PaymentProps) {
                         />
                     </div>
                 )}
-            </section>
+            </section> */}
 
             <div className="flex items-center justify-between pt-6 pb-10">
                 <button

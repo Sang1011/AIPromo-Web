@@ -14,22 +14,20 @@ import {
 } from "../../../store/eventSlice";
 import { fetchAllHashtags, fetchCreateHashtag } from "../../../store/hashtagSlice";
 import type {
-    CreateEventRequest,
     EventCategory,
     EventHashtag,
-    GetEventDetailResponse,
-    UpdateEventInfoRequest,
+    GetEventDetailResponse
 } from "../../../types/event/event";
+import { notify } from "../../../utils/notify";
 import ImagePreviewBox from "../shared/ImagePreviewBox";
 import UploadBox from "../shared/UploadBox";
-import { notify } from "../../../utils/notify";
 
 interface Step1EventInfoProps {
     onNext?: () => void;
-    onCancel?: () => void;
     mode?: "create" | "edit";
     onCreated?: (eventId: string) => void;
     eventData?: GetEventDetailResponse | null;
+    reloadEvent?: () => Promise<void>;
 }
 
 interface Actor {
@@ -149,7 +147,7 @@ function CreateHashtagModal({ initialName, onClose, onCreated }: CreateHashtagMo
     );
 }
 
-export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCreated, eventData }: Step1EventInfoProps) {
+export default function Step1EventInfo({ onNext, mode = "edit", onCreated, eventData, reloadEvent }: Step1EventInfoProps) {
     const [hashtagInput, setHashtagInput] = useState("");
     const [suggestions, setSuggestions] = useState<EventHashtag[]>([]);
     const [showCreateHashtagModal, setShowCreateHashtagModal] = useState(false);
@@ -160,6 +158,7 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
     const { currentInfor } = useSelector((state: RootState) => state.AUTH);
+    const [initEventForm, setInitEventForm] = useState<EventFormState>();
     const [eventForm, setEventForm] = useState<EventFormState>({
         title: "",
         description: "",
@@ -208,6 +207,8 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
+
+    const isChanged = JSON.stringify(eventForm) !== JSON.stringify(initEventForm);
 
     const addHashtag = (tag: EventHashtag) => {
         if (eventForm.selectedHashtags.some((t) => t.id === tag.id)) return;
@@ -364,6 +365,13 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
     };
 
     const handleNext = async () => {
+        if (mode === "edit" && eventId) {
+            if (!isChanged) {
+                onNext?.();
+                return;
+            }
+        }
+
         if (!validateAll()) return;
         const { finalBannerUrl, updatedImages, updatedActorUrls } = await flushUploads();
 
@@ -393,8 +401,11 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
                         onCreated?.(res.data);
                     });
             } else if (mode === "edit" && eventId) {
-                await dispatch(fetchUpdateEvent({ id: eventId, data: payload })).unwrap();
-                notify.success("Đã lưu thông tin sự kiện");
+                if (isChanged) {
+                    await dispatch(fetchUpdateEvent({ id: eventId, data: payload })).unwrap();
+                    await reloadEvent?.();
+                    notify.success("Đã lưu thông tin sự kiện");
+                }
                 onNext?.();
             }
         } catch {
@@ -427,34 +438,46 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
     }, [categoryInput]);
 
     useEffect(() => {
-        if (mode === "create") updateForm("actors", [{ name: "", major: "", image: null }]);
-        if (mode === "edit") {
+        if (mode === "create") {
             setEventForm((prev) => ({
                 ...prev,
+                actors: prev.actors.length
+                    ? prev.actors
+                    : [{ name: "", major: "", image: null }],
+            }));
+        }
 
-                title: eventData?.title ?? "",
-                description: eventData?.description ?? "",
-                location: eventData?.location ?? "",
-                bannerUrl: eventData?.bannerUrl ?? null,
+        else if (mode === "edit" && eventData) {
+            const form: EventFormState = {
+                title: eventData.title ?? "",
+                description: eventData.description ?? "",
+                location: eventData.location ?? "",
+                bannerUrl: eventData.bannerUrl ?? null,
 
-                selectedHashtags: eventData?.hashtags ?? [],
-                selectedCategories: eventData?.categories ?? [],
+                selectedHashtags: eventData.hashtags ?? [],
+                selectedCategories: eventData.categories ?? [],
 
-                actorUrls: eventData?.actorImages?.map((a) => a.image) ?? [],
+                actorUrls: eventData.actorImages?.map((a) => a.image) ?? [],
 
                 images:
-                    eventData?.images?.map((img) => ({
+                    eventData.images?.map((img) => ({
                         id: img.id,
                         url: img.imageUrl,
                     })) ?? [],
 
                 actors:
-                    eventData?.actorImages?.map((actor) => ({
+                    eventData.actorImages?.map((actor) => ({
                         name: actor.name,
                         major: actor.major,
                         image: null,
                     })) ?? [],
-            }));
+
+                deletedImageIds: [],
+                bannerFile: null,
+            };
+
+            setEventForm(form);
+            setInitEventForm(form);
         }
     }, [mode, eventData]);
 
@@ -712,7 +735,7 @@ export default function Step1EventInfo({ onNext, onCancel, mode = "edit", onCrea
 
                 <div className="flex justify-end pt-6">
                     <button onClick={handleNext} className="px-6 py-3 rounded-xl bg-primary text-white font-semibold">
-                        {mode === "create" ? "Tạo sự kiện" : "Tiếp theo →"}
+                        {mode === "create" ? "Tạo sự kiện" : isChanged ? "Lưu và Tiếp tục →" : "Tiếp theo →"}
                     </button>
                 </div>
             </div>

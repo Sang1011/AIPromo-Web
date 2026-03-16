@@ -243,6 +243,20 @@ export default function Step2Schedule({
 
     useEffect(() => { loadSessions(); }, [eventId]);
 
+    const handleNext = () => {
+        if (!hasSessions) {
+            notify.error("Sự kiện phải có ít nhất 1 suất diễn");
+            return;
+        }
+
+        if (!hasTickets) {
+            notify.error("Sự kiện phải có ít nhất 1 loại vé");
+            return;
+        }
+
+        onNext();
+    };
+
     const handleDelete = async (sessionId: string) => {
         if (!eventId) return;
         try {
@@ -351,7 +365,7 @@ export default function Step2Schedule({
                 </button>
 
                 <button
-                    onClick={onNext}
+                    onClick={handleNext}
                     className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-all"
                 >
                     Tiếp theo →
