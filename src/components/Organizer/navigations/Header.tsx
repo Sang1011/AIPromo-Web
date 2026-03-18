@@ -13,6 +13,7 @@ import { fetchEventById } from "../../../store/eventSlice";
 interface HeaderProps {
     title?: string;
     canGoBack?: boolean;
+    haveTitle?: boolean;
     urlBack?: string;
     onBack?: () => void;
 }
@@ -20,6 +21,7 @@ interface HeaderProps {
 export default function Header({
     title,
     canGoBack = false,
+    haveTitle = false,
     urlBack,
     onBack,
 }: HeaderProps) {
@@ -60,7 +62,7 @@ export default function Header({
 
                     <div className="flex flex-col justify-center">
                         <h1 className="text-2xl font-bold text-white">
-                            {isEventHeader
+                            {haveTitle && isEventHeader
                                 ? currentEvent?.title || "Đang tải..."
                                 : title}
                         </h1>
