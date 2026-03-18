@@ -6,7 +6,7 @@ import {
 import { MdDashboard, MdEventSeat, MdGroup, MdShoppingCart } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
 
-export type EventStatusUI = "draft" | "pending" | "upcoming" | "past";
+export type EventStatusUI = "draft" | "pending" | "upcoming" | "past" | "suspend";
 
 export interface EventItemMapUI {
     id: string;

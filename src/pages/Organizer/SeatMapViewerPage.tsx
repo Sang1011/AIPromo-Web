@@ -70,16 +70,8 @@ const BORDER_COLOR = '#2a2a3e';
 const PRIMARY = '#7c3bed';
 const TEXT_MUTED = '#9ca3af';
 
-// ─────────────────────────────────────────────
-// Helper: format VND
-// ─────────────────────────────────────────────
-
 const fmtVND = (n: number) =>
     n.toLocaleString('vi-VN') + 'đ';
-
-// ─────────────────────────────────────────────
-// SeatMapViewer component
-// ─────────────────────────────────────────────
 
 const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
     seatMapData,

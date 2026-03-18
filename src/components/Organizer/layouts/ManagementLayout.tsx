@@ -110,7 +110,7 @@ export default function ManagementLayout() {
                     }`}
             >
                 <Header
-                    eventName={"Hội thảo AI & Future Marketing 2026"}
+                    haveTitle={true}
                     canGoBack={!!isMarketingDetail}
                     onBack={() => navigate(buildEventPath("marketing"))}
                 />

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import SeatMapLocker from "./SeatMapLocker";
 import { FiLock, FiUnlock, FiX } from "react-icons/fi";
-import { FaCouch, FaStar } from "react-icons/fa";
+import { FaCouch } from "react-icons/fa";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { SeatMapData } from "../../types/config/seatmap";
-import JSON_SEAT_MAP from "../../data/seat-map.json";
 import { fetchGetSeatMap } from "../../store/seatMapSlice";
 import type { AppDispatch, RootState } from "../../store";
 import { useDispatch, useSelector } from "react-redux";
@@ -69,7 +68,11 @@ export default function LockSeatTab() {
 
             {/* SEAT MAP */}
             <div className="flex-1 min-w-0 rounded-2xl overflow-hidden border border-white/10">
-                {!seatMapData ? (
+                {!spec ? (
+                    <div className="flex items-center justify-center h-full text-slate-400">
+                        Không có sơ đồ ghế
+                    </div>
+                ) : !seatMapData ? (
                     <div className="flex items-center justify-center h-full text-slate-400">
                         Đang tải sơ đồ ghế...
                     </div>

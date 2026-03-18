@@ -56,7 +56,6 @@ function App() {
 
   return (
     <>
-      <Toaster position="top-right" />
       <Routes>
         {/*Attendee*/}
         <Route path="/" element={<HomePage />} />
@@ -96,16 +95,16 @@ function App() {
           onConfirm={(payload) => console.log(payload)}
         />} />
 
-      {/* Admin group */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboardPage />} />
-        <Route path="categories" element={<AdminCategoryPage />} />
-        <Route path="hashtags" element={<AdminHashtagPage />} />
-        <Route path="finance" element={<FinanceRevenuePage />} />
-        <Route path="events" element={<EventModerationPage />} />
-        <Route path="users" element={<UserManagementPage />} />
-        <Route path="logs" element={<SystemLogsPage />} />
-      </Route>
+        {/* Admin group */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="categories" element={<AdminCategoryPage />} />
+          <Route path="hashtags" element={<AdminHashtagPage />} />
+          <Route path="finance" element={<FinanceRevenuePage />} />
+          <Route path="events" element={<EventModerationPage />} />
+          <Route path="users" element={<UserManagementPage />} />
+          <Route path="logs" element={<SystemLogsPage />} />
+        </Route>
 
         {/* Staff group */}
         <Route path="/staff" element={<StaffLayout />}>
