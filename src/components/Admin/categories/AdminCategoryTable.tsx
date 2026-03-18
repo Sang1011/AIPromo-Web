@@ -4,9 +4,10 @@ import AdminEditCategoryModal from "./AdminEditCategoryModal";
 import AdminFloatingMenu from "./AdminFloatingMenu";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchAllCategories, fetchToggleCategoryStatus } from "../../../store/categorySlice";
+import { fetchAllCategories, fetchToggleCategoryStatus, fetchDeleteCategory } from "../../../store/categorySlice";
 import type { Category } from "../../../types/category/category";
 import AdminConfirmStatusModal from "./AdminConfirmStatusModal";
+import toast from "react-hot-toast";
 import AdminCreateCategoryModal from "./AdminCreateCategoryModal";
 
 const glassCard =
@@ -22,6 +23,8 @@ export default function AdminCategoryTable() {
     const [statusConfirm, setStatusConfirm] = useState<{ id: number; activate: boolean } | null>(null);
     const [confirming, setConfirming] = useState(false);
     const [openCreate, setOpenCreate] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; name: string } | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const load = async () => {
         try {
@@ -79,9 +82,8 @@ export default function AdminCategoryTable() {
                                 <tr key={c.id} className="hover:bg-white/5 transition-colors">
                                     <td className="px-8 py-5">
                                         <div>
-                                            <p className="text-sm font-semibold text-white">{c.name}</p>
-                                            <p className="text-[10px] text-[#a592c8]">ID: {c.id}</p>
-                                        </div>
+                                                    <p className="text-sm font-semibold text-white">{c.name}</p>
+                                                </div>
                                     </td>
                                     <td className="px-8 py-5 text-sm text-[#a592c8]">{c.code}</td>
                                     <td className="px-8 py-5 text-sm text-[#a592c8]">{c.description}</td>
@@ -126,28 +128,73 @@ export default function AdminCategoryTable() {
                 );
             })()}
 
-            {statusConfirm && (
+            {statusConfirm && (() => {
+                const statusCat = (categories || []).find(x => x.id === statusConfirm.id);
+                const name = statusCat?.name ?? `#${statusConfirm.id}`;
+                return (
+                    <AdminConfirmStatusModal
+                        title="Xác nhận thay đổi trạng thái"
+                        message={`Bạn có chắc muốn chuyển category "${name}" sang trạng thái "${statusConfirm.activate ? 'Hoạt động' : 'Tạm dừng'}"?`}
+                        onCancel={() => setStatusConfirm(null)}
+                        confirming={confirming}
+                        onConfirm={async () => {
+                            setConfirming(true);
+                            try {
+                                await dispatch(fetchToggleCategoryStatus({ id: statusConfirm.id, activate: statusConfirm.activate })).unwrap();
+                                toast.success("Đã cập nhật trạng thái");
+                                await dispatch(fetchAllCategories({})).unwrap();
+                                setStatusConfirm(null);
+                            } catch (e) {
+                                console.error(e);
+                                const msg = (e as any)?.response?.data?.detail ?? (e as any)?.message ?? "Thay đổi trạng thái thất bại";
+                                toast.error(msg);
+                            } finally {
+                                setConfirming(false);
+                            }
+                        }}
+                    />
+                );
+            })()}
+
+            {deleteConfirm !== null && (
                 <AdminConfirmStatusModal
-                    title="Xác nhận thay đổi trạng thái"
-                    message={`Bạn có chắc muốn chuyển category #${statusConfirm.id} sang trạng thái "${statusConfirm.activate ? 'Hoạt động' : 'Tạm dừng'}"?`}
-                    onCancel={() => setStatusConfirm(null)}
-                    confirming={confirming}
+                    title="Xác nhận xóa"
+                    message={`Bạn có chắc muốn xóa category "${deleteConfirm.name}"? Hành động này không thể hoàn tác.`}
+                    onCancel={() => setDeleteConfirm(null)}
+                    confirming={deleting}
                     onConfirm={async () => {
-                        setConfirming(true);
+                        setDeleting(true);
                         try {
-                            await dispatch(fetchToggleCategoryStatus({ id: statusConfirm.id, activate: statusConfirm.activate })).unwrap();
+                            await dispatch(fetchDeleteCategory(deleteConfirm.id)).unwrap();
+                            toast.success("Đã xóa category");
                             await dispatch(fetchAllCategories({})).unwrap();
-                            setStatusConfirm(null);
-                        } catch (e) {
-                            console.error(e);
+                            setDeleteConfirm(null);
+                        } catch (err: any) {
+                            console.error(err);
+                            const detail = err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message ?? "Xóa thất bại";
+                            if (typeof detail === 'string' && detail.toLowerCase().includes('cannot delete category')) {
+                                toast.error('Không thể xóa category vì đang được sử dụng bởi một hoặc nhiều sự kiện.');
+                            } else {
+                                toast.error(detail);
+                            }
                         } finally {
-                            setConfirming(false);
+                            setDeleting(false);
                         }
                     }}
                 />
             )}
             {openMenu && (
-                <AdminFloatingMenu rect={openMenu.rect} items={[{ key: 'edit', label: 'Cập nhật', onClick: () => setEditingId(openMenu.id) }, { key: 'delete', label: 'Xoá', onClick: () => { /* TODO: implement delete */ } }]} onClose={() => setOpenMenu(null)} />
+                <AdminFloatingMenu
+                    rect={openMenu.rect}
+                    items={[
+                        { key: 'edit', label: 'Cập nhật', onClick: () => setEditingId(openMenu.id) },
+                        { key: 'delete', label: 'Xoá', onClick: () => {
+                            const catName = (categories || []).find(x => x.id === openMenu.id)?.name ?? `#${openMenu.id}`;
+                            setDeleteConfirm({ id: openMenu.id, name: catName });
+                        } }
+                    ]}
+                    onClose={() => setOpenMenu(null)}
+                />
             )}
         </div>
     );

@@ -97,6 +97,21 @@ export const fetchToggleCategoryStatus = createAsyncThunk<
     }
 );
 
+export const fetchDeleteCategory = createAsyncThunk<
+    void,
+    number
+>(
+    `${name}/fetchDeleteCategory`,
+    async (id, thunkAPI) => {
+        try {
+            const response = await categoryService.deleteCategory(id);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 const categorySlice = createSlice({
     name,
     initialState,
@@ -128,6 +143,12 @@ const categorySlice = createSlice({
             fetchToggleCategoryStatus.fulfilled,
             () => {
                 // no-op: UI will re-fetch
+            }
+        );
+        builder.addCase(
+            fetchDeleteCategory.fulfilled,
+            () => {
+                // UI will re-fetch
             }
         );
 
