@@ -148,7 +148,7 @@ export default function Step3Settings({
                         <FiMap />
                     </div>
                     <div>
-                        <h2 className="text-lg font-semibold text-white">Sơ đồ chỗ ngồi</h2>
+                        <h2 className="text-lg font-semibold text-white">Sơ đồ chỗ ngồi trực quan</h2>
                         <p className="text-xs text-slate-500 mt-0.5">Thiết lập sơ đồ ghế cho sự kiện của bạn</p>
                     </div>
                 </div>
@@ -166,7 +166,7 @@ export default function Step3Settings({
                                 <FiMap size={15} className="text-emerald-400" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-white">Sơ đồ đã được thiết lập</p>
+                                <p className="text-sm font-semibold text-white">Sơ đồ trực quan đã được thiết lập</p>
                                 <p className="text-xs text-slate-500 mt-0.5">Nhấn để chỉnh sửa cấu hình ghế ngồi</p>
                             </div>
                         </div>

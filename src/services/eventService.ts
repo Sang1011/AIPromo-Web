@@ -10,8 +10,6 @@ import type {
     GetAllSessionResponse,
     GetAllRequestByMe,
     GetAllEventByMeResponse,
-    UpdateTicketTypeRequest,
-    CreateTicketTypeRequest,
     GetPendingEventsResponse,
     GetPendingEventsRequest,
     UpdateSeatMapRequest
@@ -138,7 +136,7 @@ const eventService = {
     },
 
     cancelEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
-    return interceptorAPI().patch(`/events/${eventId}/cancel`, {reason});
+        return interceptorAPI().patch(`/events/${eventId}/cancel`, { reason });
     },
 
     unpublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
@@ -149,8 +147,8 @@ const eventService = {
     },
     getPendingEvents: (request: GetPendingEventsRequest): Promise<AxiosResponse<GetPendingEventsResponse>> => {
         return interceptorAPI().get("/events/pending", {
-        params: request
-    });
+            params: request
+        });
     },
     getSeatMap: (eventId: string): Promise<AxiosResponse<ApiResponse<UpdateSeatMapRequest>>> => {
         return interceptorAPI().get(`/events/${eventId}/spec`);
@@ -165,7 +163,7 @@ const eventService = {
     updateEventPolicy: (eventId: string, policy: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch(`/events/${eventId}/policy`, { policy });
     },
-    
+
 }
 
 export default eventService

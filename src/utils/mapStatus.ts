@@ -8,7 +8,7 @@ export const STATUS_MAP: Record<
     Draft: { status: "draft", label: "Bản nháp", color: "slate" },
     PendingReview: { status: "pending", label: "Chờ duyệt", color: "blue" },
     Published: { status: "upcoming", label: "Đang hoạt động", color: "amber" },
-    Unpublished: { status: "draft", label: "Tạm ẩn", color: "cyan" },
+    Suspended: { status: "suspend", label: "Trì hoãn", color: "cyan" },
     PendingCancellation: { status: "pending", label: "Chờ huỷ", color: "orange" },
     Cancelled: { status: "past", label: "Đã huỷ", color: "red" },
     Completed: { status: "past", label: "Đã kết thúc", color: "emerald" }
@@ -25,13 +25,15 @@ export function mapStatus(status: EventStatus) {
 }
 
 export const FILTER_TO_API_STATUS: Record<FilterStatus, EventStatus[]> = {
-    Draft: ["Draft", "Unpublished"],
+    Draft: ["Draft"],
 
     Pending: ["PendingReview", "PendingCancellation"],
 
     Upcoming: ["Published"],
 
     Past: ["Completed", "Cancelled"],
+
+    Suspend: ["Suspended"]
 };
 
 export function convertFilterToApiStatus(filter: FilterStatus): string {
