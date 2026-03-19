@@ -28,6 +28,7 @@ interface Step1EventInfoProps {
     onCreated?: (eventId: string) => void;
     eventData?: GetEventDetailResponse | null;
     reloadEvent?: () => Promise<void>;
+    isAllowUpdate?: boolean;
 }
 
 interface Actor {
@@ -147,7 +148,9 @@ function CreateHashtagModal({ initialName, onClose, onCreated }: CreateHashtagMo
     );
 }
 
-export default function Step1EventInfo({ onNext, mode = "edit", onCreated, eventData, reloadEvent }: Step1EventInfoProps) {
+export default function Step1EventInfo({
+    onNext, mode = "edit", onCreated, eventData, reloadEvent, isAllowUpdate = true,
+}: Step1EventInfoProps) {
     const [hashtagInput, setHashtagInput] = useState("");
     const [suggestions, setSuggestions] = useState<EventHashtag[]>([]);
     const [showCreateHashtagModal, setShowCreateHashtagModal] = useState(false);
@@ -237,6 +240,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
     const isChanged = JSON.stringify(eventForm) !== JSON.stringify(initEventForm);
 
     const addHashtag = (tag: EventHashtag) => {
+        if (!isAllowUpdate) return;
         if (eventForm.selectedHashtags.some((t) => t.id === tag.id)) return;
         updateForm("selectedHashtags", [...eventForm.selectedHashtags, tag]);
         setHashtagInput("");
@@ -245,6 +249,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
     };
 
     const removeHashtag = (id: number) => {
+        if (!isAllowUpdate) return;
         updateForm("selectedHashtags", eventForm.selectedHashtags.filter((t) => t.id !== id));
     };
 
@@ -260,6 +265,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
         !suggestions.some((s) => s.name.toLowerCase() === hashtagInput.trim().toLowerCase());
 
     const addCategory = (cat: EventCategory) => {
+        if (!isAllowUpdate) return;
         if (eventForm.selectedCategories.some((c) => c.id === cat.id)) return;
         updateForm("selectedCategories", [...eventForm.selectedCategories, cat]);
         setCategoryInput("");
@@ -268,18 +274,26 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
     };
 
     const removeCategory = (id: number) => {
+        if (!isAllowUpdate) return;
         updateForm("selectedCategories", eventForm.selectedCategories.filter((c) => c.id !== id));
     };
 
-    const addActor = () => updateForm("actors", [...eventForm.actors, { name: "", major: "", image: null }]);
+    const addActor = () => {
+        if (!isAllowUpdate) return;
+        updateForm("actors", [...eventForm.actors, { name: "", major: "", image: null }]);
+    };
 
-    const removeActor = (index: number) => updateForm("actors", eventForm.actors.filter((_, i) => i !== index));
+    const removeActor = (index: number) => {
+        if (!isAllowUpdate) return;
+        updateForm("actors", eventForm.actors.filter((_, i) => i !== index));
+    };
 
     const updateActor = (index: number, field: "name" | "major" | "image", value: string | File | null) => {
         updateForm("actors", eventForm.actors.map((actor, i) => i === index ? { ...actor, [field]: value } : actor));
     };
 
     const handleBannerChange = (file: File) => {
+        if (!isAllowUpdate) return;
         const previewUrl = URL.createObjectURL(file);
         setEventForm((prev) => ({
             ...prev,
@@ -289,6 +303,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
     };
 
     const handleAddImages = (files: FileList | null) => {
+        if (!isAllowUpdate) return;
         if (!files) return;
         const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
         const maxSize = 10 * 1024 * 1024;
@@ -304,6 +319,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
     };
 
     const handleDeleteImage = (index: number) => {
+        if (!isAllowUpdate) return;
         const img = eventForm.images[index];
 
         setEventForm((prev) => {
@@ -322,6 +338,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
     };
 
     const handleActorFileChange = (file: File, index: number) => {
+        if (!isAllowUpdate) return;
         updateActor(index, "image", file);
         const previewUrl = URL.createObjectURL(file);
         setEventForm((prev) => {
@@ -521,6 +538,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
 
             <div className="space-y-8">
 
+                {/* ===== Hình ảnh sự kiện ===== */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                     <h3 className="font-semibold text-white mb-4">* Hình ảnh sự kiện</h3>
 
@@ -530,7 +548,8 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                                 <ImagePreviewBox
                                     imageUrl={eventForm.bannerUrl}
                                     aspect="16/9"
-                                    onUpdate={(file) => handleBannerChange(file)}
+                                    // Chỉ cho update banner khi isAllowUpdate
+                                    onUpdate={isAllowUpdate ? (file) => handleBannerChange(file) : undefined}
                                 />
                             ) : (
                                 <UploadBox
@@ -538,6 +557,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                                     aspect="16/9"
                                     file={null}
                                     error={!!errors.bannerUrl}
+                                    disabled={!isAllowUpdate}
                                     onChange={(file) => { if (file) handleBannerChange(file); }}
                                 />
                             )}
@@ -548,16 +568,19 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                             <label className="text-sm text-slate-400">Ảnh bổ sung sự kiện</label>
                             <div className="flex flex-wrap gap-3">
 
-                                <label className="w-24 h-24 cursor-pointer rounded-lg border border-dashed border-white/20 flex items-center justify-center text-slate-400 text-xs text-center hover:border-white/40 transition-colors">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        className="hidden"
-                                        onChange={(e) => handleAddImages(e.target.files)}
-                                    />
-                                    + Thêm ảnh
-                                </label>
+                                {/* Ẩn nút thêm ảnh khi không được phép */}
+                                {isAllowUpdate && (
+                                    <label className="w-24 h-24 cursor-pointer rounded-lg border border-dashed border-white/20 flex items-center justify-center text-slate-400 text-xs text-center hover:border-white/40 transition-colors">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            className="hidden"
+                                            onChange={(e) => handleAddImages(e.target.files)}
+                                        />
+                                        + Thêm ảnh
+                                    </label>
+                                )}
 
                                 {eventForm.images.map((img, i) => (
                                     <ImagePreviewBox
@@ -565,7 +588,8 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                                         imageUrl={img.url}
                                         square
                                         className="w-24"
-                                        onRemove={() => handleDeleteImage(i)}
+                                        // Chỉ cho xóa ảnh khi isAllowUpdate
+                                        onRemove={isAllowUpdate ? () => handleDeleteImage(i) : undefined}
                                     />
                                 ))}
                             </div>
@@ -573,43 +597,52 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                     </div>
                 </section>
 
+                {/* ===== Thông tin cơ bản ===== */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
                     <h3 className="font-semibold text-white">* Thông tin cơ bản</h3>
 
+                    {/* Tên sự kiện */}
                     <div>
                         <label className="text-sm text-slate-400">Tên sự kiện</label>
                         <input
-                            className={`mt-2 w-full rounded-xl bg-black/30 border px-4 py-3 text-white ${errors.title ? "border-red-500" : "border-white/10"}`}
+                            className={`mt-2 w-full rounded-xl bg-black/30 border px-4 py-3 text-white disabled:opacity-40 disabled:cursor-not-allowed ${errors.title ? "border-red-500" : "border-white/10"}`}
                             placeholder="Hội thảo FA - Tìm kiếm cơ hội..."
                             value={eventForm.title}
+                            disabled={!isAllowUpdate}
                             onChange={(e) => updateForm("title", e.target.value)}
                         />
                         {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title}</p>}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Hashtag */}
                         <div>
                             <div className="flex justify-between items-center">
                                 <label className="text-sm text-slate-400">Hashtag</label>
                                 {hashtagInput.trim() && <span className="text-xs text-slate-500">{suggestions.length} results</span>}
                             </div>
-                            <div className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedHashtags ? "border-red-500" : "border-white/10"}`}>
+                            <div className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedHashtags ? "border-red-500" : "border-white/10"} ${!isAllowUpdate ? "opacity-40" : ""}`}>
                                 {eventForm.selectedHashtags.map((tag) => (
                                     <div key={tag.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors">
                                         <span>#{tag.name}</span>
-                                        <button onClick={() => removeHashtag(tag.id)} className="leading-none"><FiX size={14} /></button>
+                                        {isAllowUpdate && (
+                                            <button onClick={() => removeHashtag(tag.id)} className="leading-none">
+                                                <FiX size={14} />
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                                 <input
                                     value={hashtagInput}
-                                    onChange={(e) => setHashtagInput(e.target.value)}
-                                    onKeyDown={handleHashtagEnter}
-                                    className="flex-1 bg-transparent outline-none border-none focus:outline-none focus:ring-0 text-white px-2 py-1 min-w-[120px]"
-                                    placeholder="#AI #Tech"
+                                    onChange={(e) => isAllowUpdate && setHashtagInput(e.target.value)}
+                                    onKeyDown={isAllowUpdate ? handleHashtagEnter : undefined}
+                                    readOnly={!isAllowUpdate}
+                                    className="flex-1 bg-transparent outline-none border-none focus:outline-none focus:ring-0 text-white px-2 py-1 min-w-[120px] read-only:cursor-not-allowed"
+                                    placeholder={isAllowUpdate ? "#AI #Tech" : ""}
                                 />
                             </div>
                             {errors.selectedHashtags && <p className="text-xs text-red-400 mt-1">{errors.selectedHashtags}</p>}
-                            {hashtagInput.trim() && (suggestions.length > 0 || showCreateOption) && (
+                            {isAllowUpdate && hashtagInput.trim() && (suggestions.length > 0 || showCreateOption) && (
                                 <div className="mt-2 bg-[#140f2a] border border-white/10 rounded-lg overflow-hidden">
                                     {suggestions.map((tag) => (
                                         <div key={tag.id} onClick={() => addHashtag(tag)} className="px-4 py-2 hover:bg-white/5 cursor-pointer text-sm text-white">
@@ -636,36 +669,33 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                             )}
                         </div>
 
+                        {/* Thể loại */}
                         <div ref={categoryRef} className="relative">
                             <div className="flex justify-between items-center">
                                 <label className="text-sm text-slate-400">Thể loại</label>
-                                {isCategoryFocused && (
+                                {isCategoryFocused && isAllowUpdate && (
                                     <span className="text-xs text-slate-500">{categorySuggestions.length} results</span>
                                 )}
                             </div>
 
-                            {/* Inline input box giống hashtag */}
-                            <div
-                                className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedCategories ? "border-red-500" : "border-white/10"
-                                    }`}
-                            >
+                            <div className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedCategories ? "border-red-500" : "border-white/10"} ${!isAllowUpdate ? "opacity-40" : ""}`}>
                                 {eventForm.selectedCategories.map((cat) => (
-                                    <div
-                                        key={cat.id}
-                                        className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors"
-                                    >
+                                    <div key={cat.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors">
                                         <span>{cat.name}</span>
-                                        <button onClick={() => removeCategory(cat.id)} className="leading-none">
-                                            <FiX size={14} />
-                                        </button>
+                                        {isAllowUpdate && (
+                                            <button onClick={() => removeCategory(cat.id)} className="leading-none">
+                                                <FiX size={14} />
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                                 <input
                                     value={categoryInput}
-                                    onChange={(e) => setCategoryInput(e.target.value)}
-                                    onFocus={() => setIsCategoryFocused(true)}
-                                    className="flex-1 bg-transparent outline-none border-none focus:outline-none focus:ring-0 text-white px-2 py-1 min-w-[120px]"
-                                    placeholder="Tìm thể loại..."
+                                    onChange={(e) => isAllowUpdate && setCategoryInput(e.target.value)}
+                                    onFocus={() => isAllowUpdate && setIsCategoryFocused(true)}
+                                    readOnly={!isAllowUpdate}
+                                    className="flex-1 bg-transparent outline-none border-none focus:outline-none focus:ring-0 text-white px-2 py-1 min-w-[120px] read-only:cursor-not-allowed"
+                                    placeholder={isAllowUpdate ? "Tìm thể loại..." : ""}
                                 />
                             </div>
 
@@ -673,8 +703,8 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                                 <p className="text-xs text-red-400 mt-1">{errors.selectedCategories}</p>
                             )}
 
-                            {/* Dropdown — hiện khi focused */}
-                            {isCategoryFocused && (
+                            {/* Dropdown — chỉ hiện khi isAllowUpdate */}
+                            {isAllowUpdate && isCategoryFocused && (
                                 <div className="absolute z-20 top-full mt-1 w-full rounded-lg bg-[#140f2a] border border-white/10 overflow-y-auto max-h-52 shadow-2xl">
                                     {categorySuggestions.length > 0 ? (
                                         categorySuggestions.map((cat) => {
@@ -683,7 +713,7 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                                                 <div
                                                     key={cat.id}
                                                     onMouseDown={(e) => {
-                                                        e.preventDefault(); // giữ focus không bị mất
+                                                        e.preventDefault();
                                                         if (!isSelected) addCategory(cat);
                                                     }}
                                                     className={`flex items-center justify-between px-4 py-2 cursor-pointer text-sm transition-colors ${isSelected
@@ -708,35 +738,46 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                         </div>
                     </div>
 
+                    {/* Địa điểm */}
                     <div>
                         <label className="text-sm text-slate-400">Địa điểm tổ chức</label>
                         <input
-                            className={`mt-2 w-full rounded-xl bg-black/30 border px-4 py-3 text-white ${errors.location ? "border-red-500" : "border-white/10"}`}
+                            className={`mt-2 w-full rounded-xl bg-black/30 border px-4 py-3 text-white disabled:opacity-40 disabled:cursor-not-allowed ${errors.location ? "border-red-500" : "border-white/10"}`}
                             placeholder="FPT University, Khu CNC Quận 9"
                             value={eventForm.location}
+                            disabled={!isAllowUpdate}
                             onChange={(e) => updateForm("location", e.target.value)}
                         />
                         {errors.location && <p className="text-xs text-red-400 mt-1">{errors.location}</p>}
                     </div>
                 </section>
 
+                {/* ===== Mô tả ===== */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                     <h3 className="font-semibold text-white mb-4">* Mô tả sự kiện</h3>
                     <textarea
-                        className={`w-full min-h-[200px] rounded-xl bg-black/30 border px-4 py-3 text-white ${errors.description ? "border-red-500" : "border-white/10"}`}
+                        className={`w-full min-h-[200px] rounded-xl bg-black/30 border px-4 py-3 text-white disabled:opacity-40 disabled:cursor-not-allowed ${errors.description ? "border-red-500" : "border-white/10"}`}
                         placeholder="Giới thiệu sự kiện..."
                         value={eventForm.description}
+                        disabled={!isAllowUpdate}
                         onChange={(e) => updateForm("description", e.target.value)}
                     />
                     {errors.description && <p className="text-xs text-red-400 mt-1">{errors.description}</p>}
                 </section>
 
+                {/* ===== Diễn giả ===== */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
                     <div className="flex justify-between items-center">
                         <h3 className="font-semibold text-white">* Diễn giả / Khách mời</h3>
-                        <button type="button" onClick={addActor} className="px-4 py-2 rounded-lg bg-primary text-sm">
-                            + Thêm diễn giả
-                        </button>
+                        {isAllowUpdate && (
+                            <button
+                                type="button"
+                                onClick={addActor}
+                                className="px-4 py-2 rounded-lg bg-primary text-sm"
+                            >
+                                + Thêm diễn giả
+                            </button>
+                        )}
                     </div>
 
                     {eventForm.actors.length === 0 && (
@@ -758,13 +799,15 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                                         <ImagePreviewBox
                                             imageUrl={eventForm.actorUrls[index]}
                                             square
-                                            onUpdate={(file) => handleActorFileChange(file, index)}
+                                            onUpdate={isAllowUpdate ? (file) => handleActorFileChange(file, index) : undefined}
                                         />
                                     ) : (
                                         <div>
                                             <UploadBox
                                                 label="Ảnh" aspect="1/1" file={actor.image} error={!!actorErrors?.image} square
+                                                disabled={!isAllowUpdate}
                                                 onChange={(file) => {
+                                                    if (!isAllowUpdate) return;
                                                     if (file) handleActorFileChange(file, index);
                                                     else updateActor(index, "image", null);
                                                 }}
@@ -777,8 +820,9 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                                         <div>
                                             <input
                                                 value={actor.name}
+                                                disabled={!isAllowUpdate}
                                                 onChange={(e) => updateActor(index, "name", e.target.value)}
-                                                className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white ${actorErrors.name ? "border-red-500" : "border-white/10"}`}
+                                                className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white disabled:opacity-40 disabled:cursor-not-allowed ${actorErrors.name ? "border-red-500" : "border-white/10"}`}
                                                 placeholder="Tên diễn giả"
                                             />
                                             {actorErrors.name && <p className="text-xs text-red-400 mt-1">{actorErrors.name}</p>}
@@ -786,21 +830,33 @@ export default function Step1EventInfo({ onNext, mode = "edit", onCreated, event
                                         <div>
                                             <input
                                                 value={actor.major}
+                                                disabled={!isAllowUpdate}
                                                 onChange={(e) => updateActor(index, "major", e.target.value)}
-                                                className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white ${actorErrors.major ? "border-red-500" : "border-white/10"}`}
+                                                className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white disabled:opacity-40 disabled:cursor-not-allowed ${actorErrors.major ? "border-red-500" : "border-white/10"}`}
                                                 placeholder="Chuyên môn (AI Engineer, CEO, Ca sĩ, Nghệ sĩ...)"
                                             />
                                             {actorErrors.major && <p className="text-xs text-red-400 mt-1">{actorErrors.major}</p>}
                                         </div>
                                     </div>
 
-                                    <button onClick={() => removeActor(index)} className="text-red-400 text-sm hover:underline">Xóa</button>
+                                    {/* Chỉ hiện nút Xóa khi isAllowUpdate */}
+                                    {isAllowUpdate ? (
+                                        <button
+                                            onClick={() => removeActor(index)}
+                                            className="text-red-400 text-sm hover:underline"
+                                        >
+                                            Xóa
+                                        </button>
+                                    ) : (
+                                        <div /> /* placeholder để giữ layout grid */
+                                    )}
                                 </div>
                             );
                         })}
                     </div>
                 </section>
 
+                {/* ===== Footer — nút tiếp theo KHÔNG disable ===== */}
                 <div className="flex justify-end pt-6">
                     <button onClick={handleNext} className="px-6 py-3 rounded-xl bg-primary text-white font-semibold">
                         {mode === "create" ? "Tạo sự kiện" : isChanged ? "Lưu và Tiếp tục →" : "Tiếp theo →"}

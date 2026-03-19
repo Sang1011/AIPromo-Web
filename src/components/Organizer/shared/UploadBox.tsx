@@ -9,6 +9,7 @@ export default function UploadBox({
     className = "",
     square = false,
     error = false,
+    disabled = false,
 }: {
     label: string;
     aspect: string;
@@ -17,11 +18,14 @@ export default function UploadBox({
     className?: string;
     square?: boolean;
     error?: boolean;
+    disabled?: boolean;
 }) {
 
     const [preview, setPreview] = useState(false);
     const [modalError, setModalError] = useState<string | null>(null);
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (disabled) return;
         const selectedFile = e.target.files?.[0];
 
         if (!selectedFile) return;
@@ -68,12 +72,13 @@ export default function UploadBox({
         <>
             <label
                 className={`
-                relative cursor-pointer rounded-xl
-                border border-dashed 
-${error ? "border-red-500" : "border-white/10"}
+                relative rounded-xl
+                border border-dashed
+                ${error ? "border-red-500" : "border-white/10"}
                 flex items-center justify-center
                 text-slate-400 overflow-hidden
                 ${square ? "aspect-square" : `aspect-[${aspect}]`}
+                ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
                 ${className}
             `}
             >
@@ -81,6 +86,7 @@ ${error ? "border-red-500" : "border-white/10"}
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/webp"
                     className="hidden"
+                    disabled={disabled}
                     onChange={handleFileChange}
                 />
 
@@ -91,28 +97,30 @@ ${error ? "border-red-500" : "border-white/10"}
                             alt={label}
                             onClick={(e) => {
                                 e.preventDefault();
-                                setPreview(true);
+                                if (!disabled) setPreview(true);
                             }}
-                            className="absolute inset-0 w-full h-full object-cover cursor-pointer"
+                            className={`absolute inset-0 w-full h-full object-cover ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
                         />
 
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                onChange(null);
-                            }}
-                            className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                        >
-                            <TiDelete size={24} />
-                        </button>
+                        {!disabled && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    onChange(null);
+                                }}
+                                className="absolute top-2 right-2 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                            >
+                                <TiDelete size={24} />
+                            </button>
+                        )}
                     </>
                 ) : (
                     <span className="text-sm text-center px-4">
                         {label}
                         <br />
                         <span className="text-xs opacity-60">
-                            Click để tải ảnh
+                            {disabled ? "Không thể chỉnh sửa" : "Click để tải ảnh"}
                         </span>
                     </span>
                 )}
