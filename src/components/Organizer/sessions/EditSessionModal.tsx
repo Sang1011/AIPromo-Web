@@ -29,12 +29,13 @@ interface EditSessionModalProps {
     eventStartAt?: string;
     eventEndAt?: string;
     onUpdated?: () => void;
+    isAllowUpdate?: boolean;
 }
 
 export default function EditSessionModal({
     open, onClose, eventId, session,
     eventStartAt, eventEndAt,
-    onUpdated,
+    onUpdated, isAllowUpdate = true,
 }: EditSessionModalProps) {
     const dispatch = useDispatch<AppDispatch>();
 
@@ -155,6 +156,7 @@ export default function EditSessionModal({
                         <input
                             value={form.title}
                             onChange={set("title")}
+                            readOnly={!isAllowUpdate}
                             className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${errors.title ? "border-red-500" : "border-white/10"}`}
                             placeholder="VD: Buổi sáng - Ngày 1"
                         />
@@ -167,6 +169,7 @@ export default function EditSessionModal({
                         <textarea
                             value={form.description}
                             onChange={set("description")}
+                            readOnly={!isAllowUpdate}
                             rows={3}
                             className="w-full rounded-xl bg-black/30 border border-white/10 px-4 py-2.5 text-white text-sm resize-none outline-none focus:ring-1 focus:ring-primary/50 transition-all"
                             placeholder="Mô tả ngắn về suất diễn..."
@@ -180,6 +183,7 @@ export default function EditSessionModal({
                             <input
                                 type="datetime-local"
                                 value={form.startTime}
+                                readOnly={!isAllowUpdate}
                                 onChange={set("startTime")}
                                 min={eventStartAt}
                                 max={eventEndAt}
@@ -192,6 +196,7 @@ export default function EditSessionModal({
                             <input
                                 type="datetime-local"
                                 value={form.endTime}
+                                readOnly={!isAllowUpdate}
                                 onChange={set("endTime")}
                                 min={eventStartAt}
                                 max={eventEndAt}
@@ -212,7 +217,7 @@ export default function EditSessionModal({
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={saving || !isAllowUpdate}
                         className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50 transition-opacity"
                     >
                         {saving ? "Đang lưu..." : "Lưu thay đổi"}

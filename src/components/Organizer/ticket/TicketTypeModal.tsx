@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { FiX, FiPlus, FiEdit2, FiTrash2, FiCheck } from "react-icons/fi";
 import type { AppDispatch, RootState } from "../../../store";
@@ -18,11 +18,8 @@ import { notify } from "../../../utils/notify";
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
 
-const emptyForm = () => ({
-    name: "",
-    price: 0,
-    quantity: "1", // string để tránh leading zero
-});
+// Format số thành chuỗi có dấu chấm ngăn cách hàng nghìn
+const formatRaw = (num: string) => num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
 interface CreateFormErrors {
     name?: string;
@@ -32,12 +29,21 @@ interface CreateFormErrors {
 
 // ─── FREE toggle ──────────────────────────────────────────────────────────────
 
-function FreeToggle({ isFree, onToggle }: { isFree: boolean; onToggle: () => void }) {
+function FreeToggle({
+    isFree,
+    onToggle,
+    readOnly = false,
+}: {
+    isFree: boolean;
+    onToggle: () => void;
+    readOnly?: boolean;
+}) {
     return (
         <button
             type="button"
-            onClick={onToggle}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all shrink-0 ${isFree
+            onClick={readOnly ? undefined : onToggle}
+            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all shrink-0 ${readOnly ? "opacity-40 cursor-not-allowed" : ""
+                } ${isFree
                     ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
                     : "bg-white/[0.03] border-white/8 text-slate-500 hover:text-slate-300 hover:border-white/15"
                 }`}
@@ -59,17 +65,23 @@ function PriceInput({
     value,
     onChange,
     hasError,
+    readOnly = false,
 }: {
     value: number;
     onChange: (val: number) => void;
     hasError?: boolean;
+    readOnly?: boolean;
 }) {
-    const [raw, setRaw] = useState<string>("");
+    // Sync raw với value prop — cần thiết khi load giá cũ lúc edit
+    const [raw, setRaw] = useState<string>(value > 0 ? String(value) : "");
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const format = (num: string) => num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    useEffect(() => {
+        setRaw(value > 0 ? String(value) : "");
+    }, [value]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (readOnly) return;
         const digits = e.target.value.replace(/\D/g, "");
         setRaw(digits);
         onChange(digits === "" ? 0 : Number(digits));
@@ -77,19 +89,22 @@ function PriceInput({
 
     return (
         <div
-            tabIndex={0}
-            onClick={() => inputRef.current?.focus()}
-            className={`flex items-center rounded-xl bg-black/30 border px-4 py-2.5 transition-all focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-white/8 ${hasError ? "border-red-500/60" : "border-white/8"
-                }`}
+            tabIndex={readOnly ? -1 : 0}
+            onClick={() => !readOnly && inputRef.current?.focus()}
+            className={`flex items-center rounded-xl bg-black/30 border px-4 py-2.5 transition-all ${readOnly
+                    ? "opacity-40 cursor-not-allowed"
+                    : "focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-white/8"
+                } ${hasError ? "border-red-500/60" : "border-white/8"}`}
         >
             <input
                 ref={inputRef}
-                value={format(raw)}
+                value={formatRaw(raw)}
                 onChange={handleChange}
+                readOnly={readOnly}
                 type="text"
                 inputMode="numeric"
                 placeholder="0"
-                className="bg-transparent text-white text-sm border-none p-0 m-0 flex-1 min-w-0 outline-none focus:outline-none focus:ring-0 focus:border-none"
+                className="bg-transparent text-white text-sm border-none p-0 m-0 flex-1 min-w-0 outline-none focus:outline-none focus:ring-0 focus:border-none read-only:cursor-not-allowed"
             />
             <span className="text-slate-500 text-sm select-none ml-2">VND</span>
         </div>
@@ -105,6 +120,7 @@ function PriceField({
     onFreeToggle,
     error,
     onClearError,
+    readOnly = false,
 }: {
     price: number;
     isFree: boolean;
@@ -112,6 +128,7 @@ function PriceField({
     onFreeToggle: () => void;
     error?: string;
     onClearError?: () => void;
+    readOnly?: boolean;
 }) {
     return (
         <div className="space-y-1.5">
@@ -121,12 +138,16 @@ function PriceField({
             <div className="flex items-center gap-2">
                 <div className="flex-1">
                     {isFree ? (
-                        <div className="flex items-center px-4 py-2.5 rounded-xl bg-black/30 border border-white/8 text-emerald-400 text-sm font-semibold">
+                        <div
+                            className={`flex items-center px-4 py-2.5 rounded-xl bg-black/30 border border-white/8 text-emerald-400 text-sm font-semibold ${readOnly ? "opacity-40" : ""
+                                }`}
+                        >
                             Miễn phí
                         </div>
                     ) : (
                         <PriceInput
                             value={price}
+                            readOnly={readOnly}
                             onChange={(val) => {
                                 onPriceChange(val);
                                 onClearError?.();
@@ -135,7 +156,7 @@ function PriceField({
                         />
                     )}
                 </div>
-                <FreeToggle isFree={isFree} onToggle={onFreeToggle} />
+                <FreeToggle isFree={isFree} onToggle={onFreeToggle} readOnly={readOnly} />
             </div>
             {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
@@ -149,26 +170,30 @@ function QuantityInput({
     onChange,
     hasError,
     placeholder = "VD: 500",
+    readOnly = false,
 }: {
     value: string;
     onChange: (val: string) => void;
     hasError?: boolean;
     placeholder?: string;
+    readOnly?: boolean;
 }) {
     return (
         <input
             value={value}
             onChange={(e) => {
+                if (readOnly) return;
                 const digits = e.target.value.replace(/\D/g, "");
-                // bỏ leading zero: "070" → 70 → "70"
                 onChange(digits === "" ? "" : String(Number(digits)));
             }}
             onBlur={() => {
+                if (readOnly) return;
                 if (!value || Number(value) < 1) onChange("1");
             }}
+            readOnly={readOnly}
             inputMode="numeric"
             placeholder={placeholder}
-            className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${hasError ? "border-red-500/60" : "border-white/8"
+            className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all read-only:opacity-40 read-only:cursor-not-allowed ${hasError ? "border-red-500/60" : "border-white/8"
                 }`}
         />
     );
@@ -180,10 +205,12 @@ function TicketEditRow({
     ticket,
     onSave,
     onCancel,
+    isAllowUpdate = true,
 }: {
     ticket: TicketTypeItem;
     onSave: (data: UpdateTicketTypeRequest) => Promise<void>;
     onCancel: () => void;
+    isAllowUpdate?: boolean;
 }) {
     const [isFree, setIsFree] = useState(ticket.price === 0);
     const [price, setPrice] = useState(ticket.price);
@@ -209,6 +236,7 @@ function TicketEditRow({
             <PriceField
                 price={price}
                 isFree={isFree}
+                readOnly={!isAllowUpdate}
                 onPriceChange={setPrice}
                 onFreeToggle={() => { setIsFree((v) => !v); setPrice(0); }}
             />
@@ -222,12 +250,13 @@ function TicketEditRow({
                         value={quantity}
                         onChange={setQuantity}
                         placeholder="Số lượng"
+                        readOnly={!isAllowUpdate}
                     />
                 </div>
                 <button
                     onClick={handleSave}
-                    disabled={saving}
-                    className="p-2.5 rounded-xl bg-primary/20 hover:bg-primary/40 text-primary transition-colors disabled:opacity-50"
+                    disabled={saving || !isAllowUpdate}
+                    className="p-2.5 rounded-xl bg-primary/20 hover:bg-primary/40 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Lưu"
                 >
                     <FiCheck size={15} />
@@ -250,10 +279,12 @@ function TicketDisplayRow({
     ticket,
     onEdit,
     onDelete,
+    isAllowUpdate = true,
 }: {
     ticket: TicketTypeItem;
     onEdit: () => void;
     onDelete: () => void;
+    isAllowUpdate?: boolean;
 }) {
     const [deleting, setDeleting] = useState(false);
 
@@ -283,15 +314,16 @@ function TicketDisplayRow({
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                     onClick={onEdit}
-                    className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                    disabled={!isAllowUpdate}
+                    className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     title="Chỉnh sửa"
                 >
                     <FiEdit2 size={14} />
                 </button>
                 <button
                     onClick={handleDelete}
-                    disabled={deleting}
-                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                    disabled={deleting || !isAllowUpdate}
+                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     title="Xoá"
                 >
                     <FiTrash2 size={14} />
@@ -303,7 +335,13 @@ function TicketDisplayRow({
 
 // ─── Add ticket form ──────────────────────────────────────────────────────────
 
-function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Promise<void> }) {
+function AddTicketForm({
+    onAdd,
+    isAllowUpdate = true,
+}: {
+    onAdd: (data: CreateTicketTypeRequest) => Promise<void>;
+    isAllowUpdate?: boolean;
+}) {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState("");
     const [price, setPrice] = useState(0);
@@ -349,7 +387,8 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
         return (
             <button
                 onClick={() => setOpen(true)}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-white/10 text-slate-400 hover:text-white hover:border-primary/40 hover:bg-primary/[0.04] text-sm font-medium transition-all"
+                disabled={!isAllowUpdate}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-white/10 text-slate-400 hover:text-white hover:border-primary/40 hover:bg-primary/[0.04] text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:border-white/10 disabled:hover:bg-transparent"
             >
                 <FiPlus size={14} />
                 Thêm loại vé mới
@@ -378,10 +417,12 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
                 <input
                     value={name}
                     onChange={(e) => {
+                        if (!isAllowUpdate) return;
                         setName(e.target.value);
                         if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
                     }}
-                    className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all ${errors.name ? "border-red-500/60" : "border-white/8"
+                    readOnly={!isAllowUpdate}
+                    className={`w-full rounded-xl bg-black/30 border px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all read-only:opacity-40 read-only:cursor-not-allowed ${errors.name ? "border-red-500/60" : "border-white/8"
                         }`}
                     placeholder="VD: VÉ TIÊU CHUẨN"
                     autoFocus
@@ -393,8 +434,10 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
             <PriceField
                 price={price}
                 isFree={isFree}
+                readOnly={!isAllowUpdate}
                 onPriceChange={setPrice}
                 onFreeToggle={() => {
+                    if (!isAllowUpdate) return;
                     setIsFree((v) => !v);
                     setPrice(0);
                     if (errors.price) setErrors((p) => ({ ...p, price: undefined }));
@@ -415,6 +458,7 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
                         if (errors.quantity) setErrors((p) => ({ ...p, quantity: undefined }));
                     }}
                     hasError={!!errors.quantity}
+                    readOnly={!isAllowUpdate}
                 />
                 {errors.quantity && <p className="text-xs text-red-400">{errors.quantity}</p>}
             </div>
@@ -429,8 +473,8 @@ function AddTicketForm({ onAdd }: { onAdd: (data: CreateTicketTypeRequest) => Pr
                 </button>
                 <button
                     onClick={handleSubmit}
-                    disabled={saving}
-                    className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50 hover:bg-primary/90 transition-all"
+                    disabled={saving || !isAllowUpdate}
+                    className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-all"
                 >
                     {saving ? "Đang thêm..." : "Thêm vé"}
                 </button>
@@ -445,9 +489,10 @@ interface TicketTypeModalProps {
     open: boolean;
     onClose: () => void;
     eventId: string;
+    isAllowUpdate?: boolean;
 }
 
-export default function TicketTypeModal({ open, onClose, eventId }: TicketTypeModalProps) {
+export default function TicketTypeModal({ open, onClose, eventId, isAllowUpdate = true }: TicketTypeModalProps) {
     const dispatch = useDispatch<AppDispatch>();
     const tickets = useSelector((state: RootState) => state.TICKET_TYPE.ticketTypes);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -523,6 +568,7 @@ export default function TicketTypeModal({ open, onClose, eventId }: TicketTypeMo
                                     ticket={ticket}
                                     onSave={(data) => handleUpdate(ticket.id, data)}
                                     onCancel={() => setEditingId(null)}
+                                    isAllowUpdate={isAllowUpdate}
                                 />
                             ) : (
                                 <TicketDisplayRow
@@ -530,6 +576,7 @@ export default function TicketTypeModal({ open, onClose, eventId }: TicketTypeMo
                                     ticket={ticket}
                                     onEdit={() => setEditingId(ticket.id)}
                                     onDelete={() => handleDelete(ticket.id)}
+                                    isAllowUpdate={isAllowUpdate}
                                 />
                             )
                         )
@@ -538,7 +585,7 @@ export default function TicketTypeModal({ open, onClose, eventId }: TicketTypeMo
 
                 {/* Add form */}
                 <div className="px-6 pb-5 flex-shrink-0 border-t border-white/5 pt-4">
-                    <AddTicketForm onAdd={handleAdd} />
+                    <AddTicketForm onAdd={handleAdd} isAllowUpdate={isAllowUpdate} />
                 </div>
             </div>
         </div>

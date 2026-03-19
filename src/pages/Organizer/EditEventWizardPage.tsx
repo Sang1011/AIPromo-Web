@@ -25,6 +25,7 @@ export default function EditEventWizardPage() {
 
     const nextStep = () => setStep((s) => Math.min(s + 1, 5));
     const prevStep = () => setStep((s) => Math.max(s - 1, 1));
+    const [isAllowUpdate, setIsAllowUpdate] = useState(false);
 
     const reloadEvent = async () => {
         if (!eventId) return;
@@ -45,6 +46,9 @@ export default function EditEventWizardPage() {
             const res = await dispatch(fetchEventById(eventId)).unwrap();
             const eventData: GetEventDetailResponse = res.data;
             setEvent(eventData);
+            if (eventData.status === "Draft" || eventData.status === "Suspended") {
+                setIsAllowUpdate(true);
+            }
         } catch (err) {
             console.error("Failed to fetch event data:", err);
         }
@@ -90,6 +94,7 @@ export default function EditEventWizardPage() {
                     mode="edit"
                     onNext={nextStep}
                     eventData={event}
+                    isAllowUpdate={isAllowUpdate}
                     reloadEvent={reloadEvent}
                 />
             )}
@@ -101,6 +106,7 @@ export default function EditEventWizardPage() {
                     onBack={prevStep}
                     eventData={event}
                     reloadEvent={reloadEvent}
+                    isAllowUpdate={isAllowUpdate}
                 />
             )}
 
@@ -111,6 +117,7 @@ export default function EditEventWizardPage() {
                     onBack={prevStep}
                     eventData={event}
                     reloadEvent={reloadEvent}
+                    isAllowUpdate={isAllowUpdate}
                 />
             )}
 
@@ -120,6 +127,7 @@ export default function EditEventWizardPage() {
                     onBack={prevStep}
                     eventData={event}
                     reloadEvent={reloadEvent}
+                    isAllowUpdate={isAllowUpdate}
                 />
             )}
 

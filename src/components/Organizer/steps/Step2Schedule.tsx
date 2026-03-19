@@ -202,9 +202,10 @@ interface Step2ScheduleProps {
     onBack: () => void;
     eventData: GetEventDetailResponse | null;
     reloadEvent?: () => Promise<void>;
+    isAllowUpdate?: boolean;
 }
 
-export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }: Step2ScheduleProps) {
+export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, isAllowUpdate = true }: Step2ScheduleProps) {
     const dispatch = useDispatch<AppDispatch>();
     const { eventId } = useParams<{ eventId: string }>();
     const [timeForm, setTimeForm] = useState<TimeForm>({
@@ -505,6 +506,7 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }
                     eventId={eventId}
                     eventStartAt={timeForm.eventStartAt}
                     eventEndAt={timeForm.eventEndAt}
+                    isAllowUpdate={isAllowUpdate}
                     onCreated={async () => {
                         loadSessions();
                         await reloadEvent?.();
@@ -517,6 +519,7 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }
                     onClose={() => setEditingSession(null)}
                     eventId={eventId}
                     session={editingSession}
+                    isAllowUpdate={isAllowUpdate}
                     eventStartAt={timeForm.eventStartAt}
                     eventEndAt={timeForm.eventEndAt}
                     onUpdated={async () => {
@@ -528,6 +531,7 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent }
             {eventId && (
                 <TicketTypeModal
                     open={openTicketModal}
+                    isAllowUpdate={isAllowUpdate}
                     onClose={async () => {
                         setOpenTicketModal(false);
                         await reloadEvent?.();

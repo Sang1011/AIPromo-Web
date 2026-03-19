@@ -95,7 +95,7 @@ const eventService = {
         eventId: string,
         data: UpdateEventSettingsRequest
     ): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().put(`/events/${eventId}/settings`, data);
+        return interceptorAPI().patch(`/events/${eventId}/settings`, data);
     },
 
     createEventSessions: (

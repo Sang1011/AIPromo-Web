@@ -97,11 +97,11 @@ export interface CreateEventSessionRequest {
 
 export interface UpdateEventSettingsRequest {
     isEmailReminderEnabled: boolean;
-    urlPath: string;
-    ticketSaleStartAt: string;
-    ticketSaleEndAt: string;
-    eventStartAt: string;
-    eventEndAt: string;
+    urlPath?: string;
+    ticketSaleStartAt?: string;
+    ticketSaleEndAt?: string;
+    eventStartAt?: string;
+    eventEndAt?: string;
 }
 
 export interface GetAllEventResponse {
