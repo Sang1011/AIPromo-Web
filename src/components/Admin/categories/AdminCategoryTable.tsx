@@ -1,5 +1,5 @@
 import { MdFilterList, MdAdd, MdMoreVert, MdRefresh } from "react-icons/md";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminEditCategoryModal from "./AdminEditCategoryModal";
 import AdminFloatingMenu from "./AdminFloatingMenu";
 import { useDispatch, useSelector } from "react-redux";
@@ -25,6 +25,8 @@ export default function AdminCategoryTable() {
     const [openCreate, setOpenCreate] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; name: string } | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const load = async () => {
         try {
@@ -40,6 +42,20 @@ export default function AdminCategoryTable() {
     useEffect(() => {
         load();
     }, []);
+
+    // keep page in range when data changes
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(((categories || []).length) / pageSize));
+        if (page > totalPages) setPage(totalPages);
+    }, [categories, page]);
+
+    const sorted = useMemo(() => (categories ? [...categories].sort((a, b) => a.id - b.id) : []), [categories]);
+    const total = sorted.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const currentSlice = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return sorted.slice(start, start + pageSize);
+    }, [sorted, page]);
 
     return (
         <div className={`${glassCard} rounded-xl overflow-hidden`}>
@@ -77,8 +93,8 @@ export default function AdminCategoryTable() {
                                 <td colSpan={5} className="px-8 py-6 text-center text-sm text-[#a592c8]">Đang tải...</td>
                             </tr>
                         ) : (
-                            // sort by id ascending (1 at top)
-                            (categories ? [...categories].sort((a, b) => a.id - b.id) : []).map((c) => (
+                            // paged slice of sorted categories
+                            (currentSlice || []).map((c) => (
                                 <tr key={c.id} className="hover:bg-white/5 transition-colors">
                                     <td className="px-8 py-5">
                                         <div>
@@ -104,8 +120,27 @@ export default function AdminCategoryTable() {
                     </tbody>
                 </table>
             </div>
-            <div className="px-8 py-4 border-t border-[#302447] flex justify-between items-center bg-white/5">
-                <p className="text-xs text-[#a592c8]">Tổng cộng <span className="text-white font-bold">{(categories || []).length}</span> category</p>
+            <div className="px-8 py-4 border-t border-[#302447] flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-white/5">
+                <p className="text-xs text-[#a592c8]">Hiển thị <span className="text-white font-bold">{(currentSlice || []).length}</span> trên <span className="text-white font-bold">{total}</span> category</p>
+
+                <div className="flex items-center gap-2">
+                    <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className={`px-3 py-1 rounded-md text-sm ${page <= 1 ? 'text-[#6b5b86] bg-[#0f0b16]' : 'text-white bg-[#302447] hover:bg-white/10'}`}>Prev</button>
+                    <div className="hidden sm:flex items-center gap-1">
+                        {Array.from({ length: totalPages }).map((_, idx) => {
+                            const p = idx + 1;
+                            const show = totalPages <= 10 || Math.abs(p - page) <= 3 || p === 1 || p === totalPages;
+                            if (!show) {
+                                if (p === 2 && page > 6) return (<span key={p} className="px-2">...</span>);
+                                if (p === totalPages - 1 && page < totalPages - 5) return (<span key={p} className="px-2">...</span>);
+                                return null;
+                            }
+                            return (
+                                <button key={p} onClick={() => setPage(p)} className={`px-3 py-1 rounded-md text-sm ${p === page ? 'bg-primary text-white' : 'bg-[#1b1230] text-[#a592c8] hover:bg-white/5'}`}>{p}</button>
+                            );
+                        })}
+                    </div>
+                    <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className={`px-3 py-1 rounded-md text-sm ${page >= totalPages ? 'text-[#6b5b86] bg-[#0f0b16]' : 'text-white bg-[#302447] hover:bg-white/10'}`}>Next</button>
+                </div>
             </div>
             {editingId !== null && (
                 // modal lazy load

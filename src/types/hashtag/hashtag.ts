@@ -5,6 +5,7 @@ export interface Hashtag {
     name: string;
     slug: string;
     usageCount: number;
+    createdAt?: string;
 }
 
 export interface CreateHashtagRequest extends Pick<Hashtag, "name"> { }
