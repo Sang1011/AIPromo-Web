@@ -1,7 +1,17 @@
 import Konva from 'konva';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage } from 'react-konva';
+import { useDispatch, useSelector } from 'react-redux';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import type { AppDispatch, RootState } from '../../store';
+import { fetchGetSeatMap } from '../../store/seatMapSlice';
+import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
 import type { Area, Seat, SeatMapData, TextEntity, TicketType } from '../../types/config/seatmap';
+import { FiArrowLeft } from 'react-icons/fi';
+import type { CreatePendingOrderRequest, TicketRequest } from '../../types/ticketing/ticketing';
+import { fetchCreatePendingOrder } from '../../store/ticketingSlice';
+import { notify } from '../../utils/notify';
+import { fetchEventById } from '../../store/eventSlice';
 
 // ─────────────────────────────────────────────
 // Types
@@ -61,9 +71,9 @@ interface ConfirmPayload {
 
 const CANVAS_WIDTH = 1550;
 const CANVAS_HEIGHT = 900;
-const SEAT_SELECTED_COLOR = '#22c55e';    // green-500
-const SEAT_AVAILABLE_COLOR = '#ffffff';    // white
-const SEAT_SOLD_COLOR = 'red';
+const SEAT_SELECTED_COLOR = '#22c55e';
+const SEAT_AVAILABLE_COLOR = '#ffffff';
+const SEAT_SOLD_COLOR = '#9ca3af';
 const BG_COLOR = '#0B0B12';
 const PANEL_BG = '#18122B';
 const BORDER_COLOR = '#2a2a3e';
@@ -194,10 +204,15 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         });
     }, []);
 
-    // ── Pan (right-click drag) ──
+    // ── Pan (right-click drag OR left-click drag on empty stage) ──
     const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-        if (e.evt.button !== 2) return;
+        const isRightClick = e.evt.button === 2;
+        const isLeftClickOnStage = e.evt.button === 0 && e.target === e.target.getStage();
+        if (!isRightClick && !isLeftClickOnStage) return;
         isPanningRef.current = true;
+        if (isLeftClickOnStage) {
+            stageRef.current?.container().style.setProperty('cursor', 'grabbing');
+        }
         panStartRef.current = {
             x: e.evt.clientX - stagePos.x,
             y: e.evt.clientY - stagePos.y,
@@ -213,7 +228,12 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
     }, []);
 
     useEffect(() => {
-        const stop = () => { isPanningRef.current = false; };
+        const stop = () => {
+            if (isPanningRef.current) {
+                isPanningRef.current = false;
+                stageRef.current?.container().style.setProperty('cursor', 'default');
+            }
+        };
         window.addEventListener('mouseup', stop);
         return () => window.removeEventListener('mouseup', stop);
     }, []);
@@ -340,10 +360,8 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         );
     };
 
-    // ── Render all areas ──
     const renderAreas = () => sections.map(area => {
         if (!area.isAreaType) {
-            // Pure shape (non-interactive decoration)
             const fillColor = area.fill ?? '#374151';
             return (
                 <Group key={area.id} x={area.x} y={area.y} rotation={area.rotation} listening={false}>
@@ -358,7 +376,7 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         }
 
         const tt = ticketTypes.find(t => t.id === area.ticketTypeId);
-        const baseColor = tt?.color ?? '#6b7280';
+        const baseColor = area.fill ?? tt?.color ?? '#6b7280';
         const isHovered = hoveredAreaId === area.id;
         const isSelected = mode === 'zone' && selectedZone?.areaId === area.id;
         const inPopup = mode === 'zone' && zonePopup?.areaId === area.id;
@@ -398,42 +416,70 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         );
     });
 
-    // ── Render seats ──
+    const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
     const renderSeats = () => {
         if (mode !== 'seat') return null;
+
         return allSeats.map(seat => {
             const isSold = seat.status === 'sold';
             const isSelected = selectedSeatIds.has(seat.id);
-            let fill: string;
-            if (isSold) fill = SEAT_SOLD_COLOR;
-            else if (isSelected) fill = SEAT_SELECTED_COLOR;
-            else fill = SEAT_AVAILABLE_COLOR;
+            const isHovered = hoveredSeatId === seat.id;
+
+            let fill = SEAT_AVAILABLE_COLOR;
 
             return (
-                <Circle
+                <Rect
                     key={seat.id}
-                    x={seat.x + seat.width / 2}
-                    y={seat.y + seat.height / 2}
-                    radius={Math.min(seat.width, seat.height) / 2 - 1}
-                    fill={fill}
-                    stroke={isSelected ? '#16a34a' : 'transparent'}
-                    strokeWidth={isSelected ? 2 : 0}
-                    opacity={isSold ? 0.45 : 1}
+                    x={seat.x}
+                    y={seat.y}
+                    width={seat.width}
+                    height={seat.height}
+                    cornerRadius={4}
+
+                    fill={isSold ? SEAT_SOLD_COLOR : isSelected ? SEAT_SELECTED_COLOR : fill}
+
+                    stroke={isSelected ? 'blue' : SEAT_SOLD_COLOR}
+                    strokeWidth={
+                        isSelected
+                            ? 2
+                            : isHovered && !isSold
+                                ? 1.5
+                                : 1
+                    }
+
+                    scaleX={isSelected ? 1.1 : isHovered ? 1.2 : 1}
+                    scaleY={isSelected ? 1.1 : isHovered ? 1.2 : 1}
+
+                    shadowColor={isSelected ? '#22c55e' : undefined}
+                    shadowBlur={isSelected ? 8 : 0}
+                    shadowOpacity={isSelected ? 0.6 : 0}
+
+                    opacity={isSold ? 0.7 : 1}
                     listening={!isSold}
+
                     onClick={() => handleSeatClick(seat)}
                     onTap={() => handleSeatClick(seat)}
+
                     onMouseEnter={() => {
-                        if (!isSold) stageRef.current?.container().style.setProperty('cursor', 'pointer');
+                        if (!isSold) {
+                            setHoveredSeatId(seat.id);
+
+                            const container = stageRef.current?.container();
+                            if (container) container.style.cursor = 'pointer';
+                        }
                     }}
+
                     onMouseLeave={() => {
-                        stageRef.current?.container().style.setProperty('cursor', 'default');
+                        setHoveredSeatId(null);
+
+                        const container = stageRef.current?.container();
+                        if (container) container.style.cursor = 'default';
                     }}
                 />
             );
         });
     };
 
-    // ── Render free texts ──
     const renderTexts = () => texts
         .filter(t => !t.attachedAreaId)
         .map(t => (
@@ -471,7 +517,6 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         </div>
     );
 
-    // ── Right panel: seat mode selected seats ──
     const renderSelectedSeatsPanel = () => {
         if (mode !== 'seat') return null;
         return (
@@ -573,21 +618,43 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         ? selectedSeatIds.size > 0
         : !!selectedZone;
 
-    // ── Seat mode legend ──
     const seatLegend = () => {
         if (mode !== 'seat') return null;
+
         return (
             <div style={{ display: 'flex', gap: 16, fontSize: 12, color: TEXT_MUTED, marginBottom: 6 }}>
-                {[
-                    { color: SEAT_AVAILABLE_COLOR, label: 'Đang trống' },
-                    { color: SEAT_SELECTED_COLOR, label: 'Đang chọn' },
-                    { color: SEAT_SOLD_COLOR, label: 'Không chọn được' },
-                ].map(({ color, label }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: color, border: '1px solid #555' }} />
-                        {label}
-                    </div>
-                ))}
+                {/* Available */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{
+                        width: 15,
+                        height: 15,
+                        borderRadius: 4,
+                        background: SEAT_AVAILABLE_COLOR,
+                        border: '1px solid #555'
+                    }} />
+                    Ghế đang trống
+                </div>
+
+                {/* Selected */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{
+                        width: 15,
+                        height: 15,
+                        borderRadius: 4,
+                        background: SEAT_SELECTED_COLOR,
+                    }} />
+                    Ghế đang chọn
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{
+                        width: 15,
+                        height: 15,
+                        borderRadius: 4,
+                        background: SEAT_SOLD_COLOR,
+                    }} />
+                    Ghế đã bán
+                </div>
             </div>
         );
     };
@@ -852,56 +919,184 @@ const popupQtyBtn: React.CSSProperties = {
     fontWeight: 700,
 };
 
-// ─────────────────────────────────────────────
-// Page wrapper (demo / standalone usage)
-// Nhận seatMapData qua props hoặc từ URL param
-// ─────────────────────────────────────────────
 
-interface SeatMapViewerPageProps {
-    seatMapData?: SeatMapData;
-    mode?: ViewerMode;
-    ticketTypes?: TicketType[];
-    onConfirm?: (payload: ConfirmPayload) => void;
-    onBack?: () => void;
-}
+const SeatMapViewerPage: React.FC = () => {
+    const { id: eventId } = useParams<{ id: string }>();
+    const dispatch = useDispatch<AppDispatch>();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-const DEFAULT_TICKET_TYPES: TicketType[] = [
-    { id: 'VIP', name: 'Vé VIP Premium', color: '#8B5CF6', price: 500000 },
-    { id: 'STANDARD', name: 'Vé Standard', color: '#3b82f6', price: 300000 },
-    { id: 'ECONOMY', name: 'Vé Economy', color: '#10b981', price: 150000 },
-];
+    const { eventSessionId } = location.state || {};
 
-const EMPTY_MAP: SeatMapData = { areas: [], texts: [] };
+    const { spec, loading: seatMapLoading } = useSelector((state: RootState) => state.SEATMAP);
+    const { ticketTypes: ticketTypeItems } = useSelector((state: RootState) => state.TICKET_TYPE);
+    const { currentEvent } = useSelector((state: RootState) => state.EVENT);
 
-const SeatMapViewerPage: React.FC<SeatMapViewerPageProps> = ({
-    seatMapData = EMPTY_MAP,
-    mode = 'zone',
-    ticketTypes = DEFAULT_TICKET_TYPES,
-    onConfirm,
-    onBack,
-}) => {
+    useEffect(() => {
+        if (!eventId) return;
+        dispatch(fetchEventById(eventId));
+    }, [eventId, dispatch]);
+
+    useEffect(() => {
+        if (!currentEvent) return;
+
+        if (currentEvent.status !== "Published" && currentEvent.status !== "Completed") {
+            notify.error("Sự kiện chưa được mở bán");
+            navigate(`/event-detail/${eventId}`);
+        }
+    }, [currentEvent, eventId, navigate]);
+
+    useEffect(() => {
+        if (!eventSessionId) {
+            notify.error("Thiếu session, quay lại trang sự kiện");
+            navigate(`/event-detail/${eventId}`);
+        }
+    }, [eventSessionId, eventId, navigate]);
+
+    useEffect(() => {
+        if (!eventId || !eventSessionId) return;
+
+        dispatch(fetchGetSeatMap(eventId));
+        dispatch(fetchGetAllTicketTypes({ eventId }));
+    }, [eventId, eventSessionId, dispatch]);
+
+    const seatMapData = useMemo<SeatMapData>(() => {
+        if (!spec) return { areas: [], texts: [] };
+        try {
+            return JSON.parse(spec) as SeatMapData;
+        } catch {
+            return { areas: [], texts: [] };
+        }
+    }, [spec]);
+
+    const ticketTypes = useMemo<TicketType[]>(() => {
+        const seen = new Set<string>();
+
+        return seatMapData.areas
+            .filter(area =>
+                area.isAreaType &&
+                area.ticketTypeId &&
+                !seen.has(area.ticketTypeId) &&
+                seen.add(area.ticketTypeId)
+            )
+            .map(area => {
+                const item = ticketTypeItems.find(t => t.id === area.ticketTypeId);
+
+                return {
+                    id: area.ticketTypeId,
+                    name: item?.name ?? area.ticketTypeId,
+                    color: area.fill ?? '#6b7280',
+                    price: area.price,
+                };
+            });
+    }, [seatMapData, ticketTypeItems]);
+
+    const mode = useMemo<ViewerMode>(() => {
+        const hasSeats = seatMapData.areas.some(area => area.seats && area.seats.length > 0);
+        return hasSeats ? 'seat' : 'zone';
+    }, [seatMapData]);
+
+    const SESSION_ID = eventSessionId!;
+
+    const handleConfirm = async (payload: ConfirmPayload) => {
+        if (!SESSION_ID) {
+            notify.error("Session không hợp lệ");
+            return;
+        }
+
+        let tickets: TicketRequest[] = [];
+
+        if (payload.mode === 'zone' && payload.zones) {
+            tickets = payload.zones.flatMap(zone =>
+                Array.from({ length: zone.quantity }, () => ({
+                    eventSessionId: SESSION_ID,
+                    ticketTypeId: zone.ticketTypeId,
+                }))
+            );
+        }
+
+        if (payload.mode === 'seat' && payload.seats) {
+            tickets = payload.seats.map(seat => ({
+                eventSessionId: SESSION_ID,
+                ticketTypeId: seat.ticketTypeId,
+                seatId: seat.id,
+            }));
+        }
+
+        const request: CreatePendingOrderRequest = { tickets };
+
+        console.log('=== CreatePendingOrderRequest ===');
+        console.log(JSON.stringify(request, null, 2));
+
+        const result = await dispatch(fetchCreatePendingOrder(request));
+
+        if (fetchCreatePendingOrder.fulfilled.match(result)) {
+            notify.success("Tạo order thành công");
+        } else {
+            notify.error("Tạo order thất bại");
+        }
+    };
+
+    if (!eventSessionId || !currentEvent) return null;
+
+    if (seatMapLoading) {
+        return (
+            <div
+                style={{
+                    width: '100vw',
+                    height: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#0B0B12',
+                    color: 'white',
+                    fontSize: 16,
+                }}
+            >
+                Đang tải...
+            </div>
+        );
+    }
+
     return (
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#0B0B12' }}>
             {/* Top nav */}
-            <div style={{
-                height: 48,
-                background: '#18122B',
-                borderBottom: '1px solid #2a2a3e',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 16px',
-                gap: 16,
-                flexShrink: 0,
-            }}>
-                {onBack && (
-                    <button
-                        onClick={onBack}
-                        style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}
-                    >
-                        ← Trở về
-                    </button>
-                )}
-                <span style={{ fontSize: 14, color: '#e5e7eb', fontWeight: 600 }}>Chọn vé</span>
+            <div
+                style={{
+                    height: 48,
+                    background: "#18122B",
+                    borderBottom: "1px solid #2a2a3e",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0 16px",
+                    flexShrink: 0,
+                    gap: 12,
+                }}
+            >
+                <button
+                    onClick={() => navigate(`/event-detail/${eventId}`)}
+                    className="
+                        flex items-center gap-2
+                        px-3 py-1.5
+                        rounded-md
+                        bg-[#221A3A] 
+                        text-gray-200 font-semibold text-sm
+                        hover:bg-[#2a2147]
+                        transition-colors
+                    "
+                >
+                    <FiArrowLeft size={18} />
+                    Trở về
+                </button>
+                <span
+                    style={{
+                        fontSize: 14,
+                        color: "#e5e7eb",
+                        fontWeight: 600,
+                    }}
+                >
+                    Click trái để chọn ghế • Giữ chuột phải và kéo để di chuyển • Cuộn để zoom
+                </span>
             </div>
 
             {/* Main viewer */}
@@ -910,7 +1105,7 @@ const SeatMapViewerPage: React.FC<SeatMapViewerPageProps> = ({
                     seatMapData={seatMapData}
                     mode={mode}
                     ticketTypes={ticketTypes}
-                    onConfirm={onConfirm}
+                    onConfirm={handleConfirm}
                 />
             </div>
         </div>
@@ -918,5 +1113,5 @@ const SeatMapViewerPage: React.FC<SeatMapViewerPageProps> = ({
 };
 
 export { SeatMapViewer };
-export type { SeatMapViewerProps, ConfirmPayload, ViewerMode };
+export type { ConfirmPayload, SeatMapViewerProps, ViewerMode };
 export default SeatMapViewerPage;

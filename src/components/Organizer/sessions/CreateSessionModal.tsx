@@ -4,6 +4,11 @@ import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../store";
 import { notify } from "../../../utils/notify";
 
+// ── NEW: pure validation helper ───────────────────────────────────────────────
+import { validateSession, errorsToFieldMap } from "../../../utils/eventValidation";
+import DateTimeInput from "../shared/DateTimeInput";
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface SessionFormErrors {
     title?: string;
     startTime?: string;
@@ -21,7 +26,7 @@ interface Props {
 }
 
 export default function CreateSessionModal({
-    open, onClose, eventId, eventStartAt, eventEndAt, onCreated, isAllowUpdate = true
+    open, onClose, eventId, eventStartAt, eventEndAt, onCreated, isAllowUpdate = true,
 }: Props) {
     const dispatch = useDispatch<AppDispatch>();
 
@@ -34,40 +39,17 @@ export default function CreateSessionModal({
 
     if (!open) return null;
 
-    const formatDateTime = (iso: string) => {
-        if (!iso) return "—";
-        return new Date(iso).toLocaleString("vi-VN", {
-            weekday: "short",
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    };
-
+    // ── CHANGED: hand-rolled validate() replaced with the pure helper ─────────
     const validate = (): boolean => {
-        const e: SessionFormErrors = {};
-        if (!title.trim()) e.title = "Tiêu đề không được để trống";
-        if (!startTime) e.startTime = "Vui lòng chọn thời gian bắt đầu";
-        if (!endTime) e.endTime = "Vui lòng chọn thời gian kết thúc";
-        else if (startTime && endTime <= startTime)
-            e.endTime = "Thời gian kết thúc phải sau thời gian bắt đầu";
-
-        // Validate nằm trong khoảng sự kiện
-        if (startTime && eventStartAt && new Date(startTime) < new Date(eventStartAt))
-            e.startTime = `Suất diễn phải bắt đầu sau ${formatDateTime(new Date(eventStartAt).toISOString())}`;
-
-        if (endTime && eventEndAt && new Date(endTime) > new Date(eventEndAt))
-            e.endTime = `Suất diễn phải kết thúc trước ${formatDateTime(new Date(eventEndAt).toISOString())}`;
-
-        setErrors(e);
-        return Object.keys(e).length === 0;
+        const result = validateSession(
+            { id: "", title, startTime, endTime },
+            { eventStartAt, eventEndAt }
+        );
+        const map = errorsToFieldMap(result.errors) as SessionFormErrors;
+        setErrors(map);
+        return result.valid;
     };
-
-    // hint min/max cho datetime-local input
-    const minDateTime = eventStartAt || undefined;
-    const maxDateTime = eventEndAt || undefined;
+    // ─────────────────────────────────────────────────────────────────────────
 
     const handleSubmit = async () => {
         if (!validate()) return;
@@ -109,6 +91,16 @@ export default function CreateSessionModal({
                     <p className="text-gray-400 text-sm mt-1">Điền thông tin chi tiết cho suất diễn mới của bạn.</p>
                 </div>
 
+                {/* NEW: show event window hint when it's set */}
+                {(eventStartAt || eventEndAt) && (
+                    <div className="mb-5 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-slate-400">
+                        <span className="text-primary/60">⏱</span>
+                        Suất diễn phải nằm trong khung giờ sự kiện
+                        {eventStartAt && <> từ <span className="text-slate-300">{new Date(eventStartAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></>}
+                        {eventEndAt && <> đến <span className="text-slate-300">{new Date(eventEndAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></>}
+                    </div>
+                )}
+
                 <div className="space-y-5">
                     {/* Title */}
                     <div>
@@ -129,9 +121,7 @@ export default function CreateSessionModal({
                                 if (errors.title) setErrors((p) => ({ ...p, title: undefined }));
                             }}
                         />
-                        {errors.title && (
-                            <p className="text-xs text-red-400 mt-1">{errors.title}</p>
-                        )}
+                        {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title}</p>}
                     </div>
 
                     {/* Description */}
@@ -152,50 +142,28 @@ export default function CreateSessionModal({
                     {/* Start / End time */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 ml-1">
-                                Bắt đầu
-                            </label>
-                            <input
-                                type="datetime-local"
-                                readOnly={!isAllowUpdate}
-                                min={minDateTime}
-                                max={maxDateTime}
-                                className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:ring-2 focus:ring-primary/20 outline-none transition-all [color-scheme:dark] ${errors.startTime
-                                    ? "border-red-500/60 focus:border-red-500"
-                                    : "border-white/10 focus:border-primary"
-                                    }`}
+                            <DateTimeInput
+                                label="Bắt đầu"
                                 value={startTime}
-                                onChange={(e) => {
-                                    setStartTime(e.target.value);
+                                onChange={(v) => {
+                                    setStartTime(v);
                                     if (errors.startTime) setErrors((p) => ({ ...p, startTime: undefined }));
                                 }}
+                                disabled={!isAllowUpdate}
                             />
-                            {errors.startTime && (
-                                <p className="text-xs text-red-400 mt-1">{errors.startTime}</p>
-                            )}
+                            {errors.startTime && <p className="text-xs text-red-400 mt-1">{errors.startTime}</p>}
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 ml-1">
-                                Kết thúc
-                            </label>
-                            <input
-                                type="datetime-local"
-                                readOnly={!isAllowUpdate}
-                                min={minDateTime}
-                                max={maxDateTime}
-                                className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:ring-2 focus:ring-primary/20 outline-none transition-all [color-scheme:dark] ${errors.endTime
-                                    ? "border-red-500/60 focus:border-red-500"
-                                    : "border-white/10 focus:border-primary"
-                                    }`}
+                            <DateTimeInput
+                                label="Kết thúc"
                                 value={endTime}
-                                onChange={(e) => {
-                                    setEndTime(e.target.value);
+                                onChange={(v) => {
+                                    setEndTime(v);
                                     if (errors.endTime) setErrors((p) => ({ ...p, endTime: undefined }));
                                 }}
+                                disabled={!isAllowUpdate}
                             />
-                            {errors.endTime && (
-                                <p className="text-xs text-red-400 mt-1">{errors.endTime}</p>
-                            )}
+                            {errors.endTime && <p className="text-xs text-red-400 mt-1">{errors.endTime}</p>}
                         </div>
                     </div>
                 </div>
