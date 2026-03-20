@@ -1,5 +1,4 @@
 import { Route, Routes } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
 import DashboardLayout from "./components/Organizer/layouts/DashboardLayout";
 import ManagementLayout from "./components/Organizer/layouts/ManagementLayout";
 import AnalyticsPage from "./pages/Organizer/AnalyticsPage";

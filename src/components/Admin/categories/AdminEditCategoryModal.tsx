@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { createPortal } from "react-dom";
 import { FiX } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
@@ -48,10 +49,13 @@ export default function AdminEditCategoryModal({ categoryId, onClose }: AdminEdi
         setSaving(true);
         try {
             await dispatch(fetchUpdateCategory({ id: categoryId, data: { code: form.code, name: form.name, description: form.description } })).unwrap();
+            toast.success("Cập nhật category thành công");
             await dispatch(fetchAllCategories({})).unwrap();
             onClose();
         } catch (e) {
             console.error(e);
+            const msg = (e as any)?.response?.data?.detail ?? (e as any)?.message ?? "Cập nhật thất bại";
+            toast.error(msg);
         } finally {
             setSaving(false);
         }
@@ -74,15 +78,9 @@ export default function AdminEditCategoryModal({ categoryId, onClose }: AdminEdi
                             <input value={form.code} onChange={(e) => setForm((s) => ({ ...s, code: e.target.value }))} className="w-full rounded-xl bg-black/40 border border-white/10 py-2 px-3 text-white text-sm outline-none focus:ring-1 focus:ring-primary" />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-sm text-slate-400 mb-1 block">Tên</label>
-                                <input value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} className="w-full rounded-xl bg-black/40 border border-white/10 py-2 px-3 text-white text-sm outline-none focus:ring-1 focus:ring-primary" />
-                            </div>
-                            <div>
-                                <label className="text-sm text-slate-400 mb-1 block">&nbsp;</label>
-                                <div className="text-xs text-slate-500 italic">ID: {current?.id ?? "-"}</div>
-                            </div>
+                        <div>
+                            <label className="text-sm text-slate-400 mb-1 block">Tên</label>
+                            <input value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} className="w-full rounded-xl bg-black/40 border border-white/10 py-2 px-3 text-white text-sm outline-none focus:ring-1 focus:ring-primary" />
                         </div>
 
                         <div>
