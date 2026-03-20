@@ -1,5 +1,4 @@
 import { Route, Routes } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
 import DashboardLayout from "./components/Organizer/layouts/DashboardLayout";
 import ManagementLayout from "./components/Organizer/layouts/ManagementLayout";
 import AnalyticsPage from "./pages/Organizer/AnalyticsPage";
@@ -22,6 +21,8 @@ import AllEvent from "./pages/AllEvent";
 import HistoryEvent from "./pages/HistoryEvent";
 import AdminLayout from "./components/Admin/layouts/AdminLayout";
 import AdminDashboardPage from "./pages/Admin/AdminDashboardPage";
+import AdminCategoryPage from "./pages/Admin/AdminCategoryPage";
+import AdminHashtagPage from "./pages/Admin/AdminHashtagPage";
 import FinanceRevenuePage from "./pages/Admin/FinanceRevenuePage";
 import EventModerationPage from "./pages/Admin/EventModerationPage";
 import UserManagementPage from "./pages/Admin/UserManagementPage";
@@ -96,6 +97,8 @@ function App() {
         {/* Admin group */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
+          <Route path="categories" element={<AdminCategoryPage />} />
+          <Route path="hashtags" element={<AdminHashtagPage />} />
           <Route path="finance" element={<FinanceRevenuePage />} />
           <Route path="events" element={<EventModerationPage />} />
           <Route path="users" element={<UserManagementPage />} />

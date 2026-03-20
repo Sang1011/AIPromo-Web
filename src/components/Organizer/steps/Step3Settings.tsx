@@ -13,6 +13,7 @@ interface Step3SettingsProps {
     onBack?: () => void;
     eventData: GetEventDetailResponse | null;
     reloadEvent?: () => Promise<void>;
+    isAllowUpdate?: boolean;
 }
 
 type EventSettingsForm = {
@@ -21,7 +22,7 @@ type EventSettingsForm = {
 };
 
 export default function Step3Settings({
-    onNext, onBack, eventData, reloadEvent
+    onNext, onBack, eventData, reloadEvent, isAllowUpdate = true,
 }: Step3SettingsProps) {
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
@@ -57,6 +58,9 @@ export default function Step3Settings({
     };
 
     const validateForm = () => {
+        // Nếu không được update đầy đủ thì bỏ qua validate URL
+        if (!isAllowUpdate) return true;
+
         const newErrors: Partial<Record<keyof EventSettingsForm, string>> = {};
         if (!settingsForm.urlPath) {
             newErrors.urlPath = "Vui lòng nhập đường dẫn tùy chỉnh";
@@ -80,21 +84,37 @@ export default function Step3Settings({
         if (!eventId) return;
 
         try {
-            await dispatch(fetchUpdateEventSettings({
-                eventId,
-                data: {
-                    ...settingsForm,
-                    ticketSaleStartAt: eventData?.ticketSaleStartAt ?? "",
-                    ticketSaleEndAt: eventData?.ticketSaleEndAt ?? "",
-                    eventStartAt: eventData?.eventStartAt ?? "",
-                    eventEndAt: eventData?.eventEndAt ?? "",
-                }
-            })).unwrap();
+            if (isAllowUpdate) {
+                await dispatch(fetchUpdateEventSettings({
+                    eventId,
+                    data: {
+                        ...settingsForm,
+                        ticketSaleStartAt: eventData?.ticketSaleStartAt ?? "",
+                        ticketSaleEndAt: eventData?.ticketSaleEndAt ?? "",
+                        eventStartAt: eventData?.eventStartAt ?? "",
+                        eventEndAt: eventData?.eventEndAt ?? "",
+                    }
+                })).unwrap();
+            } else {
+                await dispatch(fetchUpdateEventSettings({
+                    eventId,
+                    data: {
+                        isEmailReminderEnabled: settingsForm.isEmailReminderEnabled
+                    }
+                })).unwrap();
+            }
+
             await reloadEvent?.();
             notify.success("Đã lưu cài đặt sự kiện");
             onNext?.();
-        } catch {
-            notify.error("Không thể lưu cài đặt sự kiện");
+        } catch (err: any) {
+            const code = err?.code ?? err?.errorCode ?? err?.message ?? "";
+            if (typeof code === "string" && code.toLowerCase().includes("urlpath")) {
+                notify.error("Đường dẫn URL đã tồn tại, vui lòng chọn đường dẫn khác");
+                setErrors((prev) => ({ ...prev, urlPath: "Đường dẫn này đã được sử dụng" }));
+            } else {
+                notify.error("Không thể lưu cài đặt sự kiện");
+            }
         }
     };
 
@@ -133,6 +153,7 @@ export default function Step3Settings({
                     </div>
                     <h2 className="text-lg font-semibold text-white">Cài đặt tùy chỉnh</h2>
                 </div>
+                {/* Toggle email — luôn cho phép chỉnh */}
                 <Toggle
                     title="Tự động gửi email nhắc nhở"
                     desc="Gửi thông báo cho người tham dự 24h trước khi sự kiện diễn ra."
@@ -148,7 +169,7 @@ export default function Step3Settings({
                         <FiMap />
                     </div>
                     <div>
-                        <h2 className="text-lg font-semibold text-white">Sơ đồ chỗ ngồi</h2>
+                        <h2 className="text-lg font-semibold text-white">Sơ đồ chỗ ngồi trực quan</h2>
                         <p className="text-xs text-slate-500 mt-0.5">Thiết lập sơ đồ ghế cho sự kiện của bạn</p>
                     </div>
                 </div>
@@ -166,16 +187,17 @@ export default function Step3Settings({
                                 <FiMap size={15} className="text-emerald-400" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-white">Sơ đồ đã được thiết lập</p>
+                                <p className="text-sm font-semibold text-white">Sơ đồ trực quan đã được thiết lập</p>
                                 <p className="text-xs text-slate-500 mt-0.5">Nhấn để chỉnh sửa cấu hình ghế ngồi</p>
                             </div>
                         </div>
                         <button
                             type="button"
+                            disabled={!isAllowUpdate}
                             onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map/edit`, {
                                 state: { from: "edit" }
                             })}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 text-sm text-white font-medium transition-all"
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 text-sm text-white font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <FiEdit2 size={14} />
                             Chỉnh sửa
@@ -195,10 +217,11 @@ export default function Step3Settings({
                         </div>
                         <button
                             type="button"
+                            disabled={!isAllowUpdate}
                             onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map/edit`, {
                                 state: { from: "edit" }
                             })}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <FiPlus size={15} />
                             Thêm sơ đồ chỗ ngồi
@@ -224,12 +247,14 @@ export default function Step3Settings({
                         <input
                             value={settingsForm.urlPath}
                             onChange={(e) => updateForm("urlPath", e.target.value)}
-                            className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:border-primary"
+                            readOnly={!isAllowUpdate}
+                            className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white outline-none focus:border-primary disabled:opacity-40 disabled:cursor-not-allowed"
                         />
                         <button
                             type="button"
                             onClick={generateUrl}
-                            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm text-white transition"
+                            disabled={!isAllowUpdate}
+                            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             Tạo
                         </button>
@@ -245,7 +270,6 @@ export default function Step3Settings({
                 </div>
             </section>
 
-            {/* ===== Footer ===== */}
             <div className="flex items-center justify-between pt-4">
                 <button
                     onClick={onBack}

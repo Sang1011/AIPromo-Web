@@ -13,9 +13,9 @@ interface PolicySection {
 
 interface Step4PolicyProps {
     onBack?: () => void;
-    onNext?: () => void;
     eventData?: GetEventDetailResponse | null;
     reloadEvent?: () => Promise<void>;
+    isAllowUpdate: boolean;
 }
 
 const defaultSections: PolicySection[] = [
@@ -68,6 +68,7 @@ export default function Step4Policy({
     onBack,
     eventData,
     reloadEvent,
+    isAllowUpdate,
 }: Step4PolicyProps) {
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
@@ -165,6 +166,7 @@ export default function Step4Policy({
             await handleSave();
             await dispatch(fetchRequestPublishEvent(eventData.id)).unwrap();
             notify.success("Gửi yêu cầu duyệt thành công!");
+            localStorage.removeItem(`editEventStep_${eventData.id}`);
             navigate("/organizer/my-events");
         } catch {
             notify.error("Gửi yêu cầu duyệt thất bại");
@@ -200,12 +202,14 @@ export default function Step4Policy({
                                 value={sec.title}
                                 onChange={(e) => updateTitle(si, e.target.value)}
                                 placeholder="Tiêu đề điều khoản..."
-                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-violet-500"
+                                readOnly={!isAllowUpdate}
+                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-violet-500 disabled:opacity-40 disabled:cursor-not-allowed"
                             />
                             {sections.length > 1 && (
                                 <button
                                     onClick={() => removeSection(si)}
-                                    className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded-lg hover:bg-red-500/10 transition"
+                                    disabled={!isAllowUpdate}
+                                    className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded-lg hover:bg-red-500/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     Xóa mục
                                 </button>
@@ -222,12 +226,14 @@ export default function Step4Policy({
                                         value={item}
                                         onChange={(e) => updateItem(si, ii, e.target.value)}
                                         placeholder="Nội dung điều khoản..."
-                                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500"
+                                        readOnly={!isAllowUpdate}
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500 disabled:opacity-40 disabled:cursor-not-allowed"
                                     />
                                     {sec.items.length > 1 && (
                                         <button
                                             onClick={() => removeItem(si, ii)}
-                                            className="text-slate-500 hover:text-red-400 transition text-lg leading-none"
+                                            disabled={!isAllowUpdate}
+                                            className="text-slate-500 hover:text-red-400 transition text-lg leading-none disabled:opacity-40 disabled:cursor-not-allowed"
                                         >
                                             ×
                                         </button>
@@ -237,7 +243,8 @@ export default function Step4Policy({
 
                             <button
                                 onClick={() => addItem(si)}
-                                className="text-violet-400 hover:text-violet-300 text-xs mt-1 transition"
+                                disabled={!isAllowUpdate}
+                                className="text-violet-400 hover:text-violet-300 text-xs mt-1 transition disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 + Thêm dòng
                             </button>
@@ -249,13 +256,15 @@ export default function Step4Policy({
             {/* Add section */}
             <button
                 onClick={addSection}
-                className="w-full py-3 rounded-2xl border border-dashed border-white/10 text-slate-400 hover:text-white hover:border-violet-500 text-sm transition"
+                disabled={!isAllowUpdate}
+                className="w-full py-3 rounded-2xl border border-dashed border-white/10 text-slate-400 hover:text-white hover:border-violet-500 text-sm transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-slate-400 disabled:hover:border-white/10"
             >
                 + Thêm điều khoản
             </button>
 
             {/* Footer */}
             <div className="flex items-center justify-between pt-6">
+                {/* Nút quay lại — KHÔNG disable */}
                 <button
                     onClick={onBack}
                     className="px-6 py-2 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5"
@@ -267,15 +276,15 @@ export default function Step4Policy({
                     {isDraft && (
                         <button
                             onClick={handleRequestPublish}
-                            disabled={publishing}
+                            disabled={publishing || !isAllowUpdate}
                             className="px-8 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition"
                         >
-                            {publishing ? "Đang gửi..." : "Yêu cầu duyệt"}
+                            {publishing ? "Đang gửi..." : "Lưu và gửi yêu cầu duyệt"}
                         </button>
                     )}
                     <button
                         onClick={handleSave}
-                        disabled={loading}
+                        disabled={loading || !isAllowUpdate}
                         className="px-8 py-2.5 rounded-xl bg-primary text-white font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {loading ? "Đang lưu..." : "Lưu lại"}

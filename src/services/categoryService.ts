@@ -18,6 +18,15 @@ const categoryService = {
     getCategoryById: (id: number): Promise<AxiosResponse<GetCategoryByIdResponse>> => {
         return interceptorAPI().get(`/categories/${id}`);
     },
+    updateCategory: (id: number, data: { code?: string; name?: string; description?: string }): Promise<AxiosResponse<void>> => {
+        return interceptorAPI().put(`/categories/${id}`, data);
+    },
+    toggleCategoryStatus: (id: number, activate: boolean): Promise<AxiosResponse<void>> => {
+        return interceptorAPI().patch(`/categories/${id}/status`, { activate });
+    },
+    deleteCategory: (id: number): Promise<AxiosResponse<void>> => {
+        return interceptorAPI().delete(`/categories/${id}`);
+    },
 }
 
 export default categoryService

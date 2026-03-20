@@ -1,4 +1,4 @@
-type FilterStatus = "Upcoming" | "Past" | "Pending" | "Draft";
+type FilterStatus = "Upcoming" | "Past" | "Pending" | "Draft" | "Suspend";
 
 interface StatusFiltersProps {
     activeFilter?: FilterStatus;
@@ -7,6 +7,7 @@ interface StatusFiltersProps {
 
 const FILTERS: Array<{ key: FilterStatus; label: string }> = [
     { key: "Upcoming", label: "Đang diễn ra" },
+    { key: "Suspend", label: "Trì hoãn" },
     { key: "Past", label: "Đã qua" },
     { key: "Pending", label: "Chờ duyệt" },
     { key: "Draft", label: "Nháp" },

@@ -14,13 +14,14 @@ interface Props {
     open: boolean;
     onClose: () => void;
     eventId: string;
-    eventStartAt?: string; // thêm
-    eventEndAt?: string;   // thêm
+    eventStartAt?: string;
+    eventEndAt?: string;
     onCreated?: () => void;
+    isAllowUpdate?: boolean;
 }
 
 export default function CreateSessionModal({
-    open, onClose, eventId, eventStartAt, eventEndAt, onCreated
+    open, onClose, eventId, eventStartAt, eventEndAt, onCreated, isAllowUpdate = true
 }: Props) {
     const dispatch = useDispatch<AppDispatch>();
 
@@ -116,6 +117,7 @@ export default function CreateSessionModal({
                         </label>
                         <input
                             type="text"
+                            readOnly={!isAllowUpdate}
                             placeholder="VD: Buổi sáng - Khai mạc"
                             className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-white/20 ${errors.title
                                 ? "border-red-500/60 focus:border-red-500"
@@ -140,6 +142,7 @@ export default function CreateSessionModal({
                         <textarea
                             placeholder="Nhập nội dung tóm tắt..."
                             rows={3}
+                            readOnly={!isAllowUpdate}
                             className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none placeholder:text-white/20"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
@@ -154,6 +157,7 @@ export default function CreateSessionModal({
                             </label>
                             <input
                                 type="datetime-local"
+                                readOnly={!isAllowUpdate}
                                 min={minDateTime}
                                 max={maxDateTime}
                                 className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:ring-2 focus:ring-primary/20 outline-none transition-all [color-scheme:dark] ${errors.startTime
@@ -176,6 +180,7 @@ export default function CreateSessionModal({
                             </label>
                             <input
                                 type="datetime-local"
+                                readOnly={!isAllowUpdate}
                                 min={minDateTime}
                                 max={maxDateTime}
                                 className={`w-full px-4 py-3 rounded-xl bg-white/5 border focus:ring-2 focus:ring-primary/20 outline-none transition-all [color-scheme:dark] ${errors.endTime
@@ -204,7 +209,7 @@ export default function CreateSessionModal({
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={saving}
+                        disabled={saving || !isAllowUpdate}
                         className="px-8 py-2.5 rounded-xl font-medium bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
                     >
                         {saving ? "Đang tạo..." : "Tạo ngay"}

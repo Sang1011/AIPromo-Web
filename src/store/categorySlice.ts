@@ -67,6 +67,51 @@ export const fetchCreateCategory = createAsyncThunk<
     }
 );
 
+export const fetchUpdateCategory = createAsyncThunk<
+    void,
+    { id: number; data: Partial<CreateCategoryRequest> }
+>(
+    `${name}/fetchUpdateCategory`,
+    async (params, thunkAPI) => {
+        try {
+            const response = await categoryService.updateCategory(params.id, params.data);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchToggleCategoryStatus = createAsyncThunk<
+    void,
+    { id: number; activate: boolean }
+>(
+    `${name}/fetchToggleCategoryStatus`,
+    async (params, thunkAPI) => {
+        try {
+            const response = await categoryService.toggleCategoryStatus(params.id, params.activate);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchDeleteCategory = createAsyncThunk<
+    void,
+    number
+>(
+    `${name}/fetchDeleteCategory`,
+    async (id, thunkAPI) => {
+        try {
+            const response = await categoryService.deleteCategory(id);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 const categorySlice = createSlice({
     name,
     initialState,
@@ -84,6 +129,26 @@ const categorySlice = createSlice({
             fetchCategoryById.fulfilled,
             (state, action: PayloadAction<GetCategoryByIdResponse>) => {
                 state.currentCategory = action.payload.data;
+            }
+        );
+
+        builder.addCase(
+            fetchUpdateCategory.fulfilled,
+            () => {
+                // after successful update we'll rely on UI to re-fetch list or fetchCategoryById
+            }
+        );
+
+        builder.addCase(
+            fetchToggleCategoryStatus.fulfilled,
+            () => {
+                // no-op: UI will re-fetch
+            }
+        );
+        builder.addCase(
+            fetchDeleteCategory.fulfilled,
+            () => {
+                // UI will re-fetch
             }
         );
 

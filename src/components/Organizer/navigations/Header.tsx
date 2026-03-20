@@ -1,29 +1,35 @@
+import { useEffect } from "react";
 import {
     FiPlus,
     FiChevronDown,
     FiUser,
     FiArrowLeft,
 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import type { AppDispatch, RootState } from "../../../store";
+import { fetchEventById } from "../../../store/eventSlice";
 
 interface HeaderProps {
     title?: string;
-    eventName?: string;
     canGoBack?: boolean;
+    haveTitle?: boolean;
     urlBack?: string;
     onBack?: () => void;
 }
 
 export default function Header({
     title,
-    eventName,
     canGoBack = false,
+    haveTitle = false,
     urlBack,
     onBack,
 }: HeaderProps) {
     const navigate = useNavigate();
-    const isEventHeader = !!eventName;
-
+    const { eventId } = useParams<{ eventId: string }>();
+    const dispatch = useDispatch<AppDispatch>();
+    const { currentEvent } = useSelector((state: RootState) => state.EVENT);
+    const isEventHeader = !!eventId;
     const handleBack = () => {
         if (onBack) {
             onBack();
@@ -33,6 +39,12 @@ export default function Header({
             navigate(-1);
         }
     };
+
+
+    useEffect(() => {
+        if (!eventId) return;
+        dispatch(fetchEventById(eventId));
+    }, [eventId, dispatch]);
 
     return (
         <header className="sticky top-0 z-40 h-20 bg-gradient-to-b from-black/40 to-black/20 backdrop-blur-xl border-b border-white/10">
@@ -49,15 +61,11 @@ export default function Header({
                     )}
 
                     <div className="flex flex-col justify-center">
-                        {isEventHeader ? (
-                            <h1 className="text-2xl font-bold text-white">
-                                {eventName}
-                            </h1>
-                        ) : (
-                            <h1 className="text-2xl font-bold text-white">
-                                {title}
-                            </h1>
-                        )}
+                        <h1 className="text-2xl font-bold text-white">
+                            {haveTitle && isEventHeader
+                                ? currentEvent?.title || "Đang tải..."
+                                : title}
+                        </h1>
                     </div>
                 </div>
 

@@ -1,6 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./authSlice";
-import hashtagReducer from "./authSlice";
+import hashtagReducer from "./hashtagSlice";
 import eventReducer from "./eventSlice";
 import categoryReducer from "./categorySlice";
 import ticketTypeReducer from "./ticketTypeSlice";
