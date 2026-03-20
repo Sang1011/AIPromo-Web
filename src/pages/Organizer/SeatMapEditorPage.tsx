@@ -14,6 +14,7 @@ import { fetchAssignAreas, fetchGetSeatMap, fetchUpdateSeatMap } from '../../sto
 import { notify } from '../../utils/notify';
 import type { TicketTypeItem } from '../../types/ticketType/ticketType';
 import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
+import { fetchEventById } from '../../store/eventSlice';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -30,30 +31,22 @@ type GuideLine = {
     y?: number;
 };
 
-const SEAT_COLOR_PRESET = [
-    '#7C3AED', // violet-600
-    '#2563EB', // blue-600
-    '#059669', // emerald-600
-    '#D97706', // amber-600
-    '#DC2626', // red-600
-    '#6B7280', // gray-500
-];
-
 const TICKET_TYPE_COLORS = [
-    '#3b82f6', // blue
-    '#a855f7', // purple
-    '#ADD8E6', // lightblue
-    '#f59e0b', // amber
-    '#94a3b8', // slate
-    '#10b981', // emerald
-    '#ec4899', // pink
-    '#ef4444', // red
-    '#f97316', // orange
-    '#84cc16', // lime
-    '#06b6d4', // cyan
-    '#8b5cf6', // violet
-    '#d97706', // yellow-orange
-    '#6366f1', // indigo
+    '#3b82f6',
+    '#a855f7',
+    '#00c0ff',
+    '#f59e0b',
+    '#373737',
+    '#235d3a',
+    '#ec4899',
+    '#ef4444',
+    '#f97316',
+    '#65a30d',
+    '#0891b2',
+    '#008080',
+    '#8b5cf6',
+    '#d97706',
+    '#6366f1',
 ];
 
 
@@ -87,6 +80,9 @@ const SeatMapEditorPage: React.FC = () => {
     const groupDragAnchorRef = useRef<Konva.Node | null>(null);
     const [ticketTypes, setTicketTypes] = useState<TicketTypeItem[]>([]);
     const stageRef = useRef<Konva.Stage>(null);
+    const [seatWidthStr, setSeatWidthStr] = useState(String(seatWidth));
+    const [seatHeightStr, setSeatHeightStr] = useState(String(seatHeight));
+    const [seatSpacingStr, setSeatSpacingStr] = useState(String(seatSpacing));
     const transformerRef = useRef<Konva.Transformer>(null);
     const selectionRectRef = useRef<Konva.Rect>(null);
     const layerRef = useRef<Konva.Layer>(null);
@@ -144,8 +140,8 @@ const SeatMapEditorPage: React.FC = () => {
         }
     }, []);
 
-    // trong component — thay useState ticketTypes cũ
     const reduxTicketTypes = useSelector((state: RootState) => state.TICKET_TYPE.ticketTypes);
+    const { currentEvent } = useSelector((state: RootState) => state.EVENT);
 
     useEffect(() => {
         if (reduxTicketTypes.length === 0) return;
@@ -158,6 +154,12 @@ const SeatMapEditorPage: React.FC = () => {
                 };
             })
         );
+        setSections(prev => prev.map(s => {
+            if (s.isAreaType && !reduxTicketTypes.find(t => t.id === s.ticketTypeId)) {
+                return { ...s, ticketTypeId: reduxTicketTypes[0].id };
+            }
+            return s;
+        }));
     }, [reduxTicketTypes]);
 
     const searchSectionName = (sectionId: string) => {
@@ -195,7 +197,6 @@ const SeatMapEditorPage: React.FC = () => {
             ...textEntities.filter(t => selectedIds.includes(t.id))
         ];
         setClipboard(copiedEntities);
-
         console.log(`Đã copy ${copiedEntities.length} phần tử`);
     }, [selectedIds, sections, seats, textEntities]);
 
@@ -225,7 +226,6 @@ const SeatMapEditorPage: React.FC = () => {
             } else if (isSeat) {
                 const seat = entity as Seat;
                 const newSectionId = idMap.get(seat.sectionId) || seat.sectionId;
-
                 newSeats.push({
                     ...seat,
                     id: newId,
@@ -279,16 +279,13 @@ const SeatMapEditorPage: React.FC = () => {
 
         setSeats(prev =>
             prev.map(seat => {
-                // Seat được drag trực tiếp
                 if (dragStartPosRef.current[seat.id]) {
                     return { ...seat, x: snapToGrid(seat.x), y: snapToGrid(seat.y) };
                 }
-                // Seat thuộc section đang drag (track bằng key đặc biệt)
                 const sectionKey = `seat-of-${seat.sectionId}-${seat.id}`;
                 if (dragStartPosRef.current[sectionKey]) {
                     return { ...seat, x: snapToGrid(seat.x), y: snapToGrid(seat.y) };
                 }
-                // Seat thuộc section đang drag (fallback bằng sectionDeltas)
                 const delta = sectionDeltas[seat.sectionId];
                 if (delta) {
                     return { ...seat, x: snapToGrid(seat.x + delta.dx), y: snapToGrid(seat.y + delta.dy) };
@@ -298,11 +295,16 @@ const SeatMapEditorPage: React.FC = () => {
         );
 
         setTextEntities(prev =>
-            prev.map(t =>
-                dragStartPosRef.current[t.id]
-                    ? { ...t, x: snapToGrid(t.x), y: snapToGrid(t.y) }
-                    : t
-            )
+            prev.map(t => {
+                if (dragStartPosRef.current[t.id]) {
+                    return { ...t, x: snapToGrid(t.x), y: snapToGrid(t.y) };
+                }
+                const delta = sectionDeltas[t.attachedAreaId ?? ''];
+                if (delta) {
+                    return { ...t, x: snapToGrid(t.x + delta.dx), y: snapToGrid(t.y + delta.dy) };
+                }
+                return t;
+            })
         );
 
         setIsGroupDragging(false);
@@ -311,7 +313,6 @@ const SeatMapEditorPage: React.FC = () => {
         groupDragAnchorRef.current = null;
         saveToHistory();
     }, [saveToHistory]);
-
 
     const handleDragEnd = useCallback(
         (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
@@ -324,7 +325,6 @@ const SeatMapEditorPage: React.FC = () => {
             const dx = snapToGrid(node.x()) - startPos.x;
             const dy = snapToGrid(node.y()) - startPos.y;
 
-            // Nếu là section → dời seats theo
             const isSection = sections.some(s => s.id === id);
 
             setSections(prev =>
@@ -341,6 +341,13 @@ const SeatMapEditorPage: React.FC = () => {
                         seat.sectionId === id
                             ? { ...seat, x: seat.x + dx, y: seat.y + dy }
                             : seat
+                    )
+                );
+                setTextEntities(prev =>
+                    prev.map(t =>
+                        t.attachedAreaId === id
+                            ? { ...t, x: t.x + dx, y: t.y + dy }
+                            : t
                     )
                 );
             } else {
@@ -367,8 +374,7 @@ const SeatMapEditorPage: React.FC = () => {
         [saveToHistory, isGroupDragging, sections]
     );
 
-    const [seatFillColor, setSeatFillColor] = useState('#9ca3af');
-
+    const [seatFillColor] = useState('#ffffff');
 
     const handleTransformEnd = useCallback(
         (id: string, e: Konva.KonvaEventObject<Event>) => {
@@ -427,14 +433,11 @@ const SeatMapEditorPage: React.FC = () => {
         [sections, saveToHistory]
     );
 
-
     const [showLockModal, setShowLockModal] = useState(false);
 
     const changeShape = useCallback((shape: Area['type']) => {
         if (!isSingleSectionSelected || !selectedSection) return;
-
         if (selectedSection.type === 'polygon') return;
-
 
         const centerX = selectedSection.x + selectedSection.width / 2;
         const centerY = selectedSection.y + selectedSection.height / 2;
@@ -540,7 +543,6 @@ const SeatMapEditorPage: React.FC = () => {
         });
     };
 
-
     const createText = useCallback(() => {
         const stage = stageRef.current;
         if (!stage) return;
@@ -578,21 +580,6 @@ const SeatMapEditorPage: React.FC = () => {
     const createShapeAtPosition = (x: number, y: number) => {
         createSectionAtPosition(x, y, selectedShape, false);
     };
-
-    const applySeatColorToSection = useCallback(() => {
-        if (!selectedSection) return;
-
-        setSeats(prev =>
-            prev.map(seat =>
-                seat.sectionId === selectedSection.id
-                    ? { ...seat, fill: seatFillColor }
-                    : seat
-            )
-        );
-
-        saveToHistory();
-    }, [selectedSection, seatFillColor, saveToHistory]);
-
 
     const deleteSectionSeats = useCallback(() => {
         if (!isSingleSectionSelected || !selectedSection) return;
@@ -663,7 +650,7 @@ const SeatMapEditorPage: React.FC = () => {
 
         const newSeats: Seat[] = [];
         const newSeatIds: string[] = [];
-        const seatSize = 30;
+        const seatSize = seatWidth;
         const centerX = selectedSection.x + selectedSection.width / 2;
         const centerY = selectedSection.y + selectedSection.height / 2;
         const radius = Math.min(selectedSection.width, selectedSection.height) / 2 - 40;
@@ -688,8 +675,8 @@ const SeatMapEditorPage: React.FC = () => {
                 x,
                 y,
                 fill: seatFillColor,
-                width: seatSize,
-                height: seatSize,
+                width: seatWidth,
+                height: seatHeight,
                 rotation: angleDeg + 90,
                 status: 'available',
             });
@@ -828,7 +815,6 @@ const SeatMapEditorPage: React.FC = () => {
         const ticketType = ticketTypes.find(t => t.id === selectedSection.ticketTypeId);
         if (!ticketType?.quantity || ticketType.quantity <= 0) return;
 
-        // Chỉ tạo số còn thiếu
         const alreadyCreated = seats.filter(s => s.sectionId === selectedSection.id).length;
         const total = Math.max(0, ticketType.quantity - alreadyCreated);
         if (total <= 0) return;
@@ -931,6 +917,7 @@ const SeatMapEditorPage: React.FC = () => {
         ) => {
             const newId = crypto.randomUUID();
             const newSection: Area = {
+                fill: ticketTypes[0]?.color || TICKET_TYPE_COLORS[0],
                 id: newId,
                 name: ticketTypes[0]?.name,
                 type: shape,
@@ -962,7 +949,7 @@ const SeatMapEditorPage: React.FC = () => {
                 saveToHistory();
             });
         },
-        [saveToHistory]
+        [saveToHistory, ticketTypes]
     );
 
     useEffect(() => {
@@ -1042,7 +1029,6 @@ const SeatMapEditorPage: React.FC = () => {
                 return;
             }
 
-
             if (editorMode === 'SELECT' && e.evt.shiftKey) {
                 setIsSelecting(true);
                 setCursor('crosshair');
@@ -1061,8 +1047,6 @@ const SeatMapEditorPage: React.FC = () => {
             stagePos,
         ]
     );
-
-
 
     const zoomIn = () => {
         setStageScale(prev => Math.min(prev + 0.1, 3));
@@ -1122,7 +1106,6 @@ const SeatMapEditorPage: React.FC = () => {
 
         reader.readAsText(file);
     };
-
 
     const exportSeatMap = () => {
         const data: SeatMapData = {
@@ -1214,7 +1197,6 @@ const SeatMapEditorPage: React.FC = () => {
         t => t.id === selectedSection.ticketTypeId
     );
 
-
     const beginGroupDrag = (draggedId: string) => {
         setIsGroupDragging(true);
 
@@ -1231,7 +1213,6 @@ const SeatMapEditorPage: React.FC = () => {
                 dragStartPosRef.current[id] = { x: node.x(), y: node.y() };
             }
 
-            // Nếu id là section → lưu vị trí ban đầu của tất cả seats thuộc nó
             const isSection = sections.some(s => s.id === id);
             if (isSection) {
                 seats.filter(seat => seat.sectionId === id).forEach(seat => {
@@ -1240,7 +1221,6 @@ const SeatMapEditorPage: React.FC = () => {
             }
         });
     };
-
 
     useEffect(() => {
         const handleMouseUp = () => {
@@ -1391,6 +1371,8 @@ const SeatMapEditorPage: React.FC = () => {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            const tag = (e.target as HTMLElement).tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
             if (e.key === 'Delete' || e.key === 'Backspace') {
                 handleDelete();
             } else if (e.key === 'Escape') {
@@ -1432,7 +1414,6 @@ const SeatMapEditorPage: React.FC = () => {
         return () => observer.disconnect();
     }, []);
 
-
     const setCursor = (cursor: string) => {
         const stage = stageRef.current;
         if (stage) {
@@ -1442,7 +1423,7 @@ const SeatMapEditorPage: React.FC = () => {
 
     useEffect(() => {
         if (!eventId) return;
-
+        dispatch(fetchEventById(eventId));
         dispatch(fetchGetAllTicketTypes({ eventId }));
 
         dispatch(fetchGetSeatMap(eventId))
@@ -1475,7 +1456,6 @@ const SeatMapEditorPage: React.FC = () => {
                 console.warn('No seatmap found or failed to load:', err);
             });
     }, [eventId]);
-
 
     const renderSection = (area: Area) => {
         const ticketType = ticketTypes.find(t => t.id === area.ticketTypeId);
@@ -1532,7 +1512,6 @@ const SeatMapEditorPage: React.FC = () => {
 
                     applyGroupDragDelta(dx, dy);
                 }}
-
 
                 onDragEnd={(e) => {
                     if (isGroupDragging) {
@@ -1700,8 +1679,6 @@ const SeatMapEditorPage: React.FC = () => {
                     </button>
                 </div>
 
-
-
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <button
                         onClick={() => setShowLockModal(true)}
@@ -1834,7 +1811,7 @@ const SeatMapEditorPage: React.FC = () => {
                                 notify.error('Lưu thất bại');
                             }
                         }}
-                        disabled={seatMapLoading}
+                        disabled={seatMapLoading || currentEvent?.status === "Draft"}
                         style={{
                             background: seatMapLoading ? '#6d28d9' : '#8B5CF6',
                             border: 'none',
@@ -1979,7 +1956,6 @@ const SeatMapEditorPage: React.FC = () => {
 
                                 {seats.map(seat => {
                                     const isSelected = selectedIds.includes(seat.id);
-                                    const isPartOfMultiSelect = selectedIds.length > 1 && isSelected;
                                     return (
                                         <Rect
                                             key={seat.id}
@@ -2224,7 +2200,6 @@ const SeatMapEditorPage: React.FC = () => {
                             }}
                         >
                             <FaCopy />
-                            {/* ✅ Badge hiển thị số phần tử đã copy */}
                             {clipboard.length > 0 && (
                                 <span style={{
                                     position: 'absolute',
@@ -2276,9 +2251,7 @@ const SeatMapEditorPage: React.FC = () => {
                             display: 'flex',
                             flexDirection: 'column',
                             zIndex: 20,
-                            transform: showPropertiesPanel
-                                ? 'translateX(0)'
-                                : 'translateX(100%)',
+                            transform: showPropertiesPanel ? 'translateX(0)' : 'translateX(100%)',
                             opacity: showPropertiesPanel ? 1 : 0,
                             pointerEvents: showPropertiesPanel ? 'auto' : 'none',
                             transition: 'transform 0.25s ease, opacity 0.2s ease',
@@ -2389,72 +2362,28 @@ const SeatMapEditorPage: React.FC = () => {
                                         </div>
 
                                         <div style={{ marginBottom: '24px' }}>
-                                            <label
-                                                style={{
-                                                    display: 'block',
-                                                    fontSize: '12px',
-                                                    fontWeight: 600,
-                                                    color: '#9ca3af',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.05em',
-                                                    marginBottom: '12px',
-                                                }}
-                                            >
+                                            <label style={{
+                                                display: 'block',
+                                                fontSize: '12px',
+                                                fontWeight: 600,
+                                                color: '#9ca3af',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.05em',
+                                                marginBottom: '12px'
+                                            }}>
                                                 MÀU GHẾ
                                             </label>
-
-                                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                                {SEAT_COLOR_PRESET.map(color => (
-                                                    <button
-                                                        key={color}
-                                                        onClick={() => setSeatFillColor(color)}
-                                                        style={{
-                                                            width: 36,
-                                                            height: 36,
-                                                            background: color,
-                                                            border:
-                                                                seatFillColor === color
-                                                                    ? '3px solid white'
-                                                                    : '1px solid rgba(255,255,255,0.2)',
-                                                            borderRadius: 8,
-                                                            cursor: 'pointer',
-                                                        }}
-                                                    />
-                                                ))}
-
-
-                                                <label
-                                                    style={{
-                                                        width: '36px',
-                                                        height: '36px',
-                                                        borderRadius: '8px',
-                                                        border: '1px dashed rgba(255,255,255,0.4)',
-                                                        background: seatFillColor,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        cursor: 'pointer',
-                                                        position: 'relative',
-                                                        color: '#e5e7eb',
-                                                    }}
-                                                    title="Chọn màu ghế khác"
-                                                >
-                                                    <MdOutlinePalette />
-                                                    <input
-                                                        type="color"
-                                                        value={seatFillColor}
-                                                        onChange={(e) => setSeatFillColor(e.target.value)}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            inset: 0,
-                                                            opacity: 0,
-                                                            cursor: 'pointer',
-                                                        }}
-                                                    />
-                                                </label>
+                                            <div style={{
+                                                background: '#16162a',
+                                                border: '1px solid #2a2a3e',
+                                                borderRadius: '8px',
+                                                padding: '10px 12px',
+                                                color: '#9ca3af',
+                                                fontSize: '13px',
+                                            }}>
+                                                Ghế màu trắng
                                             </div>
                                         </div>
-
 
                                         <div style={{ marginBottom: '24px' }}>
                                             <label style={{
@@ -2528,8 +2457,13 @@ const SeatMapEditorPage: React.FC = () => {
                                                         type="number"
                                                         min={10}
                                                         max={100}
-                                                        value={seatWidth}
-                                                        onChange={(e) => setSeatWidth(Number(e.target.value))}
+                                                        value={seatWidthStr}
+                                                        onChange={(e) => setSeatWidthStr(e.target.value)}
+                                                        onBlur={() => {
+                                                            const v = Math.max(10, Number(seatWidthStr) || 10);
+                                                            setSeatWidth(v);
+                                                            setSeatWidthStr(String(v));
+                                                        }}
                                                         placeholder="Rộng"
                                                         style={{
                                                             flex: 1,
@@ -2541,11 +2475,16 @@ const SeatMapEditorPage: React.FC = () => {
                                                         }}
                                                     />
                                                     <input
-                                                        type="number"
                                                         min={10}
                                                         max={100}
-                                                        value={seatHeight}
-                                                        onChange={(e) => setSeatHeight(Number(e.target.value))}
+                                                        type="number"
+                                                        value={seatHeightStr}
+                                                        onChange={(e) => setSeatHeightStr(e.target.value)}
+                                                        onBlur={() => {
+                                                            const v = Math.max(10, Number(seatHeightStr) || 10);
+                                                            setSeatHeight(v);
+                                                            setSeatHeightStr(String(v));
+                                                        }}
                                                         placeholder="Cao"
                                                         style={{
                                                             flex: 1,
@@ -2573,8 +2512,13 @@ const SeatMapEditorPage: React.FC = () => {
                                                     type="number"
                                                     min={0}
                                                     max={50}
-                                                    value={seatSpacing}
-                                                    onChange={(e) => setSeatSpacing(Number(e.target.value))}
+                                                    value={seatSpacingStr}
+                                                    onChange={(e) => setSeatSpacingStr(e.target.value)}
+                                                    onBlur={() => {
+                                                        const v = Math.max(0, Number(seatSpacingStr) || 0);
+                                                        setSeatSpacing(v);
+                                                        setSeatSpacingStr(String(v));
+                                                    }}
                                                     style={{
                                                         width: '100%',
                                                         background: '#16162a',
@@ -2585,7 +2529,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                     }}
                                                 />
                                             </div>
-
 
                                             {seatLayoutType === 'grid' && (
                                                 <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
@@ -2684,40 +2627,27 @@ const SeatMapEditorPage: React.FC = () => {
                                                         }}>
                                                             Độ cong (độ)
                                                         </label>
-                                                        <div style={{ marginBottom: '12px' }}>
-                                                            <label
-                                                                style={{
-                                                                    display: 'block',
-                                                                    fontSize: '11px',
-                                                                    color: '#9ca3af',
-                                                                    marginBottom: '8px',
-                                                                }}
-                                                            >
-                                                                Độ cong
-                                                            </label>
 
-                                                            <select
-                                                                value={arcCurvature}
-                                                                onChange={(e) => setArcCurvature(Number(e.target.value))}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    background: '#16162a',
-                                                                    border: '1px solid #2a2a3e',
-                                                                    borderRadius: '6px',
-                                                                    padding: '8px 10px',
-                                                                    color: '#e5e7eb',
-                                                                    fontSize: '13px',
-                                                                    outline: 'none',
-                                                                }}
-                                                            >
-                                                                <option value={120}>1/3 vòng (120°)</option>
-                                                                <option value={180}>Nửa vòng (180°)</option>
-                                                                <option value={240}>2/3 vòng (240°)</option>
-                                                                <option value={270}>3/4 vòng (270°)</option>
-                                                                <option value={325}>Gần tròn (325°)</option>
-                                                            </select>
-                                                        </div>
-
+                                                        <select
+                                                            value={arcCurvature}
+                                                            onChange={(e) => setArcCurvature(Number(e.target.value))}
+                                                            style={{
+                                                                width: '100%',
+                                                                background: '#16162a',
+                                                                border: '1px solid #2a2a3e',
+                                                                borderRadius: '6px',
+                                                                padding: '8px 10px',
+                                                                color: '#e5e7eb',
+                                                                fontSize: '13px',
+                                                                outline: 'none',
+                                                            }}
+                                                        >
+                                                            <option value={120}>1/3 vòng (120°)</option>
+                                                            <option value={180}>Nửa vòng (180°)</option>
+                                                            <option value={240}>2/3 vòng (240°)</option>
+                                                            <option value={270}>3/4 vòng (270°)</option>
+                                                            <option value={325}>Gần tròn (325°)</option>
+                                                        </select>
                                                     </div>
                                                 </>
                                             )}
@@ -2940,7 +2870,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                 </span>
                                             </div>
                                         </div>
-
                                     </>
                                 )}
                                 {isSingleSectionSelected &&
@@ -3104,7 +3033,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                     />
                                                 </label>
                                             </div>
-
                                         </div>
                                     </>
                                 )}
@@ -3439,7 +3367,6 @@ const SeatMapEditorPage: React.FC = () => {
                                             </span>
                                         </div>
 
-
                                         <div style={{ marginBottom: '24px' }}>
                                             <label style={{
                                                 display: 'block',
@@ -3572,7 +3499,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                     gap: '12px',
                                                 }}
                                             >
-                                                {/* Color dot */}
                                                 <div style={{
                                                     width: '14px',
                                                     height: '14px',
@@ -3676,22 +3602,17 @@ const SeatMapEditorPage: React.FC = () => {
                             top: '30px',
                             right: '16px',
                             transform: 'translateY(-50%)',
-
                             width: '44px',
                             height: '44px',
                             borderRadius: '12px',
-
                             background: '#1a1a2e',
                             border: '1px solid #2a2a3e',
                             color: '#9ca3af',
-
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-
                             cursor: 'pointer',
                             zIndex: 30,
-
                             boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
                         }}
                         title="Mở bảng thuộc tính"
@@ -3699,7 +3620,6 @@ const SeatMapEditorPage: React.FC = () => {
                         <MdMenu />
                     </button>
                 )}
-
             </div>
             {contextMenu && (
                 <div
@@ -3790,18 +3710,14 @@ const SeatMapEditorPage: React.FC = () => {
                         ) : (
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
-                                    onClick={() =>
-                                        handleUnlockAllSections()
-                                    }
+                                    onClick={() => handleUnlockAllSections()}
                                     style={actionBtn('#10b981')}
                                 >
                                     Mở khóa tất cả
                                 </button>
 
                                 <button
-                                    onClick={() =>
-                                        handleLockAllSections()
-                                    }
+                                    onClick={() => handleLockAllSections()}
                                     style={actionBtn('#dc2626')}
                                 >
                                     Khóa tất cả
@@ -3887,7 +3803,7 @@ const SeatMapEditorPage: React.FC = () => {
                     </div>
                 </div>
             )}
-        </div >
+        </div>
     );
 };
 

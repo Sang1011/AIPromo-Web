@@ -2,11 +2,14 @@ import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axio
 import API from "../services/api";
 import authService from "../services/authService";
 
+let axiosInstance: AxiosInstance | null = null;
+
 interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
     _retry?: boolean;
 }
 
 let isRefreshing = false;
+let isLoggingOut = false;
 
 let pendingQueue: Array<{
     resolve: (token: string) => void;
@@ -56,7 +59,9 @@ function attachInterceptors(instance: AxiosInstance): AxiosInstance {
                             reject
                         });
                     }).then((token) => {
-                        originalRequest.headers?.set("Authorization", `Bearer ${token}`);
+                        if (originalRequest.headers) {
+                            originalRequest.headers.set("Authorization", `Bearer ${token}`);
+                        }
                         return instance(originalRequest);
                     });
                 }
@@ -79,7 +84,9 @@ function attachInterceptors(instance: AxiosInstance): AxiosInstance {
                         localStorage.setItem("REFRESH_TOKEN", newRefreshToken);
                         localStorage.setItem("DEVICE_ID", newDeviceId);
                         processQueue(null, newToken);
-                        originalRequest.headers?.set("Authorization", `Bearer ${newToken}`);
+                        if (originalRequest.headers) {
+                            originalRequest.headers.set("Authorization", `Bearer ${newToken}`);
+                        }
                         return instance(originalRequest);
                     }
                     processQueue(error, null);
@@ -103,13 +110,21 @@ function attachInterceptors(instance: AxiosInstance): AxiosInstance {
 }
 
 function handleLogout() {
+    if (isLoggingOut) return;
+    isLoggingOut = true;
+
     localStorage.removeItem("ACCESS_TOKEN");
     localStorage.removeItem("REFRESH_TOKEN");
     localStorage.removeItem("DEVICE_ID");
+
     window.location.href = "/login";
 }
 
+
 export function interceptorAPI(): AxiosInstance {
-    const instance = API.call();
-    return attachInterceptors(instance);
+    if (!axiosInstance) {
+        const instance = API.call();
+        axiosInstance = attachInterceptors(instance);
+    }
+    return axiosInstance;
 }

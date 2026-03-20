@@ -6,6 +6,11 @@ import { fetchUpdateSession } from "../../../store/eventSlice";
 import type { EventSession } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
 
+// ── NEW: pure validation helper ───────────────────────────────────────────────
+import { validateSession, errorsToFieldMap } from "../../../utils/eventValidation";
+import DateTimeInput from "../shared/DateTimeInput";
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface SessionFormState {
     title: string;
     description: string;
@@ -64,25 +69,17 @@ export default function EditSessionModal({
 
     if (!open) return null;
 
+    // ── CHANGED: hand-rolled validate() replaced with the pure helper ─────────
     const validate = (): boolean => {
-        const e: SessionFormErrors = {};
-        if (!form.title.trim()) e.title = "Tiêu đề không được để trống";
-        if (!form.startTime) e.startTime = "Vui lòng chọn thời gian bắt đầu";
-        if (!form.endTime) e.endTime = "Vui lòng chọn thời gian kết thúc";
-        else if (form.startTime && form.endTime <= form.startTime)
-            e.endTime = "Thời gian kết thúc phải sau thời gian bắt đầu";
-
-        // Validate nằm trong khoảng sự kiện
-        if (form.startTime && eventStartAt && new Date(form.startTime) < new Date(eventStartAt))
-            e.startTime = `Suất diễn phải bắt đầu từ ${new Date(eventStartAt).toLocaleString("vi-VN")} trở đi`;
-
-        if (form.endTime && eventEndAt && new Date(form.endTime) > new Date(eventEndAt))
-            e.endTime = `Suất diễn phải kết thúc trước ${new Date(eventEndAt).toLocaleString("vi-VN")}`;
-
-        setErrors(e);
-        return Object.keys(e).length === 0;
+        const result = validateSession(
+            { id: session.id, title: form.title, startTime: form.startTime, endTime: form.endTime },
+            { eventStartAt, eventEndAt }
+        );
+        const map = errorsToFieldMap(result.errors) as SessionFormErrors;
+        setErrors(map);
+        return result.valid;
     };
-
+    // ─────────────────────────────────────────────────────────────────────────
 
     const hasChanged = (): boolean => {
         const original = initialForm();
@@ -147,6 +144,17 @@ export default function EditSessionModal({
                     </button>
                 </div>
 
+                {/* NEW: event window hint */}
+                {(eventStartAt || eventEndAt) && (
+                    <div className="mx-6 mt-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 text-xs text-slate-400">
+                        <span className="text-primary/60">⏱</span>
+                        Phải nằm trong:
+                        {eventStartAt && <span className="text-slate-300">{new Date(eventStartAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+                        {eventStartAt && eventEndAt && <span>–</span>}
+                        {eventEndAt && <span className="text-slate-300">{new Date(eventEndAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+                    </div>
+                )}
+
                 {/* Body */}
                 <div className="px-6 py-5 space-y-4">
 
@@ -179,28 +187,20 @@ export default function EditSessionModal({
                     {/* Start / End time */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-sm text-slate-400 mb-1 block">Bắt đầu</label>
-                            <input
-                                type="datetime-local"
+                            <DateTimeInput
+                                label="Bắt đầu"
                                 value={form.startTime}
-                                readOnly={!isAllowUpdate}
-                                onChange={set("startTime")}
-                                min={eventStartAt}
-                                max={eventEndAt}
-                                className={`w-full rounded-xl bg-black/30 border px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all [color-scheme:dark] ${errors.startTime ? "border-red-500" : "border-white/10"}`}
+                                onChange={(v) => set("startTime")({ target: { value: v } } as React.ChangeEvent<HTMLInputElement>)}
+                                disabled={!isAllowUpdate}
                             />
                             {errors.startTime && <p className="text-xs text-red-400 mt-1">{errors.startTime}</p>}
                         </div>
                         <div>
-                            <label className="text-sm text-slate-400 mb-1 block">Kết thúc</label>
-                            <input
-                                type="datetime-local"
+                            <DateTimeInput
+                                label="Kết thúc"
                                 value={form.endTime}
-                                readOnly={!isAllowUpdate}
-                                onChange={set("endTime")}
-                                min={eventStartAt}
-                                max={eventEndAt}
-                                className={`w-full rounded-xl bg-black/30 border px-3 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all [color-scheme:dark] ${errors.endTime ? "border-red-500" : "border-white/10"}`}
+                                onChange={(v) => set("endTime")({ target: { value: v } } as React.ChangeEvent<HTMLInputElement>)}
+                                disabled={!isAllowUpdate}
                             />
                             {errors.endTime && <p className="text-xs text-red-400 mt-1">{errors.endTime}</p>}
                         </div>
