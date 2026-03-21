@@ -93,7 +93,7 @@ export interface CreateEventRequest {
 export interface UpdateEventInfoRequest extends Omit<CreateEventRequest, "organizerId"> { }
 
 export interface CreateEventSessionRequest {
-    sessions: Omit<EventSession, "ticketTypes">[];
+    sessions: Omit<EventSession, "ticketTypes" | "id">[];
 }
 
 export interface UpdateEventSettingsRequest {
@@ -156,7 +156,7 @@ export interface GetEventDetailResponse {
 }
 
 export type GetAllSessionResponse = EventSession[];
-export type UpdateEventSessionRequest = Omit<EventSession, "ticketTypes">;
+export type UpdateEventSessionRequest = Omit<EventSession, "ticketTypes" | "id">;
 
 export interface GetAllRequestByMe extends GetAllRequest {
     Statuses?: string;
