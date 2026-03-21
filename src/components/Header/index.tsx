@@ -296,7 +296,7 @@ const Header: React.FC = () => {
 
             {/* Tạo sự kiện */}
             <Link
-              to="/create-event"
+              to="/Login"
               onClick={() => setSearchFocused(false)}
               className="flex items-center gap-2 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-all"
               style={{
@@ -305,7 +305,7 @@ const Header: React.FC = () => {
               }}
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
-              <span className="hidden sm:inline">Tạo sự kiện</span>
+              <span className="hidden sm:inline"> Tạo sự kiện</span>
             </Link>
 
             {isLoggedIn ? (
