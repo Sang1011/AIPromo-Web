@@ -4,9 +4,10 @@ import Footer from '../../components/Footer'
 import { useDispatch, useSelector } from "react-redux"
 import type { AppDispatch, RootState } from "../../store"
 import { fetchEventById } from "../../store/eventSlice"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import type { GetEventDetailResponse } from "../../types/event/event"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
+import DOMPurify from 'dompurify'
 
 // ─── Skeleton Components ───────────────────────────────────────────────────────
 
@@ -24,7 +25,6 @@ function EventDetailSkeleton() {
     <>
       <Header />
       <main className="pt-24 purple-gradient-bg">
-        {/* Hero Skeleton */}
         <section className="relative w-full h-[60vh] min-h-[450px] overflow-hidden bg-[#0B0B12]">
           <div className="relative h-full max-w-[1280px] mx-auto px-6 md:px-20 flex flex-col justify-end pb-12">
             <div className="max-w-3xl space-y-4">
@@ -42,20 +42,15 @@ function EventDetailSkeleton() {
             </div>
           </div>
         </section>
-
-        {/* Content Skeleton */}
         <div className="max-w-[1280px] mx-auto px-6 md:px-20 py-12">
           <div className="flex flex-col lg:flex-row gap-12">
-            {/* Left Column Skeleton */}
             <div className="flex-1 space-y-16">
-              {/* Description */}
               <section className="space-y-4">
                 <SkeletonBox className="h-8 w-48" />
                 <SkeletonBox className="h-4 w-full" />
                 <SkeletonBox className="h-4 w-full" />
                 <SkeletonBox className="h-4 w-3/4" />
               </section>
-              {/* Artists */}
               <section>
                 <SkeletonBox className="h-8 w-48 mb-8" />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -68,7 +63,6 @@ function EventDetailSkeleton() {
                   ))}
                 </div>
               </section>
-              {/* Sessions */}
               <section>
                 <SkeletonBox className="h-8 w-56 mb-8" />
                 <div className="space-y-6">
@@ -80,9 +74,8 @@ function EventDetailSkeleton() {
                     </div>
                   ))}
                 </div>
-             </section>
+              </section>
             </div>
-            {/* Right Column Skeleton */}
             <div className="w-full lg:w-[400px]">
               <div className="glass rounded-2xl p-8 border-2 border-primary/20 space-y-6">
                 <SkeletonBox className="h-10 w-48" />
@@ -97,6 +90,95 @@ function EventDetailSkeleton() {
       </main>
       <Footer />
     </>
+  )
+}
+
+// ─── Lightbox Component ────────────────────────────────────────────────────────
+
+function Lightbox({
+  images,
+  currentIndex,
+  onClose,
+  onPrev,
+  onNext,
+}: {
+  images: { id: string; imageUrl: string }[]
+  currentIndex: number
+  onClose: () => void
+  onPrev: () => void
+  onNext: () => void
+}) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+      if (e.key === "ArrowLeft") onPrev()
+      if (e.key === "ArrowRight") onNext()
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [onClose, onPrev, onNext])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.92)" }}
+      onClick={onClose}
+    >
+      {/* Close button */}
+      <button
+        className="absolute top-5 right-5 size-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white z-10"
+        onClick={onClose}
+      >
+        <span className="material-symbols-outlined">close</span>
+      </button>
+
+      {/* Prev */}
+      {images.length > 1 && (
+        <button
+          className="absolute left-4 md:left-8 size-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white z-10"
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+        >
+          <span className="material-symbols-outlined">chevron_left</span>
+        </button>
+      )}
+
+      {/* Image */}
+      <div
+        className="max-w-[90vw] max-h-[85vh] flex items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={images[currentIndex].imageUrl}
+          alt={`Event image ${currentIndex + 1}`}
+          className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+          style={{ border: "1.5px solid rgba(255,255,255,0.1)" }}
+        />
+      </div>
+
+      {/* Next */}
+      {images.length > 1 && (
+        <button
+          className="absolute right-4 md:right-8 size-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white z-10"
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+        >
+          <span className="material-symbols-outlined">chevron_right</span>
+        </button>
+      )}
+
+      {/* Counter */}
+      {images.length > 1 && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+          {images.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === currentIndex ? "w-6 bg-primary" : "w-1.5 bg-white/30"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -126,30 +208,34 @@ function formatPrice(price: number) {
 
 function EventDetail() {
   const dispatch = useDispatch<AppDispatch>()
-    const { id } = useParams<{ id: string }>();
-  useEffect(() => {
-    window.scrollTo(0, 0);
-       if (!id) return;
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
 
-    dispatch(fetchEventById(id));
+  // ── Lightbox state ──
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+
+  // ── Session selection state ──
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  const [sessionError, setSessionError] = useState(false)
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    if (!id) return
+    dispatch(fetchEventById(id))
   }, [dispatch])
 
   const eventDetail = useSelector(
     (s: RootState) => s.EVENT?.currentEvent
   ) as GetEventDetailResponse
+console.log("eventDetail",eventDetail);
 
-   
-  // const loading = useSelector((s: RootState) => s.EVENT?.loading)
-
-  // ── Loading state ──
-  if ( !eventDetail) {
+  if (!eventDetail) {
     return <EventDetailSkeleton />
   }
 
   // ── Derived data ──
-  const firstTicket = eventDetail.ticketTypes?.[0];
-  console.log("firstTicket",eventDetail.ticketTypes);
-  
+  const firstTicket = eventDetail.ticketTypes?.[0]
   const startDate = formatDate(eventDetail.eventStartAt)
   const startTime = formatTime(eventDetail.eventStartAt)
   const endTime = formatTime(eventDetail.eventEndAt)
@@ -160,9 +246,46 @@ function EventDetail() {
   const vat = firstTicket ? Math.round(firstTicket.price * 0.1) : 0
   const total = firstTicket ? firstTicket.price + serviceFee + vat : 0
 
+  // ── Lightbox helpers ──
+  const images = eventDetail.images ?? []
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index)
+    setLightboxOpen(true)
+  }
+  const closeLightbox = () => setLightboxOpen(false)
+  const prevImage = () => setLightboxIndex((i) => (i - 1 + images.length) % images.length)
+  const nextImage = () => setLightboxIndex((i) => (i + 1) % images.length)
+
+  // ── Buy ticket handler ──
+  const handleBuyTicket = () => {
+    if (!selectedSessionId) {
+      setSessionError(true)
+      // Scroll to sessions section
+      document.getElementById("sessions-section")?.scrollIntoView({ behavior: "smooth", block: "center" })
+      return
+    }
+    navigate(`/event-detail/${id}/seat-map/show`, {
+      state: {
+        eventSessionId: selectedSessionId,
+      },
+    })
+  }
+
   return (
     <>
       <Header />
+
+      {/* ── Lightbox ── */}
+      {lightboxOpen && images.length > 0 && (
+        <Lightbox
+          images={images}
+          currentIndex={lightboxIndex}
+          onClose={closeLightbox}
+          onPrev={prevImage}
+          onNext={nextImage}
+        />
+      )}
+
       <main className="pt-24 purple-gradient-bg">
 
         {/* ── Hero Section ── */}
@@ -175,8 +298,6 @@ function EventDetail() {
           />
           <div className="relative h-full max-w-[1280px] mx-auto px-6 md:px-20 flex flex-col justify-end pb-12">
             <div className="max-w-3xl">
-
-              {/* Categories & Hashtags */}
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 {eventDetail.categories?.map((cat) => (
                   <span
@@ -214,7 +335,6 @@ function EventDetail() {
                   <span className="text-lg font-medium">{eventDetail.location}</span>
                 </div>
               </div>
-
             </div>
           </div>
         </section>
@@ -237,37 +357,45 @@ function EventDetail() {
                 </div>
               </section>
 
-              {/* Policy (if present) */}
+              {/* Policy */}
               {eventDetail.policy && (
                 <section>
                   <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
                     <span className="w-1.5 h-8 bg-primary rounded-full" />
                     Chính sách sự kiện
                   </h2>
-                  <div className="prose prose-invert max-w-none text-gray-300 leading-relaxed">
-                    <p className="whitespace-pre-line">{eventDetail.policy}</p>
-                  </div>
+                  <div
+                    className="prose prose-invert max-w-none text-gray-300 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(eventDetail.policy) }}
+                  />
                 </section>
               )}
 
-              {/* Images Gallery (if present) */}
-              {eventDetail.images?.length > 0 && (
+              {/* ── Images Gallery with Lightbox ── */}
+              {images.length > 0 && (
                 <section>
                   <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
                     <span className="w-1.5 h-8 bg-primary rounded-full" />
                     Hình ảnh sự kiện
                   </h2>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {eventDetail.images.map((img) => (
+                    {images.map((img, index) => (
                       <div
                         key={img.id}
-                        className="aspect-video rounded-xl overflow-hidden border border-white/10 hover:border-primary/50 transition-colors"
+                        className="aspect-video rounded-xl overflow-hidden border border-white/10 hover:border-primary/50 transition-colors cursor-pointer relative group"
+                        onClick={() => openLightbox(index)}
                       >
                         <img
                           src={img.imageUrl}
                           alt="Event image"
-                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
+                          <span className="material-symbols-outlined text-white text-4xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-lg">
+                            zoom_in
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -301,33 +429,82 @@ function EventDetail() {
                 </section>
               )}
 
-              {/* Sessions / Agenda */}
+              {/* ── Sessions / Agenda with selection ── */}
               {eventDetail.sessions?.length > 0 && (
-                <section>
-                  <h2 className="text-3xl font-bold mb-8 flex items-center gap-3">
+                <section id="sessions-section">
+                  <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
                     <span className="w-1.5 h-8 bg-primary rounded-full" />
                     Chương trình sự kiện
                   </h2>
+                  <p className="text-gray-400 text-sm mb-8">
+                    Chọn buổi bạn muốn tham dự <span className="text-primary font-semibold">*</span>
+                  </p>
+
+                  {/* Error message */}
+                  {sessionError && (
+                    <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400">
+                      <span className="material-symbols-outlined text-xl">error</span>
+                      <span className="text-sm font-medium">Vui lòng chọn một buổi trước khi mua vé</span>
+                    </div>
+                  )}
+
                   <div className="relative pl-8">
                     <div className="absolute left-0 top-2 bottom-2 w-0.5 timeline-line" />
-                    {eventDetail.sessions.map((session, index) => (
-                      <div key={index} className="relative mb-10 last:mb-0">
-                        <div
-                          className={`absolute -left-10 mt-1.5 size-4 rounded-full transition-colors ${
-                            index === 0
-                              ? "bg-primary neon-glow"
-                              : "bg-primary/40 border-2 border-primary"
-                          }`}
-                        />
-                        <div className="glass p-5 rounded-xl">
-                          <span className="text-primary font-bold">
-                            {formatTime(session.startTime)} - {formatTime(session.endTime)}
-                          </span>
-                          <h4 className="text-xl font-bold mt-1">{session.title}</h4>
-                          <p className="text-gray-400 mt-2">{session.description}</p>
+                    {eventDetail.sessions.map((session, index) => {
+                      const isSelected = selectedSessionId === session.id
+                      return (
+                        <div key={session.id} className="relative mb-6 last:mb-0">
+                          {/* Timeline dot */}
+                          <div
+                            className={`absolute -left-10 mt-1.5 size-4 rounded-full transition-all duration-300 ${
+                              isSelected
+                                ? "bg-primary neon-glow scale-125"
+                                : index === 0
+                                ? "bg-primary/40 border-2 border-primary"
+                                : "bg-primary/40 border-2 border-primary"
+                            }`}
+                          />
+
+                          {/* Session card — clickable */}
+                          <div
+                            onClick={() => {
+                              setSelectedSessionId(session.id)
+                              setSessionError(false)
+                            }}
+                            className={`glass p-5 rounded-xl cursor-pointer transition-all duration-300 border-2 ${
+                              isSelected
+                                ? "border-primary/70 bg-primary/10 shadow-[0_0_20px_rgba(124,63,237,0.2)]"
+                                : "border-transparent hover:border-primary/30 hover:bg-white/5"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <span className="text-primary font-bold text-sm">
+                                  {formatTime(session.startTime)} - {formatTime(session.endTime)}
+                                </span>
+                                <h4 className="text-xl font-bold mt-1">{session.title}</h4>
+                                <p className="text-gray-400 mt-2 text-sm">{session.description}</p>
+                              </div>
+
+                              {/* Selection indicator */}
+                              <div
+                                className={`shrink-0 size-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 mt-1 ${
+                                  isSelected
+                                    ? "border-primary bg-primary"
+                                    : "border-white/30 bg-transparent"
+                                }`}
+                              >
+                                {isSelected && (
+                                  <span className="material-symbols-outlined text-white text-sm" style={{ fontSize: "14px" }}>
+                                    check
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </section>
               )}
@@ -377,13 +554,17 @@ function EventDetail() {
                   {firstTicket ? (
                     <>
                       {/* Ticket Type Badge */}
-                      <div className="flex items-center gap-2">
-                        <span className="bg-primary/20 text-primary px-3 py-1 rounded text-xs font-bold uppercase tracking-widest border border-primary/30">
-                          {firstTicket.areaName}
-                        </span>
-                        <span className="bg-white/10 text-white px-3 py-1 rounded text-xs border border-white/10">
-                          {firstTicket.areaType}
-                        </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {firstTicket.areaName && (
+                          <span className="bg-primary/20 text-primary px-3 py-1 rounded text-xs font-bold uppercase tracking-widest border border-primary/30">
+                            {firstTicket.areaName}
+                          </span>
+                        )}
+                        {firstTicket.areaType && (
+                          <span className="bg-white/10 text-white px-3 py-1 rounded text-xs border border-white/10">
+                            {firstTicket.areaType}
+                          </span>
+                        )}
                       </div>
 
                       {/* Ticket Name & Price */}
@@ -397,14 +578,12 @@ function EventDetail() {
                           </span>
                           <span className="text-xl text-primary font-bold">VNĐ</span>
                         </div>
-
-                        {/* Sale period */}
                         <p className="text-xs text-gray-500 mt-2">
                           Mở bán: {saleStart} — {saleEnd}
                         </p>
                       </div>
 
-                      {/* Multiple ticket types selector (if more than 1) */}
+                      {/* Multiple ticket types selector */}
                       {eventDetail.ticketTypes?.length > 1 && (
                         <div className="space-y-2">
                           <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Loại vé khác</p>
@@ -424,6 +603,26 @@ function EventDetail() {
                               </div>
                             ))}
                           </div>
+                        </div>
+                      )}
+
+                      {/* Session reminder in ticket card */}
+                      {eventDetail.sessions?.length > 0 && (
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 ${
+                          selectedSessionId
+                            ? "bg-primary/10 border-primary/40 text-primary"
+                            : sessionError
+                            ? "bg-red-500/10 border-red-500/30 text-red-400"
+                            : "bg-white/5 border-white/10 text-gray-400"
+                        }`}>
+                          <span className="material-symbols-outlined text-xl shrink-0">
+                            {selectedSessionId ? "event_available" : "event_note"}
+                          </span>
+                          <span className="text-sm font-medium">
+                            {selectedSessionId
+                              ? `Buổi: ${eventDetail.sessions.find(s => s.id === selectedSessionId)?.title}`
+                              : "Chưa chọn buổi tham dự"}
+                          </span>
                         </div>
                       )}
 
@@ -450,7 +649,10 @@ function EventDetail() {
                     </div>
                   )}
 
-                  <button className="w-full py-5 bg-primary rounded-xl font-bold text-lg neon-glow hover:translate-y-[-2px] hover:shadow-[0_0_25px_rgba(124,63,237,0.7)] transition-all flex items-center justify-center gap-3">
+                  <button
+                    onClick={handleBuyTicket}
+                    className="w-full py-5 bg-primary rounded-xl font-bold text-lg neon-glow hover:translate-y-[-2px] hover:shadow-[0_0_25px_rgba(124,63,237,0.7)] transition-all flex items-center justify-center gap-3"
+                  >
                     <span>Mua vé ngay</span>
                     <span className="material-symbols-outlined">arrow_forward</span>
                   </button>
@@ -495,7 +697,7 @@ function EventDetail() {
           </div>
         </div>
 
-        {/* ── Related Events (static) ── */}
+        {/* ── Related Events ── */}
         <section className="bg-[#121218] py-20">
           <div className="max-w-[1280px] mx-auto px-6 md:px-20">
             <div className="flex justify-between items-end mb-10">

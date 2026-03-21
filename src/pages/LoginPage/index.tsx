@@ -61,7 +61,15 @@ function Login() {
             localStorage.removeItem(REMEMBER_ME_KEY);
             localStorage.removeItem(SAVED_EMAIL_KEY);
           }
-          navigate("/");
+         const roles = res.payload.data.user.roles;
+          if (roles.includes('Organizer')) {
+              navigate("/organizer/my-events");
+          } else if (roles.includes('Staff')) {
+              navigate("/staff/event-approval");
+          } else {
+              navigate("/");
+          }
+          
         } else {
           setError("Email hoặc mật khẩu không đúng. Vui lòng thử lại.");
         }

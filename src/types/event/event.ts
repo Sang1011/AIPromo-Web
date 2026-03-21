@@ -43,6 +43,7 @@ export interface EventImage {
 }
 
 export interface EventSession {
+    id: string;
     title: string;
     description: string;
     startTime: string;

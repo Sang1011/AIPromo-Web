@@ -332,7 +332,7 @@ const EventListSection: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const events = useSelector((s: RootState) => s.EVENT?.events) ?? [];
   const pagination = useSelector((s: RootState) => s.EVENT?.pagination) ?? null;
-
+    const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
@@ -463,7 +463,24 @@ const EventListSection: React.FC = () => {
               background: "linear-gradient(90deg, transparent, rgba(124,59,237,0.5), transparent)",
             }}
           />
-
+           <div className="mt-6">
+          <button
+            onClick={() => navigate("/all-event")}
+            style={{
+              padding: "10px 20px",
+              borderRadius: 999,
+              fontSize: 14,
+              fontWeight: 600,
+              background: "linear-gradient(135deg,#7c3bed,#a855f7)",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
+            }}
+          >
+            Xem tất cả sự kiện 
+          </button>
+</div>
          
         </div>
 
