@@ -4,17 +4,18 @@ import { FaArrowLeft, FaCopy, FaMinus, FaPaste, FaPlus } from "react-icons/fa";
 import { IoMdLock, IoMdUnlock } from 'react-icons/io';
 import { MdMenu, MdOutlineKeyboardArrowRight, MdOutlinePalette } from 'react-icons/md';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
-import { getWorldPointer } from '../../utils/getWorldPointer';
-import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity, TicketType } from '../../types/config/seatmap';
-import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
+import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../store';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchAssignAreas, fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
-import { notify } from '../../utils/notify';
-import type { TicketTypeItem } from '../../types/ticketType/ticketType';
-import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
 import { fetchEventById } from '../../store/eventSlice';
+import { fetchAssignAreas, fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
+import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
+import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity } from '../../types/config/seatmap';
+import type { TicketTypeItem } from '../../types/ticketType/ticketType';
+import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
+import { getWorldPointer } from '../../utils/getWorldPointer';
+import { notify } from '../../utils/notify';
+import { validateSeatMap } from '../../utils/validateSeatMap';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -56,7 +57,7 @@ const SeatMapEditorPage: React.FC = () => {
     const [seats, setSeats] = useState<Seat[]>([]);
     const [selectedShape, setSelectedShape] = useState<Area['type']>('rect');
     const [stageScale, setStageScale] = useState(1);
-    const [guides, setGuides] = useState<GuideLine | null>(null);
+    const [guides] = useState<GuideLine | null>(null);
     const [textEntities, setTextEntities] = useState<TextEntity[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [history, setHistory] = useState<HistoryState[]>([{ sections, seats, textEntities }]);
@@ -84,10 +85,13 @@ const SeatMapEditorPage: React.FC = () => {
     const [seatHeightStr, setSeatHeightStr] = useState(String(seatHeight));
     const [seatSpacingStr, setSeatSpacingStr] = useState(String(seatSpacing));
     const transformerRef = useRef<Konva.Transformer>(null);
-    const selectionRectRef = useRef<Konva.Rect>(null);
     const layerRef = useRef<Konva.Layer>(null);
     const [customSeatCount, setCustomSeatCount] = useState(10);
     const [isGroupDragging, setIsGroupDragging] = useState(false);
+    const [activeAreaId, setActiveAreaId] = useState<string | null>(null);
+    const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
+    const [seatMoveMode, setSeatMoveMode] = useState(false);
+    const [showHelpModal, setShowHelpModal] = useState(false);
     const [contextMenu, setContextMenu] = useState<{
         x: number;
         y: number;
@@ -140,27 +144,12 @@ const SeatMapEditorPage: React.FC = () => {
         }
     }, []);
 
-    const reduxTicketTypes = useSelector((state: RootState) => state.TICKET_TYPE.ticketTypes);
+    const { ticketTypes: reduxTicketTypes } = useSelector(
+        (state: RootState) => state.TICKET_TYPE
+    );
     const { currentEvent } = useSelector((state: RootState) => state.EVENT);
 
-    useEffect(() => {
-        if (reduxTicketTypes.length === 0) return;
-        setTicketTypes(prev =>
-            reduxTicketTypes.map((t, index) => {
-                const existing = prev.find(p => p.id === t.id);
-                return {
-                    ...t,
-                    color: existing?.color ?? TICKET_TYPE_COLORS[index % TICKET_TYPE_COLORS.length],
-                };
-            })
-        );
-        setSections(prev => prev.map(s => {
-            if (s.isAreaType && !reduxTicketTypes.find(t => t.id === s.ticketTypeId)) {
-                return { ...s, ticketTypeId: reduxTicketTypes[0].id };
-            }
-            return s;
-        }));
-    }, [reduxTicketTypes]);
+    const ticketTypesFetchedRef = useRef(false);
 
     const searchSectionName = (sectionId: string) => {
         const section = sections.find(s => s.id === sectionId);
@@ -497,11 +486,24 @@ const SeatMapEditorPage: React.FC = () => {
     const updateSectionProperty = useCallback((property: keyof Area, value: any) => {
         if (!isSingleSectionSelected || !selectedSection) return;
 
+        if (property === 'ticketTypeId') {
+            setSeats(prev => prev.filter(s => s.sectionId !== selectedSection.id));
+
+            const newTicketType = ticketTypes.find(t => t.id === value);
+            setSections(prev => prev.map(s =>
+                s.id === selectedSection.id
+                    ? { ...s, ticketTypeId: value, fill: newTicketType?.color ?? s.fill }
+                    : s
+            ));
+            saveToHistory();
+            return;
+        }
+
         setSections(prev => prev.map(s =>
             s.id === selectedSection.id ? { ...s, [property]: value } : s
         ));
         saveToHistory();
-    }, [isSingleSectionSelected, selectedSection, saveToHistory]);
+    }, [isSingleSectionSelected, selectedSection, ticketTypes, saveToHistory]);
 
     const updateSeatProperty = useCallback((property: keyof Seat, value: any) => {
         if (!isSingleSeatSelected || !selectedSeat) return;
@@ -702,31 +704,21 @@ const SeatMapEditorPage: React.FC = () => {
         layer: Konva.Layer,
         ids: string[]
     ) => {
-        const nodes = ids
-            .map(id => layer.findOne(`#${id}`))
-            .filter(Boolean) as Konva.Node[];
-
+        const nodes = ids.map(id => layer.findOne(`#${id}`)).filter(Boolean) as Konva.Node[];
         if (nodes.length === 0) return null;
 
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
 
         nodes.forEach(node => {
-            const rect = node.getClientRect({ skipTransform: false });
+            const rect = node.getClientRect({ relativeTo: layer });
             minX = Math.min(minX, rect.x);
             minY = Math.min(minY, rect.y);
             maxX = Math.max(maxX, rect.x + rect.width);
             maxY = Math.max(maxY, rect.y + rect.height);
         });
 
-        return {
-            x: minX,
-            y: minY,
-            width: maxX - minX,
-            height: maxY - minY,
-        };
+        return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
     };
 
     const createCustomCountSeats = useCallback(() => {
@@ -1030,6 +1022,7 @@ const SeatMapEditorPage: React.FC = () => {
             }
 
             if (editorMode === 'SELECT' && e.evt.shiftKey) {
+                if (e.target !== e.target.getStage()) return;
                 setIsSelecting(true);
                 setCursor('crosshair');
                 setSelectionBox({
@@ -1065,7 +1058,6 @@ const SeatMapEditorPage: React.FC = () => {
     };
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const imageInputRef = useRef<HTMLInputElement>(null);
 
     const importSeatMap = (file: File) => {
         const reader = new FileReader();
@@ -1107,41 +1099,8 @@ const SeatMapEditorPage: React.FC = () => {
         reader.readAsText(file);
     };
 
-    const exportSeatMap = () => {
-        const data: SeatMapData = {
-            areas: sections.map(area => ({
-                ...area,
-                seats: seats.filter(seat => seat.sectionId === area.id),
-            })),
-            texts: textEntities,
-        };
-
-        const json = JSON.stringify(data, null, 2);
-
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'seat-map.json';
-        a.click();
-
-        URL.revokeObjectURL(url);
-    };
-
-    const updateSelectedSeatsColor = (color: string) => {
-        setSeats(prev =>
-            prev.map(seat =>
-                selectedIds.includes(seat.id)
-                    ? { ...seat, fill: color }
-                    : seat
-            )
-        );
-        saveToHistory();
-    };
-
     const dispatch = useDispatch<AppDispatch>();
-    const { loading: seatMapLoading, error: seatMapError } = useSelector(
+    const { loading: seatMapLoading } = useSelector(
         (state: RootState) => state.SEATMAP
     );
 
@@ -1165,21 +1124,55 @@ const SeatMapEditorPage: React.FC = () => {
         };
 
         const selected: string[] = [];
+        const selectedSeats: string[] = [];
 
-        layerRef.current.getChildren().forEach(node => {
+        layerRef.current.find('Rect, Circle, Line, Text').forEach((node) => {
             if (!node.id()) return;
-            const isSection = sections.some(s => s.id === node.id());
-            if (isSection) return;
 
-            if (isShapeInSelectionBox(node, box)) {
-                selected.push(node.id());
+            const isSeat = seats.some(s => s.id === node.id());
+            const isSection = sections.some(s => s.id === node.id());
+            const isText = textEntities.some(t => t.id === node.id());
+
+            if (!isSeat && !isSection && !isText) return;
+
+            if (activeAreaId || seatMoveMode) {
+                // Edit mode hoặc seat move mode: chỉ select seat
+                if (!isSeat) return;
+                const seat = seats.find(s => s.id === node.id());
+                if (!seat) return;
+                // Nếu có activeAreaId thì chỉ lấy seat trong area đó
+                if (activeAreaId && seat.sectionId !== activeAreaId) return;
+                const parentSection = sections.find(s => s.id === seat.sectionId);
+                if (parentSection?.locked) return;
+                if (isShapeInSelectionBox(node, box)) {
+                    selectedSeats.push(node.id());
+                }
+            } else {
+                // Normal mode: select area + text, bỏ qua seat trong locked area
+                if (isSeat) {
+                    const seat = seats.find(s => s.id === node.id());
+                    const parentSection = sections.find(s => s.id === seat?.sectionId);
+                    if (parentSection?.locked) return;
+                }
+                if (isSection) {
+                    const section = sections.find(s => s.id === node.id());
+                    if (section?.locked) return;
+                }
+                if (isShapeInSelectionBox(node, box)) {
+                    selected.push(node.id());
+                }
             }
         });
 
-        setSelectedIds(selected);
+        if (activeAreaId || seatMoveMode) {
+            setSelectedSeatIds(prev => [...new Set([...prev, ...selectedSeats])]);
+        } else {
+            setSelectedIds(selected);
+        }
+
         setIsSelecting(false);
         setSelectionBox(null);
-    }, [isSelecting, selectionBox]);
+    }, [isSelecting, selectionBox, seats, sections, textEntities, activeAreaId, seatMoveMode]);
 
     const updateTicketTypeColor = useCallback(
         (ticketTypeId: string, color: string) => {
@@ -1275,13 +1268,15 @@ const SeatMapEditorPage: React.FC = () => {
         node: Konva.Node,
         selectionBox: { x: number; y: number; width: number; height: number }
     ) => {
-        const clientRect = node.getClientRect({ skipTransform: false });
+        const clientRect = node.getClientRect({ relativeTo: layerRef.current! });
         return Konva.Util.haveIntersection(selectionBox, clientRect);
     };
 
     const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
         if (e.target === e.target.getStage()) {
             setSelectedIds([]);
+            setActiveAreaId(null);
+            setSelectedSeatIds([]);
         }
     }, []);
 
@@ -1357,14 +1352,12 @@ const SeatMapEditorPage: React.FC = () => {
     const location = useLocation();
 
     const multiSelectBox = useMemo(() => {
-        if (selectedIds.length <= 1 || !layerRef.current) return null;
-        return getMultiSelectBoundingBox(layerRef.current, selectedIds);
-    }, [
-        selectedIds,
-        sections,
-        seats,
-        textEntities
-    ]);
+        const ids = seatMoveMode || activeAreaId
+            ? selectedSeatIds
+            : selectedIds;
+        if (ids.length <= 1 || !layerRef.current) return null;
+        return getMultiSelectBoundingBox(layerRef.current, ids);
+    }, [selectedIds, selectedSeatIds, sections, seats, textEntities, seatMoveMode, activeAreaId]);
 
     const navigate = useNavigate();
     const { eventId } = useParams();
@@ -1378,6 +1371,8 @@ const SeatMapEditorPage: React.FC = () => {
             } else if (e.key === 'Escape') {
                 setEditorMode('SELECT');
                 setSelectedIds([]);
+                setActiveAreaId(null);
+                setSelectedSeatIds([]);
             } else if (e.ctrlKey || e.metaKey) {
                 if (e.key === 'z') {
                     e.preventDefault();
@@ -1424,17 +1419,13 @@ const SeatMapEditorPage: React.FC = () => {
     useEffect(() => {
         if (!eventId) return;
         dispatch(fetchEventById(eventId));
-        dispatch(fetchGetAllTicketTypes({ eventId }));
-
         dispatch(fetchGetSeatMap(eventId))
             .unwrap()
             .then((spec) => {
                 try {
                     const data: SeatMapData = JSON.parse(spec);
-
                     const importedSections: Area[] = [];
                     const importedSeats: Seat[] = [];
-
                     data.areas.forEach(area => {
                         const { seats: areaSeats, ...section } = area;
                         importedSections.push({ ...section, draggable: true });
@@ -1443,7 +1434,15 @@ const SeatMapEditorPage: React.FC = () => {
                         });
                     });
 
-                    setSections(importedSections);
+                    const currentTicketTypes = ticketTypes.length > 0 ? ticketTypes : [];
+                    const sectionsWithColor = importedSections.map(s => {
+                        if (!s.isAreaType) return s;
+                        const matched = currentTicketTypes.find(t => t.id === s.ticketTypeId);
+                        if (matched?.color) return { ...s, fill: matched.color };
+                        return s;
+                    });
+
+                    setSections(sectionsWithColor);
                     setSeats(importedSeats);
                     setTextEntities(data.texts || []);
                     setSelectedIds([]);
@@ -1457,10 +1456,45 @@ const SeatMapEditorPage: React.FC = () => {
             });
     }, [eventId]);
 
+    useEffect(() => {
+        if (!eventId) return;
+        dispatch(fetchGetAllTicketTypes({ eventId }))
+            .finally(() => {
+                ticketTypesFetchedRef.current = true;
+            });
+    }, [eventId]);
+
+    useEffect(() => {
+        if (!ticketTypesFetchedRef.current) return;
+        if (reduxTicketTypes.length === 0) {
+            navigate(`/organizer/my-events/${eventId}/edit`);
+            return;
+        }
+
+        const updatedTicketTypes = reduxTicketTypes.map((t, index) => {
+            const existing = ticketTypes.find(p => p.id === t.id);
+            return {
+                ...t,
+                color: existing?.color ?? TICKET_TYPE_COLORS[index % TICKET_TYPE_COLORS.length],
+            };
+        });
+        setTicketTypes(updatedTicketTypes);
+
+        setSections(prev => prev.map(s => {
+            if (!s.isAreaType) return s;
+            const matched = updatedTicketTypes.find(t => t.id === s.ticketTypeId);
+            if (!matched) {
+                return { ...s, ticketTypeId: updatedTicketTypes[0].id, fill: updatedTicketTypes[0].color };
+            }
+            return { ...s, fill: matched.color };
+        }));
+    }, [reduxTicketTypes, currentEvent]);
+
     const renderSection = (area: Area) => {
         const ticketType = ticketTypes.find(t => t.id === area.ticketTypeId);
+        const isActiveArea = area.id === activeAreaId;
         const fillColor = area.isAreaType
-            ? ticketType?.color ?? '#6b7280'
+            ? ticketType?.color ?? area.fill ?? '#6b7280'
             : area.fill ?? '#374151';
         return (
             <Group
@@ -1470,8 +1504,13 @@ const SeatMapEditorPage: React.FC = () => {
                 y={area.y}
                 rotation={area.rotation}
                 opacity={area.locked ? 0.6 : 1}
+                stroke={isActiveArea ? '#f59e0b' : area.stroke}
+                strokeWidth={isActiveArea ? 3 : 1}
+                dash={isActiveArea ? [8, 4] : (area.locked ? [6, 4] : [])}
                 listening={selectedIds.length <= 1 || !selectedIds.includes(area.id)}
                 draggable={
+                    !activeAreaId &&
+                    !seatMoveMode &&
                     editorMode === 'SELECT' &&
                     !area.locked &&
                     !isSelecting &&
@@ -1496,8 +1535,9 @@ const SeatMapEditorPage: React.FC = () => {
                 }}
                 onDblClick={() => {
                     if (area.locked) return;
-                    setEditorMode('SELECT');
-                    setSelectedIds([area.id]);
+                    setActiveAreaId(area.id);
+                    setSelectedIds([]);
+                    setSelectedSeatIds([]);
                 }}
                 onMouseLeave={(e) => {
                     e.target.opacity(1);
@@ -1522,6 +1562,8 @@ const SeatMapEditorPage: React.FC = () => {
                 }}
 
                 onClick={(e) => {
+                    if (activeAreaId) return;
+                    if (seatMoveMode) return;
                     if (isSelecting) return;
                     if (editorMode !== 'SELECT') return;
                     e.cancelBubble = true;
@@ -1680,6 +1722,33 @@ const SeatMapEditorPage: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+                    <button
+                        onClick={() => setShowHelpModal(true)}
+                        className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-violet-500/15 hover:border-violet-400 transition-all duration-200"
+                        title="Hướng dẫn sử dụng"
+                    >
+                        Hướng dẫn
+                    </button>
+                    <button
+                        onClick={() => {
+                            setSeatMoveMode(prev => !prev);
+                            setActiveAreaId(null);
+                            setSelectedIds([]);
+                            setSelectedSeatIds([]);
+                        }}
+                        title={seatMoveMode ? "Tắt chế độ di chuyển ghế" : "Bật chế độ chỉ di chuyển ghế"}
+                        className={`
+        flex items-center gap-2 px-3 py-2 rounded-lg border text-sm
+        transition-all duration-200
+        ${seatMoveMode
+                                ? "bg-amber-500/20 border-amber-400 text-amber-300"
+                                : "border-slate-600 text-slate-300 hover:bg-violet-500/15 hover:border-violet-400"
+                            }
+    `}
+                    >
+                        Đang trong chế độ: {seatMoveMode ? 'chỉ di chuyển GHẾ' : 'Di chuyển cả KHU VỰC'} khi chọn nhiều (Bấm để đổi)
+                    </button>
                     <button
                         onClick={() => setShowLockModal(true)}
                         className={baseBtn}
@@ -1772,6 +1841,11 @@ const SeatMapEditorPage: React.FC = () => {
 
                     <button
                         onClick={async () => {
+                            const validation = validateSeatMap(sections, seats);
+                            if (!validation.valid) {
+                                validation.errors.forEach(err => notify.error(err.message));
+                                return;
+                            }
                             const data: SeatMapData = {
                                 areas: sections.map(area => ({
                                     ...area,
@@ -1811,7 +1885,7 @@ const SeatMapEditorPage: React.FC = () => {
                                 notify.error('Lưu thất bại');
                             }
                         }}
-                        disabled={seatMapLoading || currentEvent?.status === "Draft"}
+                        disabled={seatMapLoading || currentEvent?.status !== "Draft"}
                         style={{
                             background: seatMapLoading ? '#6d28d9' : '#8B5CF6',
                             border: 'none',
@@ -1956,6 +2030,13 @@ const SeatMapEditorPage: React.FC = () => {
 
                                 {seats.map(seat => {
                                     const isSelected = selectedIds.includes(seat.id);
+                                    const isSeatSelected = selectedSeatIds.includes(seat.id);
+                                    const isInActiveArea = activeAreaId !== null && seat.sectionId === activeAreaId;
+                                    const effectiveEditMode = activeAreaId ? isInActiveArea : seatMoveMode;
+                                    // const activeSection = sections.find(s => s.id === activeAreaId);
+                                    // const activeAreaLocked = activeSection?.locked ?? false;
+                                    const parentSection = sections.find(s => s.id === seat.sectionId);
+                                    const seatLocked = parentSection?.locked ?? false;
                                     return (
                                         <Rect
                                             key={seat.id}
@@ -1966,11 +2047,27 @@ const SeatMapEditorPage: React.FC = () => {
                                             height={seat.height}
                                             rotation={seat.rotation}
                                             fill={seat.fill}
-                                            stroke={isSelected && selectedIds.length >= 1 ? '#ec4899' : "white"}
-                                            strokeWidth={isSelected && selectedIds.length >= 1 ? 3 : 1}
-                                            shadowColor={isSelected && selectedIds.length > 1 ? '#ec4899' : undefined}
-                                            shadowBlur={isSelected && selectedIds.length > 1 ? 8 : 0}
-                                            shadowOpacity={isSelected && selectedIds.length > 1 ? 0.8 : 0}
+                                            stroke={
+                                                (isSelected && selectedIds.length >= 1) || isSeatSelected
+                                                    ? '#ec4899'
+                                                    : "white"
+                                            }
+                                            strokeWidth={
+                                                (isSelected && selectedIds.length >= 1) || isSeatSelected ? 3 : 1
+                                            }
+                                            shadowColor={
+                                                (isSelected && selectedIds.length > 1) || (isSeatSelected && selectedSeatIds.length > 1)
+                                                    ? '#ec4899'
+                                                    : undefined
+                                            }
+                                            shadowBlur={
+                                                (isSelected && selectedIds.length > 1) || (isSeatSelected && selectedSeatIds.length > 1)
+                                                    ? 8 : 0
+                                            }
+                                            shadowOpacity={
+                                                (isSelected && selectedIds.length > 1) || (isSeatSelected && selectedSeatIds.length > 1)
+                                                    ? 0.8 : 0
+                                            }
                                             cornerRadius={4}
                                             onMouseEnter={() => {
                                                 if (editorMode !== 'SELECT' || isGroupDragging) return;
@@ -1979,22 +2076,72 @@ const SeatMapEditorPage: React.FC = () => {
                                             onMouseLeave={() => {
                                                 setCursor('default');
                                             }}
-                                            listening={!isGroupDragging && selectedIds.length <= 1}
+                                            listening={
+                                                effectiveEditMode
+                                                    ? !seatLocked
+                                                    : (!isGroupDragging && selectedIds.length <= 1)
+                                            }
 
                                             draggable={
                                                 editorMode === 'SELECT' &&
                                                 !isSelecting &&
                                                 !isGroupDragging &&
-                                                isSelected &&
-                                                selectedIds.length === 1
+                                                (effectiveEditMode
+                                                    ? !seatLocked && selectedSeatIds.includes(seat.id)
+                                                    : isSelected && selectedIds.length === 1
+                                                )
                                             }
+
+                                            onClick={(e) => {
+                                                if (isSelecting) return;
+                                                if (isGroupDragging) return;
+                                                e.cancelBubble = true;
+                                                if (effectiveEditMode) {
+                                                    if (seatLocked) return;
+                                                    setSelectedSeatIds(prev =>
+                                                        e.evt.shiftKey
+                                                            ? prev.includes(seat.id) ? prev.filter(i => i !== seat.id) : [...prev, seat.id]
+                                                            : [seat.id]
+                                                    );
+                                                    setSelectedIds([]);
+                                                } else {
+                                                    handleSelect(seat.id, e.evt.shiftKey);
+                                                }
+                                            }}
 
                                             onDragStart={() => {
                                                 setCursor('grabbing');
-                                                if (selectedIds.length > 1) {
-                                                    beginGroupDrag(seat.id);
-                                                } else {
-                                                    beginMultiDrag(seat.id);
+                                                if (effectiveEditMode && !seatLocked) {
+                                                    dragStartPosRef.current = {};
+                                                    const idsToMove = selectedSeatIds.includes(seat.id) ? selectedSeatIds : [seat.id];
+                                                    idsToMove.forEach(id => {
+                                                        const node = layerRef.current?.findOne(`#${id}`);
+                                                        if (node) dragStartPosRef.current[id] = { x: node.x(), y: node.y() };
+                                                    });
+                                                } else if (!effectiveEditMode) {
+                                                    if (selectedIds.length > 1) beginGroupDrag(seat.id);
+                                                    else beginMultiDrag(seat.id);
+                                                }
+                                            }}
+
+                                            onDragEnd={(e) => {
+                                                setCursor('default');
+                                                if (effectiveEditMode && !seatLocked) {
+                                                    const startPos = dragStartPosRef.current[seat.id];
+                                                    if (!startPos) return;
+                                                    const dx = snapToGrid(e.target.x()) - startPos.x;
+                                                    const dy = snapToGrid(e.target.y()) - startPos.y;
+                                                    setSeats(prev => prev.map(s => {
+                                                        if (!selectedSeatIds.includes(s.id)) return s;
+                                                        const sp = dragStartPosRef.current[s.id];
+                                                        if (!sp) return s;
+                                                        return { ...s, x: sp.x + dx, y: sp.y + dy };
+                                                    }));
+                                                    dragStartPosRef.current = {};
+                                                    saveToHistory();
+                                                } else if (!effectiveEditMode) {
+                                                    if (isGroupDragging) endGroupDrag();
+                                                    else handleDragEnd(seat.id, e);
                                                 }
                                             }}
 
@@ -2005,23 +2152,7 @@ const SeatMapEditorPage: React.FC = () => {
                                                 applyGroupDragDelta(dx, dy);
                                             }}
 
-                                            onDragEnd={(e) => {
-                                                setCursor('default');
-                                                if (isGroupDragging) {
-                                                    endGroupDrag();
-                                                } else {
-                                                    handleDragEnd(seat.id, e);
-                                                }
-                                            }}
-
                                             onTransformEnd={(e) => handleTransformEnd(seat.id, e)}
-
-                                            onClick={(e) => {
-                                                if (isSelecting) return;
-                                                if (isGroupDragging) return;
-                                                e.cancelBubble = true;
-                                                handleSelect(seat.id, e.evt.shiftKey);
-                                            }}
                                         />
                                     );
                                 })}
@@ -2120,15 +2251,56 @@ const SeatMapEditorPage: React.FC = () => {
                                         draggable
                                         listening
                                         onDragStart={() => {
-                                            beginGroupDrag(selectedIds[0]);
+                                            const isSeatMode = seatMoveMode || !!activeAreaId;
+                                            const idsToTrack = isSeatMode ? selectedSeatIds : selectedIds;
+                                            const anchorId = idsToTrack[0];
+                                            if (!anchorId) return;
+
+                                            setIsGroupDragging(true);
+                                            const anchor = layerRef.current?.findOne(`#${anchorId}`);
+                                            if (!anchor) return;
+
+                                            groupDragAnchorRef.current = anchor;
+                                            multiDragStartRef.current = { x: anchor.x(), y: anchor.y() };
+                                            dragStartPosRef.current = {};
+
+                                            idsToTrack.forEach(id => {
+                                                const node = layerRef.current?.findOne(`#${id}`);
+                                                if (node) dragStartPosRef.current[id] = { x: node.x(), y: node.y() };
+                                            });
                                         }}
                                         onDragMove={(e) => {
                                             if (!isGroupDragging || !multiDragStartRef.current) return;
                                             const dx = e.target.x() - multiDragStartRef.current.x;
                                             const dy = e.target.y() - multiDragStartRef.current.y;
-                                            applyGroupDragDelta(dx, dy);
+
+                                            if (seatMoveMode || activeAreaId) {
+                                                setSeats(prev => prev.map(s => {
+                                                    const sp = dragStartPosRef.current[s.id];
+                                                    if (!sp) return s;
+                                                    return { ...s, x: sp.x + dx, y: sp.y + dy };
+                                                }));
+                                                forceUpdate({});
+                                            } else {
+                                                applyGroupDragDelta(dx, dy);
+                                            }
                                         }}
-                                        onDragEnd={endGroupDrag}
+                                        onDragEnd={() => {
+                                            if (seatMoveMode || activeAreaId) {
+                                                setSeats(prev => prev.map(s => {
+                                                    const sp = dragStartPosRef.current[s.id];
+                                                    if (!sp) return s;
+                                                    return { ...s, x: snapToGrid(s.x), y: snapToGrid(s.y) };
+                                                }));
+                                                setIsGroupDragging(false);
+                                                multiDragStartRef.current = null;
+                                                dragStartPosRef.current = {};
+                                                groupDragAnchorRef.current = null;
+                                                saveToHistory();
+                                            } else {
+                                                endGroupDrag();
+                                            }
+                                        }}
                                     />
                                 )}
 
@@ -3800,6 +3972,109 @@ const SeatMapEditorPage: React.FC = () => {
                         >
                             XONG
                         </button>
+                    </div>
+                </div>
+            )}
+            {showHelpModal && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.6)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                    onClick={() => setShowHelpModal(false)}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            width: '560px',
+                            maxHeight: '80vh',
+                            overflowY: 'auto',
+                            background: '#1a1a2e',
+                            borderRadius: '12px',
+                            border: '1px solid #2a2a3e',
+                            padding: '28px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '20px',
+                        }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#e5e7eb' }}>
+                                Hướng dẫn sử dụng
+                            </h2>
+                            <button
+                                onClick={() => setShowHelpModal(false)}
+                                style={{ background: 'transparent', border: 'none', color: '#9ca3af', fontSize: '20px', cursor: 'pointer' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {[
+                            {
+                                title: '1. Di chuyển & Chọn',
+                                items: [
+                                    'Kéo khu vực / ghế để di chuyển',
+                                    'Click chọn 1 đối tượng, Shift+Click để chọn thêm',
+                                    'Giữ Shift + Kéo vùng trống để chọn nhiều cùng lúc',
+                                    'Chuột phải + Kéo để cuộn canvas',
+                                    'Scroll chuột để zoom in/out',
+                                ]
+                            },
+                            {
+                                title: '2. Chế độ Khu vực (mặc định)',
+                                items: [
+                                    'Kéo để di chuyển cả khu vực lẫn ghế bên trong',
+                                    'Double click vào khu vực để vào chế độ chỉnh ghế bên trong',
+                                    'Nhấn Escape để thoát khỏi khu vực đang chỉnh',
+                                ]
+                            },
+                            {
+                                title: '3. Chế độ Ghế',
+                                items: [
+                                    'Bật bằng nút "Chế độ" trên thanh công cụ',
+                                    'Click chọn ghế, Shift+Click để chọn thêm nhiều ghế',
+                                    'Giữ Shift + Kéo vùng trống để chọn vùng ghế',
+                                    'Kéo vùng chọn xanh để di chuyển nhóm ghế đã chọn',
+                                    'Khu vực sẽ đứng yên, chỉ ghế di chuyển',
+                                ]
+                            },
+                            {
+                                title: '4. Phím tắt',
+                                items: [
+                                    'Ctrl+Z / Ctrl+Y — Undo / Redo',
+                                    'Ctrl+C / Ctrl+V — Copy / Paste',
+                                    'Delete / Backspace — Xóa đối tượng đang chọn',
+                                    'Escape — Bỏ chọn, thoát chế độ hiện tại',
+                                ]
+                            },
+                            {
+                                title: '5. Khóa khu vực',
+                                items: [
+                                    'Khóa khu vực để tránh vô tình di chuyển',
+                                    'Chuột phải vào khu vực đang khóa để mở khóa nhanh',
+                                    'Dùng "Quản lý khóa" để khóa/mở khóa hàng loạt',
+                                ]
+                            },
+                        ].map(section => (
+                            <div key={section.title}>
+                                <div style={{ fontSize: '14px', fontWeight: 600, color: '#a78bfa', marginBottom: '10px' }}>
+                                    {section.title}
+                                </div>
+                                <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {section.items.map(item => (
+                                        <li key={item} style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
+                                            {item}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
