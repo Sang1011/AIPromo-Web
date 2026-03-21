@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FiChevronDown, FiPlus, FiX } from "react-icons/fi";
+import { FiPlus, FiX } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
@@ -148,15 +148,73 @@ function CreateHashtagModal({ initialName, onClose, onCreated }: CreateHashtagMo
     );
 }
 
+// ── Dropdown ───────────────────────────────────────────────────────────────
+interface DropdownListProps {
+    children: React.ReactNode;
+}
+function DropdownList({ children }: DropdownListProps) {
+    return (
+        <div className="absolute z-30 top-full left-0 w-full mt-1 rounded-lg border border-white/15 bg-[#1a1530] shadow-2xl overflow-hidden">
+            <div className="max-h-52 overflow-y-auto">
+                {children}
+            </div>
+        </div>
+    );
+}
+
+interface DropdownItemProps {
+    onClick?: (e: React.MouseEvent) => void;
+    isSelected?: boolean;
+    children: React.ReactNode;
+    suffix?: React.ReactNode;
+}
+function DropdownItem({ onClick, isSelected, children, suffix }: DropdownItemProps) {
+    return (
+        <div
+            // dùng onMouseDown thay vì onClick để fire TRƯỚC onBlur của input,
+            // tránh dropdown đóng trước khi item được click.
+            onMouseDown={onClick}
+            className={`
+                flex items-center justify-between px-4 py-2.5
+                text-sm border-b border-white/5 last:border-b-0
+                cursor-pointer select-none transition-colors
+                ${isSelected
+                    ? "bg-primary/15 text-primary"
+                    : "text-white hover:bg-white/8"
+                }
+            `}
+        >
+            <span className="truncate">{children}</span>
+            {suffix && <span className="ml-3 flex-shrink-0 text-xs text-slate-400">{suffix}</span>}
+        </div>
+    );
+}
+
+function DropdownLoading() {
+    return (
+        <div className="px-4 py-4 text-sm text-slate-500 text-center animate-pulse">
+            Đang tải...
+        </div>
+    );
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 export default function Step1EventInfo({
     onNext, mode = "edit", onCreated, eventData, reloadEvent, isAllowUpdate = true,
 }: Step1EventInfoProps) {
+    // ── Hashtag state ──────────────────────────────────────────────────────
     const [hashtagInput, setHashtagInput] = useState("");
     const [suggestions, setSuggestions] = useState<EventHashtag[]>([]);
+    const [isHashtagOpen, setIsHashtagOpen] = useState(false);
+    const [isHashtagLoading, setIsHashtagLoading] = useState(false);
     const [showCreateHashtagModal, setShowCreateHashtagModal] = useState(false);
+
+    // ── Category state ─────────────────────────────────────────────────────
     const [categoryInput, setCategoryInput] = useState("");
     const [categorySuggestions, setCategorySuggestions] = useState<EventCategory[]>([]);
     const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+    const [isCategoryLoading, setIsCategoryLoading] = useState(false);
+
     const [errors, setErrors] = useState<FormErrors>({});
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
@@ -176,39 +234,71 @@ export default function Step1EventInfo({
         bannerFile: null
     });
 
-    const [isCategoryFocused, setIsCategoryFocused] = useState(false);
+    const hashtagRef = useRef<HTMLDivElement>(null);
+    const categoryRef = useRef<HTMLDivElement>(null);
 
+    // ── Fetch helpers ──────────────────────────────────────────────────────
+    const fetchHashtags = async (name?: string) => {
+        setIsHashtagLoading(true);
+        try {
+            const res = await dispatch(
+                fetchAllHashtags(name ? { name } : {})
+            ).unwrap();
+            const list = Array.isArray(res) ? res : (res?.data ?? []);
+            setSuggestions(list);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsHashtagLoading(false);
+        }
+    };
+
+    const fetchCategories = async (name?: string) => {
+        setIsCategoryLoading(true);
+        try {
+            const res = await dispatch(
+                fetchAllCategories(name ? { name } : {})
+            ).unwrap();
+            setCategorySuggestions(Array.isArray(res?.data) ? res.data : []);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsCategoryLoading(false);
+        }
+    };
+
+    // ── Prefetch khi mount (để data có sẵn ngay khi mở dropdown) ───────────
     useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) {
-                setIsCategoryFocused(false);
-            }
-        };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, []);
+        if (!isAllowUpdate) return;
+        fetchHashtags();
+        fetchCategories();
+    }, [isAllowUpdate]);
+
+    // ── Debounce tìm kiếm hashtag theo input ────────────────────────────────
+    useEffect(() => {
+        if (!isHashtagOpen) return;
+        if (!hashtagInput.trim()) {
+            // Khi xoá hết text → dùng lại list đã prefetch, không cần fetch lại
+            return;
+        }
+        const timer = setTimeout(() => fetchHashtags(hashtagInput.trim()), 300);
+        return () => clearTimeout(timer);
+    }, [hashtagInput, isHashtagOpen]);
+
+    // ── Debounce tìm kiếm category theo input ──────────────────────────────
+    useEffect(() => {
+        if (!isCategoryOpen) return;
+        if (!categoryInput.trim()) return;
+        const timer = setTimeout(() => fetchCategories(categoryInput.trim()), 300);
+        return () => clearTimeout(timer);
+    }, [categoryInput, isCategoryOpen]);
+
+    // Dropdown đóng qua onBlur + relatedTarget check trên container div.
+    // Không cần document mousedown listener nữa.
 
     const updateForm = <K extends keyof EventFormState>(key: K, value: EventFormState[K]) => {
         setEventForm((prev) => ({ ...prev, [key]: value }));
     };
-
-    const categoryRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) {
-                setIsCategoryOpen(false);
-                setCategoryInput("");
-                setCategorySuggestions([]);
-            }
-        };
-        document.addEventListener("mousedown", handler);
-        return () => document.removeEventListener("mousedown", handler);
-    }, []);
-
-    useEffect(() => {
-        console.log("Current user info:", currentInfor);
-    }, [currentInfor])
 
     const validateAll = (): boolean => {
         const newErrors: FormErrors = {};
@@ -239,12 +329,13 @@ export default function Step1EventInfo({
 
     const isChanged = JSON.stringify(eventForm) !== JSON.stringify(initEventForm);
 
+    // ── Hashtag handlers ───────────────────────────────────────────────────
     const addHashtag = (tag: EventHashtag) => {
         if (!isAllowUpdate) return;
         if (eventForm.selectedHashtags.some((t) => t.id === tag.id)) return;
         updateForm("selectedHashtags", [...eventForm.selectedHashtags, tag]);
         setHashtagInput("");
-        setSuggestions([]);
+        // KHÔNG đóng dropdown → UX tiếp tục chọn nhiều tag
         setErrors((prev) => ({ ...prev, selectedHashtags: undefined }));
     };
 
@@ -264,12 +355,12 @@ export default function Step1EventInfo({
         hashtagInput.trim().length > 0 &&
         !suggestions.some((s) => s.name.toLowerCase() === hashtagInput.trim().toLowerCase());
 
+    // ── Category handlers ──────────────────────────────────────────────────
     const addCategory = (cat: EventCategory) => {
         if (!isAllowUpdate) return;
         if (eventForm.selectedCategories.some((c) => c.id === cat.id)) return;
         updateForm("selectedCategories", [...eventForm.selectedCategories, cat]);
         setCategoryInput("");
-        setCategorySuggestions([]);
         setErrors((prev) => ({ ...prev, selectedCategories: undefined }));
     };
 
@@ -278,6 +369,7 @@ export default function Step1EventInfo({
         updateForm("selectedCategories", eventForm.selectedCategories.filter((c) => c.id !== id));
     };
 
+    // ── Actor handlers ─────────────────────────────────────────────────────
     const addActor = () => {
         if (!isAllowUpdate) return;
         updateForm("actors", [...eventForm.actors, { name: "", major: "", image: null }]);
@@ -292,19 +384,15 @@ export default function Step1EventInfo({
         updateForm("actors", eventForm.actors.map((actor, i) => i === index ? { ...actor, [field]: value } : actor));
     };
 
+    // ── Image handlers ─────────────────────────────────────────────────────
     const handleBannerChange = (file: File) => {
         if (!isAllowUpdate) return;
         const previewUrl = URL.createObjectURL(file);
-        setEventForm((prev) => ({
-            ...prev,
-            bannerUrl: previewUrl,
-            bannerFile: file,
-        }));
+        setEventForm((prev) => ({ ...prev, bannerUrl: previewUrl, bannerFile: file }));
     };
 
     const handleAddImages = (files: FileList | null) => {
-        if (!isAllowUpdate) return;
-        if (!files) return;
+        if (!isAllowUpdate || !files) return;
         const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
         const maxSize = 10 * 1024 * 1024;
         Array.from(files).forEach((file) => {
@@ -321,19 +409,10 @@ export default function Step1EventInfo({
     const handleDeleteImage = (index: number) => {
         if (!isAllowUpdate) return;
         const img = eventForm.images[index];
-
         setEventForm((prev) => {
-            const newDeletedIds = img.id
-                ? [...prev.deletedImageIds, img.id]
-                : prev.deletedImageIds;
-
+            const newDeletedIds = img.id ? [...prev.deletedImageIds, img.id] : prev.deletedImageIds;
             if (!img.id) URL.revokeObjectURL(img.url);
-
-            return {
-                ...prev,
-                deletedImageIds: newDeletedIds,
-                images: prev.images.filter((_, i) => i !== index),
-            };
+            return { ...prev, deletedImageIds: newDeletedIds, images: prev.images.filter((_, i) => i !== index) };
         });
     };
 
@@ -348,6 +427,7 @@ export default function Step1EventInfo({
         });
     };
 
+    // ── Upload & submit ────────────────────────────────────────────────────
     const flushUploads = async () => {
         let finalBannerUrl = eventForm.bannerUrl || "";
         if (eventForm.bannerFile) {
@@ -371,9 +451,7 @@ export default function Step1EventInfo({
         const updatedImages = await Promise.all(
             eventForm.images.map(async (img) => {
                 if (!img.file) return img;
-
                 URL.revokeObjectURL(img.url);
-
                 if (mode === "edit" && eventId) {
                     const res = await dispatch(fetchCreateImage({ eventId, file: img.file })).unwrap();
                     return { id: res.id, url: res.imageUrl, file: null };
@@ -408,11 +486,9 @@ export default function Step1EventInfo({
     };
 
     const handleNext = async () => {
-        if (mode === "edit" && eventId) {
-            if (!isChanged) {
-                onNext?.();
-                return;
-            }
+        if (mode === "edit" && eventId && !isChanged) {
+            onNext?.();
+            return;
         }
 
         if (!validateAll()) return;
@@ -456,76 +532,33 @@ export default function Step1EventInfo({
         }
     };
 
-    useEffect(() => {
-        const delay = setTimeout(async () => {
-            if (!hashtagInput.trim()) { setSuggestions([]); return; }
-            try {
-                const res = await dispatch(fetchAllHashtags({ name: hashtagInput, take: 5 })).unwrap();
-                console.log("Fetched hashtag suggestions:", res);
-                setSuggestions(res);
-            } catch (e) { console.error(e); }
-        }, 300);
-        return () => clearTimeout(delay);
-    }, [hashtagInput]);
-
-    useEffect(() => {
-        if (!isCategoryFocused) return;
-
-        const delay = setTimeout(async () => {
-            try {
-                const res = await dispatch(fetchAllCategories(
-                    categoryInput.trim() ? { name: categoryInput } : {}
-                )).unwrap();
-                setCategorySuggestions(res.data);
-            } catch (err) { console.error(err); }
-        }, 300);
-        return () => clearTimeout(delay);
-    }, [categoryInput, isCategoryFocused]);
-
+    // ── Init form data ─────────────────────────────────────────────────────
     useEffect(() => {
         if (mode === "create") {
             setEventForm((prev) => ({
                 ...prev,
-                actors: prev.actors.length
-                    ? prev.actors
-                    : [{ name: "", major: "", image: null }],
+                actors: prev.actors.length ? prev.actors : [{ name: "", major: "", image: null }],
             }));
-        }
-
-        else if (mode === "edit" && eventData) {
+        } else if (mode === "edit" && eventData) {
             const form: EventFormState = {
                 title: eventData.title ?? "",
                 description: eventData.description ?? "",
                 location: eventData.location ?? "",
                 bannerUrl: eventData.bannerUrl ?? null,
-
                 selectedHashtags: eventData.hashtags ?? [],
                 selectedCategories: eventData.categories ?? [],
-
                 actorUrls: eventData.actorImages?.map((a) => a.image) ?? [],
-
-                images:
-                    eventData.images?.map((img) => ({
-                        id: img.id,
-                        url: img.imageUrl,
-                    })) ?? [],
-
-                actors:
-                    eventData.actorImages?.map((actor) => ({
-                        name: actor.name,
-                        major: actor.major,
-                        image: null,
-                    })) ?? [],
-
+                images: eventData.images?.map((img) => ({ id: img.id, url: img.imageUrl })) ?? [],
+                actors: eventData.actorImages?.map((actor) => ({ name: actor.name, major: actor.major, image: null })) ?? [],
                 deletedImageIds: [],
                 bannerFile: null,
             };
-
             setEventForm(form);
             setInitEventForm(form);
         }
     }, [mode, eventData]);
 
+    // ── Render ─────────────────────────────────────────────────────────────
     return (
         <>
             {showCreateHashtagModal && (
@@ -541,14 +574,12 @@ export default function Step1EventInfo({
                 {/* ===== Hình ảnh sự kiện ===== */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                     <h3 className="font-semibold text-white mb-4">* Hình ảnh sự kiện</h3>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1">
                             {eventForm.bannerUrl ? (
                                 <ImagePreviewBox
                                     imageUrl={eventForm.bannerUrl}
                                     aspect="16/9"
-                                    // Chỉ cho update banner khi isAllowUpdate
                                     onUpdate={isAllowUpdate ? (file) => handleBannerChange(file) : undefined}
                                 />
                             ) : (
@@ -567,8 +598,6 @@ export default function Step1EventInfo({
                         <div className="space-y-3">
                             <label className="text-sm text-slate-400">Ảnh bổ sung sự kiện</label>
                             <div className="flex flex-wrap gap-3">
-
-                                {/* Ẩn nút thêm ảnh khi không được phép */}
                                 {isAllowUpdate && (
                                     <label className="w-24 h-24 cursor-pointer rounded-lg border border-dashed border-white/20 flex items-center justify-center text-slate-400 text-xs text-center hover:border-white/40 transition-colors">
                                         <input
@@ -581,14 +610,12 @@ export default function Step1EventInfo({
                                         + Thêm ảnh
                                     </label>
                                 )}
-
                                 {eventForm.images.map((img, i) => (
                                     <ImagePreviewBox
                                         key={img.id ?? `new-${i}`}
                                         imageUrl={img.url}
                                         square
                                         className="w-24"
-                                        // Chỉ cho xóa ảnh khi isAllowUpdate
                                         onRemove={isAllowUpdate ? () => handleDeleteImage(i) : undefined}
                                     />
                                 ))}
@@ -615,87 +642,167 @@ export default function Step1EventInfo({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Hashtag */}
-                        <div>
-                            <div className="flex justify-between items-center">
-                                <label className="text-sm text-slate-400">Hashtag</label>
-                                {hashtagInput.trim() && <span className="text-xs text-slate-500">{suggestions.length} results</span>}
-                            </div>
-                            <div className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedHashtags ? "border-red-500" : "border-white/10"} ${!isAllowUpdate ? "opacity-40" : ""}`}>
-                                {eventForm.selectedHashtags.map((tag) => (
-                                    <div key={tag.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors">
-                                        <span>#{tag.name}</span>
-                                        {isAllowUpdate && (
-                                            <button onClick={() => removeHashtag(tag.id)} className="leading-none">
-                                                <FiX size={14} />
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                                <input
-                                    value={hashtagInput}
-                                    onChange={(e) => isAllowUpdate && setHashtagInput(e.target.value)}
-                                    onKeyDown={isAllowUpdate ? handleHashtagEnter : undefined}
-                                    readOnly={!isAllowUpdate}
-                                    className="flex-1 bg-transparent outline-none border-none focus:outline-none focus:ring-0 text-white px-2 py-1 min-w-[120px] read-only:cursor-not-allowed"
-                                    placeholder={isAllowUpdate ? "#AI #Tech" : ""}
-                                />
-                            </div>
-                            {errors.selectedHashtags && <p className="text-xs text-red-400 mt-1">{errors.selectedHashtags}</p>}
-                            {isAllowUpdate && hashtagInput.trim() && (suggestions.length > 0 || showCreateOption) && (
-                                <div className="mt-2 bg-[#140f2a] border border-white/10 rounded-lg overflow-hidden">
-                                    {suggestions.map((tag) => (
-                                        <div key={tag.id} onClick={() => addHashtag(tag)} className="px-4 py-2 hover:bg-white/5 cursor-pointer text-sm text-white">
-                                            #{tag.name}
-                                        </div>
-                                    ))}
-                                    {showCreateOption && (
-                                        <>
-                                            {suggestions.length > 0 && <div className="border-t border-white/5" />}
-                                            <div
-                                                onClick={() => setShowCreateHashtagModal(true)}
-                                                className="flex items-center justify-between px-4 py-2.5 hover:bg-white/5 cursor-pointer group"
-                                            >
-                                                <span className="text-sm text-slate-400 group-hover:text-slate-200 transition-colors">
-                                                    Không có hashtag này, bạn có muốn tạo mới?
-                                                </span>
-                                                <span className="ml-3 flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 group-hover:bg-primary/40 flex items-center justify-center transition-colors">
-                                                    <FiPlus size={13} className="text-primary" />
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-                        </div>
 
-                        {/* Thể loại */}
-                        <div ref={categoryRef} className="relative">
-                            <div className="flex justify-between items-center">
-                                <label className="text-sm text-slate-400">Thể loại</label>
-                                {isCategoryFocused && isAllowUpdate && (
-                                    <span className="text-xs text-slate-500">{categorySuggestions.length} results</span>
+                        {/* ── Hashtag dropdown ── */}
+                        <div ref={hashtagRef} className="relative">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm text-slate-400">Hashtag</label>
+                                {isHashtagOpen && !isHashtagLoading && (
+                                    <span className="text-xs text-slate-500">{suggestions.length} kết quả</span>
                                 )}
                             </div>
 
-                            <div className={`mt-2 flex flex-wrap gap-2 p-2 rounded-xl bg-black/30 border ${errors.selectedCategories ? "border-red-500" : "border-white/10"} ${!isAllowUpdate ? "opacity-40" : ""}`}>
-                                {eventForm.selectedCategories.map((cat) => (
-                                    <div key={cat.id} className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-white font-semibold rounded-full text-sm hover:bg-primary/30 transition-colors">
-                                        <span>{cat.name}</span>
+                            {/*
+                             * Combobox container: tags + input nằm cùng 1 box có border.
+                             * Input không bao giờ nhảy vị trí dù có hay không có tags.
+                             * tabIndex="-1" để onBlur của container có relatedTarget đúng.
+                             */}
+                            <div
+                                className={`
+                                    flex flex-wrap gap-1.5 items-center
+                                    rounded-xl bg-black/30 border px-3 py-2 min-h-[48px]
+                                    transition-all
+                                    ${isHashtagOpen ? "ring-1 ring-primary/40" : ""}
+                                    ${errors.selectedHashtags ? "border-red-500" : "border-white/10"}
+                                `}
+                                onBlur={(e) => {
+                                    // Chỉ đóng khi focus thực sự rời khỏi cả container lẫn dropdown
+                                    if (!hashtagRef.current?.contains(e.relatedTarget as Node)) {
+                                        setIsHashtagOpen(false);
+                                    }
+                                }}
+                            >
+                                {/* Tags nằm inline trong box */}
+                                {eventForm.selectedHashtags.map((tag) => (
+                                    <div
+                                        key={tag.id}
+                                        className="flex items-center gap-1 px-2.5 py-1 bg-primary/20 text-white font-medium rounded-full text-xs shrink-0"
+                                    >
+                                        <span>#{tag.name}</span>
                                         {isAllowUpdate && (
-                                            <button onClick={() => removeCategory(cat.id)} className="leading-none">
-                                                <FiX size={14} />
+                                            <button
+                                                tabIndex={-1}
+                                                onMouseDown={(e) => { e.preventDefault(); removeHashtag(tag.id); }}
+                                                className="text-white/60 hover:text-white leading-none ml-0.5"
+                                            >
+                                                <FiX size={11} />
                                             </button>
                                         )}
                                     </div>
                                 ))}
+
+                                {/* Input co giãn theo chỗ còn lại */}
+                                <input
+                                    value={hashtagInput}
+                                    onChange={(e) => {
+                                        if (!isAllowUpdate) return;
+                                        setHashtagInput(e.target.value);
+                                        if (!e.target.value.trim()) fetchHashtags();
+                                    }}
+                                    onFocus={() => { if (isAllowUpdate) setIsHashtagOpen(true); }}
+                                    onKeyDown={isAllowUpdate ? handleHashtagEnter : undefined}
+                                    readOnly={!isAllowUpdate}
+                                    placeholder={isAllowUpdate ? "+ Thêm hashtag" : ""}
+                                    className="flex-1 min-w-[80px] bg-transparent border-none text-white text-sm outline-none ring-0 focus:ring-0 placeholder:text-slate-500 read-only:cursor-not-allowed py-1"
+                                />
+                            </div>
+
+                            {errors.selectedHashtags && (
+                                <p className="text-xs text-red-400 mt-1">{errors.selectedHashtags}</p>
+                            )}
+
+                            {/* Dropdown */}
+                            {isAllowUpdate && isHashtagOpen && (
+                                <DropdownList>
+                                    {isHashtagLoading ? (
+                                        <DropdownLoading />
+                                    ) : suggestions.length > 0 || showCreateOption ? (
+                                        <>
+                                            {suggestions.map((tag) => (
+                                                <DropdownItem
+                                                    key={tag.id}
+                                                    isSelected={eventForm.selectedHashtags.some((t) => t.id === tag.id)}
+                                                    onClick={(e) => { e.preventDefault(); addHashtag(tag); }}
+                                                    suffix={eventForm.selectedHashtags.some((t) => t.id === tag.id) ? "✓" : undefined}
+                                                >
+                                                    #{tag.name}
+                                                </DropdownItem>
+                                            ))}
+                                            {showCreateOption && (
+                                                <DropdownItem
+                                                    onClick={(e) => { e.preventDefault(); setShowCreateHashtagModal(true); }}
+                                                    suffix={<FiPlus size={13} className="text-primary" />}
+                                                >
+                                                    <span className="text-slate-400">
+                                                        Tạo hashtag &nbsp;
+                                                        <span className="text-white font-medium">#{hashtagInput.trim()}</span>
+                                                    </span>
+                                                </DropdownItem>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="px-4 py-4 text-sm text-slate-500 text-center">
+                                            Không tìm thấy hashtag nào
+                                        </div>
+                                    )}
+                                </DropdownList>
+                            )}
+                        </div>
+
+                        {/* ── Category dropdown ── */}
+                        <div ref={categoryRef} className="relative">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm text-slate-400">Thể loại</label>
+                                {isCategoryOpen && !isCategoryLoading && (
+                                    <span className="text-xs text-slate-500">{categorySuggestions.length} kết quả</span>
+                                )}
+                            </div>
+
+                            {/* Combobox container tương tự hashtag */}
+                            <div
+                                className={`
+                                    flex flex-wrap gap-1.5 items-center
+                                    rounded-xl bg-black/30 border px-3 py-2 min-h-[48px]
+                                    transition-all
+                                    ${isCategoryOpen ? "ring-1 ring-primary/40" : ""}
+                                    ${errors.selectedCategories ? "border-red-500" : "border-white/10"}
+                                `}
+                                onBlur={(e) => {
+                                    if (!categoryRef.current?.contains(e.relatedTarget as Node)) {
+                                        setIsCategoryOpen(false);
+                                        setCategoryInput("");
+                                    }
+                                }}
+                            >
+                                {eventForm.selectedCategories.map((cat) => (
+                                    <div
+                                        key={cat.id}
+                                        className="flex items-center gap-1 px-2.5 py-1 bg-primary/20 text-white font-medium rounded-full text-xs shrink-0"
+                                    >
+                                        <span>{cat.name}</span>
+                                        {isAllowUpdate && (
+                                            <button
+                                                tabIndex={-1}
+                                                onMouseDown={(e) => { e.preventDefault(); removeCategory(cat.id); }}
+                                                className="text-white/60 hover:text-white leading-none ml-0.5"
+                                            >
+                                                <FiX size={11} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+
                                 <input
                                     value={categoryInput}
-                                    onChange={(e) => isAllowUpdate && setCategoryInput(e.target.value)}
-                                    onFocus={() => isAllowUpdate && setIsCategoryFocused(true)}
+                                    onChange={(e) => {
+                                        if (!isAllowUpdate) return;
+                                        setCategoryInput(e.target.value);
+                                        if (!e.target.value.trim()) fetchCategories();
+                                    }}
+                                    onFocus={() => { if (isAllowUpdate) setIsCategoryOpen(true); }}
                                     readOnly={!isAllowUpdate}
-                                    className="flex-1 bg-transparent outline-none border-none focus:outline-none focus:ring-0 text-white px-2 py-1 min-w-[120px] read-only:cursor-not-allowed"
-                                    placeholder={isAllowUpdate ? "Tìm thể loại..." : ""}
+                                    placeholder={isAllowUpdate ? "+ Thêm thể loại" : ""}
+                                    className="flex-1 min-w-[80px] bg-transparent border-none text-white text-sm outline-none ring-0 focus:ring-0 placeholder:text-slate-500 read-only:cursor-not-allowed py-1"
                                 />
                             </div>
 
@@ -703,29 +810,26 @@ export default function Step1EventInfo({
                                 <p className="text-xs text-red-400 mt-1">{errors.selectedCategories}</p>
                             )}
 
-                            {/* Dropdown — chỉ hiện khi isAllowUpdate */}
-                            {isAllowUpdate && isCategoryFocused && (
-                                <div className="absolute z-20 top-full mt-1 w-full rounded-lg bg-[#140f2a] border border-white/10 overflow-y-auto max-h-52 shadow-2xl">
-                                    {categorySuggestions.length > 0 ? (
+                            {/* Dropdown */}
+                            {isAllowUpdate && isCategoryOpen && (
+                                <DropdownList>
+                                    {isCategoryLoading ? (
+                                        <DropdownLoading />
+                                    ) : categorySuggestions.length > 0 ? (
                                         categorySuggestions.map((cat) => {
                                             const isSelected = eventForm.selectedCategories.some((c) => c.id === cat.id);
                                             return (
-                                                <div
+                                                <DropdownItem
                                                     key={cat.id}
-                                                    onMouseDown={(e) => {
+                                                    isSelected={isSelected}
+                                                    onClick={(e) => {
                                                         e.preventDefault();
                                                         if (!isSelected) addCategory(cat);
                                                     }}
-                                                    className={`flex items-center justify-between px-4 py-2 cursor-pointer text-sm transition-colors ${isSelected
-                                                        ? "bg-primary/15 text-primary cursor-default"
-                                                        : "text-white hover:bg-white/5"
-                                                        }`}
+                                                    suffix={isSelected ? "✓" : undefined}
                                                 >
-                                                    <span>{cat.name}</span>
-                                                    {isSelected && (
-                                                        <span className="text-xs font-semibold text-primary/80">✓</span>
-                                                    )}
-                                                </div>
+                                                    {cat.name}
+                                                </DropdownItem>
                                             );
                                         })
                                     ) : (
@@ -733,7 +837,7 @@ export default function Step1EventInfo({
                                             Không tìm thấy thể loại nào
                                         </div>
                                     )}
-                                </div>
+                                </DropdownList>
                             )}
                         </div>
                     </div>
@@ -783,7 +887,9 @@ export default function Step1EventInfo({
                     {eventForm.actors.length === 0 && (
                         <>
                             <p className="text-sm text-slate-400">Chưa có diễn giả nào</p>
-                            {errors.actors?.[0]?.name && <p className="text-xs text-red-400 mt-1">{errors.actors[0].name}</p>}
+                            {errors.actors?.[0]?.name && (
+                                <p className="text-xs text-red-400 mt-1">{errors.actors[0].name}</p>
+                            )}
                         </>
                     )}
 
@@ -804,7 +910,11 @@ export default function Step1EventInfo({
                                     ) : (
                                         <div>
                                             <UploadBox
-                                                label="Ảnh" aspect="1/1" file={actor.image} error={!!actorErrors?.image} square
+                                                label="Ảnh"
+                                                aspect="1/1"
+                                                file={actor.image}
+                                                error={!!actorErrors?.image}
+                                                square
                                                 disabled={!isAllowUpdate}
                                                 onChange={(file) => {
                                                     if (!isAllowUpdate) return;
@@ -812,7 +922,9 @@ export default function Step1EventInfo({
                                                     else updateActor(index, "image", null);
                                                 }}
                                             />
-                                            {actorErrors.image && <p className="text-xs text-red-400 mt-1">{actorErrors.image}</p>}
+                                            {actorErrors.image && (
+                                                <p className="text-xs text-red-400 mt-1">{actorErrors.image}</p>
+                                            )}
                                         </div>
                                     )}
 
@@ -825,7 +937,9 @@ export default function Step1EventInfo({
                                                 className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white disabled:opacity-40 disabled:cursor-not-allowed ${actorErrors.name ? "border-red-500" : "border-white/10"}`}
                                                 placeholder="Tên diễn giả"
                                             />
-                                            {actorErrors.name && <p className="text-xs text-red-400 mt-1">{actorErrors.name}</p>}
+                                            {actorErrors.name && (
+                                                <p className="text-xs text-red-400 mt-1">{actorErrors.name}</p>
+                                            )}
                                         </div>
                                         <div>
                                             <input
@@ -835,11 +949,12 @@ export default function Step1EventInfo({
                                                 className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white disabled:opacity-40 disabled:cursor-not-allowed ${actorErrors.major ? "border-red-500" : "border-white/10"}`}
                                                 placeholder="Chuyên môn (AI Engineer, CEO, Ca sĩ, Nghệ sĩ...)"
                                             />
-                                            {actorErrors.major && <p className="text-xs text-red-400 mt-1">{actorErrors.major}</p>}
+                                            {actorErrors.major && (
+                                                <p className="text-xs text-red-400 mt-1">{actorErrors.major}</p>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Chỉ hiện nút Xóa khi isAllowUpdate */}
                                     {isAllowUpdate ? (
                                         <button
                                             onClick={() => removeActor(index)}
@@ -848,7 +963,7 @@ export default function Step1EventInfo({
                                             Xóa
                                         </button>
                                     ) : (
-                                        <div /> /* placeholder để giữ layout grid */
+                                        <div />
                                     )}
                                 </div>
                             );
@@ -856,7 +971,7 @@ export default function Step1EventInfo({
                     </div>
                 </section>
 
-                {/* ===== Footer — nút tiếp theo KHÔNG disable ===== */}
+                {/* ===== Footer ===== */}
                 <div className="flex justify-end pt-6">
                     <button onClick={handleNext} className="px-6 py-3 rounded-xl bg-primary text-white font-semibold">
                         {mode === "create" ? "Tạo sự kiện" : isChanged ? "Lưu và Tiếp tục →" : "Tiếp theo →"}
