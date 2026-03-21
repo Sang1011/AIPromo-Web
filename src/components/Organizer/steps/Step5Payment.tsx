@@ -1,14 +1,14 @@
-import { FiInfo, FiCreditCard } from "react-icons/fi";
-import BankSelect from "../bank/BankSelect";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { FiCreditCard, FiInfo } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import {
     fetchOrganizerProfile,
     fetchUpdateOrganizerBank,
 } from "../../../store/organizerProfileSlice";
-import { notify } from "../../../utils/notify";
 import type { GetEventDetailResponse } from "../../../types/event/event";
+import { notify } from "../../../utils/notify";
+import BankSelect from "../bank/BankSelect";
 
 interface Step5PaymentProps {
     onBack?: () => void;
@@ -24,14 +24,14 @@ interface BankErrors {
     branch?: string;
 }
 
-interface VatErrors {
-    companyName?: string;
-    address?: string;
-    taxCode?: string;
-    identityNumber?: string;
-}
+// interface VatErrors {
+//     companyName?: string;
+//     address?: string;
+//     taxCode?: string;
+//     identityNumber?: string;
+// }
 
-export default function Step5Payment({ onBack, onFinish, eventData, reloadEvent }: Step5PaymentProps) {
+export default function Step5Payment({ onBack, onFinish }: Step5PaymentProps) {
     const BANKS = [
         { code: "VCB", name: "Vietcombank" },
         { code: "VTB", name: "VietinBank" },
@@ -64,7 +64,7 @@ export default function Step5Payment({ onBack, onFinish, eventData, reloadEvent 
     const [identityNumber, setIdentityNumber] = useState("");
 
     const [bankErrors, setBankErrors] = useState<BankErrors>({});
-    const [vatErrors, setVatErrors] = useState<VatErrors>({});
+    // const [vatErrors, setVatErrors] = useState<VatErrors>({});
 
     useEffect(() => {
         dispatch(fetchOrganizerProfile());
@@ -84,6 +84,12 @@ export default function Step5Payment({ onBack, onFinish, eventData, reloadEvent 
     }, [profile]);
 
     const validateBank = (): boolean => {
+        console.log(businessType);
+        console.log(companyName);
+        console.log(address);
+        console.log(taxCode);
+        console.log(identityNumber);
+
         const errors: BankErrors = {};
 
         if (!accountName.trim())
@@ -104,37 +110,37 @@ export default function Step5Payment({ onBack, onFinish, eventData, reloadEvent 
         return Object.keys(errors).length === 0;
     };
 
-    const validateVat = (): boolean => {
-        const errors: VatErrors = {};
+    // const validateVat = (): boolean => {
+    //     const errors: VatErrors = {};
 
-        if (!companyName.trim())
-            errors.companyName = businessType === "personal"
-                ? "Họ và tên không được để trống"
-                : "Tên công ty không được để trống";
+    //     if (!companyName.trim())
+    //         errors.companyName = businessType === "personal"
+    //             ? "Họ và tên không được để trống"
+    //             : "Tên công ty không được để trống";
 
-        if (!address.trim())
-            errors.address = "Địa chỉ không được để trống";
+    //     if (!address.trim())
+    //         errors.address = "Địa chỉ không được để trống";
 
-        if (businessType === "personal") {
-            if (!identityNumber.trim())
-                errors.identityNumber = "Số CMND / CCCD không được để trống";
-            else if (!/^\d{9}$|^\d{12}$/.test(identityNumber))
-                errors.identityNumber = "Số CMND / CCCD phải có 9 hoặc 12 chữ số";
-        }
+    //     if (businessType === "personal") {
+    //         if (!identityNumber.trim())
+    //             errors.identityNumber = "Số CMND / CCCD không được để trống";
+    //         else if (!/^\d{9}$|^\d{12}$/.test(identityNumber))
+    //             errors.identityNumber = "Số CMND / CCCD phải có 9 hoặc 12 chữ số";
+    //     }
 
-        if (businessType === "company") {
-            if (!taxCode.trim())
-                errors.taxCode = "Mã số thuế không được để trống";
-            else if (!/^[0-9]{10}(-[0-9]{3})?$/.test(taxCode))
-                errors.taxCode = "Mã số thuế không hợp lệ (10 hoặc 13 ký tự số)";
+    //     if (businessType === "company") {
+    //         if (!taxCode.trim())
+    //             errors.taxCode = "Mã số thuế không được để trống";
+    //         else if (!/^[0-9]{10}(-[0-9]{3})?$/.test(taxCode))
+    //             errors.taxCode = "Mã số thuế không hợp lệ (10 hoặc 13 ký tự số)";
 
-            if (identityNumber && !/^\d{9}$|^\d{12}$/.test(identityNumber))
-                errors.identityNumber = "Số CMND / CCCD phải có 9 hoặc 12 chữ số";
-        }
+    //         if (identityNumber && !/^\d{9}$|^\d{12}$/.test(identityNumber))
+    //             errors.identityNumber = "Số CMND / CCCD phải có 9 hoặc 12 chữ số";
+    //     }
 
-        setVatErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
+    //     setVatErrors(errors);
+    //     return Object.keys(errors).length === 0;
+    // };
 
     const handleFinish = async () => {
         const bankValid = validateBank();
@@ -446,33 +452,33 @@ function Label({ children, required }: { children: React.ReactNode; required?: b
     );
 }
 
-function RadioCard({
-    label,
-    value,
-    checked,
-    onChange,
-}: {
-    label: string
-    value: string
-    checked: boolean
-    onChange: () => void
-}) {
-    return (
-        <label
-            className={`
-                flex items-center gap-3 p-4 rounded-xl cursor-pointer border transition
-                ${checked ? "border-primary bg-primary/10" : "border-white/10 bg-white/5 hover:border-primary/40"}
-            `}
-        >
-            <input
-                type="radio"
-                name="business_type"
-                value={value}
-                checked={checked}
-                onChange={onChange}
-                className="accent-primary"
-            />
-            <span className="text-sm font-medium text-white">{label}</span>
-        </label>
-    );
-}
+// function RadioCard({
+//     label,
+//     value,
+//     checked,
+//     onChange,
+// }: {
+//     label: string
+//     value: string
+//     checked: boolean
+//     onChange: () => void
+// }) {
+//     return (
+//         <label
+//             className={`
+//                 flex items-center gap-3 p-4 rounded-xl cursor-pointer border transition
+//                 ${checked ? "border-primary bg-primary/10" : "border-white/10 bg-white/5 hover:border-primary/40"}
+//             `}
+//         >
+//             <input
+//                 type="radio"
+//                 name="business_type"
+//                 value={value}
+//                 checked={checked}
+//                 onChange={onChange}
+//                 className="accent-primary"
+//             />
+//             <span className="text-sm font-medium text-white">{label}</span>
+//         </label>
+//     );
+// }

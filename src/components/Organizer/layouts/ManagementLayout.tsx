@@ -6,10 +6,8 @@ import { MdAnalytics, MdCampaign, MdConfirmationNumber, MdDashboard, MdEdit, MdE
 import { Outlet, useMatch, useNavigate, useParams } from "react-router-dom";
 import Header from "../navigations/Header";
 import Sidebar from "../navigations/Sidebar";
-import { useHandleOrganizer } from "../../../hooks/useHandleOrganizer";
 
 export default function ManagementLayout() {
-    useHandleOrganizer();
     const [collapsed, setCollapsed] = useState(false);
     const { eventId } = useParams<{ eventId: string }>();
     const navigate = useNavigate();

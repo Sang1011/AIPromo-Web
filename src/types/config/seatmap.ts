@@ -33,6 +33,7 @@ export interface TicketType {
     name: string;
     color: string;
     price: number;
+    quantity?: number;
 }
 
 

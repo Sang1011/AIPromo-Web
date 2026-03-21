@@ -14,8 +14,6 @@ import type {
     GetAllRequestByMe,
     GetAllCreateResponseForPrivate,
     EventSession,
-    CreateTicketTypeRequest,
-    UpdateTicketTypeRequest,
     GetPendingEventsRequest,
     PendingEventsData,
 } from "../types/event/event";
@@ -312,7 +310,7 @@ export const fetchPublishEvent = createAsyncThunk<any, string>(
     }
 )
 
-export const fetchCancelEvent = createAsyncThunk<any,{ eventId: string; reason: string }>(
+export const fetchCancelEvent = createAsyncThunk<any, { eventId: string; reason: string }>(
     `${name}/cancelEvent`,
     async ({ eventId, reason }, thunkAPI) => {
         try {
@@ -439,18 +437,18 @@ const eventSlice = createSlice({
         });
         builder.addCase(fetchPendingEvents.fulfilled, (state, action) => {
 
-        if (!action.payload) return
+            if (!action.payload) return
 
-        state.events = action.payload.items
+            state.events = action.payload.items
 
-        state.pagination = {
-            pageNumber: action.payload.pageNumber,
-            pageSize: action.payload.pageSize,
-            totalCount: action.payload.totalCount,
-            totalPages: action.payload.totalPages,
-            hasPrevious: action.payload.hasPrevious,
-            hasNext: action.payload.hasNext
-        }
+            state.pagination = {
+                pageNumber: action.payload.pageNumber,
+                pageSize: action.payload.pageSize,
+                totalCount: action.payload.totalCount,
+                totalPages: action.payload.totalPages,
+                hasPrevious: action.payload.hasPrevious,
+                hasNext: action.payload.hasNext
+            }
 
         });
     },

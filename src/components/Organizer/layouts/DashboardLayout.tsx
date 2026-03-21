@@ -6,7 +6,6 @@ import type { DashboardLayoutConfig } from "../../../types/config/dashboard.conf
 import Header from "../navigations/Header";
 import PromoSidebar from "../navigations/PromoSidebar";
 import Sidebar from "../navigations/Sidebar";
-import { useHandleOrganizer } from "../../../hooks/useHandleOrganizer";
 
 const menuGroups = [
     {
@@ -31,7 +30,6 @@ const menuGroups = [
 ];
 
 export default function DashboardLayout() {
-    useHandleOrganizer();
     const [collapsed, setCollapsed] = useState(false);
 
     const [config, setConfig] = useState<DashboardLayoutConfig>({

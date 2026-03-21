@@ -13,10 +13,6 @@ import { fetchCreatePendingOrder } from '../../store/ticketingSlice';
 import { notify } from '../../utils/notify';
 import { fetchEventById } from '../../store/eventSlice';
 
-// ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
-
 type ViewerMode = 'zone' | 'seat';
 
 interface SelectedSeat {
@@ -290,13 +286,6 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         }
     };
 
-    // ── Reset ──
-    const handleReset = () => {
-        setSelectedZone(null);
-        setSelectedSeatIds(new Set());
-        setZonePopup(null);
-    };
-
     // ── Render area shape ──
     const renderAreaShape = (area: Area, fillColor: string, strokeColor: string, opacity: number) => {
         const common = {
@@ -327,9 +316,8 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
     };
 
     // ── Render label inside area ──
-    const renderAreaLabel = (area: Area, color: string) => {
+    const renderAreaLabel = (area: Area) => {
         const isCircle = area.type === 'circle';
-        const cx = isCircle ? 0 : area.width / 2;
         const cy = isCircle ? 0 : area.height / 2;
         const fontSize = Math.max(10, area.labelFontSize ?? 14);
         const tt = ticketTypes.find(t => t.id === area.ticketTypeId);
@@ -411,7 +399,7 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                 }}
             >
                 {renderAreaShape(area, fillColor, strokeColor, opacity)}
-                {mode === 'zone' && renderAreaLabel(area, baseColor)}
+                {mode === 'zone' && renderAreaLabel(area)}
             </Group>
         );
     });
@@ -577,31 +565,35 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                 Bấm vào khu vực để chọn
             </div>
         );
+
+        const maxQty = ticketTypes.find(t => t.id === selectedZone.ticketTypeId)?.quantity ?? 0;
+        const atMin = selectedZone.quantity <= 1;
+        const atMax = selectedZone.quantity >= maxQty;
+
         return (
-            <div style={{
-                background: '#16162a',
-                border: `1px solid ${BORDER_COLOR}`,
-                borderRadius: 8,
-                padding: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-            }}>
+            <div style={{ background: '#16162a', border: `1px solid ${BORDER_COLOR}`, borderRadius: 8, padding: '12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 12, height: 12, borderRadius: 3, background: selectedZone.ticketTypeColor }} />
                     <span style={{ fontSize: 14, fontWeight: 700 }}>{selectedZone.areaName}</span>
                 </div>
-                <div style={{ fontSize: 12, color: TEXT_MUTED }}>{selectedZone.ticketTypeName} · {fmtVND(selectedZone.price)} / vé</div>
+                <div style={{ fontSize: 12, color: TEXT_MUTED }}>
+                    {selectedZone.ticketTypeName} · {fmtVND(selectedZone.price)} / vé
+                </div>
+                <div style={{ fontSize: 12, color: atMax ? '#ef4444' : TEXT_MUTED }}>
+                    Còn lại: {maxQty} vé
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 13, color: '#e5e7eb' }}>Số lượng:</span>
                     <button
+                        disabled={atMin}
                         onClick={() => setSelectedZone(z => z ? { ...z, quantity: Math.max(1, z.quantity - 1) } : z)}
-                        style={qtyBtn}
+                        style={{ ...qtyBtn, opacity: atMin ? 0.4 : 1, cursor: atMin ? 'not-allowed' : 'pointer' }}
                     >−</button>
                     <span style={{ minWidth: 24, textAlign: 'center', fontSize: 15, fontWeight: 700 }}>{selectedZone.quantity}</span>
                     <button
-                        onClick={() => setSelectedZone(z => z ? { ...z, quantity: z.quantity + 1 } : z)}
-                        style={qtyBtn}
+                        disabled={atMax}
+                        onClick={() => setSelectedZone(z => z ? { ...z, quantity: Math.min(maxQty, z.quantity + 1) } : z)}
+                        style={{ ...qtyBtn, opacity: atMax ? 0.4 : 1, cursor: atMax ? 'not-allowed' : 'pointer' }}
                     >+</button>
                 </div>
                 <button
@@ -817,23 +809,37 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                         </div>
 
                         {/* Ticket type row */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <div style={{ width: 14, height: 14, borderRadius: 3, background: zonePopup.ticketTypeColor }} />
-                                <span style={{ fontSize: 15, fontWeight: 600 }}>{zonePopup.ticketTypeName}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <button
-                                    onClick={() => setZonePopup(z => z ? { ...z, quantity: Math.max(1, z.quantity - 1) } : z)}
-                                    style={popupQtyBtn}
-                                >−</button>
-                                <span style={{ fontSize: 16, fontWeight: 700, minWidth: 24, textAlign: 'center' }}>{zonePopup.quantity}</span>
-                                <button
-                                    onClick={() => setZonePopup(z => z ? { ...z, quantity: z.quantity + 1 } : z)}
-                                    style={popupQtyBtn}
-                                >+</button>
-                            </div>
-                        </div>
+                        {(() => {
+                            const maxQty = ticketTypes.find(t => t.id === zonePopup.ticketTypeId)?.quantity ?? 0;
+                            const atMin = zonePopup.quantity <= 1;
+                            const atMax = zonePopup.quantity >= maxQty;
+                            return (
+                                <>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <div style={{ width: 14, height: 14, borderRadius: 3, background: zonePopup.ticketTypeColor }} />
+                                            <span style={{ fontSize: 15, fontWeight: 600 }}>{zonePopup.ticketTypeName}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <button
+                                                disabled={atMin}
+                                                onClick={() => setZonePopup(z => z ? { ...z, quantity: Math.max(1, z.quantity - 1) } : z)}
+                                                style={{ ...popupQtyBtn, opacity: atMin ? 0.4 : 1, cursor: atMin ? 'not-allowed' : 'pointer' }}
+                                            >−</button>
+                                            <span style={{ fontSize: 16, fontWeight: 700, minWidth: 24, textAlign: 'center' }}>{zonePopup.quantity}</span>
+                                            <button
+                                                disabled={atMax}
+                                                onClick={() => setZonePopup(z => z ? { ...z, quantity: Math.min(maxQty, z.quantity + 1) } : z)}
+                                                style={{ ...popupQtyBtn, opacity: atMax ? 0.4 : 1, cursor: atMax ? 'not-allowed' : 'pointer' }}
+                                            >+</button>
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: 12, color: atMax ? '#ef4444' : '#9ca3af' }}>
+                                        Còn lại: {maxQty} vé
+                                    </div>
+                                </>
+                            );
+                        })()}
 
                         {/* Change zone link */}
                         <button
@@ -987,6 +993,7 @@ const SeatMapViewerPage: React.FC = () => {
                     name: item?.name ?? area.ticketTypeId,
                     color: area.fill ?? '#6b7280',
                     price: area.price,
+                    quantity: item?.quantity ?? 0,
                 };
             });
     }, [seatMapData, ticketTypeItems]);
