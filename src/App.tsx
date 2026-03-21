@@ -32,7 +32,6 @@ import StaffDashboardPage from "./pages/Staff/StaffDashboardPage";
 import EventApprovalPage from "./pages/Staff/EventApprovalPage";
 import OrganizerProfilePage from "./pages/Staff/OrganizerProfilePage";
 import Login from "./pages/LoginPage";
-import data from "../src/data/seat-map.json";
 import SeatMapViewerPage from "./pages/Organizer/SeatMapViewerPage";
 import Register from "./pages/RegisterPage";
 import { useDispatch } from "react-redux";
@@ -64,6 +63,7 @@ function App() {
         <Route path="/event-detail/:id" element={<EventDetail />} />
         <Route path="/all-event" element={<AllEvent />} />
         <Route path="/history-event" element={<HistoryEvent />} />
+        <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
 
         {/* Organizer */}
         {/* Organizer - Dashboard group */}
@@ -88,11 +88,6 @@ function App() {
           <Route path="vouchers" element={<VoucherManagementPage />} />
         </Route >
         <Route path="/organizer/my-events/:eventId/seat-map/edit" element={<SeatMapEditorPage />} />
-        <Route path="/organizer/my-events/:eventId/seat-map/show" element={<SeatMapViewerPage
-          seatMapData={data as any}
-          mode="seat"
-          onConfirm={(payload) => console.log(payload)}
-        />} />
 
         {/* Admin group */}
         <Route path="/admin" element={<AdminLayout />}>

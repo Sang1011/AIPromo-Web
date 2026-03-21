@@ -8,6 +8,7 @@ import { fetchGetSeatMap } from "../../store/seatMapSlice";
 import type { AppDispatch, RootState } from "../../store";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchGetAllTicketTypes } from "../../store/ticketTypeSlice";
+import { fetchEventById } from "../../store/eventSlice";
 export default function LockSeatTab() {
     const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
     const MAX_VISIBLE = 3;
@@ -16,6 +17,7 @@ export default function LockSeatTab() {
     const dispatch = useDispatch<AppDispatch>();
     const [seatMapData, setSeatMapData] = useState<SeatMapData | null>(null);
     const { ticketTypes } = useSelector((state: RootState) => state.TICKET_TYPE)
+    const { currentEvent } = useSelector((state: RootState) => state.EVENT)
 
     const visibleSeats = showAll
         ? selectedSeatIds
@@ -33,6 +35,7 @@ export default function LockSeatTab() {
 
     useEffect(() => {
         if (!eventId) return;
+        dispatch(fetchEventById(eventId))
         dispatch(fetchGetSeatMap(eventId))
         dispatch(fetchGetAllTicketTypes({ eventId }));
     }, [eventId, dispatch])
@@ -228,18 +231,27 @@ export default function LockSeatTab() {
 
                     <button
                         onClick={() => {
-                            gotoEdit()
+                            if (!currentEvent) {
+                                gotoEdit()
+                            }
                         }}
+                        disabled={currentEvent?.status !== "Draft"}
                         className="
         w-full py-3 rounded-xl
         bg-gradient-to-r from-primary/30 to-primary/10
         text-white font-semibold
         border border-primary/30
+        transition-all
+
         hover:from-primary/40 hover:to-primary/20
         hover:border-primary/50
-        transition-all
-        shadow-[0_0_0_0_rgba(139,92,246,0)]
         hover:shadow-[0_0_18px_2px_rgba(139,92,246,0.35)]
+
+        disabled:opacity-40
+        disabled:cursor-not-allowed
+        disabled:hover:shadow-none
+        disabled:hover:from-primary/30
+        disabled:hover:to-primary/10
     "
                     >
                         Chỉnh sửa sơ đồ

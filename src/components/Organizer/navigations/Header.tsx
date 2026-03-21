@@ -61,9 +61,9 @@ export default function Header({
                     )}
 
                     <div className="flex flex-col justify-center">
-                        <h1 className="text-2xl font-bold text-white">
+                        <h1 className="text-2xl font-bold text-white max-w-[870px] truncate">
                             {haveTitle && isEventHeader
-                                ? currentEvent?.title || "Đang tải..."
+                                ? "Sự kiện " + currentEvent?.title || "Đang tải..."
                                 : title}
                         </h1>
                     </div>

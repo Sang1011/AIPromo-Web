@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { FiCalendar } from "react-icons/fi";
+import "../shared/datetime.css";
 
 interface DateTimeInputProps {
     label: string;

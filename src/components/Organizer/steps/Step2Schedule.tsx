@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
     FiPlus, FiEdit2, FiTrash2, FiCalendar, FiClock,
@@ -15,7 +15,15 @@ import { fetchGetAllTicketTypes } from "../../../store/ticketTypeSlice";
 import type { TicketTypeItem } from "../../../types/ticketType/ticketType";
 import { notify } from "../../../utils/notify";
 import DateTimeInput from "../shared/DateTimeInput";
-import "../shared/datetime.css";
+
+import {
+    validateEventTime,
+    getInvalidSessions,
+    errorsToFieldMap,
+    type EventTimeWindow,
+    type SessionWindow,
+    type InvalidSessionsResult,
+} from "../../../utils/eventValidation";
 
 const formatDateTime = (iso: string) => {
     if (!iso) return "—";
@@ -71,11 +79,12 @@ function SectionHeader({
 }
 
 function SessionCard({
-    session, onEdit, onDelete,
+    session, onEdit, onDelete, hasConflict,
 }: {
     session: EventSession & { id: string };
     onEdit: () => void;
     onDelete: () => void;
+    hasConflict?: boolean;
 }) {
     const [deleting, setDeleting] = useState(false);
 
@@ -86,10 +95,21 @@ function SessionCard({
     };
 
     return (
-        <div className="group relative flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-[#18122B] border border-white/5 hover:border-primary/25 hover:bg-[#1e1638] transition-all duration-200">
-            <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full bg-primary/30 group-hover:bg-primary/60 transition-colors" />
+        <div className={`group relative flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border transition-all duration-200 ${hasConflict
+            ? "bg-red-950/30 border-red-500/30 hover:border-red-500/50"
+            : "bg-[#18122B] border-white/5 hover:border-primary/25 hover:bg-[#1e1638]"
+            }`}>
+            <div className={`absolute left-0 top-3 bottom-3 w-0.5 rounded-full transition-colors ${hasConflict ? "bg-red-500/60" : "bg-primary/30 group-hover:bg-primary/60"
+                }`} />
             <div className="flex-1 min-w-0 pl-3">
-                <p className="font-bold text-white text-sm truncate">{session.title}</p>
+                <div className="flex items-center gap-2">
+                    <p className="font-bold text-white text-sm truncate">{session.title}</p>
+                    {hasConflict && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 shrink-0">
+                            <FiAlertTriangle size={9} /> Ngoài giờ sự kiện
+                        </span>
+                    )}
+                </div>
                 {session.description && (
                     <p className="text-xs text-slate-500 truncate mt-0.5 max-w-sm">{session.description}</p>
                 )}
@@ -188,6 +208,53 @@ function Divider() {
     );
 }
 
+// ─── NEW: Conflict warning banner ─────────────────────────────────────────────
+/**
+ * Shown above the sessions list when the current event window does not cover
+ * all existing sessions. The caller passes the live conflict result so this
+ * component stays purely presentational.
+ */
+function ConflictBanner({
+    result,
+    onDismiss,
+}: {
+    result: InvalidSessionsResult;
+    onDismiss: () => void;
+}) {
+    if (!result.hasConflicts) return null;
+    return (
+        <div className="rounded-xl border border-red-500/25 bg-red-950/30 p-4 space-y-2">
+            <div className="flex items-start gap-2">
+                <FiAlertTriangle className="text-red-400 mt-0.5 shrink-0" size={14} />
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-red-300">
+                        {result.conflicts.length} suất diễn nằm ngoài khung giờ sự kiện
+                    </p>
+                    <p className="text-xs text-red-400/80 mt-0.5">
+                        Bạn cần chỉnh sửa hoặc xoá các suất diễn này trước khi tiếp tục.
+                    </p>
+                </div>
+                <button
+                    onClick={onDismiss}
+                    className="text-red-400/50 hover:text-red-300 transition-colors text-xs shrink-0"
+                >
+                    ✕
+                </button>
+            </div>
+            <ul className="space-y-1 pl-5">
+                {result.conflicts.map((c) => (
+                    <li key={c.id} className="text-xs text-red-400/70">
+                        <span className="font-semibold text-red-300">{c.title}</span>
+                        {" — "}
+                        {c.reasons.join(" · ")}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 type TimeForm = {
     ticketSaleStartAt: string;
     ticketSaleEndAt: string;
@@ -205,9 +272,12 @@ interface Step2ScheduleProps {
     isAllowUpdate?: boolean;
 }
 
-export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, isAllowUpdate = true }: Step2ScheduleProps) {
+export default function Step2Schedule({
+    onNext, onBack, eventData, reloadEvent, isAllowUpdate = true,
+}: Step2ScheduleProps) {
     const dispatch = useDispatch<AppDispatch>();
     const { eventId } = useParams<{ eventId: string }>();
+
     const [timeForm, setTimeForm] = useState<TimeForm>({
         ticketSaleStartAt: "",
         ticketSaleEndAt: "",
@@ -216,6 +286,13 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
     });
     const [initialTimeForm, setInitialTimeForm] = useState<TimeForm | null>(null);
     const [timeErrors, setTimeErrors] = useState<TimeFormErrors>({});
+
+    const [sessionConflicts, setSessionConflicts] = useState<InvalidSessionsResult>({
+        hasConflicts: false,
+        conflicts: [],
+    });
+    const [conflictDismissed, setConflictDismissed] = useState(false);
+
     const sessions = (useSelector(
         (state: RootState) => state.EVENT.sessions
     ) ?? []) as (EventSession & { id: string })[];
@@ -238,30 +315,39 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
     useEffect(() => { loadSessions(); }, [eventId]);
     useEffect(() => { if (eventId) dispatch(fetchGetAllTicketTypes({ eventId })); }, [eventId]);
 
+    const recomputeConflicts = useCallback(
+        (form: TimeForm, currentSessions: typeof sessions) => {
+            if (!form.eventStartAt || !form.eventEndAt || currentSessions.length === 0) {
+                setSessionConflicts({ hasConflicts: false, conflicts: [] });
+                return;
+            }
+            const result = getInvalidSessions(
+                currentSessions.map((s) => ({
+                    id: s.id,
+                    title: s.title,
+                    startTime: s.startTime,
+                    endTime: s.endTime,
+                })) satisfies SessionWindow[],
+                { eventStartAt: form.eventStartAt, eventEndAt: form.eventEndAt }
+            );
+            setSessionConflicts(result);
+            if (result.hasConflicts) setConflictDismissed(false); // re-show banner
+        },
+        []
+    );
+
+    useEffect(() => {
+        recomputeConflicts(timeForm, sessions);
+    }, [timeForm.eventStartAt, timeForm.eventEndAt, sessions, recomputeConflicts]);
+
     const hasSessions = sessions.length > 0;
     const hasTickets = ticketTypes.length > 0;
+    const conflictIds = new Set(sessionConflicts.conflicts.map((c) => c.id));
 
-    const validateTimeForm = (): boolean => {
-        const e: TimeFormErrors = {};
-        if (!timeForm.ticketSaleStartAt) e.ticketSaleStartAt = "Vui lòng chọn thời gian bắt đầu bán vé";
-        if (!timeForm.ticketSaleEndAt) e.ticketSaleEndAt = "Vui lòng chọn thời gian kết thúc bán vé";
-        if (!timeForm.eventStartAt) e.eventStartAt = "Vui lòng chọn thời gian bắt đầu sự kiện";
-        if (!timeForm.eventEndAt) e.eventEndAt = "Vui lòng chọn thời gian kết thúc sự kiện";
-
-        if (timeForm.ticketSaleStartAt && timeForm.ticketSaleEndAt &&
-            new Date(timeForm.ticketSaleStartAt) >= new Date(timeForm.ticketSaleEndAt))
-            e.ticketSaleEndAt = "Thời gian kết thúc bán vé phải sau thời gian bắt đầu";
-
-        if (timeForm.ticketSaleEndAt && timeForm.eventStartAt &&
-            new Date(timeForm.ticketSaleEndAt) > new Date(timeForm.eventStartAt))
-            e.eventStartAt = "Sự kiện phải bắt đầu sau khi kết thúc bán vé";
-
-        if (timeForm.eventStartAt && timeForm.eventEndAt &&
-            new Date(timeForm.eventStartAt) >= new Date(timeForm.eventEndAt))
-            e.eventEndAt = "Thời gian kết thúc sự kiện phải sau thời gian bắt đầu";
-
-        setTimeErrors(e);
-        return Object.keys(e).length === 0;
+    const runTimeValidation = (): boolean => {
+        const result = validateEventTime(timeForm as EventTimeWindow);
+        setTimeErrors(errorsToFieldMap(result.errors));
+        return result.valid;
     };
 
     const toUTC = (local: string) => new Date(local).toISOString();
@@ -271,26 +357,16 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
         JSON.stringify(initialTimeForm) !== JSON.stringify(timeForm);
 
     const handleNext = async () => {
-        if (!validateTimeForm()) return;
+        if (!runTimeValidation()) return;
         if (!hasSessions) { notify.error("Sự kiện phải có ít nhất 1 suất diễn"); return; }
         if (!hasTickets) { notify.error("Sự kiện phải có ít nhất 1 loại vé"); return; }
 
-        if (timeForm.eventStartAt && timeForm.eventEndAt) {
-            const eventStart = new Date(timeForm.eventStartAt);
-            const eventEnd = new Date(timeForm.eventEndAt);
-
-            const invalidSession = sessions.find(s => {
-                const sStart = new Date(s.startTime);
-                const sEnd = new Date(s.endTime);
-                return sStart < eventStart || sEnd > eventEnd;
-            });
-
-            if (invalidSession) {
-                notify.error(
-                    `Suất diễn "${invalidSession.title}" nằm ngoài khoảng thời gian sự kiện`
-                );
-                return;
-            }
+        if (sessionConflicts.hasConflicts) {
+            notify.error(
+                `${sessionConflicts.conflicts.length} suất diễn nằm ngoài khung giờ sự kiện. Vui lòng chỉnh sửa trước khi tiếp tục.`
+            );
+            setConflictDismissed(false);
+            return;
         }
 
         if (isTimeFormChanged()) {
@@ -342,13 +418,11 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
 
     return (
         <div className="space-y-8 max-w-3xl mx-auto">
-
             <div>
                 <h2 className="text-xl font-extrabold text-white tracking-tight">Thời gian biểu & Loại vé</h2>
                 <p className="text-sm text-slate-500 mt-1">Thiết lập các suất diễn và hạng vé cho sự kiện.</p>
             </div>
 
-            {/* ===== Thời gian bán vé ===== */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiLock size={16} />}
@@ -379,7 +453,6 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
                 </div>
             </section>
 
-            {/* ===== Thời gian sự kiện ===== */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiInfo size={16} />}
@@ -412,7 +485,6 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
 
             <Divider />
 
-            {/* ===== Suất diễn ===== */}
             <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiLayers size={16} />}
@@ -428,6 +500,16 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
                         </button>
                     }
                 />
+
+                {!conflictDismissed && (
+                    <div className="mb-4">
+                        <ConflictBanner
+                            result={sessionConflicts}
+                            onDismiss={() => setConflictDismissed(true)}
+                        />
+                    </div>
+                )}
+
                 {loading ? (
                     <div className="py-10 flex items-center justify-center">
                         <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
@@ -438,6 +520,7 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
                             <SessionCard
                                 key={s.id}
                                 session={s}
+                                hasConflict={conflictIds.has(s.id)}
                                 onEdit={() => setEditingSession(s)}
                                 onDelete={() => handleDelete(s.id)}
                             />
@@ -450,7 +533,6 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
 
             <Divider />
 
-            {/* ===== Loại vé ===== */}
             <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiTag size={16} />}
@@ -483,7 +565,6 @@ export default function Step2Schedule({ onNext, onBack, eventData, reloadEvent, 
                 )}
             </div>
 
-            {/* ===== Footer ===== */}
             <div className="flex items-center justify-between pt-2">
                 <button
                     onClick={onBack}
