@@ -31,6 +31,20 @@ const authService = {
   updateUser: (data: UserProfileRequest ): Promise<AxiosResponse<any>> => {
     return interceptorAPI().patch(`users/profile`, data);
   },
+  uploadProfileImage: (userId: string, file: File): Promise<AxiosResponse<any>> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return interceptorAPI().patch(
+      `/users/${userId}/profile-image`,
+      formData,
+      {
+        headers: {
+          accept: "application/json",
+        },
+      }
+    );
+  },
 }
 
 export default authService
