@@ -20,6 +20,7 @@ export interface RegisterRequest {
 export interface UserProfile {
   email: string;
   userName: string;
+  profileImageUrl: string,
   firstName: string;
   lastName: string;
   phoneNumber: string;
