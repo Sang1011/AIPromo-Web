@@ -255,9 +255,10 @@ function Login() {
                 <label className="block text-sm font-medium text-slate-200" htmlFor="password">
                   Mật khẩu
                 </label>
-                <a className="text-xs text-primary hover:text-primary/80 transition-colors font-medium" href="#">
+               <Link to="/forgot-password"> <a className="text-xs text-primary hover:text-primary/80 transition-colors font-medium" href="#">
                   Quên mật khẩu?
                 </a>
+                </Link>
               </div>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
