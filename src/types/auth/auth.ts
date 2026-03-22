@@ -34,3 +34,17 @@ export interface UserProfile {
   modifiedBy: string;
   isActive: boolean;
 }
+
+
+export interface UserProfileRequest {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  birthday: string;
+  gender: string;
+  phone: string;
+  address: string;
+  description: string;
+  socialLink: string;
+  profileImageUrl: string;
+}
