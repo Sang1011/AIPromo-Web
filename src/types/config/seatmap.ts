@@ -35,6 +35,7 @@ export interface TicketType {
     price: number;
     quantity?: number;
     soldQuantity?: number;
+    remainingQuantity?: number;
 }
 
 
