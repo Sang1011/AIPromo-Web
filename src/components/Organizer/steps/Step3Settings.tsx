@@ -3,9 +3,9 @@ import { FiEye, FiLink, FiMap, FiPlus, FiEdit2 } from "react-icons/fi";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch } from "../../../store";
-import { fetchUpdateEventSettings } from "../../../store/eventSlice";
+import { fetchEventById, fetchUpdateEventSettings } from "../../../store/eventSlice";
 import { fetchGetSeatMap } from "../../../store/seatMapSlice";
-import type { GetEventDetailResponse } from "../../../types/event/event";
+import type { EventSession, GetEventDetailResponse } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
 
 interface Step3SettingsProps {
@@ -42,11 +42,29 @@ export default function Step3Settings({
     useEffect(() => {
         if (!eventId) return;
         setSeatMapLoading(true);
-        dispatch(fetchGetSeatMap(eventId))
+
+        dispatch(fetchEventById(eventId))
             .unwrap()
-            .then((spec) => setSeatMapSpec(spec ?? null))
-            .catch(() => setSeatMapSpec(null))
-            .finally(() => setSeatMapLoading(false));
+            .then((res) => {
+                const sessions: EventSession[] = res.data?.sessions ?? [];
+                const firstSession = sessions[0];
+
+                if (!firstSession) {
+                    setSeatMapSpec(null);
+                    setSeatMapLoading(false);
+                    return;
+                }
+
+                dispatch(fetchGetSeatMap({ eventId, sessionId: firstSession.id }))
+                    .unwrap()
+                    .then((spec) => setSeatMapSpec(spec ?? null))
+                    .catch(() => setSeatMapSpec(null))
+                    .finally(() => setSeatMapLoading(false));
+            })
+            .catch(() => {
+                setSeatMapSpec(null);
+                setSeatMapLoading(false);
+            });
     }, [eventId]);
 
     const hasSeatMap = !!seatMapSpec;

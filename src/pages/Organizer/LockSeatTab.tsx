@@ -35,10 +35,18 @@ export default function LockSeatTab() {
 
     useEffect(() => {
         if (!eventId) return;
+
         dispatch(fetchEventById(eventId))
-        dispatch(fetchGetSeatMap(eventId))
-        dispatch(fetchGetAllTicketTypes({ eventId }));
-    }, [eventId, dispatch])
+            .unwrap()
+            .then((res) => {
+                const sessions = res.data?.sessions ?? [];
+                const firstSession = sessions[0];
+                if (!firstSession) return;
+
+                dispatch(fetchGetSeatMap({ eventId, sessionId: firstSession.id }));
+                dispatch(fetchGetAllTicketTypes({ eventId }));
+            });
+    }, [eventId, dispatch]);
 
     const getTicketType = (sectionId: string) => {
         return ticketTypes.find(t => t.areaId === sectionId);

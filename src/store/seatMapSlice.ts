@@ -1,5 +1,4 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import eventService from "../services/eventService";
 import seatmapService from "../services/seatmapService";
 import type { AssignAreasRequest } from "../types/seatmap/seatmap";
 
