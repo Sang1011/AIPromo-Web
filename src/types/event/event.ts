@@ -1,6 +1,7 @@
 import type { ApiResponse } from "../api";
 
 export interface GetAllRequest {
+    CategoryId?:number,
     PageNumber?: number;
     PageSize?: number;
     SortColumn?: string;
