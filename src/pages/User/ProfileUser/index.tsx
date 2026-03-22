@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchUserDetail } from "../../../store/authSlice";
@@ -187,6 +187,176 @@ const WalletModal: React.FC<{
   );
 };
 
+interface AvatarProps {
+  profileImageUrl: string | null | undefined;
+  initials: string;
+  isActive: boolean;
+  userId: string;
+  onUploaded: (newUrl: string) => void;
+}
+
+const AvatarUpload: React.FC<AvatarProps> = ({
+  profileImageUrl,
+  initials,
+  isActive,
+  userId,
+  onUploaded,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const displayUrl = previewUrl ?? profileImageUrl ?? null;
+
+ const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    setUploadError("Chỉ chấp nhận file ảnh.");
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    setUploadError("Ảnh tối đa 5 MB.");
+    return;
+  }
+
+  // Preview ngay
+  const objectUrl = URL.createObjectURL(file);
+  setPreviewUrl(objectUrl);
+  setUploadError(null);
+
+  setUploading(true);
+  try {
+    const response = await authService.uploadProfileImage(userId, file);
+
+    const json = response.data;
+
+    const newUrl =
+      json?.profileImageUrl ??
+      json?.imageUrl ??
+      json?.url ??
+      json?.data?.profileImageUrl ??
+      null;
+
+    onUploaded(newUrl ?? objectUrl);
+  } catch (err: any) {
+    setUploadError(
+      err?.response?.data?.message ??
+      err?.message ??
+      "Upload thất bại, vui lòng thử lại."
+    );
+
+    // rollback preview
+    setPreviewUrl(null);
+    URL.revokeObjectURL(objectUrl);
+  } finally {
+    setUploading(false);
+
+    // reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+};
+
+  return (
+    <div className="relative shrink-0 group">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* Avatar */}
+      <div
+        className="w-32 h-32 md:w-36 md:h-36 rounded-2xl flex items-center justify-center text-white font-bold text-4xl border-4 overflow-hidden cursor-pointer select-none"
+        style={{
+          background: displayUrl ? "transparent" : "linear-gradient(135deg, #793bed, #a855f7)",
+          borderColor: "rgba(121,59,237,0.35)",
+          boxShadow: "0 20px 60px rgba(121,59,237,0.3)",
+        }}
+        onClick={() => !uploading && fileInputRef.current?.click()}
+        title="Nhấn để đổi ảnh đại diện"
+      >
+        {displayUrl ? (
+          <img
+            src={displayUrl}
+            alt="Avatar"
+            className="w-full h-full object-cover"
+            onError={() => setPreviewUrl(null)}
+          />
+        ) : (
+          initials
+        )}
+      </div>
+
+      {/* Hover overlay — camera icon */}
+      <div
+        className="absolute inset-0 rounded-2xl flex items-center justify-center transition-all pointer-events-none"
+        style={{
+          background: uploading
+            ? "rgba(0,0,0,0.55)"
+            : "rgba(0,0,0,0)",
+          opacity: uploading ? 1 : undefined,
+        }}
+      >
+        {uploading ? (
+          <svg className="animate-spin w-7 h-7 text-white" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        ) : (
+          <div
+            className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ pointerEvents: "none" }}
+          >
+            {/* Dark overlay on hover via group */}
+          </div>
+        )}
+      </div>
+
+      {/* CSS-driven hover dark overlay + camera icon */}
+      <style>{`
+        .avatar-wrap:hover .avatar-overlay { opacity: 1 !important; }
+      `}</style>
+      <div
+        className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+        style={{
+          background: "rgba(0,0,0,0.50)",
+          display: uploading ? "none" : undefined,
+        }}
+        onClick={() => !uploading && fileInputRef.current?.click()}
+      >
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="material-symbols-outlined text-white text-3xl">photo_camera</span>
+          <span className="text-white text-[10px] font-bold tracking-wide">Đổi ảnh</span>
+        </div>
+      </div>
+
+      {/* Verified badge */}
+      {isActive && (
+        <div className="absolute -bottom-2 -right-2 p-1.5 rounded-lg z-10" style={{ background: "#793bed" }}>
+          <span className="material-symbols-outlined text-white text-sm">verified</span>
+        </div>
+      )}
+
+      {/* Upload error tooltip */}
+      {uploadError && (
+        <div
+          className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-300 border border-red-500/20 z-20"
+          style={{ background: "rgba(239,68,68,0.12)" }}
+        >
+          {uploadError}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Build form helper ──────────────────────────────────────────────
 const buildForm = (u: UserProfile) => ({
   firstName: u.firstName,
   lastName: u.lastName,
@@ -215,14 +385,19 @@ const ProfileUser: React.FC = () => {
   useEffect(() => {
     if (user) {
       setForm(buildForm(user));
+      // Sync profileImageUrl from server into local state
+      setAvatarUrl(user.profileImageUrl ?? null);
     }
   }, [user]);
+
+  // Local avatar URL — updated instantly after successful upload
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Wallet state
   const [walletBalance, setWalletBalance] = useState(350_000);
   const [showWalletModal, setShowWalletModal] = useState(false);
 
-  // Form state — khởi tạo rỗng, sẽ được fill bởi useEffect ở trên
+  // Form state
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({
     firstName: "",
@@ -249,18 +424,15 @@ const ProfileUser: React.FC = () => {
         userId,
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        birthday: form.birthday,           
+        birthday: form.birthday,
         gender: form.gender,
-        phone: user.phoneNumber ?? "",    
+        phone: user.phoneNumber ?? "",
         address: form.address.trim(),
         description: (user as any).description ?? "",
         socialLink: form.socialLink.trim(),
-        profileImageUrl: (user as any).profileImageUrl ?? "",
+        profileImageUrl: avatarUrl ?? (user as any).profileImageUrl ?? "",
       };
-      console.log("payload",payload);
-      
       await authService.updateUser(payload);
-      // Reload lại user mới nhất từ server sau khi update thành công
       dispatch(fetchUserDetail(userId));
       setEditMode(false);
     } catch (err: any) {
@@ -270,7 +442,6 @@ const ProfileUser: React.FC = () => {
     }
   };
 
-  // FIX: reset form về giá trị user hiện tại, không phải giá trị cũ lúc render
   const handleCancel = () => {
     if (user) {
       setForm(buildForm(user));
@@ -278,7 +449,6 @@ const ProfileUser: React.FC = () => {
     setEditMode(false);
   };
 
-  // FIX: guard render khi user chưa load — đặt TRƯỚC khi tính toán bất kỳ giá trị nào từ user
   if (!user) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -325,24 +495,16 @@ const ProfileUser: React.FC = () => {
             />
 
             <div className="flex flex-col md:flex-row items-center md:items-end gap-8 relative z-10">
-              {/* Avatar */}
-              <div className="relative shrink-0">
-                <div
-                  className="w-32 h-32 md:w-36 md:h-36 rounded-2xl flex items-center justify-center text-white font-bold text-4xl border-4"
-                  style={{
-                    background: "linear-gradient(135deg, #793bed, #a855f7)",
-                    borderColor: "rgba(121,59,237,0.35)",
-                    boxShadow: "0 20px 60px rgba(121,59,237,0.3)",
-                  }}
-                >
-                  {initials}
-                </div>
-                {user.isActive && (
-                  <div className="absolute -bottom-2 -right-2 p-1.5 rounded-lg" style={{ background: "#793bed" }}>
-                    <span className="material-symbols-outlined text-white text-sm">verified</span>
-                  </div>
-                )}
-              </div>
+              {/* ── Avatar with upload ── */}
+              {userId && (
+                <AvatarUpload
+                  profileImageUrl={avatarUrl}
+                  initials={initials}
+                  isActive={user.isActive}
+                  userId={userId}
+                  onUploaded={(newUrl) => setAvatarUrl(newUrl)}
+                />
+              )}
 
               {/* Tên & meta */}
               <div className="text-center md:text-left flex-1">
@@ -355,7 +517,6 @@ const ProfileUser: React.FC = () => {
                     style={{ background: "rgba(255,255,255,0.05)", color: "#94a3b8" }}
                   >
                     <span className="material-symbols-outlined text-xs">alternate_email</span>
-                    {/* FIX: hiển thị đúng theo chế độ */}
                     {editMode ? form.userName : user.userName}
                   </span>
                   <span className="flex items-center gap-1.5 text-xs text-slate-400">
@@ -425,7 +586,6 @@ const ProfileUser: React.FC = () => {
                   </button>
                 )}
                 </div>
-                {/* Hiển thị lỗi save nếu có */}
                 {saveError && (
                   <p className="text-xs font-medium text-red-400 text-right">{saveError}</p>
                 )}
@@ -588,7 +748,6 @@ const ProfileUser: React.FC = () => {
                 className="rounded-2xl p-6 border border-white/5 relative overflow-hidden"
                 style={{ background: "rgba(24,18,43,0.8)", backdropFilter: "blur(12px)" }}
               >
-                {/* Glow */}
                 <div
                   className="absolute -top-6 -right-6 w-32 h-32 rounded-full pointer-events-none"
                   style={{ background: "rgba(121,59,237,0.15)", filter: "blur(40px)" }}
@@ -601,7 +760,6 @@ const ProfileUser: React.FC = () => {
                   Ví của bạn
                 </h3>
 
-                {/* Số dư */}
                 <div className="relative z-10 mb-5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
                     Số dư hiện tại
@@ -610,15 +768,11 @@ const ProfileUser: React.FC = () => {
                     {formatVND(walletBalance)}
                   </p>
                   <div className="flex items-center gap-1.5 mt-2">
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ background: "#22c55e" }}
-                    />
+                    <span className="w-2 h-2 rounded-full" style={{ background: "#22c55e" }} />
                     <span className="text-[11px] text-slate-500">Ví đang hoạt động</span>
                   </div>
                 </div>
 
-                {/* Lịch sử nhanh */}
                 <div
                   className="rounded-xl px-4 py-3 mb-5 border border-white/5 relative z-10"
                   style={{ background: "rgba(255,255,255,0.03)" }}
@@ -650,7 +804,6 @@ const ProfileUser: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Nút nạp tiền */}
                 <button
                   onClick={() => setShowWalletModal(true)}
                   className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] relative z-10"
@@ -701,34 +854,7 @@ const ProfileUser: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Sự kiện sắp tới ──────────────────────────── */}
-          <div className="mt-10">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-xl font-bold tracking-tight text-white">Sự kiện sắp tới</h2>
-              <a
-                className="text-xs font-bold hover:underline"
-                style={{ color: "#793bed" }}
-                href="/profile/tickets"
-              >
-                Xem tất cả vé
-              </a>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SuKienCard
-                danh_muc="TECH FEST 2026"
-                tieu_de="AI & Human Synergy Summit"
-                dia_diem="Quận 1, TP.HCM"
-                ngay="24/03"
-              />
-              <SuKienCard
-                danh_muc="NEON NIGHTS"
-                tieu_de="Retro-Future Music Expo"
-                dia_diem="Quận 7, TP.HCM"
-                ngay="02/04"
-              />
-            </div>
-          </div>
-
+      
         </div>
       </div>
     </>
