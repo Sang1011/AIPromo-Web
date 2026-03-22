@@ -3,7 +3,7 @@ import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import { useDispatch, useSelector } from "react-redux"
 import type { AppDispatch, RootState } from "../../store"
-import { fetchEventById } from "../../store/eventSlice"
+import { fetchAllEvents, fetchEventById } from "../../store/eventSlice"
 import { useEffect, useState } from "react"
 import type { GetEventDetailResponse } from "../../types/event/event"
 import { useParams, useNavigate } from "react-router-dom"
@@ -124,7 +124,6 @@ function Lightbox({
       style={{ background: "rgba(0,0,0,0.92)" }}
       onClick={onClose}
     >
-      {/* Close button */}
       <button
         className="absolute top-5 right-5 size-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white z-10"
         onClick={onClose}
@@ -132,7 +131,6 @@ function Lightbox({
         <span className="material-symbols-outlined">close</span>
       </button>
 
-      {/* Prev */}
       {images.length > 1 && (
         <button
           className="absolute left-4 md:left-8 size-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white z-10"
@@ -142,7 +140,6 @@ function Lightbox({
         </button>
       )}
 
-      {/* Image */}
       <div
         className="max-w-[90vw] max-h-[85vh] flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
@@ -155,7 +152,6 @@ function Lightbox({
         />
       </div>
 
-      {/* Next */}
       {images.length > 1 && (
         <button
           className="absolute right-4 md:right-8 size-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white z-10"
@@ -165,7 +161,6 @@ function Lightbox({
         </button>
       )}
 
-      {/* Counter */}
       {images.length > 1 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
           {images.map((_, i) => (
@@ -178,6 +173,25 @@ function Lightbox({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Related Event Card Skeleton ───────────────────────────────────────────────
+
+function RelatedEventCardSkeleton() {
+  return (
+    <div className="glass rounded-2xl overflow-hidden">
+      <SkeletonBox className="h-48 w-full rounded-none" />
+      <div className="p-6 space-y-3">
+        <div className="flex justify-between">
+          <SkeletonBox className="h-5 w-24" />
+          <SkeletonBox className="h-5 w-20" />
+        </div>
+        <SkeletonBox className="h-6 w-3/4" />
+        <SkeletonBox className="h-4 w-full" />
+        <SkeletonBox className="h-4 w-2/3" />
+      </div>
     </div>
   )
 }
@@ -204,7 +218,15 @@ function formatPrice(price: number) {
   return price.toLocaleString("vi-VN")
 }
 
+function formatDateShort(isoString: string) {
+  if (!isoString) return ""
+  const date = new Date(isoString)
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "short" }).toUpperCase()
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
+
+const RELATED_PAGE_SIZE = 3
 
 function EventDetail() {
   const dispatch = useDispatch<AppDispatch>()
@@ -219,16 +241,36 @@ function EventDetail() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [sessionError, setSessionError] = useState(false)
 
+  // ── Related Events pagination state ──
+  const [relatedPage, setRelatedPage] = useState(1)
+  const [relatedLoading, setRelatedLoading] = useState(false)
+
   useEffect(() => {
     window.scrollTo(0, 0)
     if (!id) return
     dispatch(fetchEventById(id))
-  }, [dispatch])
+  }, [dispatch, id])
+
+  // ── Fetch related events whenever page changes ──
+  useEffect(() => {
+    setRelatedLoading(true)
+    dispatch(
+      fetchAllEvents({
+        PageNumber: relatedPage,
+        PageSize: RELATED_PAGE_SIZE,
+        SortColumn: "eventStartAt",
+        SortOrder: "Descending",
+      })
+    ).finally(() => setRelatedLoading(false))
+  }, [dispatch, relatedPage])
 
   const eventDetail = useSelector(
     (s: RootState) => s.EVENT?.currentEvent
   ) as GetEventDetailResponse
-console.log("eventDetail",eventDetail);
+
+  // Read related events + pagination from the same store slice
+  const relatedEvents = useSelector((s: RootState) => s.EVENT.events)
+  const relatedPagination = useSelector((s: RootState) => s.EVENT.pagination)
 
   if (!eventDetail) {
     return <EventDetailSkeleton />
@@ -248,10 +290,7 @@ console.log("eventDetail",eventDetail);
 
   // ── Lightbox helpers ──
   const images = eventDetail.images ?? []
-  const openLightbox = (index: number) => {
-    setLightboxIndex(index)
-    setLightboxOpen(true)
-  }
+  const openLightbox = (index: number) => { setLightboxIndex(index); setLightboxOpen(true) }
   const closeLightbox = () => setLightboxOpen(false)
   const prevImage = () => setLightboxIndex((i) => (i - 1 + images.length) % images.length)
   const nextImage = () => setLightboxIndex((i) => (i + 1) % images.length)
@@ -260,22 +299,31 @@ console.log("eventDetail",eventDetail);
   const handleBuyTicket = () => {
     if (!selectedSessionId) {
       setSessionError(true)
-      // Scroll to sessions section
       document.getElementById("sessions-section")?.scrollIntoView({ behavior: "smooth", block: "center" })
       return
     }
     navigate(`/event-detail/${id}/seat-map/show`, {
-      state: {
-        eventSessionId: selectedSessionId,
-      },
+      state: { eventSessionId: selectedSessionId },
     })
   }
+
+  // ── Related pagination handlers ──
+  const handleRelatedPrev = () => {
+    if (relatedPage > 1) setRelatedPage((p) => p - 1)
+  }
+  const handleRelatedNext = () => {
+    if (relatedPagination && relatedPage < relatedPagination.totalPages) {
+      setRelatedPage((p) => p + 1)
+    }
+  }
+
+  // Filter out the current event from related list
+  const filteredRelated = relatedEvents.filter((e) => String(e.id) !== String(id))
 
   return (
     <>
       <Header />
 
-      {/* ── Lightbox ── */}
       {lightboxOpen && images.length > 0 && (
         <Lightbox
           images={images}
@@ -371,7 +419,7 @@ console.log("eventDetail",eventDetail);
                 </section>
               )}
 
-              {/* ── Images Gallery with Lightbox ── */}
+              {/* Images Gallery */}
               {images.length > 0 && (
                 <section>
                   <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
@@ -390,7 +438,6 @@ console.log("eventDetail",eventDetail);
                           alt="Event image"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        {/* Hover overlay */}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
                           <span className="material-symbols-outlined text-white text-4xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-lg">
                             zoom_in
@@ -402,7 +449,7 @@ console.log("eventDetail",eventDetail);
                 </section>
               )}
 
-              {/* Artists / Lineup */}
+              {/* Artists */}
               {eventDetail.actorImages?.length > 0 && (
                 <section>
                   <h2 className="text-3xl font-bold mb-8 flex items-center gap-3">
@@ -411,17 +458,12 @@ console.log("eventDetail",eventDetail);
                   </h2>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                     {eventDetail.actorImages.map((actor) => (
-                      <div
-                        key={actor.id}
-                        className="flex flex-col items-center text-center group cursor-pointer"
-                      >
+                      <div key={actor.id} className="flex flex-col items-center text-center group cursor-pointer">
                         <div
                           className="size-32 rounded-full mb-4 border-2 border-primary/20 group-hover:border-primary group-hover:neon-glow transition-all duration-300 bg-cover bg-center overflow-hidden"
                           style={{ backgroundImage: `url("${actor.image}")` }}
                         />
-                        <h3 className="text-lg font-bold group-hover:text-primary transition-colors">
-                          {actor.name}
-                        </h3>
+                        <h3 className="text-lg font-bold group-hover:text-primary transition-colors">{actor.name}</h3>
                         <p className="text-sm text-gray-400">{actor.major}</p>
                       </div>
                     ))}
@@ -429,7 +471,7 @@ console.log("eventDetail",eventDetail);
                 </section>
               )}
 
-              {/* ── Sessions / Agenda with selection ── */}
+              {/* Sessions */}
               {eventDetail.sessions?.length > 0 && (
                 <section id="sessions-section">
                   <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
@@ -440,7 +482,6 @@ console.log("eventDetail",eventDetail);
                     Chọn buổi bạn muốn tham dự <span className="text-primary font-semibold">*</span>
                   </p>
 
-                  {/* Error message */}
                   {sessionError && (
                     <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400">
                       <span className="material-symbols-outlined text-xl">error</span>
@@ -454,23 +495,15 @@ console.log("eventDetail",eventDetail);
                       const isSelected = selectedSessionId === session.id
                       return (
                         <div key={session.id} className="relative mb-6 last:mb-0">
-                          {/* Timeline dot */}
                           <div
                             className={`absolute -left-10 mt-1.5 size-4 rounded-full transition-all duration-300 ${
                               isSelected
                                 ? "bg-primary neon-glow scale-125"
-                                : index === 0
-                                ? "bg-primary/40 border-2 border-primary"
                                 : "bg-primary/40 border-2 border-primary"
                             }`}
                           />
-
-                          {/* Session card — clickable */}
                           <div
-                            onClick={() => {
-                              setSelectedSessionId(session.id)
-                              setSessionError(false)
-                            }}
+                            onClick={() => { setSelectedSessionId(session.id); setSessionError(false) }}
                             className={`glass p-5 rounded-xl cursor-pointer transition-all duration-300 border-2 ${
                               isSelected
                                 ? "border-primary/70 bg-primary/10 shadow-[0_0_20px_rgba(124,63,237,0.2)]"
@@ -485,13 +518,9 @@ console.log("eventDetail",eventDetail);
                                 <h4 className="text-xl font-bold mt-1">{session.title}</h4>
                                 <p className="text-gray-400 mt-2 text-sm">{session.description}</p>
                               </div>
-
-                              {/* Selection indicator */}
                               <div
                                 className={`shrink-0 size-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 mt-1 ${
-                                  isSelected
-                                    ? "border-primary bg-primary"
-                                    : "border-white/30 bg-transparent"
+                                  isSelected ? "border-primary bg-primary" : "border-white/30 bg-transparent"
                                 }`}
                               >
                                 {isSelected && (
@@ -509,7 +538,7 @@ console.log("eventDetail",eventDetail);
                 </section>
               )}
 
-              {/* Location / Map */}
+              {/* Location */}
               <section>
                 <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
                   <span className="w-1.5 h-8 bg-primary rounded-full" />
@@ -548,12 +577,9 @@ console.log("eventDetail",eventDetail);
             <div className="w-full lg:w-[400px]">
               <div className="sticky top-28">
 
-                {/* Ticket Card */}
                 <div className="glass rounded-2xl p-8 border-2 border-primary/20 shadow-2xl space-y-8">
-
                   {firstTicket ? (
                     <>
-                      {/* Ticket Type Badge */}
                       <div className="flex items-center gap-2 flex-wrap">
                         {firstTicket.areaName && (
                           <span className="bg-primary/20 text-primary px-3 py-1 rounded text-xs font-bold uppercase tracking-widest border border-primary/30">
@@ -567,7 +593,6 @@ console.log("eventDetail",eventDetail);
                         )}
                       </div>
 
-                      {/* Ticket Name & Price */}
                       <div>
                         <p className="text-gray-400 text-sm font-medium uppercase tracking-widest mb-1">
                           {firstTicket.name}
@@ -583,7 +608,6 @@ console.log("eventDetail",eventDetail);
                         </p>
                       </div>
 
-                      {/* Multiple ticket types selector */}
                       {eventDetail.ticketTypes?.length > 1 && (
                         <div className="space-y-2">
                           <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Loại vé khác</p>
@@ -606,7 +630,6 @@ console.log("eventDetail",eventDetail);
                         </div>
                       )}
 
-                      {/* Session reminder in ticket card */}
                       {eventDetail.sessions?.length > 0 && (
                         <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 ${
                           selectedSessionId
@@ -626,7 +649,6 @@ console.log("eventDetail",eventDetail);
                         </div>
                       )}
 
-                      {/* Price breakdown */}
                       <div className="space-y-4">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-400">Phí dịch vụ (2%)</span>
@@ -679,7 +701,6 @@ console.log("eventDetail",eventDetail);
                   </div>
                 </div>
 
-                {/* Support Card */}
                 <div className="mt-6 glass rounded-2xl p-6 border border-white/10">
                   <h4 className="font-bold mb-4">Cần hỗ trợ?</h4>
                   <p className="text-sm text-gray-400 mb-4">
@@ -700,57 +721,129 @@ console.log("eventDetail",eventDetail);
         {/* ── Related Events ── */}
         <section className="bg-[#121218] py-20">
           <div className="max-w-[1280px] mx-auto px-6 md:px-20">
+
+            {/* Header row */}
             <div className="flex justify-between items-end mb-10">
               <div>
                 <h2 className="text-3xl font-bold flex items-center gap-3">
                   <span className="w-1.5 h-8 bg-primary rounded-full" />
                   Có thể bạn cũng thích
                 </h2>
-                <p className="text-gray-400 mt-2">Thêm nhiều sự kiện tương lai được tuyển chọn dành cho bạn.</p>
+                <p className="text-gray-400 mt-2">
+                  Thêm nhiều sự kiện tương lai được tuyển chọn dành cho bạn.
+                </p>
               </div>
-              <div className="flex gap-3">
-                <button className="size-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
-                  <span className="material-symbols-outlined">chevron_left</span>
-                </button>
-                <button className="size-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors">
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  date: "12 THÁNG 11", price: "TỪ 500K VNĐ", title: "Phục Hưng Kỹ Thuật Số",
-                  desc: "Lễ kỷ niệm nghệ thuật NFT và trải nghiệm thực tế ảo ngay giữa lòng thành phố.",
-                  img: "https://lh3.googleusercontent.com/aida-public/AB6AXuA0CJjrCvLX6ZIziGY6xL0wdsBegndPWXYntfqU1OUPanpxOb70UV1Q14x5P9VAXAY2pcF1sP4GtWfCM3qMGjUa5v39bJFedXqtYYqCAhJ4KfHT9Tb_lXeQWXkURWk2xb6Noxhv6mdqDhINRh_38e_brfCUMd5Wq_tSXzPo4KJUyR7RutclhKPZNR8YpNu_OL_PpCHxO7dv4_v8fzmW0kjZRqSRawFARRlJpIvER4L09MpIdA65UeKvYIst4CS4Jz02cSxMPzpIyQ4t"
-                },
-                {
-                  date: "05 THÁNG 12", price: "TỪ 850K VNĐ", title: "Synth City Trực Tiếp",
-                  desc: "Lễ hội synthwave lớn nhất Đông Nam Á trở lại với phiên bản thứ ba.",
-                  img: "https://lh3.googleusercontent.com/aida-public/AB6AXuD37jc4_P8OcN5XXYS_pqMjhYH_WAwkE2fkZoyvInyRJD76_mjpe--4lupRzwKpqkGhfY01vUeEyQK2PP3v7m0EPaMxrRGIA8h6eBwOLvCCHo5xeA172gMiAESUn2hAR7umAfi6XAfEXJW48cwCEPEj2zvZl2ne9k94c3VX-7Has_u4Bh4vwXhgNzKS2gsX7OBttEMxfPxKzzMM7-_U_m0R1c46c_pbKQEYLUkDDbI1ThjelcdxyDbxycQiNr-NlYA7sY5b6v44YAWt"
-                },
-                {
-                  date: "20 THÁNG 1", price: "MIỄN PHÍ", title: "Gặp Gỡ Nhà Sáng Tạo AI",
-                  desc: "Sự kiện kết nối dành cho những người đam mê công nghệ, lập trình viên và nghệ sĩ kỹ thuật số.",
-                  img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAk5hDwgHLr0XV5TL6SJSGd2ocNFrpMrLvj4w2yNv6jGP6jWCWQfqYESdPEtEOAgsUyUKDO8eT5R6ciMpmCS7CgUvs9PlfTGW1mFqNay97Oc6sCSs_7vyEttn1BrK68josa7BT5gR7L8wuD3h_MCNTxuDSkvHeULuTLBK61duGhcGShbMAL60WjIwnDInoiNwdhTBgKaDqAJDJCf-VUQY7pKKAooQhjJA6460WfB9jx-X21Ogj5r5xOzlpK3g8gCEgehJzxTmUnJxz6"
-                },
-              ].map((event, i) => (
-                <div key={i} className="group glass rounded-2xl overflow-hidden hover:neon-border transition-all duration-300">
-                  <div
-                    className="h-48 w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                    style={{ backgroundImage: `url("${event.img}")` }}
-                  />
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-xs font-bold text-primary px-2 py-1 rounded bg-primary/10">{event.date}</span>
-                      <span className="text-xs font-bold text-gray-400">{event.price}</span>
-                    </div>
-                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{event.title}</h3>
-                    <p className="text-sm text-gray-400 line-clamp-2">{event.desc}</p>
-                  </div>
+
+              {/* Pagination controls — top right */}
+              {relatedPagination && relatedPagination.totalPages > 1 && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleRelatedPrev}
+                    disabled={relatedPage === 1 || relatedLoading}
+                    className="size-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 hover:border-primary/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <span className="material-symbols-outlined">chevron_left</span>
+                  </button>
+
+                  {/* Page indicator */}
+                  <span className="text-slate-400 text-sm font-semibold min-w-[60px] text-center">
+                    {relatedPage} / {relatedPagination.totalPages}
+                  </span>
+
+                  <button
+                    onClick={handleRelatedNext}
+                    disabled={!relatedPagination.hasNext || relatedLoading}
+                    className="size-12 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 hover:border-primary/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <span className="material-symbols-outlined">chevron_right</span>
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
+
+            {/* Cards grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {relatedLoading
+                ? [1, 2, 3].map((i) => <RelatedEventCardSkeleton key={i} />)
+                : filteredRelated.slice(0, RELATED_PAGE_SIZE).map((event) => (
+                    <div
+                      key={event.id}
+                      onClick={() => {
+                        navigate(`/event-detail/${event.id}`)
+                        window.scrollTo(0, 0)
+                      }}
+                      className="group glass rounded-2xl overflow-hidden hover:neon-border transition-all duration-300 cursor-pointer"
+                    >
+                      {/* Banner */}
+                      <div className="h-48 w-full overflow-hidden bg-slate-800 relative">
+                        {event.bannerUrl ? (
+                          <img
+                            src={event.bannerUrl}
+                            alt={event.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                            <span className="material-symbols-outlined text-slate-600 text-5xl">image</span>
+                          </div>
+                        )}
+                        {/* Categories overlay */}
+                        {event.categories && event.categories.length > 0 && (
+                          <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
+                            {event.categories.slice(0, 2).map((cat) => (
+                              <span
+                                key={cat.id}
+                                className="text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm bg-black/40 text-white border border-white/20"
+                              >
+                                {cat.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-6">
+                        <div className="flex justify-between items-start mb-3">
+                          {event.eventStartAt && (
+                            <span className="text-xs font-bold text-primary px-2 py-1 rounded bg-primary/10 border border-primary/20">
+                              {formatDateShort(event.eventStartAt)}
+                            </span>
+                          )}
+                          
+                        </div>
+                        <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                          {event.title}
+                        </h3>
+                        {event.location && (
+                          <div className="flex items-center gap-1.5 text-gray-400 text-sm mt-3">
+                            <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
+                            <span className="line-clamp-1">{event.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+              }
+            </div>
+
+            {/* Bottom page dots — optional visual indicator */}
+            {relatedPagination && relatedPagination.totalPages > 1 && (
+              <div className="mt-10 flex justify-center gap-2">
+                {Array.from({ length: relatedPagination.totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setRelatedPage(page)}
+                    disabled={relatedLoading}
+                    className={`h-1.5 rounded-full transition-all duration-300 disabled:cursor-not-allowed ${
+                      page === relatedPage
+                        ? "w-8 bg-primary"
+                        : "w-2 bg-white/20 hover:bg-white/40"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+
           </div>
         </section>
 
