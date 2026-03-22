@@ -12,3 +12,19 @@
 .card-glow:hover {
     box-shadow: 0 10px 30px -10px rgba(121, 59, 237, 0.4);
 }
+
+
+.dual-range-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    pointer-events: all;
+}
+
+.dual-range-thumb::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    pointer-events: all;
+}
