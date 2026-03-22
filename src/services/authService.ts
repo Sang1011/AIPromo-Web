@@ -1,4 +1,4 @@
-import type { LoginRequest, RegisterRequest, UserProfile } from "../types/auth/auth"
+import type { LoginRequest, RegisterRequest, UserProfile, UserProfileRequest } from "../types/auth/auth"
 import { interceptorAPI } from "../utils/attachInterceptors"
 import API from "./api"
 import type { AxiosResponse } from "axios"
@@ -25,8 +25,12 @@ const authService = {
   resetPassword: (email: string, otpCode: string, newPassword: string): Promise<AxiosResponse<any>> =>
     API.call().post("/auth/reset-password", { email, otpCode, newPassword }),
 
-  userDetail: (id: string) : Promise<AxiosResponse<UserProfile>> =>
-   interceptorAPI().get(`/user/${id}`)
+  userDetail: (id: string): Promise<AxiosResponse<UserProfile>> =>
+    interceptorAPI().get(`/user/${id}`),
+
+  updateUser: (data: UserProfileRequest ): Promise<AxiosResponse<any>> => {
+    return interceptorAPI().patch(`users/profile`, data);
+  },
 }
 
 export default authService
