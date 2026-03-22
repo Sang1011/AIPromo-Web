@@ -1,5 +1,4 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import eventService from "../services/eventService";
 import seatmapService from "../services/seatmapService";
 import type { AssignAreasRequest } from "../types/seatmap/seatmap";
 
@@ -17,9 +16,9 @@ const initialState: SeatMapState = {
 
 export const fetchGetSeatMap = createAsyncThunk(
     "SEAT_MAP/getSpec",
-    async (eventId: string, { rejectWithValue }) => {
+    async ({ eventId, sessionId }: { eventId: string; sessionId: string }, { rejectWithValue }) => {
         try {
-            const res = await eventService.getSeatMap(eventId);
+            const res = await seatmapService.getSeatMap(eventId, sessionId);
             return res.data.data.spec;
         } catch (err: any) {
             return rejectWithValue(err?.response?.data?.message ?? "Không thể tải seatmap");
@@ -31,7 +30,7 @@ export const fetchUpdateSeatMap = createAsyncThunk(
     "SEAT_MAP/updateSpec",
     async ({ eventId, spec }: { eventId: string; spec: string }, { rejectWithValue }) => {
         try {
-            await eventService.updateSeatMap(eventId, spec);
+            await seatmapService.updateSeatMap(eventId, spec);
             return spec;
         } catch (err: any) {
             return rejectWithValue(err?.response?.data?.message ?? "Không thể cập nhật seatmap");

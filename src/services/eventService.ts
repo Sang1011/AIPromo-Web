@@ -11,8 +11,7 @@ import type {
     GetAllRequestByMe,
     GetAllEventByMeResponse,
     GetPendingEventsResponse,
-    GetPendingEventsRequest,
-    UpdateSeatMapRequest
+    GetPendingEventsRequest
 } from "../types/event/event"
 import type { AxiosResponse } from "axios"
 import { interceptorAPI } from "../utils/attachInterceptors";
@@ -149,16 +148,6 @@ const eventService = {
         return interceptorAPI().get("/events/pending", {
             params: request
         });
-    },
-    getSeatMap: (eventId: string): Promise<AxiosResponse<ApiResponse<UpdateSeatMapRequest>>> => {
-        return interceptorAPI().get(`/events/${eventId}/spec`);
-    },
-    updateSeatMap: (eventId: string, spec: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/spec`, spec, {
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
     },
     updateEventPolicy: (eventId: string, policy: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch(`/events/${eventId}/policy`, { policy });

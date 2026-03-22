@@ -21,6 +21,7 @@ export interface TicketTypeItem {
     name: string;
     price: number;
     quantity: number;
+    soldQuantity: number;
     areaId: string | null;
     areaName: string | null;
     areaType: string | null;

@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import ticketingService from "../services/ticketingService";
 import type { CreatePendingOrderRequest } from "../types/ticketing/ticketing";
+import type { ApiResponse } from "../types/api";
 interface TicketingState {
     loading: boolean;
     error: string | null;
@@ -14,7 +15,7 @@ const initialState: TicketingState = {
 };
 
 export const fetchCreatePendingOrder = createAsyncThunk<
-    string,
+    ApiResponse<string>,
     CreatePendingOrderRequest,
     { rejectValue: string }
 >(
@@ -50,7 +51,7 @@ const ticketingSlice = createSlice({
 
             .addCase(fetchCreatePendingOrder.fulfilled, (state, action) => {
                 state.loading = false;
-                state.orderId = action.payload;
+                state.orderId = action.payload.data;
             })
 
             .addCase(fetchCreatePendingOrder.rejected, (state, action) => {

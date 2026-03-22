@@ -167,13 +167,11 @@ const SeatMapLocker: React.FC<Props> = ({
                                             rotation={seat.rotation}
                                             cornerRadius={4}
                                             fill={
-                                                seat.status === "sold"
+                                                seat.status === "blocked"
                                                     ? "#374151"
-                                                    : seat.status === "reserved"
-                                                        ? "#f59e0b"
-                                                        : isSelected
-                                                            ? "#8B5CF6"
-                                                            : seat.fill || "#10b981"
+                                                    : isSelected
+                                                        ? "#8B5CF6"
+                                                        : seat.fill || "#10b981"
                                             }
                                             stroke={isSelected ? "#ec4899" : undefined}
                                             strokeWidth={isSelected ? 2 : 0}

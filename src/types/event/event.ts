@@ -211,7 +211,3 @@ export interface GetPendingEventsRequest extends GetAllRequest {
     Title?: string;
     Statuses?: string;
 }
-export type UpdateSeatMapRequest = {
-    eventId: string;
-    spec: string;
-}

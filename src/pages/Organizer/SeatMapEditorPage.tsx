@@ -52,6 +52,7 @@ const TICKET_TYPE_COLORS = [
 
 
 const SeatMapEditorPage: React.FC = () => {
+    const SESSION_ID = "value";
     const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
     const [sections, setSections] = useState<Area[]>([]);
     const [seats, setSeats] = useState<Seat[]>([]);
@@ -1419,7 +1420,7 @@ const SeatMapEditorPage: React.FC = () => {
     useEffect(() => {
         if (!eventId) return;
         dispatch(fetchEventById(eventId));
-        dispatch(fetchGetSeatMap(eventId))
+        dispatch(fetchGetSeatMap({ eventId, sessionId: SESSION_ID }))
             .unwrap()
             .then((spec) => {
                 try {
