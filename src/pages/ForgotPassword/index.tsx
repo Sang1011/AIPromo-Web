@@ -1,6 +1,8 @@
 import { useState } from "react";
 import "./forgotpassword.css";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import authService from "../../services/authService";
+
 
 type Step = "email" | "reset";
 
@@ -45,58 +47,40 @@ function ForgotPassword() {
   };
 
   const handleSendEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    if (!email) { setError("Vui lòng nhập địa chỉ email."); return; }
-    setIsLoading(true);
+    e.preventDefault()
+    setError("")
+    if (!email) { setError("Vui lòng nhập địa chỉ email."); return }
+    setIsLoading(true)
     try {
-      const res = await fetch("https://localhost:7000/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", accept: "*/*" },
-        body: JSON.stringify({ email }),
-      });
-      if (res.ok) {
-        setSuccess("Mã OTP đã được gửi đến email của bạn.");
-        setStep("reset");
-      } else {
-        const data = await res.json();
-        setError(data.detail || "Gửi email thất bại. Vui lòng thử lại.");
-      }
-    } catch {
-      setError("Không thể kết nối đến máy chủ. Vui lòng thử lại.");
+      await authService.forgotPassword(email)
+      setSuccess("Mã OTP đã được gửi đến email của bạn.")
+      setStep("reset")
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Gửi email thất bại. Vui lòng thử lại.")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(""); setSuccess("");
-    const otp = otpCode.join("");
-    if (otp.length < 6) { setError("Vui lòng nhập đủ 6 chữ số OTP."); return; }
-    if (!newPassword) { setError("Vui lòng nhập mật khẩu mới."); return; }
-    if (newPassword.length < 8) { setError("Mật khẩu phải có ít nhất 8 ký tự."); return; }
-    if (newPassword !== confirmPassword) { setError("Mật khẩu xác nhận không khớp."); return; }
-    setIsLoading(true);
+    e.preventDefault()
+    setError(""); setSuccess("")
+    const otp = otpCode.join("")
+    if (otp.length < 6) { setError("Vui lòng nhập đủ 6 chữ số OTP."); return }
+    if (!newPassword) { setError("Vui lòng nhập mật khẩu mới."); return }
+    if (newPassword.length < 8) { setError("Mật khẩu phải có ít nhất 8 ký tự."); return }
+    if (newPassword !== confirmPassword) { setError("Mật khẩu xác nhận không khớp."); return }
+    setIsLoading(true)
     try {
-      const res = await fetch("https://localhost:7000/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", accept: "*/*" },
-        body: JSON.stringify({ email, otpCode: otp, newPassword }),
-      });
-      if (res.ok) {
-        setSuccess("Đặt lại mật khẩu thành công!");
-        setTimeout(() => navigate("/login"), 1500);
-      } else {
-        const data = await res.json();
-        setError(data.detail || "Đặt lại mật khẩu thất bại. Vui lòng thử lại.");
-      }
-    } catch {
-      setError("Không thể kết nối đến máy chủ. Vui lòng thử lại.");
+      await authService.resetPassword(email, otp, newPassword)
+      setSuccess("Đặt lại mật khẩu thành công!")
+      setTimeout(() => navigate("/login"), 1500)
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || "Đặt lại mật khẩu thất bại. Vui lòng thử lại.")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-black">
@@ -114,12 +98,36 @@ function ForgotPassword() {
 
         {/* Logo top-left */}
         <div className="absolute top-8 left-8 flex items-center gap-3 z-10">
-          <div className="text-primary">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 48 48">
-              <path clipRule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fillRule="evenodd" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold tracking-tight text-white">AIPromo</span>
+          {/* Logo */}
+          <Link
+            to="/"
+            className="flex items-center gap-3 shrink-0"
+
+          >
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
+              style={{
+                background: "linear-gradient(135deg, #7C3AED, #A855F7)",
+                boxShadow: "0 4px 15px rgba(124, 58, 237, 0.4)",
+              }}
+            >
+              <svg viewBox="0 0 32 32" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="16,4 18.5,12 27,12 20.5,17 23,25 16,20 9,25 11.5,17 5,12 13.5,12" fill="white" opacity="0.95" />
+                <line x1="26" y1="5" x2="26" y2="8" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
+                <line x1="24.5" y1="6.5" x2="27.5" y2="6.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
+                <line x1="6" y1="25" x2="6" y2="28" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+                <line x1="4.5" y1="26.5" x2="7.5" y2="26.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+              </svg>
+            </div>
+            <div className="flex flex-col leading-tight">
+              <h1 className="text-xl font-bold tracking-wide text-white" style={{ fontFamily: "Georgia, serif" }}>
+                AIPromo
+              </h1>
+              <span className="text-[9px] font-semibold tracking-[0.25em] uppercase" style={{ color: "#A855F7" }}>
+                Event Solutions
+              </span>
+            </div>
+          </Link>
         </div>
 
         {/* Bottom text */}
@@ -139,14 +147,36 @@ function ForgotPassword() {
 
         {/* Mobile header */}
         <header className="lg:hidden flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="text-primary">
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 48 48">
-                <path clipRule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fillRule="evenodd" />
+          {/* Logo */}
+          <Link
+            to="/"
+            className="flex items-center gap-3 shrink-0"
+
+          >
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
+              style={{
+                background: "linear-gradient(135deg, #7C3AED, #A855F7)",
+                boxShadow: "0 4px 15px rgba(124, 58, 237, 0.4)",
+              }}
+            >
+              <svg viewBox="0 0 32 32" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="16,4 18.5,12 27,12 20.5,17 23,25 16,20 9,25 11.5,17 5,12 13.5,12" fill="white" opacity="0.95" />
+                <line x1="26" y1="5" x2="26" y2="8" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
+                <line x1="24.5" y1="6.5" x2="27.5" y2="6.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
+                <line x1="6" y1="25" x2="6" y2="28" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+                <line x1="4.5" y1="26.5" x2="7.5" y2="26.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
               </svg>
             </div>
-            <span className="text-lg font-bold text-white">AIPromo</span>
-          </div>
+            <div className="flex flex-col leading-tight">
+              <h1 className="text-xl font-bold tracking-wide text-white" style={{ fontFamily: "Georgia, serif" }}>
+                AIPromo
+              </h1>
+              <span className="text-[9px] font-semibold tracking-[0.25em] uppercase" style={{ color: "#A855F7" }}>
+                Event Solutions
+              </span>
+            </div>
+          </Link>
         </header>
 
         <div className="flex-1 flex flex-col justify-center px-8 py-10 md:px-12 lg:px-16 xl:px-20">
@@ -268,9 +298,10 @@ function ForgotPassword() {
 
               <form onSubmit={handleResetPassword} className="space-y-5">
                 {/* OTP */}
+                {/* OTP */}
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-3">Mã OTP (6 chữ số)</label>
-                  <div className="flex gap-2" onPaste={handleOtpPaste}>
+                  <div className="flex gap-1.5" onPaste={handleOtpPaste}>
                     {otpCode.map((digit, i) => (
                       <input
                         key={i}
@@ -282,7 +313,7 @@ function ForgotPassword() {
                         onChange={(e) => handleOtpChange(i, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(i, e)}
                         disabled={isLoading}
-                        className="flex-1 h-12 text-center text-lg font-bold bg-white/5 border border-white/10 rounded-lg text-white neon-focus transition-all focus:border-primary/60 focus:bg-white/10 disabled:opacity-50"
+                        className="w-10 h-11 text-center text-base font-bold bg-white/5 border border-white/10 rounded-lg text-white neon-focus transition-all focus:border-primary/60 focus:bg-white/10 disabled:opacity-50 flex-shrink-0"
                       />
                     ))}
                   </div>
@@ -331,7 +362,7 @@ function ForgotPassword() {
                 <div className="flex gap-3 pt-1">
                   <button
                     type="button"
-                    onClick={() => { setStep("email"); setError(""); setSuccess(""); setOtpCode(["","","","","",""]); }}
+                    onClick={() => { setStep("email"); setError(""); setSuccess(""); setOtpCode(["", "", "", "", "", ""]); }}
                     disabled={isLoading}
                     className="flex-1 py-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium transition-all text-sm disabled:opacity-50"
                   >
