@@ -904,44 +904,5 @@ const EditInput: React.FC<{
   />
 );
 
-interface SuKienCardProps {
-  danh_muc: string;
-  tieu_de: string;
-  dia_diem: string;
-  ngay: string;
-}
-
-const SuKienCard: React.FC<SuKienCardProps> = ({ danh_muc, tieu_de, dia_diem, ngay }) => (
-  <div
-    className="rounded-2xl p-5 border border-white/5 flex items-center gap-4 group hover:border-[#793bed]/30 transition-all cursor-pointer"
-    style={{ background: "#18122B" }}
-  >
-    <div
-      className="w-20 h-20 rounded-xl shrink-0 flex items-center justify-center"
-      style={{ background: "rgba(121,59,237,0.15)", border: "1px solid rgba(121,59,237,0.2)" }}
-    >
-      <span className="material-symbols-outlined text-3xl" style={{ color: "rgba(121,59,237,0.6)" }}>
-        event
-      </span>
-    </div>
-    <div className="flex-grow min-w-0">
-      <p className="text-xs font-bold mb-1" style={{ color: "#793bed" }}>{danh_muc}</p>
-      <h4 className="text-sm font-bold text-white mb-2 truncate">{tieu_de}</h4>
-      <div className="flex items-center gap-3 text-[10px] text-slate-500">
-        <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-[12px]">location_on</span>
-          {dia_diem}
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-[12px]">event</span>
-          {ngay}
-        </span>
-      </div>
-    </div>
-    <span className="material-symbols-outlined text-slate-600 group-hover:text-[#793bed] transition-colors shrink-0">
-      chevron_right
-    </span>
-  </div>
-);
 
 export default ProfileUser;
