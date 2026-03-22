@@ -40,7 +40,9 @@ import { fetchMe, fetchRefreshToken } from "./store/authSlice";
 import type { AppDispatch } from "./store";
 import CreateEventPage from "./pages/Organizer/CreateEventPage";
 import ForgotPassword from "./pages/ForgotPassword";
-// import ProfileUser from "./pages/User/ProfileUser";
+import ProfileUser from "./pages/User/ProfileUser";
+import ProfileLayout from "./pages/User";
+
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -65,7 +67,9 @@ function App() {
         <Route path="/all-event" element={<AllEvent />} />
         <Route path="/history-event" element={<HistoryEvent />} />
         <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
-        {/* <Route path="/profile" element={<ProfileUser />} /> */}
+        <Route path="/profile" element={<ProfileLayout />}>
+           <Route path="account" element={<ProfileUser />} />
+        </Route>
         {/* Organizer */}
         {/* Organizer - Dashboard group */}
         <Route path="/organizer" element={<DashboardLayout />}>
