@@ -2,7 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchUserDetail } from "../../../store/authSlice";
-import type { UserProfile } from "../../../types/auth/auth";
+import type { UserProfile, UserProfileRequest } from "../../../types/auth/auth";
+import authService from "../../../services/authService";
+
+
+// ── Helpers ────────────────────────────────────────────────────────
 const formatNgayTao = (iso: string) =>
   new Date(iso).toLocaleDateString("vi-VN", { year: "numeric", month: "short", day: "2-digit" });
 
@@ -26,6 +30,7 @@ const genderLabel = (g: string | null) => {
 const formatVND = (amount: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 
+// ── Wallet Deposit Modal ───────────────────────────────────────────
 const PRESET_AMOUNTS = [50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000];
 
 const WalletModal: React.FC<{
@@ -189,6 +194,7 @@ const buildForm = (u: UserProfile) => ({
   address: u.address ?? "",
   birthday: toDateInput(u.birthday),
   gender: u.gender ?? "",
+  socialLink: (u as any).socialLink ?? "",
 });
 
 const ProfileUser: React.FC = () => {
@@ -216,6 +222,7 @@ const ProfileUser: React.FC = () => {
   const [walletBalance, setWalletBalance] = useState(350_000);
   const [showWalletModal, setShowWalletModal] = useState(false);
 
+  // Form state — khởi tạo rỗng, sẽ được fill bởi useEffect ở trên
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({
     firstName: "",
@@ -224,21 +231,46 @@ const ProfileUser: React.FC = () => {
     address: "",
     birthday: "",
     gender: "",
+    socialLink: "",
   });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const set = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user || !userId) return;
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setSaving(false);
-    setEditMode(false);
+    setSaveError(null);
+    try {
+      const payload: UserProfileRequest = {
+        userId,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        birthday: form.birthday,           
+        gender: form.gender,
+        phone: user.phoneNumber ?? "",    
+        address: form.address.trim(),
+        description: (user as any).description ?? "",
+        socialLink: form.socialLink.trim(),
+        profileImageUrl: (user as any).profileImageUrl ?? "",
+      };
+      console.log("payload",payload);
+      
+      await authService.updateUser(payload);
+      // Reload lại user mới nhất từ server sau khi update thành công
+      dispatch(fetchUserDetail(userId));
+      setEditMode(false);
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message ?? "Lưu thất bại, vui lòng thử lại.");
+    } finally {
+      setSaving(false);
+    }
   };
 
+  // FIX: reset form về giá trị user hiện tại, không phải giá trị cũ lúc render
   const handleCancel = () => {
     if (user) {
       setForm(buildForm(user));
@@ -246,6 +278,7 @@ const ProfileUser: React.FC = () => {
     setEditMode(false);
   };
 
+  // FIX: guard render khi user chưa load — đặt TRƯỚC khi tính toán bất kỳ giá trị nào từ user
   if (!user) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -346,7 +379,8 @@ const ProfileUser: React.FC = () => {
               </div>
 
               {/* Nút chỉnh sửa */}
-              <div className="flex gap-3 shrink-0">
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <div className="flex gap-3">
                 {editMode ? (
                   <>
                     <button
@@ -389,6 +423,11 @@ const ProfileUser: React.FC = () => {
                     <span className="material-symbols-outlined text-[16px]">edit</span>
                     Chỉnh sửa
                   </button>
+                )}
+                </div>
+                {/* Hiển thị lỗi save nếu có */}
+                {saveError && (
+                  <p className="text-xs font-medium text-red-400 text-right">{saveError}</p>
                 )}
               </div>
             </div>
@@ -507,6 +546,33 @@ const ProfileUser: React.FC = () => {
                       <span className="leading-relaxed" style={{ color: user.address ? "white" : "#475569" }}>
                         {user.address ?? "Chưa cập nhật"}
                       </span>
+                    )}
+                  </TruongThongTin>
+                </div>
+
+                <div className="md:col-span-2 pt-4 border-t border-white/5">
+                  <TruongThongTin label="Social / Website" editMode={editMode}>
+                    {editMode ? (
+                      <EditInput
+                        value={form.socialLink}
+                        onChange={set("socialLink")}
+                        placeholder="https://..."
+                      />
+                    ) : (
+                      (user as any).socialLink ? (
+                        <a
+                          href={(user as any).socialLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 hover:underline"
+                          style={{ color: "#a78bfa" }}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">link</span>
+                          {(user as any).socialLink}
+                        </a>
+                      ) : (
+                        <span style={{ color: "#475569" }}>Chưa cập nhật</span>
+                      )
                     )}
                   </TruongThongTin>
                 </div>
@@ -701,12 +767,14 @@ const TruongThongTin: React.FC<TruongThongTinProps> = ({ label, editMode, locked
 const EditInput: React.FC<{
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}> = ({ value, onChange }) => (
+  placeholder?: string;
+}> = ({ value, onChange, placeholder }) => (
   <input
     type="text"
     value={value}
     onChange={onChange}
-    className="w-full bg-transparent text-white text-lg font-medium outline-none"
+    placeholder={placeholder}
+    className="w-full bg-transparent text-white text-lg font-medium outline-none placeholder-slate-600"
   />
 );
 
