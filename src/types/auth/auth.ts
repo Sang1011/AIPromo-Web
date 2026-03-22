@@ -16,3 +16,21 @@ export interface RegisterRequest {
   phoneNumber: string;
   address: string;
 }
+ 
+export interface UserProfile {
+  email: string;
+  userName: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  address: string | null;
+  birthday: string | null;
+  gender: string | null;
+  roles: string[];
+  id: string;
+  createdAt: string;
+  createdBy: string;
+  modifiedAt: string;
+  modifiedBy: string;
+  isActive: boolean;
+}
