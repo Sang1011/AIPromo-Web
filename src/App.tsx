@@ -41,6 +41,7 @@ import type { AppDispatch } from "./store";
 import CreateEventPage from "./pages/Organizer/CreateEventPage";
 
 import ForgotPassword from "./pages/ForgotPassword";
+import PaymentPage from "./pages/Organizer/PaymentPage";
 function App() {
   const dispatch = useDispatch<AppDispatch>();
   const refreshToken = localStorage.getItem("REFRESH_TOKEN");
@@ -64,6 +65,7 @@ function App() {
         <Route path="/all-event" element={<AllEvent />} />
         <Route path="/history-event" element={<HistoryEvent />} />
         <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
+        <Route path="/event-detail/:id/payment" element={<PaymentPage />} />
 
         {/* Organizer */}
         {/* Organizer - Dashboard group */}

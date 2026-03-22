@@ -34,6 +34,7 @@ export interface TicketType {
     color: string;
     price: number;
     quantity?: number;
+    soldQuantity?: number;
 }
 
 
@@ -47,7 +48,7 @@ export interface Seat {
     width: number;
     height: number;
     rotation: number;
-    status: 'available' | 'sold' | 'reserved';
+    status: 'available' | 'blocked';
     fill: string;
 }
 
