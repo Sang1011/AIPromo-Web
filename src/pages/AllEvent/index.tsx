@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Footer from "../../components/Footer";
 import Header from "../../components/Header";
 import "./AllEvent.css";
@@ -30,6 +30,8 @@ function getCategoryColor(id: number) {
 function AllEvent() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
 
   const events = useSelector((state: RootState) => state.EVENT.events);
   const pagination = useSelector((state: RootState) => state.EVENT.pagination);
@@ -42,7 +44,13 @@ function AllEvent() {
   const [sortOrder, setSortOrder] = useState<"Ascending" | "Descending">("Descending");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 8;
-
+  //filter category
+  useEffect(() => {
+  const categoryId = searchParams.get("categoryId");
+  if (categoryId) {
+    setSelectedCategoryIds([Number(categoryId)]);
+  }
+}, []);  // chỉ chạy 1 lần khi mount
   // Client-side filters
   const [searchTitle, setSearchTitle] = useState("");
   const [debouncedTitle, setDebouncedTitle] = useState("");
