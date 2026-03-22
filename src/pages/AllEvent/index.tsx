@@ -6,6 +6,8 @@ import Header from "../../components/Header";
 import "./AllEvent.css";
 import { fetchAllEvents } from "../../store/eventSlice";
 import type { AppDispatch, RootState } from "../../store";
+import type { Category } from "../../types/category/category";
+import { fetchAllCategories } from "../../store/categorySlice";
 
 const INPUT_CLS =
   "w-full py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-200 transition-all";
@@ -31,7 +33,11 @@ function AllEvent() {
 
   const events = useSelector((state: RootState) => state.EVENT.events);
   const pagination = useSelector((state: RootState) => state.EVENT.pagination);
-
+  const categoriesData: Category[] =
+    useSelector((s: RootState) => s.CATEGORY?.categories) ?? [];
+  useEffect(() => {
+    dispatch(fetchAllCategories({}));
+  }, [dispatch]);
   // Server-side params
   const [sortOrder, setSortOrder] = useState<"Ascending" | "Descending">("Descending");
   const [currentPage, setCurrentPage] = useState(1);
@@ -53,16 +59,19 @@ function AllEvent() {
     debounceTimer.current = setTimeout(() => setDebouncedTitle(val), 350);
   };
 
-  useEffect(() => {
-    dispatch(
-      fetchAllEvents({
-        PageNumber: currentPage,
-        PageSize: PAGE_SIZE,
-        SortColumn: "eventStartAt",
-        SortOrder: sortOrder,
-      })
-    );
-  }, [dispatch, currentPage, sortOrder]);
+useEffect(() => {
+  dispatch(
+    fetchAllEvents({
+      CategoryId: selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : undefined,
+      // hoặc nếu API hỗ trợ nhiều id:
+      // CategoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : undefined,
+      PageNumber: currentPage,
+      PageSize: PAGE_SIZE,
+      SortColumn: "eventStartAt",
+      SortOrder: sortOrder,
+    })
+  );
+}, [dispatch, currentPage, sortOrder, selectedCategoryIds]);
 
   const handleSortChange = (order: "Ascending" | "Descending") => {
     setSortOrder(order);
@@ -92,17 +101,14 @@ function AllEvent() {
     selectedCategoryIds.length > 0;
 
   // Derive unique categories from all loaded events
-  const allCategories = useMemo(() => {
-    const map = new Map<number, string>();
-    events.forEach((e) => e.categories?.forEach((c) => map.set(c.id, c.name)));
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [events]);
+const allCategories = categoriesData.filter((c) => c.isActive);
 
-  const toggleCategory = (id: number) => {
-    setSelectedCategoryIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
-  };
+ const toggleCategory = (id: number) => {
+  setSelectedCategoryIds((prev) =>
+    prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+  );
+  setCurrentPage(1); // reset về trang 1
+};
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -171,11 +177,6 @@ function AllEvent() {
           <p className="text-slate-400 text-base max-w-md">
             Tìm kiếm và khám phá những sự kiện thú vị được tuyển chọn dành riêng cho bạn.
           </p>
-          {pagination && (
-            <p className="text-slate-500 text-sm mt-1">
-              <span className="text-white font-bold text-lg">{pagination.totalCount}</span> sự kiện đang chờ bạn
-            </p>
-          )}
         </div>
 
         {/* ── Filter Bar ── */}
@@ -210,22 +211,20 @@ function AllEvent() {
             <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/10">
               <button
                 onClick={() => handleSortChange("Ascending")}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  sortOrder === "Ascending"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortOrder === "Ascending"
                     ? "bg-primary text-white shadow-md"
                     : "text-slate-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
                 Ascending
               </button>
               <button
                 onClick={() => handleSortChange("Descending")}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  sortOrder === "Descending"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortOrder === "Descending"
                     ? "bg-primary text-white shadow-md"
                     : "text-slate-400 hover:text-white"
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
                 Descending
@@ -237,11 +236,10 @@ function AllEvent() {
             {/* Filter toggle */}
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
-                showFilters || hasActiveFilters
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${showFilters || hasActiveFilters
                   ? "bg-primary text-white border-primary shadow-[0_0_16px_rgba(121,59,237,0.4)]"
                   : "bg-white/5 border-white/10 text-slate-300 hover:border-primary/50 hover:text-white"
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-[18px]">tune</span>
               Bộ lọc
@@ -349,11 +347,10 @@ function AllEvent() {
                         <button
                           key={cat.id}
                           onClick={() => toggleCategory(cat.id)}
-                          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                            active
+                          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${active
                               ? "bg-primary text-white border-primary shadow-[0_0_12px_rgba(121,59,237,0.4)]"
                               : `${getCategoryColor(cat.id)} hover:opacity-80`
-                          }`}
+                            }`}
                         >
                           {active && <span className="material-symbols-outlined text-[13px]">check</span>}
                           {cat.name}
@@ -545,11 +542,10 @@ function AllEvent() {
                   <button
                     key={page}
                     onClick={() => handlePageChange(page as number)}
-                    className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold text-sm transition-all ${
-                      currentPage === page
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold text-sm transition-all ${currentPage === page
                         ? "bg-primary text-white shadow-[0_0_16px_rgba(121,59,237,0.5)]"
                         : "bg-surface border border-white/10 text-slate-400 hover:text-white hover:border-primary/40"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
