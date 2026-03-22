@@ -1,23 +1,10 @@
 import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { useSelector } from "react-redux";
-import type { RootState } from "../../store";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 
-interface UserInfo {
-  userId?: string;
-  name?: string;
-  email?: string;
-}
-
 const ProfileLayout: React.FC = () => {
-  const { currentInfor } = useSelector((state: RootState) => state.AUTH);
-  const user = currentInfor as UserInfo;
 
-  const initials = user?.name
-    ? user.name.trim().split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()
-    : "U";
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     [
@@ -29,34 +16,14 @@ const ProfileLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0B0B12] text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-      {/* Header cố định trên cùng */}
       <Header />
 
-      {/* Layout body — bên dưới header (header cao ~72px) */}
       <div className="flex pt-[72px] min-h-screen">
 
-        {/* ── Sidebar ─────────────────────────────────── */}
-        {/* sticky top-[72px] → dính ngay dưới header, không đè lên */}
         <aside
           className="hidden md:flex flex-col w-72 shrink-0 sticky top-[72px] h-[calc(100vh-72px)] border-r border-white/5 bg-[#0B0B12] overflow-y-auto"
         >
           <div className="flex flex-col h-full px-4 py-6 space-y-6">
-
-            {/* User mini card */}
-            <div className="px-4 py-3 rounded-xl bg-[#18122B] border border-white/5">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-                  style={{ background: "linear-gradient(135deg, #793bed, #a855f7)" }}
-                >
-                  {initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-white text-sm truncate">{user?.name ?? "Người dùng"}</p>
-                  <p className="text-xs text-slate-500 truncate">{user?.email ?? ""}</p>
-                </div>
-              </div>
-            </div>
 
             {/* Navigation */}
             <nav className="space-y-1">
