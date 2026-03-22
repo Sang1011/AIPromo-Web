@@ -11,7 +11,7 @@ export default function TicketTypeList({ quantities, onChange, ticketTypes }: Pr
         <div className="space-y-4">
             {ticketTypes.map((t) => {
                 const value = quantities[t.id] ?? 0;
-                const remain = t.quantity - value;
+                const remain = t.quantity - t.soldQuantity;
 
                 return (
                     <div
@@ -22,14 +22,14 @@ export default function TicketTypeList({ quantities, onChange, ticketTypes }: Pr
                             <h4 className="text-white font-semibold">{t.name}</h4>
 
                             <p className="text-xs text-slate-400">
-                                Còn lại: {remain} / {t.quantity}
+                                {t.soldQuantity} / {t.quantity}
                             </p>
 
                             <div className="mt-2 h-2 w-40 bg-white/10 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-primary transition-all"
                                     style={{
-                                        width: `${((quantities[t.id] ?? 0) / t.quantity) * 100}%`,
+                                        width: `${(value / t.quantity) * 100}%`,
                                     }}
                                 />
                             </div>
@@ -48,19 +48,19 @@ export default function TicketTypeList({ quantities, onChange, ticketTypes }: Pr
                                 type="number"
                                 value={value}
                                 min={0}
-                                max={t.quantity}
+                                max={remain}
                                 onChange={(e) => {
                                     const num = Number(e.target.value);
                                     if (Number.isNaN(num)) return;
 
-                                    const safe = Math.min(t.quantity, Math.max(0, num));
+                                    const safe = Math.min(remain, Math.max(0, num));
                                     onChange(t.id, safe - value);
                                 }}
                                 className="w-16 px-0 text-center bg-white/5 rounded-lg text-white py-1"
                             />
 
                             <button
-                                disabled={value >= t.quantity}
+                                disabled={value >= remain}
                                 onClick={() => onChange(t.id, 1)}
                                 className="w-8 h-8 rounded-lg bg-primary text-white disabled:opacity-30"
                             >

@@ -16,6 +16,7 @@ import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
 import { getWorldPointer } from '../../utils/getWorldPointer';
 import { notify } from '../../utils/notify';
 import { validateSeatMap } from '../../utils/validateSeatMap';
+import type { EventSession } from '../../types/event/event';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -52,7 +53,6 @@ const TICKET_TYPE_COLORS = [
 
 
 const SeatMapEditorPage: React.FC = () => {
-    const SESSION_ID = "value";
     const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
     const [sections, setSections] = useState<Area[]>([]);
     const [seats, setSeats] = useState<Seat[]>([]);
@@ -493,7 +493,7 @@ const SeatMapEditorPage: React.FC = () => {
             const newTicketType = ticketTypes.find(t => t.id === value);
             setSections(prev => prev.map(s =>
                 s.id === selectedSection.id
-                    ? { ...s, ticketTypeId: value, fill: newTicketType?.color ?? s.fill }
+                    ? { ...s, ticketTypeId: value, fill: newTicketType?.color ?? s.fill, name: newTicketType?.name ?? s.name }
                     : s
             ));
             saveToHistory();
@@ -927,7 +927,9 @@ const SeatMapEditorPage: React.FC = () => {
             };
 
             setSections(prev => {
-                newSection.name = `${isArea ? 'Khu vực' : 'Shape'} ${prev.length + 1}`;
+                newSection.name = isArea
+                    ? (ticketTypes[0]?.name ?? `Khu vực ${prev.length + 1}`)
+                    : `Shape ${prev.length + 1}`;
                 if (isArea) {
                     newSection.points = []
                 }
@@ -1178,15 +1180,20 @@ const SeatMapEditorPage: React.FC = () => {
     const updateTicketTypeColor = useCallback(
         (ticketTypeId: string, color: string) => {
             setTicketTypes(prev =>
-                prev.map(t =>
-                    t.id === ticketTypeId
-                        ? { ...t, color }
-                        : t
+                prev.map(t => t.id === ticketTypeId ? { ...t, color } : t)
+            );
+
+            setSections(prev =>
+                prev.map(s =>
+                    s.isAreaType && s.ticketTypeId === ticketTypeId
+                        ? { ...s, fill: color }
+                        : s
                 )
             );
         },
         []
     );
+
     const currentTicketType = selectedSection && ticketTypes.find(
         t => t.id === selectedSection.ticketTypeId
     );
@@ -1419,41 +1426,49 @@ const SeatMapEditorPage: React.FC = () => {
 
     useEffect(() => {
         if (!eventId) return;
-        dispatch(fetchEventById(eventId));
-        dispatch(fetchGetSeatMap({ eventId, sessionId: SESSION_ID }))
+
+        dispatch(fetchEventById(eventId))
             .unwrap()
-            .then((spec) => {
-                try {
-                    const data: SeatMapData = JSON.parse(spec);
-                    const importedSections: Area[] = [];
-                    const importedSeats: Seat[] = [];
-                    data.areas.forEach(area => {
-                        const { seats: areaSeats, ...section } = area;
-                        importedSections.push({ ...section, draggable: true });
-                        areaSeats.forEach(seat => {
-                            importedSeats.push({ ...seat, sectionId: section.id });
-                        });
-                    });
+            .then((res) => {
+                const sessions = (res.data?.sessions ?? []) as EventSession[];
+                const firstSession = sessions[0];
+                if (!firstSession) return;
 
-                    const currentTicketTypes = ticketTypes.length > 0 ? ticketTypes : [];
-                    const sectionsWithColor = importedSections.map(s => {
-                        if (!s.isAreaType) return s;
-                        const matched = currentTicketTypes.find(t => t.id === s.ticketTypeId);
-                        if (matched?.color) return { ...s, fill: matched.color };
-                        return s;
-                    });
+                dispatch(fetchGetSeatMap({ eventId, sessionId: firstSession.id }))
+                    .unwrap()
+                    .then((spec) => {
+                        try {
+                            const data: SeatMapData = JSON.parse(spec);
+                            const importedSections: Area[] = [];
+                            const importedSeats: Seat[] = [];
+                            data.areas.forEach(area => {
+                                const { seats: areaSeats, ...section } = area;
+                                importedSections.push({ ...section, draggable: true });
+                                areaSeats.forEach(seat => {
+                                    importedSeats.push({ ...seat, sectionId: section.id });
+                                });
+                            });
 
-                    setSections(sectionsWithColor);
-                    setSeats(importedSeats);
-                    setTextEntities(data.texts || []);
-                    setSelectedIds([]);
-                    saveToHistory();
-                } catch {
-                    console.error('Invalid seatmap spec from server');
-                }
-            })
-            .catch((err) => {
-                console.warn('No seatmap found or failed to load:', err);
+                            const currentTicketTypes = ticketTypes.length > 0 ? ticketTypes : [];
+                            const sectionsWithColor = importedSections.map(s => {
+                                if (!s.isAreaType) return s;
+                                const matched = currentTicketTypes.find(t => t.id === s.ticketTypeId);
+                                if (matched?.color) return { ...s, fill: matched.color };
+                                return s;
+                            });
+
+                            setSections(sectionsWithColor);
+                            setSeats(importedSeats);
+                            setTextEntities(data.texts || []);
+                            setSelectedIds([]);
+                            saveToHistory();
+                        } catch {
+                            console.error('Invalid seatmap spec from server');
+                        }
+                    })
+                    .catch((err) => {
+                        console.warn('No seatmap found or failed to load:', err);
+                    });
             });
     }, [eventId]);
 
@@ -1887,19 +1902,50 @@ const SeatMapEditorPage: React.FC = () => {
                             }
                         }}
                         disabled={seatMapLoading || currentEvent?.status !== "Draft"}
+                        title={currentEvent?.status !== "Draft" ? "Không thể cập nhật do sự kiện không còn ở trạng thái NHÁP" : undefined}
                         style={{
-                            background: seatMapLoading ? '#6d28d9' : '#8B5CF6',
+                            background: seatMapLoading
+                                ? '#6d28d9'
+                                : currentEvent?.status !== "Draft"
+                                    ? '#374151'
+                                    : '#8B5CF6',
                             border: 'none',
                             borderRadius: '8px',
                             padding: '10px 24px',
-                            color: 'white',
+                            color: currentEvent?.status !== "Draft" ? '#6b7280' : 'white',
                             fontSize: '14px',
                             fontWeight: 600,
-                            cursor: seatMapLoading ? 'not-allowed' : 'pointer',
+                            cursor: seatMapLoading || currentEvent?.status !== "Draft" ? 'not-allowed' : 'pointer',
                             opacity: seatMapLoading ? 0.7 : 1,
                         }}
                     >
                         {seatMapLoading ? 'Đang lưu...' : 'Lưu sơ đồ'}
+                    </button>
+                    <button
+                        onClick={() => {
+                            const data: SeatMapData = {
+                                areas: sections.map(area => ({
+                                    ...area,
+                                    seats: seats.filter(seat => seat.sectionId === area.id),
+                                })),
+                                texts: textEntities,
+                            };
+                            const spec = JSON.stringify(data, null, 2);
+                            console.log('=== SPEC ===');
+                            console.log(spec);
+                        }}
+                        style={{
+                            background: 'transparent',
+                            border: '1px solid #4b5563',
+                            borderRadius: '8px',
+                            padding: '10px 16px',
+                            color: '#9ca3af',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Log spec
                     </button>
                 </div>
             </div>
@@ -3349,39 +3395,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                     outline: 'none'
                                                 }}
                                             />
-                                        </div>
-
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label style={{
-                                                display: 'block',
-                                                fontSize: '12px',
-                                                fontWeight: 600,
-                                                color: '#9ca3af',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                                marginBottom: '12px'
-                                            }}>
-                                                TRẠNG THÁI
-                                            </label>
-                                            <select
-                                                value={selectedSeat.status}
-                                                onChange={(e) => updateSeatProperty('status', e.target.value as Seat['status'])}
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#16162a',
-                                                    border: '1px solid #2a2a3e',
-                                                    borderRadius: '8px',
-                                                    padding: '10px 12px',
-                                                    color: '#e5e7eb',
-                                                    fontSize: '14px',
-                                                    outline: 'none',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                <option value="available">Có sẵn</option>
-                                                <option value="sold">Đã bán</option>
-                                                <option value="reserved">Đã đặt</option>
-                                            </select>
                                         </div>
                                     </>
                                 )}
