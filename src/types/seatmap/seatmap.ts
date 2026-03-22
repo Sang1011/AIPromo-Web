@@ -6,3 +6,9 @@ export interface AssignAreaMapping {
 export interface AssignAreasRequest {
     mappings: AssignAreaMapping[];
 }
+
+export type GetSeatMapResponse = {
+    eventId: string;
+    spec: string;
+    eventSessionId: string;
+}

@@ -66,12 +66,12 @@ export default function EditEventWizardPage() {
 
     useEffect(() => {
         if (!key) return;
-
-        const saved = localStorage.getItem(key);
-        if (saved) {
-            setStep(Number(saved));
+        if (step > 1) {
+            localStorage.setItem(key, String(step));
+        } else {
+            localStorage.removeItem(key);
         }
-    }, [key]);
+    }, [step, key]);
 
     // Save step
     useEffect(() => {

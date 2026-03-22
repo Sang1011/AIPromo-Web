@@ -39,8 +39,8 @@ import { useEffect } from "react";
 import { fetchMe, fetchRefreshToken } from "./store/authSlice";
 import type { AppDispatch } from "./store";
 import CreateEventPage from "./pages/Organizer/CreateEventPage";
-
 import ForgotPassword from "./pages/ForgotPassword";
+
 function App() {
   const dispatch = useDispatch<AppDispatch>();
   const refreshToken = localStorage.getItem("REFRESH_TOKEN");

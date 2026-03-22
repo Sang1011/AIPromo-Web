@@ -12,6 +12,7 @@ import type { CreatePendingOrderRequest, TicketRequest } from '../../types/ticke
 import { fetchCreatePendingOrder } from '../../store/ticketingSlice';
 import { notify } from '../../utils/notify';
 import { fetchEventById } from '../../store/eventSlice';
+import { clearOldOrderFromFirebase } from '../../utils/orderFirebase';
 
 type ViewerMode = 'zone' | 'seat';
 
@@ -238,6 +239,8 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
     const handleAreaClick = useCallback((area: Area) => {
         if (mode !== 'zone') return;
         const tt = ticketTypes.find(t => t.id === area.ticketTypeId);
+        const remaining = Math.max(0, (tt?.quantity ?? 0) - (tt?.soldQuantity ?? 0));
+        if (remaining === 0) return;
         setZonePopup({
             areaId: area.id,
             areaName: area.name,
@@ -252,14 +255,20 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
     // ── Seat click (seat mode) ──
     const handleSeatClick = useCallback((seat: Seat) => {
         if (mode !== 'seat') return;
-        if (seat.status === 'sold') return;
+        if (seat.status === 'blocked') return;
+
+        const area = seatMapData.areas.find(a => a.id === seat.sectionId);
+        const tt = ticketTypes.find(t => t.id === area?.ticketTypeId);
+        const remaining = Math.max(0, (tt?.quantity ?? 0) - (tt?.soldQuantity ?? 0));
+        if (remaining === 0) return;
+
         setSelectedSeatIds(prev => {
             const next = new Set(prev);
             if (next.has(seat.id)) next.delete(seat.id);
             else next.add(seat.id);
             return next;
         });
-    }, [mode]);
+    }, [mode, seatMapData, ticketTypes]);
 
     // ── Confirm zone popup ──
     const confirmZone = () => {
@@ -316,7 +325,7 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
     };
 
     // ── Render label inside area ──
-    const renderAreaLabel = (area: Area) => {
+    const renderAreaLabel = (area: Area, remaining?: number, isSoldOut?: boolean) => {
         const isCircle = area.type === 'circle';
         const cy = isCircle ? 0 : area.height / 2;
         const fontSize = Math.max(10, area.labelFontSize ?? 14);
@@ -332,18 +341,42 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                     text={area.name}
                     fontSize={fontSize}
                     fontStyle="bold"
-                    fill="white"
+                    fill={isSoldOut ? '#9ca3af' : 'white'}
                     align="center"
                 />
-                <KonvaText
-                    x={isCircle ? -area.width / 2 : 0}
-                    y={cy + 2}
-                    width={isCircle ? area.width : area.width}
-                    text={priceStr}
-                    fontSize={Math.max(9, fontSize - 2)}
-                    fill="rgba(255,255,255,0.8)"
-                    align="center"
-                />
+                {isSoldOut ? (
+                    <KonvaText
+                        x={isCircle ? -area.width / 2 : 0}
+                        y={cy + 2}
+                        width={isCircle ? area.width : area.width}
+                        text="Hết vé"
+                        fontSize={Math.max(9, fontSize - 2)}
+                        fill="#ef4444"
+                        align="center"
+                        fontStyle="bold"
+                    />
+                ) : (
+                    <>
+                        <KonvaText
+                            x={isCircle ? -area.width / 2 : 0}
+                            y={cy + 2}
+                            width={isCircle ? area.width : area.width}
+                            text={priceStr}
+                            fontSize={Math.max(9, fontSize - 2)}
+                            fill="rgba(255,255,255,0.8)"
+                            align="center"
+                        />
+                        <KonvaText
+                            x={isCircle ? -area.width / 2 : 0}
+                            y={cy + fontSize + 4}
+                            width={isCircle ? area.width : area.width}
+                            text={`Còn lại: ${remaining}`}
+                            fontSize={Math.max(8, fontSize - 3)}
+                            fill="rgba(134,239,172,0.9)"
+                            align="center"
+                        />
+                    </>
+                )}
             </>
         );
     };
@@ -364,21 +397,26 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         }
 
         const tt = ticketTypes.find(t => t.id === area.ticketTypeId);
-        const baseColor = area.fill ?? tt?.color ?? '#6b7280';
+        const remaining = Math.max(0, (tt?.quantity ?? 0) - (tt?.soldQuantity ?? 0));
+        const isSoldOut = remaining === 0;
+
+        const baseColor = isSoldOut ? '#374151' : (area.fill ?? tt?.color ?? '#6b7280');
         const isHovered = hoveredAreaId === area.id;
         const isSelected = mode === 'zone' && selectedZone?.areaId === area.id;
         const inPopup = mode === 'zone' && zonePopup?.areaId === area.id;
 
         let fillColor = baseColor;
-        let strokeColor = 'white';
-        let opacity = 1;
+        let strokeColor = isSoldOut ? '#4b5563' : 'white';
+        let opacity = isSoldOut ? 0.5 : 1;
 
-        if (isSelected || inPopup) {
-            strokeColor = '#22c55e';
-            opacity = 1;
-        } else if (isHovered && mode === 'zone') {
-            opacity = 0.8;
-            strokeColor = '#a78bfa';
+        if (!isSoldOut) {
+            if (isSelected || inPopup) {
+                strokeColor = '#22c55e';
+                opacity = 1;
+            } else if (isHovered && mode === 'zone') {
+                opacity = 0.8;
+                strokeColor = '#a78bfa';
+            }
         }
 
         return (
@@ -387,11 +425,14 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                 x={area.x}
                 y={area.y}
                 rotation={area.rotation}
-                onClick={() => handleAreaClick(area)}
-                onTap={() => handleAreaClick(area)}
+                onClick={() => !isSoldOut && handleAreaClick(area)}
+                onTap={() => !isSoldOut && handleAreaClick(area)}
                 onMouseEnter={() => {
-                    if (mode === 'zone') setHoveredAreaId(area.id);
-                    stageRef.current?.container().style.setProperty('cursor', mode === 'zone' ? 'pointer' : 'default');
+                    if (mode === 'zone' && !isSoldOut) setHoveredAreaId(area.id);
+                    stageRef.current?.container().style.setProperty(
+                        'cursor',
+                        mode === 'zone' ? (isSoldOut ? 'not-allowed' : 'pointer') : 'default'
+                    );
                 }}
                 onMouseLeave={() => {
                     setHoveredAreaId(null);
@@ -399,21 +440,25 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                 }}
             >
                 {renderAreaShape(area, fillColor, strokeColor, opacity)}
-                {mode === 'zone' && renderAreaLabel(area)}
+                {mode === 'zone' && renderAreaLabel(area, remaining, isSoldOut)}
             </Group>
         );
     });
 
     const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
+
     const renderSeats = () => {
         if (mode !== 'seat') return null;
 
         return allSeats.map(seat => {
-            const isSold = seat.status === 'sold';
+            const isSold = seat.status === 'blocked';
             const isSelected = selectedSeatIds.has(seat.id);
             const isHovered = hoveredSeatId === seat.id;
-
-            let fill = SEAT_AVAILABLE_COLOR;
+            const area = seatMapData.areas.find(a => a.id === seat.sectionId);
+            const tt = ticketTypes.find(t => t.id === area?.ticketTypeId);
+            const remaining = Math.max(0, (tt?.quantity ?? 0) - (tt?.soldQuantity ?? 0));
+            const isSectionSoldOut = remaining === 0;
+            const isBlocked = isSold || isSectionSoldOut;
 
             return (
                 <Rect
@@ -424,42 +469,32 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                     height={seat.height}
                     cornerRadius={4}
 
-                    fill={isSold ? SEAT_SOLD_COLOR : isSelected ? SEAT_SELECTED_COLOR : fill}
-
+                    fill={isBlocked ? SEAT_SOLD_COLOR : isSelected ? SEAT_SELECTED_COLOR : SEAT_AVAILABLE_COLOR}
                     stroke={isSelected ? 'blue' : SEAT_SOLD_COLOR}
-                    strokeWidth={
-                        isSelected
-                            ? 2
-                            : isHovered && !isSold
-                                ? 1.5
-                                : 1
-                    }
+                    strokeWidth={isSelected ? 2 : isHovered && !isBlocked ? 1.5 : 1}
 
-                    scaleX={isSelected ? 1.1 : isHovered ? 1.2 : 1}
-                    scaleY={isSelected ? 1.1 : isHovered ? 1.2 : 1}
+                    scaleX={isSelected ? 1.1 : isHovered && !isBlocked ? 1.2 : 1}
+                    scaleY={isSelected ? 1.1 : isHovered && !isBlocked ? 1.2 : 1}
 
                     shadowColor={isSelected ? '#22c55e' : undefined}
                     shadowBlur={isSelected ? 8 : 0}
                     shadowOpacity={isSelected ? 0.6 : 0}
 
-                    opacity={isSold ? 0.7 : 1}
-                    listening={!isSold}
+                    opacity={isBlocked ? 0.7 : 1}
+                    listening={!isBlocked}
 
                     onClick={() => handleSeatClick(seat)}
                     onTap={() => handleSeatClick(seat)}
 
                     onMouseEnter={() => {
-                        if (!isSold) {
+                        if (!isBlocked) {
                             setHoveredSeatId(seat.id);
-
                             const container = stageRef.current?.container();
                             if (container) container.style.cursor = 'pointer';
                         }
                     }}
-
                     onMouseLeave={() => {
                         setHoveredSeatId(null);
-
                         const container = stageRef.current?.container();
                         if (container) container.style.cursor = 'default';
                     }}
@@ -499,7 +534,11 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                         <div style={{ width: 14, height: 14, borderRadius: 3, background: tt.color, flexShrink: 0 }} />
                         <span style={{ fontSize: 13, color: '#e5e7eb' }}>{tt.name}</span>
                     </div>
-                    <span style={{ fontSize: 13, color: PRIMARY, fontWeight: 600 }}>{fmtVND(tt.price)}</span>
+                    {tt.quantity && tt.soldQuantity && (
+                        <span style={{ fontSize: 11, color: TEXT_MUTED }}>
+                            Còn lại: {Math.max(0, tt.quantity - tt.soldQuantity)} vé
+                        </span>
+                    )}
                 </div>
             ))}
         </div>
@@ -566,7 +605,8 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
             </div>
         );
 
-        const maxQty = ticketTypes.find(t => t.id === selectedZone.ticketTypeId)?.quantity ?? 0;
+        const tt = ticketTypes.find(t => t.id === selectedZone.ticketTypeId);
+        const maxQty = Math.max(0, (tt?.quantity ?? 0) - (tt?.soldQuantity ?? 0));
         const atMin = selectedZone.quantity <= 1;
         const atMax = selectedZone.quantity >= maxQty;
 
@@ -810,7 +850,8 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
 
                         {/* Ticket type row */}
                         {(() => {
-                            const maxQty = ticketTypes.find(t => t.id === zonePopup.ticketTypeId)?.quantity ?? 0;
+                            const tt = ticketTypes.find(t => t.id === zonePopup.ticketTypeId);
+                            const maxQty = Math.max(0, (tt?.quantity ?? 0) - (tt?.soldQuantity ?? 0));
                             const atMin = zonePopup.quantity <= 1;
                             const atMax = zonePopup.quantity >= maxQty;
                             return (
@@ -962,7 +1003,7 @@ const SeatMapViewerPage: React.FC = () => {
     useEffect(() => {
         if (!eventId || !eventSessionId) return;
 
-        dispatch(fetchGetSeatMap(eventId));
+        dispatch(fetchGetSeatMap({ eventId, sessionId: eventSessionId }));
         dispatch(fetchGetAllTicketTypes({ eventId }));
     }, [eventId, eventSessionId, dispatch]);
 
@@ -994,6 +1035,7 @@ const SeatMapViewerPage: React.FC = () => {
                     color: area.fill ?? '#6b7280',
                     price: area.price,
                     quantity: item?.quantity ?? 0,
+                    soldQuantity: item?.soldQuantity ?? 0
                 };
             });
     }, [seatMapData, ticketTypeItems]);
@@ -1038,6 +1080,11 @@ const SeatMapViewerPage: React.FC = () => {
         const result = await dispatch(fetchCreatePendingOrder(request));
 
         if (fetchCreatePendingOrder.fulfilled.match(result)) {
+            const orderId = result.payload.data;
+            console.log(orderId);
+            await clearOldOrderFromFirebase();
+            localStorage.setItem("currentOrderId", orderId);
+            navigate(`/event-detail/${eventId}/payment`);
             notify.success("Tạo order thành công");
         } else {
             notify.error("Tạo order thất bại");
