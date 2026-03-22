@@ -17,7 +17,12 @@ const authService = {
   },
   refreshToken: (data: any): Promise<AxiosResponse<any>> => {
     return API.callWithToken().post("/auth/refresh-token", data)
-  }
+  },
+  forgotPassword: (email: string): Promise<AxiosResponse<any>> =>
+    API.call().post("/auth/forgot-password", { email }),
+
+  resetPassword: (email: string, otpCode: string, newPassword: string): Promise<AxiosResponse<any>> =>
+    API.call().post("/auth/reset-password", { email, otpCode, newPassword }),
 }
 
 export default authService
