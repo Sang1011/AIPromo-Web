@@ -8,6 +8,7 @@ import eventMemberReducer from "./eventMemberSlice";
 import organizerProfileReducer from "./organizerProfileSlice";
 import seatMapReducer from "./seatMapSlice";
 import ticketingReducer from "./ticketingSlice";
+import walletReducer from "./walletSlice"
 
 const store = configureStore({
     reducer: {
@@ -19,7 +20,8 @@ const store = configureStore({
         EVENT_MEMBER: eventMemberReducer,
         ORGANIZER_PROFILE: organizerProfileReducer,
         SEATMAP: seatMapReducer,
-        TICKETING: ticketingReducer
+        TICKETING: ticketingReducer,
+        WALLET: walletReducer,
     }
 })
 

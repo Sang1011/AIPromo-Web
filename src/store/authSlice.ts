@@ -108,8 +108,6 @@ export const fetchUserDetail = createAsyncThunk<
    async (id, thunkAPI) => {
       try {
          const response = await authService.userDetail(id);
-         console.log(response);
-         
          return response.data;
       } catch (error: any) {
          return thunkAPI.rejectWithValue(error.response?.data || error.message);
