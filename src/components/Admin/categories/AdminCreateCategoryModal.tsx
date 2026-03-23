@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FiX } from "react-icons/fi";
 import { createPortal } from "react-dom";
 import { useDispatch } from "react-redux";
@@ -10,6 +10,27 @@ export default function AdminCreateCategoryModal({ onClose }: { onClose: () => v
     const dispatch = useDispatch<AppDispatch>();
     const [form, setForm] = useState({ code: "", name: "", description: "" });
     const [creating, setCreating] = useState(false);
+
+    const CATEGORY_OPTIONS = [
+        { code: "TECH", label: "Công nghệ", gradient: "linear-gradient(90deg,#8b5cf6,#6366f1)" },
+        { code: "MUSIC", label: "Âm nhạc", gradient: "linear-gradient(90deg,#ec4899,#f43f5e)" },
+        { code: "WORKSHOP", label: "Workshop", gradient: "linear-gradient(90deg,#f59e0b,#f97316)" },
+        { code: "ART", label: "Nghệ thuật", gradient: "linear-gradient(90deg,#a855f7,#8b5cf6)" },
+        { code: "FINANCE", label: "Tài chính", gradient: "linear-gradient(90deg,#10b981,#14b8a6)" },
+        { code: "OTHER", label: "Khác", gradient: "linear-gradient(90deg,#64748b,#94a3b8)" },
+    ];
+
+    const [openDropdown, setOpenDropdown] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const onDocClick = (e: MouseEvent) => {
+            if (!dropdownRef.current) return;
+            if (!dropdownRef.current.contains(e.target as Node)) setOpenDropdown(false);
+        };
+        if (openDropdown) document.addEventListener('mousedown', onDocClick);
+        return () => document.removeEventListener('mousedown', onDocClick);
+    }, [openDropdown]);
 
     const canSave = form.code.trim().length > 0 && form.name.trim().length > 0;
 
@@ -41,7 +62,28 @@ export default function AdminCreateCategoryModal({ onClose }: { onClose: () => v
                 <div className="space-y-3">
                     <div>
                         <label className="text-sm text-slate-400 mb-1 block">Mã (code)</label>
-                        <input value={form.code} onChange={(e) => setForm(s => ({ ...s, code: e.target.value }))} className="w-full rounded-xl bg-black/40 border border-white/10 py-2 px-3 text-white text-sm outline-none focus:ring-1 focus:ring-primary" />
+                        <div className="relative" ref={dropdownRef}>
+                            <button type="button" onClick={() => setOpenDropdown(v => !v)} className="w-full flex items-center justify-between gap-3 rounded-xl bg-black/40 border border-white/10 py-2 px-3 text-white text-sm outline-none focus:ring-1 focus:ring-primary">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-8 rounded-md border border-white/10 flex items-center justify-center" style={{ background: form.code ? (CATEGORY_OPTIONS.find(c => c.code === form.code)?.gradient ?? 'transparent') : 'transparent' }} />
+                                    <div className="text-left">
+                                        <div className="text-sm font-medium">{form.code ? `${form.code} — ${CATEGORY_OPTIONS.find(c => c.code === form.code)?.label}` : '-- Chọn mã --'}</div>
+                                    </div>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-[#a592c8]"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+
+                            {openDropdown && (
+                                <div className="absolute left-0 w-full mt-2 rounded-xl bg-[#100d1f] border border-white/10 shadow-xl z-50 py-2">
+                                    {CATEGORY_OPTIONS.map((opt) => (
+                                        <button key={opt.code} onClick={() => { setForm(s => ({ ...s, code: opt.code })); setOpenDropdown(false); }} className="w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-3">
+                                            <div className="w-8 h-7 rounded-md border border-white/10" style={{ background: opt.gradient }} />
+                                            <div className="text-sm">{opt.code} — {opt.label}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div>
                         <label className="text-sm text-slate-400 mb-1 block">Tên</label>
