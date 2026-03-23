@@ -13,6 +13,15 @@ import AdminCreateCategoryModal from "./AdminCreateCategoryModal";
 const glassCard =
     "bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.2)]";
 
+const CATEGORY_OPTIONS = [
+    { code: "TECH", label: "Công nghệ", gradient: "linear-gradient(90deg,#8b5cf6,#6366f1)" },
+    { code: "MUSIC", label: "Âm nhạc", gradient: "linear-gradient(90deg,#ec4899,#f43f5e)" },
+    { code: "WORKSHOP", label: "Workshop", gradient: "linear-gradient(90deg,#f59e0b,#f97316)" },
+    { code: "ART", label: "Nghệ thuật", gradient: "linear-gradient(90deg,#a855f7,#8b5cf6)" },
+    { code: "FINANCE", label: "Tài chính", gradient: "linear-gradient(90deg,#10b981,#14b8a6)" },
+    { code: "OTHER", label: "Khác", gradient: "linear-gradient(90deg,#64748b,#94a3b8)" },
+];
+
 export default function AdminCategoryTable() {
     const dispatch = useDispatch<AppDispatch>();
     const categories = useSelector((state: RootState) => state.CATEGORY.categories) as Category[];
@@ -101,7 +110,19 @@ export default function AdminCategoryTable() {
                                                     <p className="text-sm font-semibold text-white">{c.name}</p>
                                                 </div>
                                     </td>
-                                    <td className="px-8 py-5 text-sm text-[#a592c8]">{c.code}</td>
+                                    <td className="px-8 py-5">
+                                        {(() => {
+                                            const opt = CATEGORY_OPTIONS.find(o => o.code === c.code);
+                                            const grad = opt?.gradient ?? 'transparent';
+                                            return (
+                                                <div className="flex items-center">
+                                                    <div className="rounded-lg w-16 h-8 flex items-center justify-center text-sm font-bold text-white" style={{ background: grad, boxShadow: 'inset 0 -6px 18px rgba(0,0,0,0.12)' }}>
+                                                        {c.code}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </td>
                                     <td className="px-8 py-5 text-sm text-[#a592c8]">{c.description}</td>
                                     <td className="px-8 py-5 text-center">
                                             <button onClick={(e) => { const btn = e.currentTarget as HTMLElement; const rect = btn.getBoundingClientRect(); setOpenStatusMenu(openStatusMenu && openStatusMenu.id === c.id ? null : { id: c.id, rect }); }} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${c.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>

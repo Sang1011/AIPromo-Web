@@ -5,7 +5,8 @@ import {
   fetchPendingEvents,
   fetchPublishEvent,
   fetchCancelEvent,
-  fetchRejectPublishEvent
+  fetchRejectPublishEvent,
+  fetchEventById
 } from "../../../store/eventSlice"
 import toast from "react-hot-toast"
 
@@ -34,6 +35,9 @@ export default function StaffEventApprovalQueue() {
   
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [approveEventId, setApproveEventId] = useState<string | null>(null)
+
+  const currentEvent = useSelector((state: RootState) => state.EVENT.currentEvent)
+  const [showDetailModal, setShowDetailModal] = useState(false)
 
   useEffect(() => {
 
@@ -212,6 +216,26 @@ export default function StaffEventApprovalQueue() {
 
   }
 
+  const openDetailModal = async (eventId: string) => {
+
+  if (currentEvent?.id === eventId) {
+    setShowDetailModal(true)
+    return
+  }
+
+  try {
+    setLoadingId(eventId)
+
+    await dispatch(fetchEventById(eventId)).unwrap()
+
+    setShowDetailModal(true)
+  } catch (err) {
+    toast.error("Không thể tải chi tiết sự kiện")
+  }
+
+  setLoadingId(null)
+}
+
   return (
 
     <div className="flex flex-col gap-10 w-full">
@@ -331,7 +355,10 @@ export default function StaffEventApprovalQueue() {
 
               <div className="col-span-2 flex justify-end gap-2">
 
-                <button className="text-xs text-slate-400 hover:text-white">
+                <button
+                  onClick={() => openDetailModal(evt.id ?? evt.eventId)}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
                   Chi tiết
                 </button>
 
@@ -500,6 +527,210 @@ export default function StaffEventApprovalQueue() {
               >
                 Xác nhận từ chối
               </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {showDetailModal && currentEvent && (
+
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={() => setShowDetailModal(false)}
+        >
+
+          <div
+            className="bg-slate-900 border border-white/10 rounded-2xl w-[1000px] max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+
+            {/* ===== BANNER (FIXED) ===== */}
+            <div className="relative w-full h-[320px] overflow-hidden rounded-t-2xl">
+
+              {/* background blur */}
+              <img
+                src={currentEvent.bannerUrl}
+                className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40"
+              />
+
+              {/* overlay */}
+              <div className="absolute inset-0 bg-black/60" />
+
+              {/* main image */}
+              <div className="relative z-10 flex items-center justify-center h-full px-4">
+
+                <img
+                  src={currentEvent.bannerUrl}
+                  className="max-h-full max-w-full object-contain rounded-xl shadow-2xl border border-white/10"
+                />
+
+              </div>
+
+              {/* close button */}
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="absolute top-4 right-4 z-20 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-lg backdrop-blur"
+              >
+                ✕
+              </button>
+
+              {/* title */}
+              <div className="absolute bottom-4 left-6 z-20">
+                <h1 className="text-2xl font-black text-white drop-shadow-lg">
+                  {currentEvent.title}
+                </h1>
+                <p className="text-sm text-slate-300">
+                  {currentEvent.location}
+                </p>
+              </div>
+
+            </div>
+
+            {/* ===== CONTENT ===== */}
+            <div className="p-6 flex flex-col gap-6">
+
+              {/* INFO GRID */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+
+                <div className="bg-slate-800/50 p-4 rounded-xl">
+                  <p className="text-slate-400 text-xs">Thời gian bắt đầu</p>
+                  <p className="text-white font-semibold">
+                    {formatDate(currentEvent.eventStartAt)}
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 p-4 rounded-xl">
+                  <p className="text-slate-400 text-xs">Thời gian kết thúc</p>
+                  <p className="text-white font-semibold">
+                    {formatDate(currentEvent.eventEndAt)}
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 p-4 rounded-xl">
+                  <p className="text-slate-400 text-xs">Mở bán vé</p>
+                  <p className="text-white font-semibold">
+                    {formatDate(currentEvent.ticketSaleStartAt)}
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 p-4 rounded-xl">
+                  <p className="text-slate-400 text-xs">Đóng bán vé</p>
+                  <p className="text-white font-semibold">
+                    {formatDate(currentEvent.ticketSaleEndAt)}
+                  </p>
+                </div>
+
+              </div>
+
+              {/* DESCRIPTION */}
+              <div>
+                <h3 className="text-white font-bold mb-2 text-lg">
+                  Mô tả sự kiện
+                </h3>
+                <p className="text-slate-300 text-sm leading-relaxed">
+                  {currentEvent.description}
+                </p>
+              </div>
+
+              {/* SESSIONS */}
+              <div>
+                <h3 className="text-white font-bold mb-3 text-lg">
+                  Lịch trình
+                </h3>
+
+                <div className="flex flex-col gap-3">
+                  {currentEvent.sessions.map((s: any) => (
+                    <div
+                      key={s.id}
+                      className="p-4 rounded-xl bg-slate-800 border border-white/5"
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-white font-semibold">
+                          {s.title}
+                        </span>
+
+                        <span className="text-xs text-slate-400">
+                          {formatDate(s.startTime)} - {formatDate(s.endTime)}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-slate-300">
+                        {s.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ACTORS */}
+              <div>
+                <h3 className="text-white font-bold mb-3 text-lg">
+                  Nghệ sĩ tham gia
+                </h3>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {currentEvent.actorImages.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center gap-3 bg-slate-800 p-3 rounded-xl border border-white/5"
+                    >
+                      <img
+                        src={a.image}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+
+                      <div>
+                        <p className="text-white text-sm font-semibold">
+                          {a.name}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {a.major}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* TICKET */}
+              <div>
+                <h3 className="text-white font-bold mb-3 text-lg">
+                  Loại vé
+                </h3>
+
+                <div className="flex flex-col gap-2">
+                  {currentEvent.ticketTypes.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-white/5"
+                    >
+                      <span className="text-white font-medium">
+                        {t.name}
+                      </span>
+
+                      <span className="text-green-400 font-bold">
+                        {t.price.toLocaleString()} VND
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* POLICY */}
+              <div>
+                <h3 className="text-white font-bold mb-3 text-lg">
+                  Chính sách
+                </h3>
+
+                <div
+                  className="text-slate-300 text-sm leading-relaxed bg-slate-800/50 p-4 rounded-xl"
+                  dangerouslySetInnerHTML={{ __html: currentEvent.policy }}
+                />
+              </div>
 
             </div>
 
