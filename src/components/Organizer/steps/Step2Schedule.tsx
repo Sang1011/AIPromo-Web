@@ -313,7 +313,7 @@ export default function Step2Schedule({
     };
 
     useEffect(() => { loadSessions(); }, [eventId]);
-    useEffect(() => { if (eventId) dispatch(fetchGetAllTicketTypes({ eventId })); }, [eventId]);
+    useEffect(() => { if (eventId && sessions) dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId: sessions[0].id })); }, [eventId, sessions]);
 
     const recomputeConflicts = useCallback(
         (form: TimeForm, currentSessions: typeof sessions) => {
@@ -611,6 +611,7 @@ export default function Step2Schedule({
             )}
             {eventId && (
                 <TicketTypeModal
+                    sessions={sessions}
                     open={openTicketModal}
                     isAllowUpdate={isAllowUpdate}
                     onClose={async () => {
