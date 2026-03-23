@@ -16,3 +16,36 @@ export interface RegisterRequest {
   phoneNumber: string;
   address: string;
 }
+ 
+export interface UserProfile {
+  email: string;
+  userName: string;
+  profileImageUrl: string,
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  address: string | null;
+  birthday: string | null;
+  gender: string | null;
+  roles: string[];
+  id: string;
+  createdAt: string;
+  createdBy: string;
+  modifiedAt: string;
+  modifiedBy: string;
+  isActive: boolean;
+}
+
+
+export interface UserProfileRequest {
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  birthday: string | null;
+  gender: string | null;
+  phone: string | null;
+  address: string | null;
+  description: string | null;
+  socialLink: string | null;
+  profileImageUrl: string | null;
+}

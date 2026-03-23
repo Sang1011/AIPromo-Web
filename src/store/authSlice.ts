@@ -10,6 +10,7 @@ interface AuthState {
    refreshToken: string | null;
    deviceId: string | null;
    currentInfor: object;
+   userDetail: object
 }
 
 
@@ -17,7 +18,8 @@ const initialState: AuthState = {
    token: null,
    refreshToken: null,
    deviceId: null,
-   currentInfor: {}
+   currentInfor: {},
+   userDetail: {}
 };
 
 export const fetchLogin = createAsyncThunk<
@@ -89,9 +91,26 @@ export const fetchRefreshToken = createAsyncThunk(
             refreshToken,
             deviceId: deviceId,
          });
-       
+
          return response.data;
 
+      } catch (error: any) {
+         return thunkAPI.rejectWithValue(error.response?.data || error.message);
+      }
+   }
+);
+
+export const fetchUserDetail = createAsyncThunk<
+   any,
+   string
+>(
+   `${name}/fetchUserDetail`,
+   async (id, thunkAPI) => {
+      try {
+         const response = await authService.userDetail(id);
+         console.log(response);
+         
+         return response.data;
       } catch (error: any) {
          return thunkAPI.rejectWithValue(error.response?.data || error.message);
       }
@@ -161,6 +180,12 @@ const authSlice = createSlice({
             localStorage.setItem("DEVICE_ID", deviceId);
          }
 
+      });
+      builder.addCase(fetchUserDetail.fulfilled, (state, action: PayloadAction<any>) => {
+         const responseData = action.payload;
+         if (responseData?.isSuccess) {
+            state.userDetail = responseData.data;
+         }
       });
    },
 });

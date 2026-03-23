@@ -327,20 +327,70 @@ const Header: React.FC = () => {
                 </button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-3 w-64 bg-[#13131f] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-                    <div className="px-5 py-4 border-b border-white/10">
-                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                        Lịch sử sự kiện
-                      </p>
-                      <p className="text-slate-500 text-xs">Chưa có dữ liệu</p>
+                  <div className="absolute right-0 mt-3 w-56 bg-[#13131f] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                    {/* User info header */}
+                    <div className="px-4 py-3 border-b border-white/8 flex items-center gap-3">
+                      <div
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                        style={{ background: "linear-gradient(135deg, #7C3AED, #A855F7)" }}
+                      >
+                        {user?.name?.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm font-semibold truncate">{user?.name}</p>
+                        <p className="text-slate-500 text-xs">Thành viên</p>
+                      </div>
                     </div>
-                    <div className="px-5 py-3">
+
+                    {/* Menu items */}
+                    <div className="py-2">
+                      <Link
+                        to="/my-tickets"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-300 hover:text-white hover:bg-white/6 transition-all group"
+                      >
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-blue-500/15 group-hover:bg-blue-500/25 transition-colors">
+                          <span className="material-symbols-outlined text-[17px] text-blue-400">confirmation_number</span>
+                        </div>
+                        <span className="text-sm font-medium">Vé của tôi</span>
+                        <span className="material-symbols-outlined text-[14px] text-slate-600 group-hover:text-slate-400 ml-auto transition-colors">chevron_right</span>
+                      </Link>
+
+                      <Link
+                        to="/my-events"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-300 hover:text-white hover:bg-white/6 transition-all group"
+                      >
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-purple-500/15 group-hover:bg-purple-500/25 transition-colors">
+                          <span className="material-symbols-outlined text-[17px] text-purple-400">event</span>
+                        </div>
+                        <span className="text-sm font-medium">Sự kiện của tôi</span>
+                        <span className="material-symbols-outlined text-[14px] text-slate-600 group-hover:text-slate-400 ml-auto transition-colors">chevron_right</span>
+                      </Link>
+
+                      <Link
+                        to="/profile/account"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-300 hover:text-white hover:bg-white/6 transition-all group"
+                      >
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/15 group-hover:bg-emerald-500/25 transition-colors">
+                          <span className="material-symbols-outlined text-[17px] text-emerald-400">manage_accounts</span>
+                        </div>
+                        <span className="text-sm font-medium">Tài khoản của tôi</span>
+                        <span className="material-symbols-outlined text-[14px] text-slate-600 group-hover:text-slate-400 ml-auto transition-colors">chevron_right</span>
+                      </Link>
+                    </div>
+
+                    {/* Divider + Logout */}
+                    <div className="border-t border-white/8 py-2">
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 px-3 py-2 rounded-xl transition-all"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/8 transition-all group"
                       >
-                        <span className="material-symbols-outlined text-base">logout</span>
-                        Đăng xuất
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-red-500/10 group-hover:bg-red-500/20 transition-colors">
+                          <span className="material-symbols-outlined text-[17px] text-red-400">logout</span>
+                        </div>
+                        <span className="text-sm font-medium">Đăng xuất</span>
                       </button>
                     </div>
                   </div>
