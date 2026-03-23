@@ -31,7 +31,7 @@ const BANKS = [
 ];
 
 type Tab = "profile" | "bank";
-type BusinessType = "personal" | "company";
+type BusinessType = "individual" | "company";
 
 interface ProfileErrors {
     displayName?: string;
@@ -63,7 +63,7 @@ export default function OrganizerAccountPage() {
     const [description, setDescription] = useState("");
     const [socialLink, setSocialLink] = useState("");
     const [address, setAddress] = useState("");
-    const [businessType, setBusinessType] = useState<BusinessType>("personal");
+    const [businessType, setBusinessType] = useState<BusinessType>("individual");
     const [identityNumber, setIdentityNumber] = useState("");
     const [companyName, setCompanyName] = useState("");
     const [taxCode, setTaxCode] = useState("");
@@ -93,7 +93,9 @@ export default function OrganizerAccountPage() {
         setDescription(profile.description ?? "");
         setSocialLink(profile.socialLink ?? "");
         setAddress(profile.address ?? "");
-        setBusinessType((profile.businessType as BusinessType) ?? "personal");
+        setBusinessType(
+            (profile.businessType?.toLowerCase() as BusinessType) ?? "individual"
+        );
         setCompanyName(profile.companyName ?? "");
         setTaxCode(profile.taxCode ?? "");
         setIdentityNumber(profile.identityNumber ?? "");
@@ -107,7 +109,7 @@ export default function OrganizerAccountPage() {
         const errors: ProfileErrors = {};
         if (!displayName.trim())
             errors.displayName = "Tên hiển thị không được để trống";
-        if (businessType === "personal") {
+        if (businessType === "individual") {
             if (identityNumber && !/^\d{9}$|^\d{12}$/.test(identityNumber))
                 errors.identityNumber = "Số CMND / CCCD phải có 9 hoặc 12 chữ số";
         }
@@ -266,8 +268,8 @@ export default function OrganizerAccountPage() {
                                 <RadioCard
                                     icon={<MdOutlinePerson size={18} />}
                                     label="Cá nhân"
-                                    checked={businessType === "personal"}
-                                    onChange={() => { setBusinessType("personal"); setProfileErrors({}); }}
+                                    checked={businessType === "individual"}
+                                    onChange={() => { setBusinessType("individual"); setProfileErrors({}); }}
                                 />
                                 <RadioCard
                                     icon={<MdOutlineBusiness size={18} />}
@@ -278,7 +280,7 @@ export default function OrganizerAccountPage() {
                             </div>
                         </div>
 
-                        {businessType === "personal" && (
+                        {businessType === "individual" && (
                             <FieldInput
                                 label="Số CMND / CCCD"
                                 placeholder="9 hoặc 12 chữ số"
