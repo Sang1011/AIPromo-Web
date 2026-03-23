@@ -1439,14 +1439,16 @@ const SeatMapEditorPage: React.FC = () => {
 
     useEffect(() => {
         if (!eventId) return;
-        dispatch(fetchGetAllTicketTypes({ eventId }))
+        const sessionId = currentEvent?.sessions?.[0]?.id;
+        if (!sessionId) return;
+        dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId: sessionId }))
             .finally(() => {
                 ticketTypesFetchedRef.current = true;
                 if (reduxTicketTypes.length === 0) {
                     navigate(`/organizer/my-events/${eventId}/edit`);
                 }
             });
-    }, [eventId]);
+    }, [eventId, currentEvent]);
 
     useEffect(() => {
         if (reduxTicketTypes.length === 0) return;

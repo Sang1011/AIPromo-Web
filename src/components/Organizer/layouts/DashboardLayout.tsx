@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
-import { MdAnalytics, MdDashboard, MdDescription } from "react-icons/md";
+import { MdAnalytics, MdDashboard, MdDescription, MdManageAccounts } from "react-icons/md";
 import type { DashboardLayoutConfig } from "../../../types/config/dashboard.config";
 import Header from "../navigations/Header";
 import PromoSidebar from "../navigations/PromoSidebar";
@@ -24,6 +24,11 @@ const menuGroups = [
                 icon: <MdDescription />,
                 label: "Điều khoản",
                 path: "/organizer/legals",
+            },
+            {
+                icon: <MdManageAccounts />,
+                label: "Quản lý tài khoản",
+                path: "/organizer/accounts",
             },
         ],
     },

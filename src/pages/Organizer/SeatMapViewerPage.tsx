@@ -1004,7 +1004,7 @@ const SeatMapViewerPage: React.FC = () => {
         if (!eventId || !eventSessionId) return;
 
         dispatch(fetchGetSeatMap({ eventId, sessionId: eventSessionId }));
-        dispatch(fetchGetAllTicketTypes({ eventId }));
+        dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId: eventSessionId }));
     }, [eventId, eventSessionId, dispatch]);
 
     const seatMapData = useMemo<SeatMapData>(() => {
