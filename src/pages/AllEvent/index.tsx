@@ -275,7 +275,7 @@ function AllEvent() {
   return (
     <>
       <Header />
-      <main className="max-w-[1440px] mx-auto px-6 py-8">
+      <main className="max-w-[1440px] mx-auto px-6 py-8 mt-10">
 
         {/* ── Hero Title ── */}
         <div className="mb-10 flex flex-col items-center gap-3 text-center pt-10">
