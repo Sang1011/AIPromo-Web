@@ -37,7 +37,6 @@ export default function LockSeatTab() {
 
     const { spec } = useSelector((state: RootState) => state.SEATMAP);
 
-    // Fetch event → extract sessions → set default session
     useEffect(() => {
         if (!eventId) return;
 
@@ -55,7 +54,6 @@ export default function LockSeatTab() {
             });
     }, [eventId, dispatch]);
 
-    // Fetch seat map whenever selected session changes
     useEffect(() => {
         if (!eventId || !selectedSessionId) return;
 
@@ -79,15 +77,23 @@ export default function LockSeatTab() {
     };
 
     useEffect(() => {
-        if (!spec) return;
+        if (!eventId || !selectedSessionId) return;
 
-        try {
-            const parsed: SeatMapData = JSON.parse(spec);
-            setSeatMapData(parsed);
-        } catch (err) {
-            console.error("Seat map parse error:", err);
-        }
-    }, [spec]);
+        setSeatMapData(null);
+        dispatch(fetchGetSeatMap({ eventId, sessionId: selectedSessionId }))
+            .unwrap()
+            .then((specString) => {
+                try {
+                    const parsed: SeatMapData = JSON.parse(specString);
+                    setSeatMapData(parsed);
+                } catch (err) {
+                    console.error("Seat map parse error:", err);
+                }
+            })
+            .catch(() => {
+                console.warn('No seatmap found');
+            });
+    }, [eventId, selectedSessionId, dispatch]);
 
     const handleSessionChange = (sessionId: string) => {
         setSelectedSessionId(sessionId);
@@ -297,7 +303,7 @@ export default function LockSeatTab() {
 
                         <button
                             onClick={() => {
-                                if (!currentEvent) {
+                                if (currentEvent) {
                                     gotoEdit();
                                 }
                             }}

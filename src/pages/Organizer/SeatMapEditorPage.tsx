@@ -46,9 +46,15 @@ const TICKET_TYPE_COLORS = [
     '#65a30d',
     '#0891b2',
     '#008080',
-    '#8b5cf6',
-    '#d97706',
+    '#ffc901',
+    '#aa0000',
     '#6366f1',
+    '#ffff66',
+    '#888608',
+    '#c71585',
+    '#ffc0b0',
+    '#9999FF',
+    '#0000cc'
 ];
 
 
@@ -149,6 +155,7 @@ const SeatMapEditorPage: React.FC = () => {
         (state: RootState) => state.TICKET_TYPE
     );
     const { currentEvent } = useSelector((state: RootState) => state.EVENT);
+    const [isTicketTypesReady, setIsTicketTypesReady] = useState(false);
 
     const ticketTypesFetchedRef = useRef(false);
 
@@ -158,27 +165,35 @@ const SeatMapEditorPage: React.FC = () => {
     }
 
     const handleDelete = useCallback(() => {
-        if (selectedIds.length > 0) {
-            const sectionIdsToDelete = selectedIds.filter(id =>
-                sections.some(s => s.id === id)
-            );
-            const seatIdsToDelete = selectedIds.filter(id =>
-                seats.some(s => s.id === id)
-            );
-            const textIdsToDelete = selectedIds.filter(id =>
-                textEntities.some(t => t.id === id)
-            );
+        const allSelectedIds = [
+            ...selectedIds,
+            ...(seatMoveMode || activeAreaId ? selectedSeatIds : [])
+        ];
 
-            setSections(prev => prev.filter(s => !sectionIdsToDelete.includes(s.id)));
-            setSeats(prev => {
-                const seatsAfterDirectDelete = prev.filter(s => !seatIdsToDelete.includes(s.id));
-                return seatsAfterDirectDelete.filter(s => !sectionIdsToDelete.includes(s.sectionId));
-            });
-            setTextEntities(prev => prev.filter(t => !textIdsToDelete.includes(t.id)));
-            setSelectedIds([]);
-            saveToHistory();
-        }
-    }, [selectedIds, sections, seats, textEntities, saveToHistory]);
+        if (allSelectedIds.length === 0) return;
+
+        const sectionIdsToDelete = selectedIds.filter(id =>
+            sections.some(s => s.id === id)
+        );
+        const seatIdsToDelete = allSelectedIds.filter(id =>
+            seats.some(s => s.id === id)
+        );
+        const textIdsToDelete = selectedIds.filter(id =>
+            textEntities.some(t => t.id === id)
+        );
+
+        setSections(prev => prev.filter(s => !sectionIdsToDelete.includes(s.id)));
+        setSeats(prev => {
+            const afterDirect = prev.filter(s => !seatIdsToDelete.includes(s.id));
+            return afterDirect.filter(s => !sectionIdsToDelete.includes(s.sectionId));
+        });
+        setTextEntities(prev => prev.filter(t => !textIdsToDelete.includes(t.id)));
+
+        setSelectedIds([]);
+        setSelectedSeatIds([]);
+        saveToHistory();
+    }, [selectedIds, selectedSeatIds, sections, seats, textEntities,
+        seatMoveMode, activeAreaId, saveToHistory]);
 
     const handleCopy = useCallback(() => {
         const copiedEntities: Entity[] = [
@@ -393,12 +408,12 @@ const SeatMapEditorPage: React.FC = () => {
                     s.id === id
                         ? {
                             ...s,
-                            width: newWidth,
-                            height: newHeight,
-                            x: node.x(),
-                            y: node.y(),
-                            rotation: node.rotation(),
-                            labelFontSize: Math.max(10, (s as any).labelFontSize * scale || 14),
+                            width: Math.round(newWidth),
+                            height: Math.round(newHeight),
+                            x: Math.round(node.x()),
+                            y: Math.round(node.y()),
+                            rotation: Math.round(node.rotation()),
+                            labelFontSize: Math.round(Math.max(10, (s as any).labelFontSize * scale || 14)),
                         }
                         : s
                 )
@@ -724,11 +739,16 @@ const SeatMapEditorPage: React.FC = () => {
 
     const createCustomCountSeats = useCallback(() => {
         if (!isSingleSectionSelected || !selectedSection) return;
-        const total = customSeatCount;
+        const tt = ticketTypes.find(t => t.id === selectedSection.ticketTypeId);
+        const alreadyCreated = seats.filter(s => s.sectionId === selectedSection.id).length;
+        const remaining = (selectedSection.isAreaType && tt?.quantity != null)
+            ? tt.quantity - alreadyCreated
+            : customSeatCount;
+        const total = Math.min(customSeatCount, Math.max(0, remaining));
         if (total <= 0) return;
 
         if (seatLayoutType === 'grid') {
-            const cols = Math.ceil(Math.sqrt(total));
+            const cols = Math.ceil(Math.sqrt(total * (4 / 3)));
             const rows = Math.ceil(total / cols);
             const newSeats: Seat[] = [];
             const newSeatIds: string[] = [];
@@ -813,7 +833,7 @@ const SeatMapEditorPage: React.FC = () => {
         if (total <= 0) return;
 
         if (seatLayoutType === 'grid') {
-            const cols = Math.ceil(Math.sqrt(total));
+            const cols = Math.ceil(Math.sqrt(total * (4 / 3)));
             const rows = Math.ceil(total / cols);
             const newSeats: Seat[] = [];
             const newSeatIds: string[] = [];
@@ -909,10 +929,15 @@ const SeatMapEditorPage: React.FC = () => {
             isArea: boolean
         ) => {
             const newId = crypto.randomUUID();
+            const usedTicketTypeIds = new Set(
+                sections.filter(s => s.isAreaType).map(s => s.ticketTypeId)
+            );
+            const unusedTicketType = ticketTypes.find(t => !usedTicketTypeIds.has(t.id))
+                ?? ticketTypes[0];
             const newSection: Area = {
-                fill: ticketTypes[0]?.color || TICKET_TYPE_COLORS[0],
+                fill: isArea ? (unusedTicketType?.color || TICKET_TYPE_COLORS[0]) : '#374151',
                 id: newId,
-                name: ticketTypes[0]?.name,
+                name: unusedTicketType?.name,
                 type: shape,
                 x: snapToGrid(x),
                 y: snapToGrid(y),
@@ -920,8 +945,8 @@ const SeatMapEditorPage: React.FC = () => {
                 height: 150,
                 rotation: 0,
                 stroke: 'white',
-                ticketTypeId: ticketTypes[0]?.id ?? '',
-                price: ticketTypes[0]?.price ?? 0,
+                ticketTypeId: isArea ? (unusedTicketType?.id ?? '') : '',
+                price: isArea ? (unusedTicketType?.price ?? 0) : 0,
                 draggable: true,
                 isAreaType: isArea,
             };
@@ -992,6 +1017,11 @@ const SeatMapEditorPage: React.FC = () => {
     const areAllSelectedAreasLocked =
         selectedAreas.length > 0 && selectedAreas.every(s => s.locked);
 
+    const usedTicketTypeIds = new Set(
+        sections.filter(s => s.isAreaType).map(s => s.ticketTypeId).filter(Boolean)
+    );
+    const hasAvailableTicketType = ticketTypes.some(t => !usedTicketTypeIds.has(t.id));
+
     const handleStageMouseDown = useCallback(
         (e: Konva.KonvaEventObject<MouseEvent>) => {
             console.log('Current editorMode:', editorMode);
@@ -1013,6 +1043,10 @@ const SeatMapEditorPage: React.FC = () => {
             if (!pointerPos) return;
 
             if (editorMode === 'CREATE_AREA') {
+                if (!hasAvailableTicketType) {
+                    setEditorMode('SELECT');
+                    return;
+                }
                 createAreaAtPosition(pointerPos.x, pointerPos.y);
                 setEditorMode('SELECT');
                 return;
@@ -1426,6 +1460,41 @@ const SeatMapEditorPage: React.FC = () => {
 
     useEffect(() => {
         if (!eventId) return;
+        dispatch(fetchGetAllTicketTypes({ eventId }))
+            .finally(() => {
+                ticketTypesFetchedRef.current = true;
+                if (reduxTicketTypes.length === 0) {
+                    navigate(`/organizer/my-events/${eventId}/edit`);
+                }
+            });
+    }, [eventId]);
+
+    useEffect(() => {
+        if (reduxTicketTypes.length === 0) return;
+
+        const updatedTicketTypes = reduxTicketTypes.map((t, index) => {
+            const existing = ticketTypes.find(p => p.id === t.id);
+            return {
+                ...t,
+                color: existing?.color ?? TICKET_TYPE_COLORS[index % TICKET_TYPE_COLORS.length],
+            };
+        });
+        setTicketTypes(updatedTicketTypes);
+        setIsTicketTypesReady(true);
+
+        setSections(prev => prev.map(s => {
+            if (!s.isAreaType) return s;
+            const matched = updatedTicketTypes.find(t => t.id === s.ticketTypeId);
+            if (!matched) {
+                return { ...s, ticketTypeId: updatedTicketTypes[0].id, fill: updatedTicketTypes[0].color };
+            }
+            return { ...s, fill: matched.color };
+        }));
+    }, [reduxTicketTypes]);
+
+    useEffect(() => {
+        if (!eventId) return;
+        if (!isTicketTypesReady) return;
 
         dispatch(fetchEventById(eventId))
             .unwrap()
@@ -1449,11 +1518,14 @@ const SeatMapEditorPage: React.FC = () => {
                                 });
                             });
 
-                            const currentTicketTypes = ticketTypes.length > 0 ? ticketTypes : [];
                             const sectionsWithColor = importedSections.map(s => {
                                 if (!s.isAreaType) return s;
-                                const matched = currentTicketTypes.find(t => t.id === s.ticketTypeId);
-                                if (matched?.color) return { ...s, fill: matched.color };
+                                const matched = reduxTicketTypes.find(t => t.id === s.ticketTypeId);
+                                if (matched) {
+                                    const color = ticketTypes.find(p => p.id === matched.id)?.color
+                                        ?? TICKET_TYPE_COLORS[reduxTicketTypes.indexOf(matched) % TICKET_TYPE_COLORS.length];
+                                    return { ...s, fill: color };
+                                }
                                 return s;
                             });
 
@@ -1470,41 +1542,13 @@ const SeatMapEditorPage: React.FC = () => {
                         console.warn('No seatmap found or failed to load:', err);
                     });
             });
-    }, [eventId]);
+    }, [isTicketTypesReady, eventId]);
 
     useEffect(() => {
-        if (!eventId) return;
-        dispatch(fetchGetAllTicketTypes({ eventId }))
-            .finally(() => {
-                ticketTypesFetchedRef.current = true;
-            });
-    }, [eventId]);
-
-    useEffect(() => {
-        if (!ticketTypesFetchedRef.current) return;
-        if (reduxTicketTypes.length === 0) {
+        if (!isTicketTypesReady && reduxTicketTypes.length === 0 && ticketTypesFetchedRef.current) {
             navigate(`/organizer/my-events/${eventId}/edit`);
-            return;
         }
-
-        const updatedTicketTypes = reduxTicketTypes.map((t, index) => {
-            const existing = ticketTypes.find(p => p.id === t.id);
-            return {
-                ...t,
-                color: existing?.color ?? TICKET_TYPE_COLORS[index % TICKET_TYPE_COLORS.length],
-            };
-        });
-        setTicketTypes(updatedTicketTypes);
-
-        setSections(prev => prev.map(s => {
-            if (!s.isAreaType) return s;
-            const matched = updatedTicketTypes.find(t => t.id === s.ticketTypeId);
-            if (!matched) {
-                return { ...s, ticketTypeId: updatedTicketTypes[0].id, fill: updatedTicketTypes[0].color };
-            }
-            return { ...s, fill: matched.color };
-        }));
-    }, [reduxTicketTypes, currentEvent]);
+    }, [reduxTicketTypes, isTicketTypesReady]);
 
     const renderSection = (area: Area) => {
         const ticketType = ticketTypes.find(t => t.id === area.ticketTypeId);
@@ -1774,11 +1818,14 @@ const SeatMapEditorPage: React.FC = () => {
 
                     <button
                         onClick={enterCreateSectionMode}
+                        disabled={!hasAvailableTicketType}
+                        title={!hasAvailableTicketType ? 'Tất cả loại vé đã có khu vực' : undefined}
                         className={
-                            editorMode === "CREATE_AREA"
-                                ? "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold " +
-                                "bg-emerald-500 text-white shadow-md shadow-emerald-500/30"
-                                : baseBtn
+                            !hasAvailableTicketType
+                                ? "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold border border-slate-700 text-slate-600 cursor-not-allowed opacity-50"
+                                : editorMode === "CREATE_AREA"
+                                    ? "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-emerald-500 text-white shadow-md shadow-emerald-500/30"
+                                    : baseBtn
                         }
                     >
                         Vẽ khu vực
@@ -2871,27 +2918,35 @@ const SeatMapEditorPage: React.FC = () => {
                                                 </>
                                             )}
 
-                                            <button
-                                                onClick={handleCreateSeats}
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#10b981',
-                                                    border: 'none',
-                                                    borderRadius: '8px',
-                                                    padding: '12px',
-                                                    color: 'white',
-                                                    fontSize: '14px',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '8px',
-                                                    marginBottom: '12px',
-                                                }}
-                                            >
-                                                TẠO THÊM GHẾ
-                                            </button>
+                                            {(() => {
+                                                const tt = ticketTypes.find(t => t.id === selectedSection?.ticketTypeId);
+                                                const alreadyCreated = seats.filter(s => s.sectionId === selectedSection?.id).length;
+                                                const isFull = selectedSection?.isAreaType && tt?.quantity != null && alreadyCreated >= tt.quantity;
+                                                return (
+                                                    <button
+                                                        onClick={handleCreateSeats}
+                                                        disabled={isFull}
+                                                        style={{
+                                                            width: '100%',
+                                                            background: isFull ? '#374151' : '#10b981',
+                                                            border: `1px solid ${isFull ? '#4b5563' : 'transparent'}`,
+                                                            borderRadius: '8px',
+                                                            padding: '12px',
+                                                            color: isFull ? '#6b7280' : 'white',
+                                                            fontSize: '14px',
+                                                            fontWeight: 600,
+                                                            cursor: isFull ? 'not-allowed' : 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '8px',
+                                                            marginBottom: '12px',
+                                                        }}
+                                                    >
+                                                        {isFull ? `✓ ĐÃ ĐỦ ${tt?.quantity?.toLocaleString('vi-VN')} GHẾ` : 'TẠO THÊM GHẾ'}
+                                                    </button>
+                                                );
+                                            })()}
                                             <div style={{ marginBottom: '12px' }}>
                                                 <label style={{
                                                     display: 'block',
@@ -2921,22 +2976,34 @@ const SeatMapEditorPage: React.FC = () => {
                                                             outline: 'none',
                                                         }}
                                                     />
-                                                    <button
-                                                        onClick={createCustomCountSeats}
-                                                        style={{
-                                                            background: '#7c3aed',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            padding: '8px 14px',
-                                                            color: 'white',
-                                                            fontSize: '13px',
-                                                            fontWeight: 600,
-                                                            cursor: 'pointer',
-                                                            whiteSpace: 'nowrap',
-                                                        }}
-                                                    >
-                                                        Tạo {customSeatCount} ghế
-                                                    </button>
+                                                    {(() => {
+                                                        const tt = ticketTypes.find(t => t.id === selectedSection?.ticketTypeId);
+                                                        const alreadyCreated = seats.filter(s => s.sectionId === selectedSection?.id).length;
+                                                        const remaining = (selectedSection?.isAreaType && tt?.quantity != null)
+                                                            ? tt.quantity - alreadyCreated
+                                                            : Infinity;
+                                                        const isFull = remaining <= 0;
+                                                        const effectiveCount = Math.min(customSeatCount, remaining === Infinity ? customSeatCount : remaining);
+                                                        return (
+                                                            <button
+                                                                onClick={createCustomCountSeats}
+                                                                disabled={isFull}
+                                                                style={{
+                                                                    background: isFull ? '#374151' : '#7c3aed',
+                                                                    border: 'none',
+                                                                    borderRadius: '6px',
+                                                                    padding: '8px 14px',
+                                                                    color: isFull ? '#6b7280' : 'white',
+                                                                    fontSize: '13px',
+                                                                    fontWeight: 600,
+                                                                    cursor: isFull ? 'not-allowed' : 'pointer',
+                                                                    whiteSpace: 'nowrap',
+                                                                }}
+                                                            >
+                                                                {isFull ? 'Đã đủ' : `Tạo ${effectiveCount} ghế`}
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                             {(() => {
@@ -3091,34 +3158,6 @@ const SeatMapEditorPage: React.FC = () => {
                                         </div>
                                     </>
                                 )}
-                                {isSingleSectionSelected &&
-                                    activeTab === 'SHAPE' &&
-                                    selectedSection.type === 'polygon' && (
-                                        <div
-                                            style={{
-                                                padding: '16px',
-                                                background: '#16162a',
-                                                border: '1px dashed #3b82f6',
-                                                borderRadius: '8px',
-                                                color: '#93c5fd',
-                                                fontSize: '13px',
-                                                lineHeight: 1.5,
-                                            }}
-                                        >
-                                            <strong>⚠ Khu vực được tạo tự động từ hình ảnh</strong>
-                                            <br />
-                                            Hình dạng này được hệ thống phát hiện từ sơ đồ gốc.
-                                            <br />
-                                            Bạn có thể:
-                                            <ul style={{ margin: '8px 0 0 16px' }}>
-                                                <li>Di chuyển</li>
-                                                <li>Thu phóng</li>
-                                                <li>Xoay</li>
-                                                <li>Tạo ghế bên trong</li>
-                                            </ul>
-                                            Không thể chỉnh sửa hình dạng chi tiết.
-                                        </div>
-                                    )}
                                 {isSingleSectionSelected && activeTab === 'SHAPE' && selectedSection.type !== 'polygon' && (
                                     <>
                                         <div style={{ marginBottom: '24px' }}>
@@ -3198,16 +3237,13 @@ const SeatMapEditorPage: React.FC = () => {
                                                 {['#8B5CF6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'].map(color => (
                                                     <button
                                                         key={color}
-                                                        onClick={() => {
-                                                            if (!currentTicketType) return;
-                                                            updateSectionProperty('fill', color);
-                                                        }}
+                                                        onClick={() => updateSectionProperty('fill', color)}
                                                         style={{
                                                             width: '48px',
                                                             height: '48px',
                                                             background: color,
                                                             border:
-                                                                currentTicketType?.color === color
+                                                                selectedSection?.fill === color
                                                                     ? '3px solid white'
                                                                     : '1px solid rgba(255,255,255,0.15)',
                                                             borderRadius: '8px',
@@ -3226,7 +3262,7 @@ const SeatMapEditorPage: React.FC = () => {
                                                         cursor: 'pointer',
                                                         position: 'relative',
                                                         overflow: 'hidden',
-                                                        background: currentTicketType?.color ?? '#1f2937',
+                                                        background: selectedSection?.fill ?? '#1f2937',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
@@ -3238,11 +3274,8 @@ const SeatMapEditorPage: React.FC = () => {
                                                     <MdOutlinePalette />
                                                     <input
                                                         type="color"
-                                                        value={currentTicketType?.color}
-                                                        onChange={(e) => {
-                                                            if (!currentTicketType) return;
-                                                            updateTicketTypeColor(currentTicketType.id, e.target.value);
-                                                        }}
+                                                        value={selectedSection?.fill ?? '#374151'}
+                                                        onChange={(e) => updateSectionProperty('fill', e.target.value)}
                                                         style={{
                                                             position: 'absolute',
                                                             inset: 0,
