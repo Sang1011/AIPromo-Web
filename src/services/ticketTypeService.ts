@@ -17,7 +17,7 @@ const ticketTypeService = {
     },
 
     getAllTicketTypes: (
-        eventId: string
+        eventId: string,
     ): Promise<AxiosResponse<GetAllTicketTypesResponse>> => {
         return interceptorAPI().get(`/events/${eventId}/ticket-types`);
     },
