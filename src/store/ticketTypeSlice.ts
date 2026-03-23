@@ -33,12 +33,12 @@ export const fetchCreateTicketType = createAsyncThunk<
 
 export const fetchGetAllTicketTypes = createAsyncThunk<
     TicketTypeItem[],
-    { eventId: string }
+    { eventId: string, eventSessionId: string }
 >(
     `${name}/fetchGetAllTicketTypes`,
-    async ({ eventId }, thunkAPI) => {
+    async ({ eventId, eventSessionId }, thunkAPI) => {
         try {
-            const res = await ticketTypeService.getAllTicketTypes(eventId);
+            const res = await ticketTypeService.getAllTicketTypes(eventId, eventSessionId);
             return res.data.data;
         } catch (error: any) {
             return thunkAPI.rejectWithValue(error?.response?.data ?? error?.message);

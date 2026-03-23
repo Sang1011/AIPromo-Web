@@ -42,6 +42,7 @@ import CreateEventPage from "./pages/Organizer/CreateEventPage";
 import ForgotPassword from "./pages/ForgotPassword";
 import ProfileUser from "./pages/User/ProfileUser";
 import ProfileLayout from "./pages/User";
+import OrganizerAccountPage from "./pages/Organizer/OrganizerAccountPage";
 
 
 function App() {
@@ -68,7 +69,7 @@ function App() {
         <Route path="/history-event" element={<HistoryEvent />} />
         <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
         <Route path="/profile" element={<ProfileLayout />}>
-           <Route path="account" element={<ProfileUser />} />
+          <Route path="account" element={<ProfileUser />} />
         </Route>
         {/* Organizer */}
         {/* Organizer - Dashboard group */}
@@ -77,6 +78,7 @@ function App() {
           <Route path="reports" element={<ReportManagementPage />} />
           <Route path="legals" element={<LegalPage />} />
           <Route path="create-event" element={<CreateEventPage />} />
+          <Route path="accounts" element={<OrganizerAccountPage />} />
         </Route>
 
         {/* Organizer - Event group */}
