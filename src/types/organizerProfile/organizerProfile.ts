@@ -41,3 +41,25 @@ export interface UpdateOrganizerBankRequest {
     bankCode: string;
     branch: string;
 }
+
+// request để tạo tổ chức
+export interface CreateProfileOrganizerRequest {
+  type: string;
+  businessInfo: {
+    logo: string;
+    displayName: string;
+    description: string;
+    address: string;
+    socialLink: string;
+    businessType: string;
+    taxCode: string;
+    identityNumber: string;
+    companyName: string;
+  };
+  bankInfo: {
+    accountName: string;
+    accountNumber: string;
+    bankCode: string;
+    branch: string;
+  };
+}
