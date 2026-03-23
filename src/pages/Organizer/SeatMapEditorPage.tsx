@@ -1211,27 +1211,6 @@ const SeatMapEditorPage: React.FC = () => {
         setSelectionBox(null);
     }, [isSelecting, selectionBox, seats, sections, textEntities, activeAreaId, seatMoveMode]);
 
-    const updateTicketTypeColor = useCallback(
-        (ticketTypeId: string, color: string) => {
-            setTicketTypes(prev =>
-                prev.map(t => t.id === ticketTypeId ? { ...t, color } : t)
-            );
-
-            setSections(prev =>
-                prev.map(s =>
-                    s.isAreaType && s.ticketTypeId === ticketTypeId
-                        ? { ...s, fill: color }
-                        : s
-                )
-            );
-        },
-        []
-    );
-
-    const currentTicketType = selectedSection && ticketTypes.find(
-        t => t.id === selectedSection.ticketTypeId
-    );
-
     const beginGroupDrag = (draggedId: string) => {
         setIsGroupDragging(true);
 
