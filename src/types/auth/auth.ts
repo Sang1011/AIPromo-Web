@@ -39,13 +39,13 @@ export interface UserProfile {
 
 export interface UserProfileRequest {
   userId: string;
-  firstName: string;
-  lastName: string;
-  birthday: string;
-  gender: string;
-  phone: string;
-  address: string;
-  description: string;
-  socialLink: string;
-  profileImageUrl: string;
+  firstName: string | null;
+  lastName: string | null;
+  birthday: string | null;
+  gender: string | null;
+  phone: string | null;
+  address: string | null;
+  description: string | null;
+  socialLink: string | null;
+  profileImageUrl: string | null;
 }
