@@ -1,6 +1,7 @@
 import type { ApiResponse } from "../api";
 
 export interface GetAllRequest {
+    CategoryId?:number,
     PageNumber?: number;
     PageSize?: number;
     SortColumn?: string;
@@ -73,6 +74,8 @@ export interface EventItem {
     eventStartAt: string;
     eventEndAt: string;
     urlPath: string;
+    minPrice: number;
+    maxPrice: number;
     createdAt: string;
     categories: EventCategory[];
 }

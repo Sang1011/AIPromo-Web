@@ -1,16 +1,17 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Footer from "../../components/Footer";
 import Header from "../../components/Header";
 import "./AllEvent.css";
 import { fetchAllEvents } from "../../store/eventSlice";
 import type { AppDispatch, RootState } from "../../store";
+import type { Category } from "../../types/category/category";
+import { fetchAllCategories } from "../../store/categorySlice";
 
 const INPUT_CLS =
   "w-full py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-200 transition-all";
 
-// Pastel color palette cycling for category badges
 const CATEGORY_COLORS = [
   "bg-violet-100 text-violet-700 border-violet-200",
   "bg-sky-100 text-sky-700 border-sky-200",
@@ -25,19 +26,117 @@ function getCategoryColor(id: number) {
   return CATEGORY_COLORS[id % CATEGORY_COLORS.length];
 }
 
+/* ── Price helpers ── */
+const PRICE_MIN = 0;
+const PRICE_MAX = 20_000_000;
+const PRICE_STEP = 100_000;
+
+const formatVND = (amount: number) =>
+  amount === 0
+    ? "Miễn phí"
+    : new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    }).format(amount);
+
+const formatVNDShort = (amount: number) => {
+  if (amount === 0) return "Miễn phí";
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}tr`;
+  return `${(amount / 1_000).toFixed(0)}k`;
+};
+
+/* ── Dual Range Slider ── */
+interface DualRangeProps {
+  min: number;
+  max: number;
+  step: number;
+  valueMin: number;
+  valueMax: number;
+  onChangeMin: (v: number) => void;
+  onChangeMax: (v: number) => void;
+}
+
+function DualRangeSlider({ min, max, step, valueMin, valueMax, onChangeMin, onChangeMax }: DualRangeProps) {
+  const pct = (v: number) => ((v - min) / (max - min)) * 100;
+
+  return (
+    <div className="relative w-full">
+      {/* Track */}
+      <div className="relative h-1.5 rounded-full bg-white/10 mt-2 mb-1">
+        {/* Active fill */}
+        <div
+          className="absolute h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-400"
+          style={{ left: `${pct(valueMin)}%`, right: `${100 - pct(valueMax)}%` }}
+        />
+      </div>
+
+      {/* Min thumb */}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={valueMin}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          if (v <= valueMax - step) onChangeMin(v);
+        }}
+        className="dual-range-thumb absolute inset-0 w-full opacity-0 cursor-pointer h-5 -mt-2"
+        style={{ zIndex: valueMin > max - step ? 5 : 3 }}
+      />
+
+      {/* Max thumb */}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={valueMax}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          if (v >= valueMin + step) onChangeMax(v);
+        }}
+        className="dual-range-thumb absolute inset-0 w-full opacity-0 cursor-pointer h-5 -mt-2"
+        style={{ zIndex: 4 }}
+      />
+
+      {/* Thumb dots (visual) */}
+      <div
+        className="absolute w-4 h-4 rounded-full bg-white border-2 border-violet-500 shadow-md -mt-3.5 -translate-x-1/2 pointer-events-none"
+        style={{ left: `${pct(valueMin)}%`, top: "50%" }}
+      />
+      <div
+        className="absolute w-4 h-4 rounded-full bg-white border-2 border-violet-500 shadow-md -mt-3.5 -translate-x-1/2 pointer-events-none"
+        style={{ left: `${pct(valueMax)}%`, top: "50%" }}
+      />
+    </div>
+  );
+}
+
 function AllEvent() {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const events = useSelector((state: RootState) => state.EVENT.events);
   const pagination = useSelector((state: RootState) => state.EVENT.pagination);
+  const categoriesData: Category[] =
+    useSelector((s: RootState) => s.CATEGORY?.categories) ?? [];
 
-  // Server-side params
+  useEffect(() => {
+    dispatch(fetchAllCategories({}));
+  }, [dispatch]);
+
   const [sortOrder, setSortOrder] = useState<"Ascending" | "Descending">("Descending");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 8;
 
-  // Client-side filters
+  useEffect(() => {
+    const categoryId = searchParams.get("categoryId");
+    if (categoryId) setSelectedCategoryIds([Number(categoryId)]);
+  }, []);
+
   const [searchTitle, setSearchTitle] = useState("");
   const [debouncedTitle, setDebouncedTitle] = useState("");
   const [locationInput, setLocationInput] = useState("");
@@ -45,6 +144,11 @@ function AllEvent() {
   const [dateTo, setDateTo] = useState("");
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+
+  /* ── Price range state ── */
+  const [priceMin, setPriceMin] = useState(PRICE_MIN);
+  const [priceMax, setPriceMax] = useState(PRICE_MAX);
+  const isPriceFiltered = priceMin > PRICE_MIN || priceMax < PRICE_MAX;
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleTitleChange = (val: string) => {
@@ -56,13 +160,14 @@ function AllEvent() {
   useEffect(() => {
     dispatch(
       fetchAllEvents({
+        CategoryId: selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : undefined,
         PageNumber: currentPage,
         PageSize: PAGE_SIZE,
         SortColumn: "eventStartAt",
         SortOrder: sortOrder,
       })
     );
-  }, [dispatch, currentPage, sortOrder]);
+  }, [dispatch, currentPage, sortOrder, selectedCategoryIds]);
 
   const handleSortChange = (order: "Ascending" | "Descending") => {
     setSortOrder(order);
@@ -82,6 +187,8 @@ function AllEvent() {
     setDateFrom("");
     setDateTo("");
     setSelectedCategoryIds([]);
+    setPriceMin(PRICE_MIN);
+    setPriceMax(PRICE_MAX);
   };
 
   const hasActiveFilters =
@@ -89,19 +196,16 @@ function AllEvent() {
     locationInput.trim() !== "" ||
     dateFrom !== "" ||
     dateTo !== "" ||
-    selectedCategoryIds.length > 0;
+    selectedCategoryIds.length > 0 ||
+    isPriceFiltered;
 
-  // Derive unique categories from all loaded events
-  const allCategories = useMemo(() => {
-    const map = new Map<number, string>();
-    events.forEach((e) => e.categories?.forEach((c) => map.set(c.id, c.name)));
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [events]);
+  const allCategories = categoriesData.filter((c) => c.isActive);
 
   const toggleCategory = (id: number) => {
     setSelectedCategoryIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
+    setCurrentPage(1);
   };
 
   const filteredEvents = useMemo(() => {
@@ -118,17 +222,23 @@ function AllEvent() {
       const categoryMatch =
         selectedCategoryIds.length === 0 ||
         event.categories?.some((c) => selectedCategoryIds.includes(c.id));
-      return titleMatch && locationMatch && fromMatch && toMatch && categoryMatch;
+
+      /* price filter: event overlaps [priceMin, priceMax] */
+      const eMin = event.minPrice ?? 0;
+      const eMax = event.maxPrice ?? event.minPrice ?? 0;
+      const priceMatch = eMin <= priceMax && eMax >= priceMin;
+
+      return titleMatch && locationMatch && fromMatch && toMatch && categoryMatch && priceMatch;
     });
-  }, [events, debouncedTitle, locationInput, dateFrom, dateTo, selectedCategoryIds]);
+  }, [events, debouncedTitle, locationInput, dateFrom, dateTo, selectedCategoryIds, priceMin, priceMax]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
-    return new Date(dateStr).toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
   const formatTime = (dateStr: string) => {
@@ -154,10 +264,18 @@ function AllEvent() {
     return pages;
   };
 
+  /* active filter badge count */
+  const activeFilterCount = [
+    debouncedTitle,
+    locationInput,
+    dateFrom || dateTo,
+    isPriceFiltered ? "price" : "",
+  ].filter(Boolean).length + selectedCategoryIds.length;
+
   return (
     <>
       <Header />
-      <main className="max-w-[1440px] mx-auto px-6 py-8">
+      <main className="max-w-[1440px] mx-auto px-6 py-8 mt-10">
 
         {/* ── Hero Title ── */}
         <div className="mb-10 flex flex-col items-center gap-3 text-center pt-10">
@@ -171,11 +289,6 @@ function AllEvent() {
           <p className="text-slate-400 text-base max-w-md">
             Tìm kiếm và khám phá những sự kiện thú vị được tuyển chọn dành riêng cho bạn.
           </p>
-          {pagination && (
-            <p className="text-slate-500 text-sm mt-1">
-              <span className="text-white font-bold text-lg">{pagination.totalCount}</span> sự kiện đang chờ bạn
-            </p>
-          )}
         </div>
 
         {/* ── Filter Bar ── */}
@@ -210,22 +323,20 @@ function AllEvent() {
             <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/10">
               <button
                 onClick={() => handleSortChange("Ascending")}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  sortOrder === "Ascending"
-                    ? "bg-primary text-white shadow-md"
-                    : "text-slate-400 hover:text-white"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortOrder === "Ascending"
+                  ? "bg-primary text-white shadow-md"
+                  : "text-slate-400 hover:text-white"
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
                 Ascending
               </button>
               <button
                 onClick={() => handleSortChange("Descending")}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  sortOrder === "Descending"
-                    ? "bg-primary text-white shadow-md"
-                    : "text-slate-400 hover:text-white"
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${sortOrder === "Descending"
+                  ? "bg-primary text-white shadow-md"
+                  : "text-slate-400 hover:text-white"
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
                 Descending
@@ -237,17 +348,16 @@ function AllEvent() {
             {/* Filter toggle */}
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
-                showFilters || hasActiveFilters
-                  ? "bg-primary text-white border-primary shadow-[0_0_16px_rgba(121,59,237,0.4)]"
-                  : "bg-white/5 border-white/10 text-slate-300 hover:border-primary/50 hover:text-white"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${showFilters || hasActiveFilters
+                ? "bg-primary text-white border-primary shadow-[0_0_16px_rgba(121,59,237,0.4)]"
+                : "bg-white/5 border-white/10 text-slate-300 hover:border-primary/50 hover:text-white"
+                }`}
             >
               <span className="material-symbols-outlined text-[18px]">tune</span>
               Bộ lọc
               {hasActiveFilters && (
                 <span className="bg-white text-primary text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                  {[debouncedTitle, locationInput, dateFrom || dateTo].filter(Boolean).length}
+                  {activeFilterCount}
                 </span>
               )}
             </button>
@@ -265,12 +375,11 @@ function AllEvent() {
             )}
           </div>
 
-          {/* Row 2: Expanded */}
+          {/* Row 2: Expanded filters */}
           {showFilters && (
-            <div className="mt-5 pt-5 border-t border-white/10">
-              {/* Location + Dates grid */}
+            <div className="mt-5 pt-5 border-t border-white/10 space-y-5">
+              {/* Location + Dates */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Location */}
                 <div>
                   <label className="block text-xs text-slate-400 font-semibold mb-2 ml-1 uppercase tracking-wide">
                     Địa điểm
@@ -297,7 +406,6 @@ function AllEvent() {
                   </div>
                 </div>
 
-                {/* Date from */}
                 <div>
                   <label className="block text-xs text-slate-400 font-semibold mb-2 ml-1 uppercase tracking-wide">
                     Từ ngày
@@ -308,6 +416,7 @@ function AllEvent() {
                     </span>
                     <input
                       type="date"
+                      lang="vi-VN"
                       value={dateFrom}
                       max={dateTo || undefined}
                       onChange={(e) => setDateFrom(e.target.value)}
@@ -316,7 +425,6 @@ function AllEvent() {
                   </div>
                 </div>
 
-                {/* Date to */}
                 <div>
                   <label className="block text-xs text-slate-400 font-semibold mb-2 ml-1 uppercase tracking-wide">
                     Đến ngày
@@ -327,6 +435,7 @@ function AllEvent() {
                     </span>
                     <input
                       type="date"
+                      lang="vi-VN"
                       value={dateTo}
                       min={dateFrom || undefined}
                       onChange={(e) => setDateTo(e.target.value)}
@@ -336,9 +445,98 @@ function AllEvent() {
                 </div>
               </div>
 
+              {/* ── Price Range Filter ── */}
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs text-slate-400 font-semibold uppercase tracking-wide flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px] text-primary">sell</span>
+                    Khoảng giá vé
+                  </label>
+                  {isPriceFiltered && (
+                    <button
+                      onClick={() => { setPriceMin(PRICE_MIN); setPriceMax(PRICE_MAX); }}
+                      className="text-[11px] text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[13px]">refresh</span>
+                      Đặt lại
+                    </button>
+                  )}
+                </div>
+
+                {/* Labels */}
+                <div className="flex items-center justify-between mb-4">
+                  <span
+                    className="text-sm font-bold px-2.5 py-1 rounded-lg"
+                    style={{
+                      background: "rgba(124,59,237,0.18)",
+                      color: "#c084fc",
+                      border: "1px solid rgba(124,59,237,0.35)",
+                    }}
+                  >
+                    {priceMin === 0 ? "Miễn phí" : formatVND(priceMin)}
+                  </span>
+                  <span className="text-slate-600 text-xs">→</span>
+                  <span
+                    className="text-sm font-bold px-2.5 py-1 rounded-lg"
+                    style={{
+                      background: "rgba(124,59,237,0.18)",
+                      color: "#c084fc",
+                      border: "1px solid rgba(124,59,237,0.35)",
+                    }}
+                  >
+                    {priceMax >= PRICE_MAX ? "20tr+" : formatVND(priceMax)}
+                  </span>
+                </div>
+
+                {/* Dual slider */}
+                <DualRangeSlider
+                  min={PRICE_MIN}
+                  max={PRICE_MAX}
+                  step={PRICE_STEP}
+                  valueMin={priceMin}
+                  valueMax={priceMax}
+                  onChangeMin={setPriceMin}
+                  onChangeMax={setPriceMax}
+                />
+
+                {/* Tick labels */}
+                <div className="flex justify-between mt-3">
+                  {[0, 5_000_000, 10_000_000, 15_000_000, 20_000_000].map((v) => (
+                    <span key={v} className="text-[10px] text-slate-600">
+                      {formatVNDShort(v)}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Quick presets */}
+                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/8">
+                  {[
+                    { label: "Miễn phí", min: 0, max: 0 },
+                    { label: "Dưới 200k", min: 0, max: 200_000 },
+                    { label: "200k – 500k", min: 200_000, max: 500_000 },
+                    { label: "500k – 1tr", min: 500_000, max: 1_000_000 },
+                    { label: "Trên 1tr", min: 1_000_000, max: PRICE_MAX },
+                  ].map((preset) => {
+                    const active = priceMin === preset.min && priceMax === preset.max;
+                    return (
+                      <button
+                        key={preset.label}
+                        onClick={() => { setPriceMin(preset.min); setPriceMax(preset.max); }}
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-full border transition-all ${active
+                          ? "bg-primary text-white border-primary shadow-[0_0_10px_rgba(121,59,237,0.4)]"
+                          : "bg-white/5 border-white/10 text-slate-400 hover:border-primary/40 hover:text-white"
+                          }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Category chips */}
               {allCategories.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="pt-1">
                   <label className="block text-xs text-slate-400 font-semibold mb-3 uppercase tracking-wide">
                     Danh mục
                   </label>
@@ -349,11 +547,10 @@ function AllEvent() {
                         <button
                           key={cat.id}
                           onClick={() => toggleCategory(cat.id)}
-                          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                            active
-                              ? "bg-primary text-white border-primary shadow-[0_0_12px_rgba(121,59,237,0.4)]"
-                              : `${getCategoryColor(cat.id)} hover:opacity-80`
-                          }`}
+                          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${active
+                            ? "bg-primary text-white border-primary shadow-[0_0_12px_rgba(121,59,237,0.4)]"
+                            : `${getCategoryColor(cat.id)} hover:opacity-80`
+                            }`}
                         >
                           {active && <span className="material-symbols-outlined text-[13px]">check</span>}
                           {cat.name}
@@ -392,6 +589,15 @@ function AllEvent() {
                   <span className="material-symbols-outlined text-[13px]">date_range</span>
                   {dateFrom || "..."} → {dateTo || "..."}
                   <button onClick={() => { setDateFrom(""); setDateTo(""); }}>
+                    <span className="material-symbols-outlined text-[13px] hover:opacity-70">close</span>
+                  </button>
+                </span>
+              )}
+              {isPriceFiltered && (
+                <span className="bg-primary/15 text-primary text-xs font-bold px-3 py-1.5 rounded-full border border-primary/25 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[13px]">sell</span>
+                  {priceMin === 0 ? "Miễn phí" : formatVNDShort(priceMin)} – {priceMax >= PRICE_MAX ? "20tr+" : formatVNDShort(priceMax)}
+                  <button onClick={() => { setPriceMin(PRICE_MIN); setPriceMax(PRICE_MAX); }}>
                     <span className="material-symbols-outlined text-[13px] hover:opacity-70">close</span>
                   </button>
                 </span>
@@ -440,89 +646,122 @@ function AllEvent() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredEvents.map((event) => (
-              <div
-                key={event.id}
-                className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/40 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(121,59,237,0.2)] flex flex-col h-full"
-              >
-                {/* Banner */}
-                <div className="relative aspect-video overflow-hidden bg-slate-800">
-                  {event.bannerUrl ? (
-                    <img
-                      alt={event.title}
-                      src={event.bannerUrl}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
-                      <span className="material-symbols-outlined text-slate-600 text-5xl">image</span>
-                    </div>
-                  )}
-                  {/* Gradient overlay always visible at bottom */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                  {/* Categories on image */}
-                  {event.categories && event.categories.length > 0 && (
-                    <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
-                      {event.categories.map((cat) => (
-                        <span
-                          key={cat.id}
-                          className="text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm bg-black/40 text-white border border-white/20"
-                        >
-                          {cat.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="p-5 flex flex-col flex-1 gap-3">
-
-                  {/* Title */}
-                  <h3 className="text-white text-[17px] font-bold leading-snug group-hover:text-primary transition-colors line-clamp-2 flex-1">
-                    {event.title}
-                  </h3>
-
-                  {/* Divider */}
-                  <div className="h-px bg-white/5" />
-
-                  {/* Meta */}
-                  <div className="space-y-2">
-                    {event.eventStartAt && (
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[15px] text-primary">calendar_today</span>
-                        </div>
-                        <span className="text-slate-300 text-sm">
-                          {formatDate(event.eventStartAt)}
-                          <span className="text-slate-500 mx-1">•</span>
-                          <span className="text-slate-400">{formatTime(event.eventStartAt)}</span>
-                        </span>
+            {filteredEvents.map((event) => {
+              const isFree = (event.minPrice ?? 0) === 0;
+              return (
+                <div
+                  key={event.id}
+                  className="group bg-surface rounded-2xl border border-white/5 overflow-hidden transition-all duration-500 hover:border-primary/40 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(121,59,237,0.2)] flex flex-col h-full"
+                >
+                  {/* Banner */}
+                  <div className="relative aspect-video overflow-hidden bg-slate-800">
+                    {event.bannerUrl ? (
+                      <img
+                        alt={event.title}
+                        src={event.bannerUrl}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                        <span className="material-symbols-outlined text-slate-600 text-5xl">image</span>
                       </div>
                     )}
-                    {event.location && (
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
-                        </div>
-                        <span className="text-slate-300 text-sm line-clamp-1">{event.location}</span>
+
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+
+                    {/* Categories */}
+                    {event.categories && event.categories.length > 0 && (
+                      <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
+                        {event.categories.map((cat) => (
+                          <span
+                            key={cat.id}
+                            className="text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm bg-black/40 text-white border border-white/20"
+                          >
+                            {cat.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ── Price badge ── */}
+                    {event.minPrice !== undefined && event.minPrice !== null && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <span
+                          className="flex items-center gap-1.5 text-[11px] font-extrabold px-3 py-1.5 rounded-full backdrop-blur-sm tracking-wide"
+                          style={
+                            isFree
+                              ? {
+                                background: "rgba(20,184,166,0.25)",
+                                color: "#2dd4bf",
+                                border: "1px solid rgba(20,184,166,0.55)",
+                                boxShadow: "0 0 12px rgba(20,184,166,0.25)",
+                              }
+                              : {
+                                background: "linear-gradient(135deg, rgba(124,59,237,0.6), rgba(168,85,247,0.6))",
+                                color: "#f1f0ff",
+                                border: "1px solid rgba(168,85,247,0.6)",
+                                boxShadow: "0 0 14px rgba(124,59,237,0.35)",
+                              }
+                          }
+                        >
+                          <svg
+                            width="11" height="11" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor" strokeWidth="2.5"
+                            strokeLinecap="round" strokeLinejoin="round"
+                          >
+                            <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                          </svg>
+                          {isFree ? "Miễn phí" : `Từ ${formatVND(event.minPrice)}`}
+                        </span>
                       </div>
                     )}
                   </div>
 
-                  {/* CTA */}
-                  <button
-                    onClick={() => navigate(`/event-detail/${event.id}`)}
-                    className="mt-1 w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:border-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.35)] flex items-center justify-center gap-2"
-                  >
-                    Xem chi tiết
-                    <span className="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-0.5">
-                      arrow_forward
-                    </span>
-                  </button>
+                  {/* Content */}
+                  <div className="p-5 flex flex-col flex-1 gap-3">
+                    <h3 className="text-white text-[17px] font-bold leading-snug group-hover:text-primary transition-colors line-clamp-2 flex-1">
+                      {event.title}
+                    </h3>
+
+                    <div className="h-px bg-white/5" />
+
+                    <div className="space-y-2">
+                      {event.eventStartAt && (
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[15px] text-primary">calendar_today</span>
+                          </div>
+                          <span className="text-slate-300 text-sm">
+                            {formatDate(event.eventStartAt)}
+                            <span className="text-slate-500 mx-1">•</span>
+                            <span className="text-slate-400">{formatTime(event.eventStartAt)}</span>
+                          </span>
+                        </div>
+                      )}
+                      {event.location && (
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
+                          </div>
+                          <span className="text-slate-300 text-sm line-clamp-1">{event.location}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => navigate(`/event-detail/${event.id}`)}
+                      className="mt-1 w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm transition-all duration-300 group-hover:bg-primary group-hover:border-primary group-hover:shadow-[0_0_20px_rgba(121,59,237,0.35)] flex items-center justify-center gap-2"
+                    >
+                      Xem chi tiết
+                      <span className="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-0.5">
+                        arrow_forward
+                      </span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -545,11 +784,10 @@ function AllEvent() {
                   <button
                     key={page}
                     onClick={() => handlePageChange(page as number)}
-                    className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold text-sm transition-all ${
-                      currentPage === page
-                        ? "bg-primary text-white shadow-[0_0_16px_rgba(121,59,237,0.5)]"
-                        : "bg-surface border border-white/10 text-slate-400 hover:text-white hover:border-primary/40"
-                    }`}
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl font-bold text-sm transition-all ${currentPage === page
+                      ? "bg-primary text-white shadow-[0_0_16px_rgba(121,59,237,0.5)]"
+                      : "bg-surface border border-white/10 text-slate-400 hover:text-white hover:border-primary/40"
+                      }`}
                   >
                     {page}
                   </button>

@@ -24,6 +24,15 @@ const formatTime = (iso: string) =>
     minute: "2-digit",
   });
 
+const formatVND = (amount: number) =>
+  amount === 0
+    ? "Miễn phí"
+    : new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+        maximumFractionDigits: 0,
+      }).format(amount);
+
 /* ================= CATEGORY BADGE ================= */
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {};
@@ -45,15 +54,18 @@ const getCategoryColor = (id: number) => {
 /* ================= EVENT CARD ================= */
 
 const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
-   const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const handleClick = () => {
     navigate(`/event-detail/${item.id}`);
   };
+
+  const isFree = item.minPrice === 0;
+
   return (
     <div
       className="rounded-2xl overflow-hidden group cursor-pointer flex flex-col h-full transition-all duration-300"
-        onClick={handleClick}
+      onClick={handleClick}
       style={{
         background: "linear-gradient(145deg, #1a1035, #120d28)",
         border: "1px solid rgba(124,59,237,0.12)",
@@ -129,15 +141,55 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
                   ? "rgba(20,184,166,0.2)"
                   : "rgba(245,158,11,0.2)",
               color: item.status === "Published" ? "#2dd4bf" : "#fbbf24",
-              border: `1px solid ${item.status === "Published"
+              border: `1px solid ${
+                item.status === "Published"
                   ? "rgba(20,184,166,0.4)"
                   : "rgba(245,158,11,0.4)"
-                }`,
+              }`,
             }}
           >
             {item.status === "Published" ? "● Đang mở" : item.status}
           </span>
         </div>
+
+        {/* ===== PRICE BADGE ===== */}
+        {item.minPrice !== undefined && item.minPrice !== null && (
+          <div className="absolute bottom-3 right-3 z-10">
+            <span
+              className="flex items-center gap-1.5 text-[11px] font-extrabold px-3 py-1.5 rounded-full backdrop-blur-sm tracking-wide"
+              style={
+                isFree
+                  ? {
+                      background: "rgba(20,184,166,0.25)",
+                      color: "#2dd4bf",
+                      border: "1px solid rgba(20,184,166,0.55)",
+                      boxShadow: "0 0 12px rgba(20,184,166,0.25)",
+                    }
+                  : {
+                      background: "linear-gradient(135deg, rgba(124,59,237,0.55), rgba(168,85,247,0.55))",
+                      color: "#f1f0ff",
+                      border: "1px solid rgba(168,85,247,0.6)",
+                      boxShadow: "0 0 16px rgba(124,59,237,0.35)",
+                    }
+              }
+            >
+              {/* Ticket icon */}
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+              </svg>
+              {isFree ? "Miễn phí" : `Từ ${formatVND(item.minPrice)}`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -153,10 +205,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
             </svg>
             {formatDate(item.eventStartAt)}
           </span>
-          <span
-            className="w-px h-3"
-            style={{ background: "rgba(255,255,255,0.15)" }}
-          />
+          <span className="w-px h-3" style={{ background: "rgba(255,255,255,0.15)" }} />
           <span className="flex items-center gap-1.5">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
@@ -169,10 +218,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
         {/* Title */}
         <h3
           className="font-bold leading-snug transition-colors duration-200 line-clamp-2"
-          style={{
-            fontSize: "1rem",
-            color: "#f1f0ff",
-          }}
+          style={{ fontSize: "1rem", color: "#f1f0ff" }}
         >
           {item.title}
         </h3>
@@ -194,10 +240,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
             <circle cx="12" cy="10" r="3" />
           </svg>
-          <span
-            className="text-sm truncate"
-            style={{ color: "rgba(148,163,184,0.7)" }}
-          >
+          <span className="text-sm truncate" style={{ color: "rgba(148,163,184,0.7)" }}>
             {item.location}
           </span>
         </div>
@@ -276,11 +319,7 @@ const Pagination = ({
       <button
         disabled={!hasPrev}
         onClick={() => onChange(current - 1)}
-        style={{
-          ...btnBase,
-          opacity: hasPrev ? 1 : 0.3,
-          cursor: hasPrev ? "pointer" : "not-allowed",
-        }}
+        style={{ ...btnBase, opacity: hasPrev ? 1 : 0.3, cursor: hasPrev ? "pointer" : "not-allowed" }}
       >
         ← Trước
       </button>
@@ -298,11 +337,11 @@ const Pagination = ({
               ...btnBase,
               ...(p === current
                 ? {
-                  background: "linear-gradient(135deg,#7c3bed,#a855f7)",
-                  border: "1px solid transparent",
-                  color: "#fff",
-                  boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
-                }
+                    background: "linear-gradient(135deg,#7c3bed,#a855f7)",
+                    border: "1px solid transparent",
+                    color: "#fff",
+                    boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
+                  }
                 : {}),
             }}
           >
@@ -314,11 +353,7 @@ const Pagination = ({
       <button
         disabled={!hasNext}
         onClick={() => onChange(current + 1)}
-        style={{
-          ...btnBase,
-          opacity: hasNext ? 1 : 0.3,
-          cursor: hasNext ? "pointer" : "not-allowed",
-        }}
+        style={{ ...btnBase, opacity: hasNext ? 1 : 0.3, cursor: hasNext ? "pointer" : "not-allowed" }}
       >
         Sau →
       </button>
@@ -332,13 +367,12 @@ const EventListSection: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const events = useSelector((s: RootState) => s.EVENT?.events) ?? [];
   const pagination = useSelector((s: RootState) => s.EVENT?.pagination) ?? null;
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  /* ===== SEARCH DEBOUNCE ===== */
   useEffect(() => {
     const timeout = setTimeout(() => setSearchQuery(searchInput), 300);
     return () => clearTimeout(timeout);
@@ -347,47 +381,30 @@ const EventListSection: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    dispatch(
-      fetchAllEvents({
-        PageNumber: pageNumber,
-        PageSize: PAGE_SIZE,
-      })
-    )
+    dispatch(fetchAllEvents({ PageNumber: pageNumber, PageSize: PAGE_SIZE }))
       .unwrap()
-      .catch(() => {
-        // UI already handles "no events" state; keep it silent here.
-      })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [dispatch, pageNumber]);
 
-  /* ===== FRONTEND FILTER (search + category) ===== */
   const filteredEvents = useMemo(() => {
     const keyword = searchQuery.toLowerCase().trim();
-    return events.filter((event) => {
-      const matchSearch = keyword
-        ? event.title.toLowerCase().includes(keyword)
-        : true;
-      return matchSearch;
-    });
+    return events.filter((event) =>
+      keyword ? event.title.toLowerCase().includes(keyword) : true
+    );
   }, [events, searchQuery]);
-
-  /* ================= UI ================= */
 
   return (
     <section className="relative py-20 px-6" style={{ minHeight: "100vh" }}>
-      {/* Background glow */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none"
         style={{
           width: 800,
           height: 400,
-          background:
-            "radial-gradient(ellipse at center, rgba(124,59,237,0.12) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse at center, rgba(124,59,237,0.12) 0%, transparent 70%)",
           filter: "blur(40px)",
         }}
       />
@@ -395,7 +412,6 @@ const EventListSection: React.FC = () => {
       <div className="max-w-7xl mx-auto relative">
         {/* Header */}
         <div className="mb-10 flex flex-col items-center text-center">
-          {/* Top badge */}
           <div
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-5"
             style={{
@@ -404,19 +420,12 @@ const EventListSection: React.FC = () => {
               boxShadow: "0 0 20px rgba(124,59,237,0.15)",
             }}
           >
-            <span
-              className="w-1.5 h-1.5 rounded-full animate-pulse"
-              style={{ background: "#a78bfa" }}
-            />
-            <p
-              className="text-xs font-bold tracking-[0.25em] uppercase"
-              style={{ color: "#a78bfa" }}
-            >
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#a78bfa" }} />
+            <p className="text-xs font-bold tracking-[0.25em] uppercase" style={{ color: "#a78bfa" }}>
               Khám phá
             </p>
           </div>
 
-          {/* Title with gradient */}
           <div className="relative inline-block mb-4">
             <h2
               className="text-5xl font-extrabold tracking-tight"
@@ -430,7 +439,6 @@ const EventListSection: React.FC = () => {
             >
               Sự kiện nổi bật
             </h2>
-            {/* Animated underline accent */}
             <span
               className="absolute -bottom-1 left-0 h-0.5 rounded-full"
               style={{
@@ -440,62 +448,46 @@ const EventListSection: React.FC = () => {
               }}
             />
             <style>{`
-      @keyframes expandWidth {
-        from { width: 0%; opacity: 0; }
-        to { width: 60%; opacity: 1; }
-      }
-    `}</style>
+              @keyframes expandWidth {
+                from { width: 0%; opacity: 0; }
+                to { width: 60%; opacity: 1; }
+              }
+            `}</style>
           </div>
 
-          {/* Subtitle */}
-          <p
-            className="max-w-lg text-base leading-relaxed"
-            style={{ color: "rgba(148,163,184,0.75)" }}
-          >
+          <p className="max-w-lg text-base leading-relaxed" style={{ color: "rgba(148,163,184,0.75)" }}>
             Tham gia những sự kiện đặc sắc nhất — âm nhạc, nghệ thuật, công nghệ và hơn thế nữa,
             được tuyển chọn dành riêng cho bạn.
           </p>
 
-          {/* Divider */}
-          <div
-            className="mt-6 w-16 h-px rounded-full"
-            style={{
-              background: "linear-gradient(90deg, transparent, rgba(124,59,237,0.5), transparent)",
-            }}
-          />
-           <div className="mt-6">
-          <button
-            onClick={() => navigate("/all-event")}
-            style={{
-              padding: "10px 20px",
-              borderRadius: 999,
-              fontSize: 14,
-              fontWeight: 600,
-              background: "linear-gradient(135deg,#7c3bed,#a855f7)",
-              color: "#fff",
-              border: "none",
-              cursor: "pointer",
-              boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
-            }}
-          >
-            Xem tất cả sự kiện 
-          </button>
-</div>
-         
+          <div className="mt-6 w-16 h-px rounded-full" style={{ background: "linear-gradient(90deg, transparent, rgba(124,59,237,0.5), transparent)" }} />
+
+          <div className="mt-6">
+            <button
+              onClick={() => navigate("/all-event")}
+              style={{
+                padding: "10px 20px",
+                borderRadius: 999,
+                fontSize: 14,
+                fontWeight: 600,
+                background: "linear-gradient(135deg,#7c3bed,#a855f7)",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
+              }}
+            >
+              Xem tất cả sự kiện
+            </button>
+          </div>
         </div>
 
         {/* Search */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-center">
-          {/* Search input */}
           <div className="relative flex-1 max-w-sm">
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
               style={{ color: "rgba(167,139,250,0.5)" }}
             >
               <circle cx="11" cy="11" r="8" />
@@ -520,12 +512,8 @@ const EventListSection: React.FC = () => {
                 outline: "none",
                 transition: "border 0.2s",
               }}
-              onFocus={(e) =>
-                (e.target.style.border = "1px solid rgba(124,59,237,0.6)")
-              }
-              onBlur={(e) =>
-                (e.target.style.border = "1px solid rgba(124,59,237,0.2)")
-              }
+              onFocus={(e) => (e.target.style.border = "1px solid rgba(124,59,237,0.6)")}
+              onBlur={(e) => (e.target.style.border = "1px solid rgba(124,59,237,0.2)")}
             />
           </div>
         </div>
@@ -536,19 +524,12 @@ const EventListSection: React.FC = () => {
             ? Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
             : filteredEvents.length > 0
               ? filteredEvents.map((item) => <EventCard key={item.id} item={item} />)
-              : !loading && (
+              : (
                 <div
                   className="col-span-3 flex flex-col items-center justify-center py-20 gap-4"
                   style={{ color: "rgba(148,163,184,0.5)" }}
                 >
-                  <svg
-                    width="48"
-                    height="48"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <circle cx="11" cy="11" r="8" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
                   </svg>
@@ -565,10 +546,7 @@ const EventListSection: React.FC = () => {
             total={pagination.totalPages}
             hasPrev={pagination.hasPrevious}
             hasNext={pagination.hasNext}
-            onChange={(p) => {
-              setPageNumber(p);
-              // window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
+            onChange={(p) => setPageNumber(p)}
           />
         )}
       </div>
