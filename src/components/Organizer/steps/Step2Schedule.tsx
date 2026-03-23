@@ -299,7 +299,8 @@ export default function Step2Schedule({
 
     const ticketTypes = useSelector(
         (state: RootState) => state.TICKET_TYPE.ticketTypes
-    );
+    ) ?? [];
+
 
     const [loading, setLoading] = useState(false);
     const [openCreateModal, setOpenCreateModal] = useState(false);
@@ -313,7 +314,14 @@ export default function Step2Schedule({
     };
 
     useEffect(() => { loadSessions(); }, [eventId]);
-    useEffect(() => { if (eventId && sessions) dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId: sessions[0].id })); }, [eventId, sessions]);
+    useEffect(() => {
+        if (eventId && sessions?.length > 0) {
+            dispatch(fetchGetAllTicketTypes({
+                eventId,
+                eventSessionId: sessions[0].id
+            }));
+        }
+    }, [eventId, sessions]);
 
     const recomputeConflicts = useCallback(
         (form: TimeForm, currentSessions: typeof sessions) => {
@@ -341,6 +349,7 @@ export default function Step2Schedule({
     }, [timeForm.eventStartAt, timeForm.eventEndAt, sessions, recomputeConflicts]);
 
     const hasSessions = sessions.length > 0;
+
     const hasTickets = ticketTypes.length > 0;
     const conflictIds = new Set(sessionConflicts.conflicts.map((c) => c.id));
 
