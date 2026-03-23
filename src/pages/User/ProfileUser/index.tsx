@@ -158,8 +158,8 @@ const WalletModal: React.FC<{
               !finalAmount || finalAmount < 10_000
                 ? "rgba(121,59,237,0.25)"
                 : loading
-                ? "rgba(121,59,237,0.5)"
-                : "#793bed",
+                  ? "rgba(121,59,237,0.5)"
+                  : "#793bed",
             boxShadow:
               finalAmount && finalAmount >= 10_000 && !loading
                 ? "0 4px 20px rgba(121,59,237,0.4)"
@@ -209,55 +209,55 @@ const AvatarUpload: React.FC<AvatarProps> = ({
 
   const displayUrl = previewUrl ?? profileImageUrl ?? null;
 
- const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  if (!file.type.startsWith("image/")) {
-    setUploadError("Chỉ chấp nhận file ảnh.");
-    return;
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    setUploadError("Ảnh tối đa 5 MB.");
-    return;
-  }
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Chỉ chấp nhận file ảnh.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Ảnh tối đa 5 MB.");
+      return;
+    }
 
-  // Preview ngay
-  const objectUrl = URL.createObjectURL(file);
-  setPreviewUrl(objectUrl);
-  setUploadError(null);
+    // Preview ngay
+    const objectUrl = URL.createObjectURL(file);
+    setPreviewUrl(objectUrl);
+    setUploadError(null);
 
-  setUploading(true);
-  try {
-    const response = await authService.uploadProfileImage(userId, file);
+    setUploading(true);
+    try {
+      const response = await authService.uploadProfileImage(userId, file);
 
-    const json = response.data;
+      const json = response.data;
 
-    const newUrl =
-      json?.profileImageUrl ??
-      json?.imageUrl ??
-      json?.url ??
-      json?.data?.profileImageUrl ??
-      null;
+      const newUrl =
+        json?.profileImageUrl ??
+        json?.imageUrl ??
+        json?.url ??
+        json?.data?.profileImageUrl ??
+        null;
 
-    onUploaded(newUrl ?? objectUrl);
-  } catch (err: any) {
-    setUploadError(
-      err?.response?.data?.message ??
-      err?.message ??
-      "Upload thất bại, vui lòng thử lại."
-    );
+      onUploaded(newUrl ?? objectUrl);
+    } catch (err: any) {
+      setUploadError(
+        err?.response?.data?.message ??
+        err?.message ??
+        "Upload thất bại, vui lòng thử lại."
+      );
 
-    // rollback preview
-    setPreviewUrl(null);
-    URL.revokeObjectURL(objectUrl);
-  } finally {
-    setUploading(false);
+      // rollback preview
+      setPreviewUrl(null);
+      URL.revokeObjectURL(objectUrl);
+    } finally {
+      setUploading(false);
 
-    // reset input
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }
-};
+      // reset input
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="relative shrink-0 group">
@@ -422,16 +422,20 @@ const ProfileUser: React.FC = () => {
     try {
       const payload: UserProfileRequest = {
         userId,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        birthday: form.birthday,
-        gender: form.gender,
-        phone: user.phoneNumber ?? "",
-        address: form.address.trim(),
-        description: (user as any).description ?? "",
-        socialLink: form.socialLink.trim(),
-        profileImageUrl: avatarUrl ?? (user as any).profileImageUrl ?? "",
+        firstName: form.firstName?.trim() || null,
+        lastName: form.lastName?.trim() || null,
+       birthday: form.birthday ? `${form.birthday}T00:00:00Z` : null,
+        gender: form.gender || null,
+        phone: user.phoneNumber?.trim() || null,
+        address: form.address?.trim() || null,
+        description: (user as any).description?.trim() || null,
+        socialLink: form.socialLink?.trim() || null,
+        profileImageUrl:
+          avatarUrl?.trim() ||
+          (user as any).profileImageUrl?.trim() ||
+          null,
       };
+
       await authService.updateUser(payload);
       dispatch(fetchUserDetail(userId));
       setEditMode(false);
@@ -542,49 +546,49 @@ const ProfileUser: React.FC = () => {
               {/* Nút chỉnh sửa */}
               <div className="flex flex-col items-end gap-2 shrink-0">
                 <div className="flex gap-3">
-                {editMode ? (
-                  <>
+                  {editMode ? (
+                    <>
+                      <button
+                        onClick={handleCancel}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                      >
+                        Huỷ
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
+                        style={{
+                          background: saving ? "rgba(121,59,237,0.45)" : "#793bed",
+                          boxShadow: saving ? "none" : "0 4px 20px rgba(121,59,237,0.4)",
+                        }}
+                      >
+                        {saving ? (
+                          <>
+                            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                              <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+                              <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                            </svg>
+                            Đang lưu…
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-symbols-outlined text-[16px]">save</span>
+                            Lưu
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={handleCancel}
-                      className="px-5 py-2.5 rounded-xl text-sm font-bold border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                      onClick={() => setEditMode(true)}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white hover:scale-105 transition-transform"
+                      style={{ background: "#793bed", boxShadow: "0 4px 20px rgba(121,59,237,0.35)" }}
                     >
-                      Huỷ
+                      <span className="material-symbols-outlined text-[16px]">edit</span>
+                      Chỉnh sửa
                     </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-105"
-                      style={{
-                        background: saving ? "rgba(121,59,237,0.45)" : "#793bed",
-                        boxShadow: saving ? "none" : "0 4px 20px rgba(121,59,237,0.4)",
-                      }}
-                    >
-                      {saving ? (
-                        <>
-                          <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-                            <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                          </svg>
-                          Đang lưu…
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined text-[16px]">save</span>
-                          Lưu
-                        </>
-                      )}
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white hover:scale-105 transition-transform"
-                    style={{ background: "#793bed", boxShadow: "0 4px 20px rgba(121,59,237,0.35)" }}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">edit</span>
-                    Chỉnh sửa
-                  </button>
-                )}
+                  )}
                 </div>
                 {saveError && (
                   <p className="text-xs font-medium text-red-400 text-right">{saveError}</p>
@@ -854,7 +858,7 @@ const ProfileUser: React.FC = () => {
             </div>
           </div>
 
-      
+
         </div>
       </div>
     </>
