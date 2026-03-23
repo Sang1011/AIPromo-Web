@@ -66,7 +66,7 @@ function Login() {
               navigate("/organizer/my-events");
           } else if (roles.includes('Staff')) {
               navigate("/staff/event-approval");
-          } else if(roles.includes('Admin')) {
+          } else if(roles.includes('admin')) {
               navigate("/admin");
           }else{
             navigate("/");
