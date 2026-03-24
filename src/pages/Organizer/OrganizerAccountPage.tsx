@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FiCheck, FiCreditCard, FiGlobe, FiMapPin, FiFileText, FiUser } from "react-icons/fi";
 import { MdOutlineBusiness, MdOutlinePerson } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
-import { useOutletContext } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store";
 import {
     fetchOrganizerProfile,
@@ -77,11 +77,42 @@ export default function OrganizerAccountPage() {
     const [branch, setBranch] = useState("");
     const [bankErrors, setBankErrors] = useState<BankErrors>({});
     const [bankLoading, setBankLoading] = useState(false);
+    const location = useLocation();
 
     useEffect(() => {
         setConfig({ title: "Quản lý tài khoản" });
         return () => setConfig({});
     }, []);
+
+    useEffect(() => {
+        const state = location.state as { missingFields?: string[]; tab?: Tab } | null;
+        if (state?.tab) setActiveTab(state.tab);
+        if (state?.missingFields?.length) {
+            const fields = state.missingFields;
+
+            const newProfileErrors: ProfileErrors = {};
+            if (fields.includes("displayName"))
+                newProfileErrors.displayName = "Tên hiển thị không được để trống";
+            if (fields.includes("identityNumber"))
+                newProfileErrors.identityNumber = "Số CMND / CCCD không được để trống";
+            if (fields.includes("taxCode"))
+                newProfileErrors.taxCode = "Mã số thuế không được để trống";
+            if (fields.includes("companyName"))
+                newProfileErrors.companyName = "Tên công ty không được để trống";
+            setProfileErrors(newProfileErrors);
+
+            const newBankErrors: BankErrors = {};
+            if (fields.includes("accountName"))
+                newBankErrors.accountName = "Chủ tài khoản không được để trống";
+            if (fields.includes("accountNumber"))
+                newBankErrors.accountNumber = "Số tài khoản không được để trống";
+            if (fields.includes("bankCode"))
+                newBankErrors.bankCode = "Vui lòng chọn ngân hàng";
+            if (fields.includes("branch"))
+                newBankErrors.branch = "Chi nhánh không được để trống";
+            setBankErrors(newBankErrors);
+        }
+    }, [location.state]);
 
     useEffect(() => {
         dispatch(fetchOrganizerProfile());
@@ -112,6 +143,12 @@ export default function OrganizerAccountPage() {
         if (businessType === "individual") {
             if (identityNumber && !/^\d{9}$|^\d{12}$/.test(identityNumber))
                 errors.identityNumber = "Số CMND / CCCD phải có 9 hoặc 12 chữ số";
+            if (!identityNumber.trim())
+                errors.identityNumber = "Số CMND / CCCD không được để trống";
+            if (!taxCode.trim())
+                errors.taxCode = "Mã số thuế không được để trống";
+            else if (!/^[0-9]{10}(-[0-9]{3})?$/.test(taxCode))
+                errors.taxCode = "Mã số thuế không hợp lệ (10 hoặc 13 chữ số)";
         }
         if (businessType === "company") {
             if (!companyName.trim())
@@ -149,7 +186,7 @@ export default function OrganizerAccountPage() {
                     address,
                     businessType,
                     companyName: businessType === "company" ? companyName : "",
-                    taxCode: businessType === "company" ? taxCode : "",
+                    taxCode: taxCode,
                     identityNumber,
                 })
             );
@@ -281,14 +318,26 @@ export default function OrganizerAccountPage() {
                         </div>
 
                         {businessType === "individual" && (
-                            <FieldInput
-                                label="Số CMND / CCCD"
-                                placeholder="9 hoặc 12 chữ số"
-                                onlyNumber
-                                value={identityNumber}
-                                onChange={(v) => { setIdentityNumber(v); setProfileErrors((p) => ({ ...p, identityNumber: undefined })); }}
-                                error={profileErrors.identityNumber}
-                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FieldInput
+                                    label="Số CMND / CCCD"
+                                    required
+                                    placeholder="9 hoặc 12 chữ số"
+                                    onlyNumber
+                                    value={identityNumber}
+                                    onChange={(v) => { setIdentityNumber(v); setProfileErrors((p) => ({ ...p, identityNumber: undefined })); }}
+                                    error={profileErrors.identityNumber}
+                                />
+                                <FieldInput
+                                    label="Mã số thuế cá nhân"
+                                    required
+                                    placeholder="10 hoặc 13 chữ số"
+                                    onlyNumber
+                                    value={taxCode}
+                                    onChange={(v) => { setTaxCode(v); setProfileErrors((p) => ({ ...p, taxCode: undefined })); }}
+                                    error={profileErrors.taxCode}
+                                />
+                            </div>
                         )}
 
                         {businessType === "company" && (

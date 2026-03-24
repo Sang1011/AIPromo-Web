@@ -71,6 +71,7 @@ function App() {
         <Route path="/profile" element={<ProfileLayout />}>
           <Route path="account" element={<ProfileUser />} />
         </Route>
+
         {/* Organizer */}
         {/* Organizer - Dashboard group */}
         <Route path="/organizer" element={<DashboardLayout />}>
