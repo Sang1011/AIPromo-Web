@@ -46,7 +46,7 @@ export interface UpdateOrganizerBankRequest {
 export interface CreateProfileOrganizerRequest {
   type: string;
   businessInfo: {
-    logo: string;
+    logo: string | null;
     displayName: string;
     description: string;
     address: string;
