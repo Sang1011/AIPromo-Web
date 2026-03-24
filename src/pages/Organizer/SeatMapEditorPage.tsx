@@ -214,7 +214,7 @@ const SeatMapEditorPage: React.FC = () => {
         const idMap = new Map<string, string>();
 
         clipboard.forEach(entity => {
-            const newId = `${entity.id}-copy-${Date.now()}-${Math.random()}`;
+            const newId = crypto.randomUUID();
             idMap.set(entity.id, newId);
 
             const isSection = 'ticketTypeId' in entity;
@@ -650,7 +650,7 @@ const SeatMapEditorPage: React.FC = () => {
 
         rowLabels.forEach((row, rowIndex) => {
             for (let i = 0; i < gridColumns; i++) {
-                const newId = `seat-${selectedSection.id}-${row}-${i + 1}-${Date.now()}-${rowIndex}-${i}`;
+                const newId = crypto.randomUUID();
                 newSeatIds.push(newId);
 
                 newSeats.push({
@@ -709,7 +709,7 @@ const SeatMapEditorPage: React.FC = () => {
             const angle = angleDeg * Math.PI / 180;
             const x = centerX + radius * Math.cos(angle) - seatSize / 2;
             const y = centerY + radius * Math.sin(angle) - seatSize / 2;
-            const newId = `seat-${selectedSection.id}-arc-${i}-${Date.now()}`;
+            const newId = crypto.randomUUID();
             newSeatIds.push(newId);
 
             newSeats.push({
@@ -787,7 +787,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let rowIndex = 0; rowIndex < rows && count < total; rowIndex++) {
                 const row = String.fromCharCode(65 + (rowIndex % 26));
                 for (let i = 0; i < cols && count < total; i++) {
-                    const newId = `seat-${selectedSection.id}-custom-${Date.now()}-${rowIndex}-${i}`;
+                    const newId = crypto.randomUUID();
                     newSeatIds.push(newId);
                     newSeats.push({
                         id: newId,
@@ -822,7 +822,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let i = 0; i < total; i++) {
                 const angleDeg = startAngle + i * angleStep;
                 const angle = angleDeg * Math.PI / 180;
-                const newId = `seat-${selectedSection.id}-custom-arc-${Date.now()}-${i}`;
+                const newId = crypto.randomUUID();
                 newSeatIds.push(newId);
                 newSeats.push({
                     id: newId,
@@ -872,7 +872,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let rowIndex = 0; rowIndex < rows && count < total; rowIndex++) {
                 const row = String.fromCharCode(65 + (rowIndex % 26));
                 for (let i = 0; i < cols && count < total; i++) {
-                    const newId = `seat-${selectedSection.id}-${row}-${i + 1}-${Date.now()}-${rowIndex}-${i}`;
+                    const newId = crypto.randomUUID();
                     newSeatIds.push(newId);
                     newSeats.push({
                         id: newId,
@@ -907,7 +907,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let i = 0; i < total; i++) {
                 const angleDeg = startAngle + i * angleStep;
                 const angle = angleDeg * Math.PI / 180;
-                const newId = `seat-${selectedSection.id}-arc-${i}-${Date.now()}`;
+                const newId = crypto.randomUUID();
                 newSeatIds.push(newId);
                 newSeats.push({
                     id: newId,
@@ -1968,7 +1968,7 @@ const SeatMapEditorPage: React.FC = () => {
                     >
                         {seatMapLoading ? 'Đang lưu...' : 'Lưu sơ đồ'}
                     </button>
-                    <button
+                    {/* <button
                         onClick={() => {
                             const data = serializeSeatMap();
                             console.log('=== SPEC ===');
@@ -1986,7 +1986,7 @@ const SeatMapEditorPage: React.FC = () => {
                         }}
                     >
                         Log spec
-                    </button>
+                    </button> */}
                 </div>
             </div>
 
