@@ -319,6 +319,38 @@ const SeatMapEditorPage: React.FC = () => {
         saveToHistory();
     }, [saveToHistory]);
 
+<<<<<<< Updated upstream
+=======
+    const serializeSeatMap = (): SeatMapData => ({
+        areas: sections.map(area => ({
+            ...area,
+            x: Math.round(area.x),
+            y: Math.round(area.y),
+            width: Math.round(area.width),
+            height: Math.round(area.height),
+            rotation: Math.round(area.rotation),
+            seats: seats
+                .filter(seat => seat.sectionId === area.id)
+                .map(seat => ({
+                    ...seat,
+                    x: Math.round(seat.x),
+                    y: Math.round(seat.y),
+                    width: Math.round(seat.width),
+                    height: Math.round(seat.height),
+                    rotation: Math.round(seat.rotation),
+                })),
+        })),
+        texts: textEntities.map(t => ({
+            ...t,
+            x: Math.round(t.x),
+            y: Math.round(t.y),
+            width: Math.round(t.width),
+            height: Math.round(t.height),
+            rotation: Math.round(t.rotation),
+        })),
+    });
+
+>>>>>>> Stashed changes
     const handleDragEnd = useCallback(
         (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
             if (isGroupDragging) return;
