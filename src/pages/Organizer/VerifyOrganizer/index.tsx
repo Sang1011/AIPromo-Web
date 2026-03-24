@@ -18,7 +18,7 @@ export default function VerifyOrganizer() {
   const [formData, setFormData] = useState({
     type: "Management", 
     businessInfo: {
-      logo: "",
+      logo: "null",
       displayName: "",
       description: "",
       address: "",
@@ -67,6 +67,7 @@ export default function VerifyOrganizer() {
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
+      console.log("formData",formData);
       
       // 1. Gọi tạo Profile
       const createAction = await dispatch(fetchCreateProfileOrganizer(formData));
