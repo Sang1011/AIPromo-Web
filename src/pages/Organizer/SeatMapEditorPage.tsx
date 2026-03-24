@@ -17,6 +17,7 @@ import { getWorldPointer } from '../../utils/getWorldPointer';
 import { notify } from '../../utils/notify';
 import { validateSeatMap } from '../../utils/validateSeatMap';
 import type { EventSession } from '../../types/event/event';
+import { rf } from '../../utils/roundFloat';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -304,10 +305,6 @@ const SeatMapEditorPage: React.FC = () => {
                 if (dragStartPosRef.current[t.id]) {
                     return { ...t, x: snapToGrid(t.x), y: snapToGrid(t.y) };
                 }
-                const delta = sectionDeltas[t.attachedAreaId ?? ''];
-                if (delta) {
-                    return { ...t, x: snapToGrid(t.x + delta.dx), y: snapToGrid(t.y + delta.dy) };
-                }
                 return t;
             })
         );
@@ -318,6 +315,35 @@ const SeatMapEditorPage: React.FC = () => {
         groupDragAnchorRef.current = null;
         saveToHistory();
     }, [saveToHistory]);
+
+    const serializeSeatMap = (): SeatMapData => ({
+        areas: sections.map(area => ({
+            ...area,
+            x: rf(area.x),
+            y: rf(area.y),
+            width: rf(area.width),
+            height: rf(area.height),
+            rotation: rf(area.rotation),
+            seats: seats
+                .filter(seat => seat.sectionId === area.id)
+                .map(seat => ({
+                    ...seat,
+                    x: rf(seat.x),
+                    y: rf(seat.y),
+                    width: rf(seat.width),
+                    height: rf(seat.height),
+                    rotation: rf(seat.rotation),
+                })),
+        })),
+        texts: textEntities.map(t => ({
+            ...t,
+            x: rf(t.x),
+            y: rf(t.y),
+            width: rf(t.width),
+            height: rf(t.height),
+            rotation: rf(t.rotation),
+        })),
+    });
 
     const handleDragEnd = useCallback(
         (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
@@ -426,8 +452,10 @@ const SeatMapEditorPage: React.FC = () => {
                             ...t,
                             x: area.x,
                             y: area.y,
-                            width: area.width,
-                            height: area.height,
+                            width: Math.round(area.width),
+                            height: Math.round(area.height),
+                            rotation: Math.round(area.rotation),
+                            labelFontSize: Math.round(Math.max(10, (t as any).labelFontSize * scale || 14)),
                         }
                         : t
                 )
@@ -1890,18 +1918,10 @@ const SeatMapEditorPage: React.FC = () => {
                                 validation.errors.forEach(err => notify.error(err.message));
                                 return;
                             }
-                            const data: SeatMapData = {
-                                areas: sections.map(area => ({
-                                    ...area,
-                                    seats: seats.filter(seat => seat.sectionId === area.id),
-                                })),
-                                texts: textEntities,
-                            };
-
+                            const data = serializeSeatMap();
                             const spec = JSON.stringify(data, null, 2);
 
                             try {
-                                console.log(spec);
                                 await dispatch(fetchUpdateSeatMap({ eventId: eventId!, spec })).unwrap();
                                 await new Promise(resolve => setTimeout(resolve, 1000));
                                 const mappings = sections
@@ -1951,16 +1971,9 @@ const SeatMapEditorPage: React.FC = () => {
                     </button>
                     <button
                         onClick={() => {
-                            const data: SeatMapData = {
-                                areas: sections.map(area => ({
-                                    ...area,
-                                    seats: seats.filter(seat => seat.sectionId === area.id),
-                                })),
-                                texts: textEntities,
-                            };
-                            const spec = JSON.stringify(data, null, 2);
+                            const data = serializeSeatMap();
                             console.log('=== SPEC ===');
-                            console.log(spec);
+                            console.log(JSON.stringify(data, null, 2));
                         }}
                         style={{
                             background: 'transparent',
@@ -3505,66 +3518,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                 <option value="italic">Nghiêng</option>
                                                 <option value="bold italic">Đậm nghiêng</option>
                                             </select>
-                                        </div>
-
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label
-                                                style={{
-                                                    display: 'block',
-                                                    fontSize: '12px',
-                                                    fontWeight: 600,
-                                                    color: '#9ca3af',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.05em',
-                                                    marginBottom: '12px',
-                                                }}
-                                            >
-                                                GẮN VỚI KHU VỰC
-                                            </label>
-
-                                            <select
-                                                value={selectedText.attachedAreaId ?? ''}
-                                                onChange={(e) =>
-                                                    updateTextProperty(
-                                                        'attachedAreaId',
-                                                        e.target.value || undefined
-                                                    )
-                                                }
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#16162a',
-                                                    border: '1px solid #2a2a3e',
-                                                    borderRadius: '8px',
-                                                    padding: '10px 12px',
-                                                    color: '#e5e7eb',
-                                                    fontSize: '14px',
-                                                    outline: 'none',
-                                                    cursor: 'pointer',
-                                                    appearance: 'none',
-                                                    WebkitAppearance: 'none',
-                                                    MozAppearance: 'none',
-                                                }}
-                                            >
-                                                <option value="">Không gắn</option>
-                                                {sections.map(sec => (
-                                                    <option key={sec.id} value={sec.id}>
-                                                        {sec.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <span
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: '12px',
-                                                    top: '50%',
-                                                    transform: 'translateY(-50%)',
-                                                    pointerEvents: 'none',
-                                                    color: '#9ca3af',
-                                                    fontSize: '18px',
-                                                }}
-                                            >
-                                                ▾
-                                            </span>
                                         </div>
 
                                         <div style={{ marginBottom: '24px' }}>
