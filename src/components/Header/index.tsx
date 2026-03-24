@@ -296,7 +296,7 @@ const Header: React.FC = () => {
 
             {/* Tạo sự kiện */}
             <Link
-              to="/Login"
+              to="/verify-organizer"
               onClick={() => setSearchFocused(false)}
               className="flex items-center gap-2 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-all"
               style={{
