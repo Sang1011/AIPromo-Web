@@ -17,7 +17,6 @@ import { getWorldPointer } from '../../utils/getWorldPointer';
 import { notify } from '../../utils/notify';
 import { validateSeatMap } from '../../utils/validateSeatMap';
 import type { EventSession } from '../../types/event/event';
-import { rf } from '../../utils/roundFloat';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -319,29 +318,29 @@ const SeatMapEditorPage: React.FC = () => {
     const serializeSeatMap = (): SeatMapData => ({
         areas: sections.map(area => ({
             ...area,
-            x: rf(area.x),
-            y: rf(area.y),
-            width: rf(area.width),
-            height: rf(area.height),
-            rotation: rf(area.rotation),
+            x: Math.round(area.x),
+            y: Math.round(area.y),
+            width: Math.round(area.width),
+            height: Math.round(area.height),
+            rotation: Math.round(area.rotation),
             seats: seats
                 .filter(seat => seat.sectionId === area.id)
                 .map(seat => ({
                     ...seat,
-                    x: rf(seat.x),
-                    y: rf(seat.y),
-                    width: rf(seat.width),
-                    height: rf(seat.height),
-                    rotation: rf(seat.rotation),
+                    x: Math.round(seat.x),
+                    y: Math.round(seat.y),
+                    width: Math.round(seat.width),
+                    height: Math.round(seat.height),
+                    rotation: Math.round(seat.rotation),
                 })),
         })),
         texts: textEntities.map(t => ({
             ...t,
-            x: rf(t.x),
-            y: rf(t.y),
-            width: rf(t.width),
-            height: rf(t.height),
-            rotation: rf(t.rotation),
+            x: Math.round(t.x),
+            y: Math.round(t.y),
+            width: Math.round(t.width),
+            height: Math.round(t.height),
+            rotation: Math.round(t.rotation),
         })),
     });
 
