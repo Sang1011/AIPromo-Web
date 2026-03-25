@@ -1096,7 +1096,7 @@ const SeatMapViewerPage: React.FC = () => {
      
             await clearOldOrderFromFirebase();
             localStorage.setItem("currentOrderId", orderId);
-            navigate(`/event-detail/${eventId}/payment`);
+            navigate(`/payment-ticket`);
             notify.success("Tạo order thành công");
         } else {
             notify.error("Tạo order thất bại, vé đã không còn");
