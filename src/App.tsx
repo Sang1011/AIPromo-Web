@@ -43,6 +43,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ProfileUser from "./pages/User/ProfileUser";
 import ProfileLayout from "./pages/User";
 import OrganizerAccountPage from "./pages/Organizer/OrganizerAccountPage";
+import VerifyOrganizer from "./pages/Organizer/VerifyOrganizer";
 
 
 function App() {
@@ -68,6 +69,7 @@ function App() {
         <Route path="/all-event" element={<AllEvent />} />
         <Route path="/history-event" element={<HistoryEvent />} />
         <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
+        <Route path="/verify-organizer" element={<VerifyOrganizer />} />
         <Route path="/profile" element={<ProfileLayout />}>
           <Route path="account" element={<ProfileUser />} />
         </Route>
