@@ -491,7 +491,7 @@ function EventDetail() {
 
                   <div className="relative pl-8">
                     <div className="absolute left-0 top-2 bottom-2 w-0.5 timeline-line" />
-                    {eventDetail.sessions.map((session, index) => {
+                    {eventDetail.sessions.map((session) => {
                       const isSelected = selectedSessionId === session.id
                       return (
                         <div key={session.id} className="relative mb-6 last:mb-0">

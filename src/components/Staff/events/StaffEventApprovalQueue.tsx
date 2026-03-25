@@ -235,6 +235,12 @@ export default function StaffEventApprovalQueue() {
 
   setLoadingId(null)
 }
+  const InfoCard = ({ label, value }: { label: string; value: string }) => (
+    <div className="bg-slate-900/70 border border-white/5 rounded-2xl p-6">
+      <p className="text-slate-400 text-sm font-medium">{label}</p>
+      <p className="text-white text-2xl font-semibold mt-2 tracking-tight">{value}</p>
+    </div>
+  );
 
   return (
 
@@ -536,208 +542,172 @@ export default function StaffEventApprovalQueue() {
 
       )}
 
+             {/* ==================== DETAIL MODAL - PHIÊN BẢN CÂN BẰNG ==================== */}
       {showDetailModal && currentEvent && (
-
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/90 backdrop-blur-2xl flex items-center justify-center z-50 p-4"
           onClick={() => setShowDetailModal(false)}
         >
-
           <div
-            className="bg-slate-900 border border-white/10 rounded-2xl w-[1000px] max-h-[90vh] overflow-y-auto shadow-2xl"
+            className="bg-slate-950 border border-white/10 rounded-3xl w-full max-w-5xl max-h-[94vh] overflow-hidden shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-
-            {/* ===== BANNER (FIXED) ===== */}
-            <div className="relative w-full h-[320px] overflow-hidden rounded-t-2xl">
-
-              {/* background blur */}
+            {/* BANNER SECTION - Giảm chiều cao đáng kể */}
+            <div className="relative h-[280px] flex-shrink-0 overflow-hidden rounded-t-3xl">
+              {/* Background blur layer */}
               <img
-                src={currentEvent.bannerUrl}
-                className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40"
+                src={currentEvent.bannerUrl || "/event-placeholder.jpg"}
+                alt={currentEvent.title}
+                className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60"
               />
 
-              {/* overlay */}
-              <div className="absolute inset-0 bg-black/60" />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/70 to-slate-950" />
 
-              {/* main image */}
-              <div className="relative z-10 flex items-center justify-center h-full px-4">
-
+              {/* Main Banner Image */}
+              <div className="relative z-10 flex items-center justify-center h-full p-6">
                 <img
-                  src={currentEvent.bannerUrl}
-                  className="max-h-full max-w-full object-contain rounded-xl shadow-2xl border border-white/10"
+                  src={currentEvent.bannerUrl || "/event-placeholder.jpg"}
+                  alt={currentEvent.title}
+                  className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl border border-white/20"
                 />
-
               </div>
 
-              {/* close button */}
+              {/* Close Button */}
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="absolute top-4 right-4 z-20 bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded-lg backdrop-blur"
+                className="absolute top-6 right-6 z-30 bg-black/80 hover:bg-black text-white w-11 h-11 flex items-center justify-center rounded-2xl backdrop-blur-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105"
               >
                 ✕
               </button>
 
-              {/* title */}
-              <div className="absolute bottom-4 left-6 z-20">
-                <h1 className="text-2xl font-black text-white drop-shadow-lg">
+              {/* Title & Location Overlay - Đặt thấp hơn một chút */}
+              <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-slate-950 via-slate-950/95 to-transparent pt-16 pb-6 px-10">
+                <h1 className="text-3xl lg:text-4xl font-black text-white tracking-tighter leading-none">
                   {currentEvent.title}
                 </h1>
-                <p className="text-sm text-slate-300">
-                  {currentEvent.location}
+                <p className="text-lg text-slate-300 mt-2 flex items-center gap-2">
+                  📍 {currentEvent.location}
                 </p>
               </div>
-
             </div>
 
-            {/* ===== CONTENT ===== */}
-            <div className="p-6 flex flex-col gap-6">
-
-              {/* INFO GRID */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-
-                <div className="bg-slate-800/50 p-4 rounded-xl">
-                  <p className="text-slate-400 text-xs">Thời gian bắt đầu</p>
-                  <p className="text-white font-semibold">
-                    {formatDate(currentEvent.eventStartAt)}
-                  </p>
-                </div>
-
-                <div className="bg-slate-800/50 p-4 rounded-xl">
-                  <p className="text-slate-400 text-xs">Thời gian kết thúc</p>
-                  <p className="text-white font-semibold">
-                    {formatDate(currentEvent.eventEndAt)}
-                  </p>
-                </div>
-
-                <div className="bg-slate-800/50 p-4 rounded-xl">
-                  <p className="text-slate-400 text-xs">Mở bán vé</p>
-                  <p className="text-white font-semibold">
-                    {formatDate(currentEvent.ticketSaleStartAt)}
-                  </p>
-                </div>
-
-                <div className="bg-slate-800/50 p-4 rounded-xl">
-                  <p className="text-slate-400 text-xs">Đóng bán vé</p>
-                  <p className="text-white font-semibold">
-                    {formatDate(currentEvent.ticketSaleEndAt)}
-                  </p>
-                </div>
-
+            {/* CONTENT AREA - Scroll chỉ phần này */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 lg:p-10 space-y-10">
+              
+              {/* Thông tin cơ bản - Grid 4 cột trên desktop, 2 cột trên mobile */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                <InfoCard label="Bắt đầu" value={formatDate(currentEvent.eventStartAt)} />
+                <InfoCard label="Kết thúc" value={formatDate(currentEvent.eventEndAt)} />
+                <InfoCard label="Mở bán vé" value={formatDate(currentEvent.ticketSaleStartAt)} />
+                <InfoCard label="Đóng bán vé" value={formatDate(currentEvent.ticketSaleEndAt)} />
               </div>
 
-              {/* DESCRIPTION */}
+              {/* Mô tả */}
               <div>
-                <h3 className="text-white font-bold mb-2 text-lg">
-                  Mô tả sự kiện
-                </h3>
-                <p className="text-slate-300 text-sm leading-relaxed">
+                <h3 className="text-2xl font-bold text-white mb-4">Mô tả sự kiện</h3>
+                <div className="text-slate-300 leading-relaxed text-[15.5px] prose prose-invert max-w-none">
                   {currentEvent.description}
-                </p>
+                </div>
               </div>
 
-              {/* SESSIONS */}
-              <div>
-                <h3 className="text-white font-bold mb-3 text-lg">
-                  Lịch trình
-                </h3>
-
-                <div className="flex flex-col gap-3">
-                  {currentEvent.sessions.map((s: any) => (
-                    <div
-                      key={s.id}
-                      className="p-4 rounded-xl bg-slate-800 border border-white/5"
-                    >
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-white font-semibold">
-                          {s.title}
-                        </span>
-
-                        <span className="text-xs text-slate-400">
-                          {formatDate(s.startTime)} - {formatDate(s.endTime)}
-                        </span>
+              {/* Lịch trình */}
+              {currentEvent.sessions?.length > 0 && (
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-5">Lịch trình</h3>
+                  <div className="space-y-4">
+                    {currentEvent.sessions.map((s: any) => (
+                      <div
+                        key={s.id}
+                        className="bg-slate-900/70 border border-white/5 rounded-2xl p-6 hover:border-white/20 transition-colors"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <p className="text-white font-semibold text-lg">{s.title}</p>
+                            {s.description && (
+                              <p className="text-slate-400 text-sm mt-1.5">{s.description}</p>
+                            )}
+                          </div>
+                          <div className="text-sm font-medium text-slate-300 whitespace-nowrap bg-slate-800 px-5 py-2.5 rounded-xl border border-white/5">
+                            {formatDate(s.startTime)} — {formatDate(s.endTime)}
+                          </div>
+                        </div>
                       </div>
-
-                      <p className="text-sm text-slate-300">
-                        {s.description}
-                      </p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* ACTORS */}
-              <div>
-                <h3 className="text-white font-bold mb-3 text-lg">
-                  Nghệ sĩ tham gia
-                </h3>
+              {/* Nghệ sĩ */}
+              {currentEvent.actorImages?.length > 0 && (
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-5">Nghệ sĩ tham gia</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {currentEvent.actorImages.map((a: any) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center gap-4 bg-slate-900/70 border border-white/5 rounded-2xl p-5 hover:border-white/20 transition-all group"
+                      >
+                        <img
+                          src={a.image}
+                          alt={a.name}
+                          className="w-16 h-16 rounded-2xl object-cover border border-white/10 group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div>
+                          <p className="font-semibold text-white text-lg">{a.name}</p>
+                          <p className="text-slate-400 text-sm">{a.major}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                <div className="grid grid-cols-3 gap-3">
-                  {currentEvent.actorImages.map((a) => (
-                    <div
-                      key={a.id}
-                      className="flex items-center gap-3 bg-slate-800 p-3 rounded-xl border border-white/5"
-                    >
-                      <img
-                        src={a.image}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-
-                      <div>
-                        <p className="text-white text-sm font-semibold">
-                          {a.name}
+              {/* Loại vé */}
+              {currentEvent.ticketTypes?.length > 0 && (
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-5">Loại vé</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {currentEvent.ticketTypes.map((t: any) => (
+                      <div
+                        key={t.id}
+                        className="flex justify-between items-center bg-slate-900/70 border border-white/5 rounded-2xl px-7 py-6 hover:border-emerald-500/30 transition-all group"
+                      >
+                        <p className="text-lg font-semibold text-white group-hover:text-emerald-400 transition-colors">
+                          {t.name}
                         </p>
-                        <p className="text-xs text-slate-400">
-                          {a.major}
+                        <p className="text-3xl font-bold text-emerald-400 tracking-tighter">
+                          {t.price.toLocaleString("vi-VN")} ₫
                         </p>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* TICKET */}
-              <div>
-                <h3 className="text-white font-bold mb-3 text-lg">
-                  Loại vé
-                </h3>
-
-                <div className="flex flex-col gap-2">
-                  {currentEvent.ticketTypes.map((t) => (
-                    <div
-                      key={t.id}
-                      className="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-white/5"
-                    >
-                      <span className="text-white font-medium">
-                        {t.name}
-                      </span>
-
-                      <span className="text-green-400 font-bold">
-                        {t.price.toLocaleString()} VND
-                      </span>
-                    </div>
-                  ))}
+              {/* Chính sách */}
+              {currentEvent.policy && (
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-5">Chính sách sự kiện</h3>
+                  <div
+                    className="prose prose-invert prose-slate max-w-none bg-slate-900/60 border border-white/5 rounded-2xl p-8 text-slate-300 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: currentEvent.policy }}
+                  />
                 </div>
-              </div>
-
-              {/* POLICY */}
-              <div>
-                <h3 className="text-white font-bold mb-3 text-lg">
-                  Chính sách
-                </h3>
-
-                <div
-                  className="text-slate-300 text-sm leading-relaxed bg-slate-800/50 p-4 rounded-xl"
-                  dangerouslySetInnerHTML={{ __html: currentEvent.policy }}
-                />
-              </div>
-
+              )}
             </div>
 
+            {/* Footer cố định */}
+            <div className="border-t border-white/10 p-6 flex justify-end bg-slate-950">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-8 py-3 text-sm font-medium text-slate-300 hover:text-white border border-white/10 hover:border-white/30 rounded-2xl transition-all"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
-
         </div>
-
       )}
 
     </div>
