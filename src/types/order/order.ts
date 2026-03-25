@@ -29,3 +29,29 @@ export interface GetAllOrderResponse {
   hasPrevious: boolean;
   hasNext: boolean;
 }
+
+export interface GetDetailOrderResponse {
+  orderId: string;
+  status: string;
+  subTotal: number;
+  totalPrice: number;
+  discountAmount: number;
+  createdAt: string;
+  eventId: string;
+  eventTitle: string;
+  bannerUrl: string;
+  location: string;
+  eventStartAt: string;
+  tickets: TicketDetail[];
+}
+
+export interface TicketDetail {
+  ticketId: string;
+  qrCode: string;
+  status: string;
+  ticketTypeName: string;
+  price: number;
+  sessionTitle: string;
+  sessionStartTime: string;
+  seatCode: string | null;
+}
