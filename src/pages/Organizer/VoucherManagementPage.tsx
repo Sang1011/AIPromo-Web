@@ -1,51 +1,596 @@
-import VouchersTable from "../../components/Organizer/voucher/VouchersTable";
+import { useEffect, useState } from "react";
+import { FiEdit2, FiPlus, FiSearch, FiSliders, FiTrash2, FiX } from "react-icons/fi";
+import { useDispatch, useSelector } from "react-redux";
+import type { CreateVoucherRequest, UpdateVoucherRequest, VoucherItem } from "../../types/voucher/voucher";
+import type { AppDispatch, RootState } from "../../store";
+import { fetchAllEventsByMe } from "../../store/eventSlice";
+import { notify } from "../../utils/notify";
+import type { GetAllCreateResponseForPrivate } from "../../types/event/event";
+import { fetchCreateVoucher, fetchDeleteVoucher, fetchGetVouchers, fetchUpdateVoucher } from "../../store/voucherSlice";
+import DateTimeInput from "../../components/Organizer/shared/DateTimeInput";
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+function formatDate(iso: string) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("vi-VN");
+}
+
+function deriveStatus(v: VoucherItem): "running" | "expired" | "maxed" {
+    if (new Date(v.endDate) < new Date()) return "expired";
+    if (v.maxUse > 0 && v.totalUse >= v.maxUse) return "maxed";
+    return "running";
+}
+
+const STATUS_LABEL = { running: "Đang chạy", expired: "Hết hạn", maxed: "Hết lượt" } as const;
+const STATUS_STYLE = {
+    running: "bg-emerald-500/20 text-emerald-400",
+    expired: "bg-red-500/20 text-red-400",
+    maxed: "bg-amber-500/20 text-amber-400",
+} as const;
+
+// ─── validate ────────────────────────────────────────────────────────────────
+
+type VoucherFormData = {
+    couponCode: string;
+    type: "Percentage" | "Fixed";
+    value: string;
+    maxUse: string;
+    startDate: string;
+    endDate: string;
+    eventId: string;
+};
+
+type FormErrors = Partial<Record<keyof VoucherFormData, string>>;
+
+function validateVoucherForm(form: VoucherFormData, isCreate: boolean): FormErrors {
+    const errors: FormErrors = {};
+
+    if (!form.couponCode.trim()) {
+        errors.couponCode = "Vui lòng nhập mã voucher";
+    } else if (!/^[A-Z0-9_-]{3,30}$/.test(form.couponCode.trim())) {
+        errors.couponCode = "Mã chỉ gồm chữ in hoa, số, - hoặc _ (3–30 ký tự)";
+    }
+
+    const value = Number(form.value);
+    if (!form.value || isNaN(value) || value <= 0) {
+        errors.value = "Giá trị giảm phải lớn hơn 0";
+    } else if (form.type === "Percentage" && value > 100) {
+        errors.value = "Phần trăm không được vượt quá 100";
+    }
+
+    const maxUse = Number(form.maxUse);
+    if (!form.maxUse || isNaN(maxUse) || maxUse < 0) {
+        errors.maxUse = "Số lượng phải >= 0 (0 = không giới hạn)";
+    }
+
+    if (!form.startDate) errors.startDate = "Vui lòng chọn ngày bắt đầu";
+    if (!form.endDate) errors.endDate = "Vui lòng chọn ngày kết thúc";
+
+    if (form.startDate && form.endDate && form.startDate >= form.endDate) {
+        errors.endDate = "Ngày kết thúc phải sau ngày bắt đầu";
+    }
+
+    if (isCreate && !form.eventId.trim()) {
+        errors.eventId = "Vui lòng chọn sự kiện";
+    }
+
+    return errors;
+}
+
+// ─── empty form ──────────────────────────────────────────────────────────────
+
+const EMPTY_FORM: VoucherFormData = {
+    couponCode: "",
+    type: "Percentage",
+    value: "",
+    maxUse: "0",
+    startDate: "",
+    endDate: "",
+    eventId: "",
+};
+
+function voucherToForm(v: VoucherItem): VoucherFormData {
+    return {
+        couponCode: v.couponCode,
+        type: v.type,
+        value: String(v.value),
+        maxUse: String(v.maxUse),
+        startDate: v.startDate?.slice(0, 16) ?? "",
+        endDate: v.endDate?.slice(0, 16) ?? "",
+        eventId: v.eventId,
+    };
+}
+
+// ─── shared input cls ────────────────────────────────────────────────────────
+
+function inputCls(hasErr: boolean) {
+    return `w-full px-4 py-2 rounded-xl bg-white/5 border ${hasErr ? "border-red-500/50" : "border-white/10"} text-sm text-white outline-none focus:border-primary transition`;
+}
+
+// ─── Field wrapper ────────────────────────────────────────────────────────────
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+    return (
+        <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-400">{label}</label>
+            {children}
+            {error && <p className="text-xs text-red-400">{error}</p>}
+        </div>
+    );
+}
+
+// ─── Modal ───────────────────────────────────────────────────────────────────
+
+interface VoucherModalProps {
+    mode: "create" | "edit";
+    initial?: VoucherItem | null;
+    onClose: () => void;
+    onSaved: () => void;
+}
+
+function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
+    const dispatch = useDispatch<AppDispatch>();
+
+    const [form, setForm] = useState<VoucherFormData>(
+        initial ? voucherToForm(initial) : { ...EMPTY_FORM }
+    );
+    const [errors, setErrors] = useState<FormErrors>({});
+    const [saving, setSaving] = useState(false);
+
+    const [eventOptions, setEventOptions] = useState<{ id: string; title: string }[]>([]);
+    const [eventsLoading, setEventsLoading] = useState(false);
+
+    useEffect(() => {
+        if (mode !== "create") return;
+        setEventsLoading(true);
+        dispatch(fetchAllEventsByMe({ PageSize: 100, PageNumber: 1 }))
+            .unwrap()
+            .then((res: GetAllCreateResponseForPrivate) => {
+                setEventOptions(res.items.map((e) => ({ id: e.id, title: e.title })));
+            })
+            .catch(() => notify.error("Không thể tải danh sách sự kiện"))
+            .finally(() => setEventsLoading(false));
+    }, []);
+
+    const update = <K extends keyof VoucherFormData>(k: K, v: VoucherFormData[K]) =>
+        setForm(prev => ({ ...prev, [k]: v }));
+
+    const handleSubmit = async () => {
+        const errs = validateVoucherForm(form, mode === "create");
+        setErrors(errs);
+        if (Object.keys(errs).length > 0) return;
+
+        setSaving(true);
+        try {
+            if (mode === "create") {
+                const payload: CreateVoucherRequest = {
+                    couponCode: form.couponCode.trim(),
+                    type: form.type,
+                    value: Number(form.value),
+                    maxUse: Number(form.maxUse),
+                    startDate: new Date(form.startDate).toISOString(),
+                    endDate: new Date(form.endDate).toISOString(),
+                    eventId: form.eventId.trim(),
+                };
+                await dispatch(fetchCreateVoucher(payload)).unwrap();
+                notify.success("Tạo voucher thành công");
+            } else {
+                const payload: UpdateVoucherRequest = {
+                    couponCode: form.couponCode.trim(),
+                    type: form.type,
+                    value: Number(form.value),
+                    maxUse: Number(form.maxUse),
+                    startDate: new Date(form.startDate).toISOString(),
+                    endDate: new Date(form.endDate).toISOString(),
+                };
+                await dispatch(fetchUpdateVoucher({ voucherId: initial!.id, data: payload })).unwrap();
+                notify.success("Cập nhật voucher thành công");
+            }
+            onSaved();
+            onClose();
+        } catch (err: any) {
+            const msg = typeof err === "string" ? err : err?.message ?? "";
+            if (msg.toLowerCase().includes("used")) {
+                notify.error("Voucher đã được sử dụng, không thể chỉnh sửa");
+            } else if (msg.toLowerCase().includes("exist") || msg.toLowerCase().includes("duplicate")) {
+                notify.error("Mã voucher đã tồn tại, vui lòng chọn mã khác");
+                setErrors(prev => ({ ...prev, couponCode: "Mã đã tồn tại" }));
+            } else {
+                notify.error(mode === "create" ? "Không thể tạo voucher" : "Không thể cập nhật voucher");
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-2xl bg-gradient-to-b from-[#1a1233] to-[#0d0a1a] border border-white/10 shadow-2xl">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                    <h3 className="text-lg font-semibold text-white">
+                        {mode === "create" ? "Tạo voucher mới" : "Chỉnh sửa voucher"}
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white transition">
+                        <FiX size={18} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                    {/* eventId dropdown — chỉ hiện khi create */}
+                    {mode === "create" && (
+                        <Field label="Sự kiện *" error={errors.eventId}>
+                            <select
+                                value={form.eventId}
+                                onChange={e => update("eventId", e.target.value)}
+                                disabled={eventsLoading}
+                                className={`${inputCls(!!errors.eventId)} [&>option]:bg-[#1a1233] [&>option]:text-white`}
+                            >
+                                <option value="">
+                                    {eventsLoading ? "Đang tải..." : "-- Chọn sự kiện --"}
+                                </option>
+                                {eventOptions.map(ev => (
+                                    <option key={ev.id} value={ev.id}>
+                                        {ev.title}
+                                    </option>
+                                ))}
+                            </select>
+                        </Field>
+                    )}
+
+                    {/* couponCode */}
+                    <Field label="Mã voucher *" error={errors.couponCode}>
+                        <input
+                            value={form.couponCode}
+                            onChange={e => update("couponCode", e.target.value.toUpperCase())}
+                            placeholder="VD: SUMMER2026"
+                            className={inputCls(!!errors.couponCode)}
+                        />
+                    </Field>
+
+                    {/* type + value */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <Field label="Loại giảm giá *">
+                            <select
+                                value={form.type}
+                                onChange={e => update("type", e.target.value as VoucherFormData["type"])}
+                                className={`${inputCls(false)} [&>option]:bg-[#1a1233] [&>option]:text-white`}
+                            >
+                                <option value="Percentage">Phần trăm (%)</option>
+                                <option value="Fixed">Số tiền cố định</option>
+                            </select>
+                        </Field>
+                        <Field
+                            label={`Giá trị * ${form.type === "Percentage" ? "(%)" : "(VNĐ)"}`}
+                            error={errors.value}
+                        >
+                            <input
+                                type="number"
+                                min={0}
+                                value={form.value}
+                                onChange={e => update("value", e.target.value)}
+                                placeholder="0"
+                                className={inputCls(!!errors.value)}
+                            />
+                        </Field>
+                    </div>
+
+                    {/* maxUse */}
+                    <Field label="Số lượng tối đa (0 = không giới hạn) *" error={errors.maxUse}>
+                        <input
+                            type="number"
+                            min={0}
+                            value={form.maxUse}
+                            onChange={e => update("maxUse", e.target.value)}
+                            placeholder="0"
+                            className={inputCls(!!errors.maxUse)}
+                        />
+                    </Field>
+
+                    {/* startDate + endDate dùng DateTimeInput */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <DateTimeInput
+                                label="Ngày bắt đầu"
+                                required
+                                value={form.startDate}
+                                onChange={(v: any) => update("startDate", v)}
+                            />
+                            {errors.startDate && (
+                                <p className="text-xs text-red-400 mt-1">{errors.startDate}</p>
+                            )}
+                        </div>
+                        <div>
+                            <DateTimeInput
+                                label="Ngày kết thúc"
+                                required
+                                value={form.endDate}
+                                onChange={(v: any) => update("endDate", v)}
+                            />
+                            {errors.endDate && (
+                                <p className="text-xs text-red-400 mt-1">{errors.endDate}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
+                    <button
+                        onClick={onClose}
+                        className="px-5 py-2 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 text-sm transition"
+                    >
+                        Hủy
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={saving}
+                        className="px-6 py-2 rounded-xl bg-primary text-white font-semibold text-sm shadow-lg shadow-primary/30 disabled:opacity-60 flex items-center gap-2"
+                    >
+                        {saving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                        {saving ? "Đang lưu..." : mode === "create" ? "Tạo voucher" : "Lưu thay đổi"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Delete confirm ───────────────────────────────────────────────────────────
+
+function DeleteConfirm({ voucher, onClose, onDeleted }: {
+    voucher: VoucherItem;
+    onClose: () => void;
+    onDeleted: () => void;
+}) {
+    const dispatch = useDispatch<AppDispatch>();
+    const [loading, setLoading] = useState(false);
+
+    const handleDelete = async () => {
+        setLoading(true);
+        try {
+            await dispatch(fetchDeleteVoucher(voucher.id)).unwrap();
+            notify.success("Đã xóa voucher thành công");
+            onDeleted();
+            onClose();
+        } catch (err: any) {
+            const msg = typeof err === "string" ? err : err?.message ?? "";
+            if (msg.toLowerCase().includes("used")) {
+                notify.error("Voucher đã được sử dụng, không thể xóa");
+            } else {
+                notify.error("Không thể xóa voucher");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl bg-gradient-to-b from-[#1a1233] to-[#0d0a1a] border border-white/10 shadow-2xl p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-white">Xác nhận xóa</h3>
+                <p className="text-sm text-slate-400">
+                    Bạn có chắc muốn xóa voucher{" "}
+                    <span className="text-primary font-semibold">{voucher.couponCode}</span>?
+                    Hành động này không thể hoàn tác.
+                </p>
+                <div className="flex justify-end gap-3">
+                    <button
+                        onClick={onClose}
+                        className="px-5 py-2 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 text-sm transition"
+                    >
+                        Hủy
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        disabled={loading}
+                        className="px-5 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm disabled:opacity-60 flex items-center gap-2"
+                    >
+                        {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                        {loading ? "Đang xóa..." : "Xóa"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function VoucherManagementPage() {
+    const dispatch = useDispatch<AppDispatch>();
+    const { vouchers, loading } = useSelector((s: RootState) => s.VOUCHER);
+
+    const [search, setSearch] = useState("");
+    const [filterStatus, setFilterStatus] = useState<"all" | "running" | "expired" | "maxed">("all");
+    const [showFilter, setShowFilter] = useState(false);
+
+    const [createOpen, setCreateOpen] = useState(false);
+    const [editTarget, setEditTarget] = useState<VoucherItem | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<VoucherItem | null>(null);
+
+    const load = () => {
+        dispatch(fetchGetVouchers({}));
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const items: VoucherItem[] = vouchers?.items ?? [];
+
+    const filtered = items.filter((v) => {
+        const matchSearch = v.couponCode.toLowerCase().includes(search.toLowerCase());
+        const status = deriveStatus(v);
+        const matchFilter = filterStatus === "all" || status === filterStatus;
+        return matchSearch && matchFilter;
+    });
+
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">
+                    <h1 className="text-2xl font-bold text-white flex items-center gap-3">
                         Quản lý mã giảm giá
-                        <span className="ml-3 text-xs px-3 py-1 rounded-full bg-primary/20 text-primary">
-                            Hoạt động
+                        <span className="text-xs px-3 py-1 rounded-full bg-primary/20 text-primary">
+                            {items.length} voucher
                         </span>
                     </h1>
                 </div>
-
                 <button
-                    className="
-                        bg-primary hover:bg-primary/90
-                        text-white px-5 py-2.5 rounded-full
-                        font-semibold flex items-center gap-2
-                        shadow-lg shadow-primary/30
-                    "
+                    onClick={() => setCreateOpen(true)}
+                    className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 transition"
                 >
-                    + Tạo Voucher mới
+                    <FiPlus size={15} />
+                    Tạo Voucher mới
                 </button>
             </div>
 
             {/* Search + Filter */}
-            <div className="flex items-center gap-4">
-                <input
-                    placeholder="Tìm kiếm voucher theo mã hoặc chương trình..."
-                    className="
-                        flex-1
-                        px-4 py-2 rounded-xl
-                        bg-black/30 border border-white/10
-                        text-sm text-white
-                        placeholder:text-slate-500
-                        outline-none
-                    "
-                />
-
-                <button className="px-4 py-2 rounded-xl bg-white/5 text-slate-300 hover:bg-white/10 transition">
-                    Bộ lọc
-                </button>
+            <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                    <FiSearch size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Tìm kiếm theo mã voucher..."
+                        className="w-full pl-10 pr-4 py-2 rounded-xl bg-black/30 border border-white/10 text-sm text-white placeholder:text-slate-500 outline-none focus:border-primary transition"
+                    />
+                </div>
+                <div className="relative">
+                    <button
+                        onClick={() => setShowFilter(p => !p)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm transition ${showFilter ? "bg-primary/20 border-primary/40 text-primary" : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"}`}
+                    >
+                        <FiSliders size={14} />
+                        Bộ lọc
+                    </button>
+                    {showFilter && (
+                        <div className="absolute right-0 top-11 z-20 w-44 rounded-xl bg-[#1a1233] border border-white/10 shadow-xl overflow-hidden">
+                            {(["all", "running", "expired", "maxed"] as const).map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => { setFilterStatus(s); setShowFilter(false); }}
+                                    className={`w-full text-left px-4 py-2.5 text-sm transition hover:bg-white/5 ${filterStatus === s ? "text-primary" : "text-slate-300"}`}
+                                >
+                                    {s === "all" ? "Tất cả" : STATUS_LABEL[s]}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <VouchersTable />
+            {/* Table */}
+            <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 overflow-hidden">
+                <div className="px-6 py-4 text-sm text-slate-400">
+                    Đang hiển thị{" "}
+                    <span className="text-primary">{filtered.length}</span> mã giảm giá
+                    {filterStatus !== "all" && (
+                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-white/5 text-slate-500">
+                            lọc: {STATUS_LABEL[filterStatus]}
+                        </span>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1.2fr_100px] px-6 py-3 text-xs font-semibold tracking-widest text-slate-400 uppercase border-t border-white/5">
+                    <div>Mã voucher</div>
+                    <div>Loại</div>
+                    <div>Giảm giá</div>
+                    <div>Số lượng</div>
+                    <div>Đã dùng</div>
+                    <div>Trạng thái</div>
+                    <div className="text-center">Thao tác</div>
+                </div>
+
+                <div className="divide-y divide-white/5">
+                    {loading && (
+                        <div className="flex items-center justify-center gap-2 py-12 text-slate-500 text-sm">
+                            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                            Đang tải...
+                        </div>
+                    )}
+
+                    {!loading && filtered.length === 0 && (
+                        <div className="py-12 text-center text-slate-500 text-sm">
+                            Không tìm thấy voucher nào
+                        </div>
+                    )}
+
+                    {!loading && filtered.map((v) => {
+                        const status = deriveStatus(v);
+                        return (
+                            <div
+                                key={v.id}
+                                className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1.2fr_100px] px-6 py-4 items-center hover:bg-white/5 transition"
+                            >
+                                <div>
+                                    <p className="text-primary font-semibold text-sm">{v.couponCode}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {formatDate(v.startDate)} – {formatDate(v.endDate)}
+                                    </p>
+                                </div>
+                                <span className="text-slate-400 text-sm">
+                                    {v.type === "Percentage" ? "Phần trăm" : "Cố định"}
+                                </span>
+                                <span className="text-white font-semibold text-sm">
+                                    {v.type === "Percentage" ? `${v.value}%` : `${v.value.toLocaleString("vi-VN")}đ`}
+                                </span>
+                                <span className="text-slate-300 text-sm">
+                                    {v.maxUse === 0 ? "∞" : v.maxUse}
+                                </span>
+                                <span className="text-slate-300 text-sm">{v.totalUse}</span>
+                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium w-fit ${STATUS_STYLE[status]}`}>
+                                    {STATUS_LABEL[status]}
+                                </span>
+                                <div className="flex items-center justify-center gap-2">
+                                    <button
+                                        onClick={() => setEditTarget(v)}
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition"
+                                        title="Chỉnh sửa"
+                                    >
+                                        <FiEdit2 size={13} />
+                                    </button>
+                                    <button
+                                        onClick={() => setDeleteTarget(v)}
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition"
+                                        title="Xóa"
+                                    >
+                                        <FiTrash2 size={13} />
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Modals */}
+            {createOpen && (
+                <VoucherModal
+                    mode="create"
+                    onClose={() => setCreateOpen(false)}
+                    onSaved={load}
+                />
+            )}
+
+            {editTarget && (
+                <VoucherModal
+                    mode="edit"
+                    initial={editTarget}
+                    onClose={() => setEditTarget(null)}
+                    onSaved={load}
+                />
+            )}
+
+            {deleteTarget && (
+                <DeleteConfirm
+                    voucher={deleteTarget}
+                    onClose={() => setDeleteTarget(null)}
+                    onDeleted={load}
+                />
+            )}
         </div>
     );
 }
