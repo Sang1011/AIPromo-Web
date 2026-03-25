@@ -1,4 +1,5 @@
 export interface CreatePendingOrderRequest {
+    eventId: string,
     tickets: TicketRequest[];
 }
 
