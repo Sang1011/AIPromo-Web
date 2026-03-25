@@ -28,7 +28,7 @@ export const fetchWalletUser = createAsyncThunk<WalletUserResponse, number>(
 
 
 export const fetchToUpWallet = createAsyncThunk<
-    WalletUserResponse,
+    ToUpWalletResponse,
     ToUpWalletResquest
 >(
     `${name}/fetchToUpWallet`,
