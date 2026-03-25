@@ -11,7 +11,6 @@ import ticketingReducer from "./ticketingSlice";
 import walletReducer from "./walletSlice"
 import orderReducer from "./orderSlice"
 import paymentReducer from "./paymentSlice"
-
 import voucherReducer from "./voucherSlice"
 import userReducer from "./userSlice";
 
@@ -29,8 +28,7 @@ const store = configureStore({
         WALLET: walletReducer,
         ORDER: orderReducer,
         PAYMENT: paymentReducer,
-        VOUCHER: voucherReducer
-        TICKETING: ticketingReducer,
+        VOUCHER: voucherReducer,
         USER: userReducer,
     }
 })
