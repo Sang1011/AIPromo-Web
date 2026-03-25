@@ -18,7 +18,7 @@ const organizerProfileService = {
         return interceptorAPI().patch("/organizers/bank", data);
     },
     createProfile:(data: CreateProfileOrganizerRequest): Promise<AxiosResponse<any>>=>{
-        return interceptorAPI().post("organizers/profile/full",data)
+        return interceptorAPI().post("organizer/profile/start-or-update",data)
     },
     verifyProfile :(): Promise<AxiosResponse<any>>=>{
         return interceptorAPI().post(`/organizers/submit`)
