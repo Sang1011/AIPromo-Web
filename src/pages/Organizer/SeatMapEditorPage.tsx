@@ -544,7 +544,7 @@ const SeatMapEditorPage: React.FC = () => {
             const newTicketType = ticketTypes.find(t => t.id === value);
             setSections(prev => prev.map(s =>
                 s.id === selectedSection.id
-                    ? { ...s, ticketTypeId: value, fill: newTicketType?.color ?? s.fill, name: newTicketType?.name ?? s.name }
+                    ? { ...s, ticketTypeId: value, fill: newTicketType?.color ?? s.fill, name: newTicketType?.name ?? s.name, price: newTicketType?.price ?? s.price }
                     : s
             ));
             saveToHistory();
@@ -1966,7 +1966,7 @@ const SeatMapEditorPage: React.FC = () => {
                     >
                         {seatMapLoading ? 'Đang lưu...' : 'Lưu sơ đồ'}
                     </button>
-                    {/* <button
+                    <button
                         onClick={() => {
                             const data = serializeSeatMap();
                             console.log('=== SPEC ===');
@@ -1984,7 +1984,7 @@ const SeatMapEditorPage: React.FC = () => {
                         }}
                     >
                         Log spec
-                    </button> */}
+                    </button>
                 </div>
             </div>
 
