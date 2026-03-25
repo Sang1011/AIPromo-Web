@@ -44,8 +44,7 @@ export interface UpdateOrganizerBankRequest {
 
 // request để tạo tổ chức
 export interface CreateProfileOrganizerRequest {
-  type: string;
-  businessInfo: {
+    type: string;
     logo: string | null;
     displayName: string;
     description: string;
@@ -55,11 +54,8 @@ export interface CreateProfileOrganizerRequest {
     taxCode: string;
     identityNumber: string;
     companyName: string;
-  };
-  bankInfo: {
     accountName: string;
     accountNumber: string;
     bankCode: string;
     branch: string;
-  };
 }
