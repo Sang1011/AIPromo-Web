@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { FiEdit2, FiPlus, FiSearch, FiSliders, FiTrash2, FiX } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
-import type { CreateVoucherRequest, UpdateVoucherRequest, VoucherItem } from "../../types/voucher/voucher";
-import type { AppDispatch, RootState } from "../../store";
-import { fetchAllEventsByMe } from "../../store/eventSlice";
-import { notify } from "../../utils/notify";
-import type { GetAllCreateResponseForPrivate } from "../../types/event/event";
-import { fetchCreateVoucher, fetchDeleteVoucher, fetchGetVouchers, fetchUpdateVoucher } from "../../store/voucherSlice";
+import { useParams } from "react-router-dom";
 import DateTimeInput from "../../components/Organizer/shared/DateTimeInput";
+import Pagination from "../../components/Organizer/shared/Pagination";
+import type { AppDispatch, RootState } from "../../store";
+import { fetchCreateVoucher, fetchDeleteVoucher, fetchGetVouchers, fetchUpdateVoucher } from "../../store/voucherSlice";
+import type { CreateVoucherRequest, UpdateVoucherRequest, VoucherItem } from "../../types/voucher/voucher";
+import { notify } from "../../utils/notify";
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string) {
@@ -83,7 +83,7 @@ const EMPTY_FORM: VoucherFormData = {
     couponCode: "",
     type: "Percentage",
     value: "",
-    maxUse: "0",
+    maxUse: "1",
     startDate: "",
     endDate: "",
     eventId: "",
@@ -124,9 +124,11 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 interface VoucherModalProps {
     mode: "create" | "edit";
     initial?: VoucherItem | null;
+    eventId?: string;
     onClose: () => void;
     onSaved: () => void;
 }
+
 
 function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
     const dispatch = useDispatch<AppDispatch>();
@@ -137,23 +139,43 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
     const [errors, setErrors] = useState<FormErrors>({});
     const [saving, setSaving] = useState(false);
 
-    const [eventOptions, setEventOptions] = useState<{ id: string; title: string }[]>([]);
-    const [eventsLoading, setEventsLoading] = useState(false);
+    // Format số thành chuỗi có dấu chấm ngăn cách hàng nghìn
+    const formatRaw = (num: string) => num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
-    useEffect(() => {
-        if (mode !== "create") return;
-        setEventsLoading(true);
-        dispatch(fetchAllEventsByMe({ PageSize: 100, PageNumber: 1 }))
-            .unwrap()
-            .then((res: GetAllCreateResponseForPrivate) => {
-                setEventOptions(res.items.map((e) => ({ id: e.id, title: e.title })));
-            })
-            .catch(() => notify.error("Không thể tải danh sách sự kiện"))
-            .finally(() => setEventsLoading(false));
-    }, []);
+
+    const [displayValue, setDisplayValue] = useState<string>(() => {
+        if (!form.value) return "";
+        if (form.type === "Fixed") return formatRaw(form.value);
+        return form.value;
+    });
 
     const update = <K extends keyof VoucherFormData>(k: K, v: VoucherFormData[K]) =>
         setForm(prev => ({ ...prev, [k]: v }));
+
+    const handleTypeChange = (newType: VoucherFormData["type"]) => {
+        update("type", newType);
+        if (newType === "Percentage") {
+            if (Number(displayValue) > 100) {
+                setDisplayValue("100");
+            } else {
+                setDisplayValue(form.value);
+
+            }
+        } else {
+            setDisplayValue(form.value ? formatRaw(form.value) : "");
+        }
+    };
+
+    const handleValueChange = (raw: string) => {
+        // Chỉ cho nhập số
+        const digitsOnly = raw.replace(/\D/g, "");
+        update("value", digitsOnly);
+        if (form.type === "Fixed") {
+            setDisplayValue(formatRaw(digitsOnly));
+        } else {
+            setDisplayValue(digitsOnly);
+        }
+    };
 
     const handleSubmit = async () => {
         const errs = validateVoucherForm(form, mode === "create");
@@ -181,7 +203,7 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
                     value: Number(form.value),
                     maxUse: Number(form.maxUse),
                     startDate: new Date(form.startDate).toISOString(),
-                    endDate: new Date(form.endDate).toISOString(),
+                    endDate: new Date(form.endDate).toISOString()
                 };
                 await dispatch(fetchUpdateVoucher({ voucherId: initial!.id, data: payload })).unwrap();
                 notify.success("Cập nhật voucher thành công");
@@ -219,26 +241,6 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
                 {/* Body */}
                 <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
-                    {/* eventId dropdown — chỉ hiện khi create */}
-                    {mode === "create" && (
-                        <Field label="Sự kiện *" error={errors.eventId}>
-                            <select
-                                value={form.eventId}
-                                onChange={e => update("eventId", e.target.value)}
-                                disabled={eventsLoading}
-                                className={`${inputCls(!!errors.eventId)} [&>option]:bg-[#1a1233] [&>option]:text-white`}
-                            >
-                                <option value="">
-                                    {eventsLoading ? "Đang tải..." : "-- Chọn sự kiện --"}
-                                </option>
-                                {eventOptions.map(ev => (
-                                    <option key={ev.id} value={ev.id}>
-                                        {ev.title}
-                                    </option>
-                                ))}
-                            </select>
-                        </Field>
-                    )}
 
                     {/* couponCode */}
                     <Field label="Mã voucher *" error={errors.couponCode}>
@@ -255,7 +257,7 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
                         <Field label="Loại giảm giá *">
                             <select
                                 value={form.type}
-                                onChange={e => update("type", e.target.value as VoucherFormData["type"])}
+                                onChange={e => handleTypeChange(e.target.value as VoucherFormData["type"])}
                                 className={`${inputCls(false)} [&>option]:bg-[#1a1233] [&>option]:text-white`}
                             >
                                 <option value="Percentage">Phần trăm (%)</option>
@@ -267,24 +269,25 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
                             error={errors.value}
                         >
                             <input
-                                type="number"
-                                min={0}
-                                value={form.value}
-                                onChange={e => update("value", e.target.value)}
-                                placeholder="0"
+                                max={form.type === "Percentage" ? 100 : undefined}
+                                type="text"
+                                inputMode="numeric"
+                                value={displayValue}
+                                onChange={e => handleValueChange(e.target.value)}
+                                placeholder={form.type === "Fixed" ? "0" : "0"}
                                 className={inputCls(!!errors.value)}
                             />
                         </Field>
                     </div>
 
                     {/* maxUse */}
-                    <Field label="Số lượng tối đa (0 = không giới hạn) *" error={errors.maxUse}>
+                    <Field label="Số lượng tối đa *" error={errors.maxUse}>
                         <input
                             type="number"
-                            min={0}
+                            min={1}
                             value={form.maxUse}
                             onChange={e => update("maxUse", e.target.value)}
-                            placeholder="0"
+                            placeholder="1"
                             className={inputCls(!!errors.maxUse)}
                         />
                     </Field>
@@ -402,20 +405,24 @@ function DeleteConfirm({ voucher, onClose, onDeleted }: {
 export default function VoucherManagementPage() {
     const dispatch = useDispatch<AppDispatch>();
     const { vouchers, loading } = useSelector((s: RootState) => s.VOUCHER);
-
+    const [currentPage, setCurrentPage] = useState(1);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<"all" | "running" | "expired" | "maxed">("all");
     const [showFilter, setShowFilter] = useState(false);
-
+    const { eventId } = useParams<{ eventId: string }>();
     const [createOpen, setCreateOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<VoucherItem | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<VoucherItem | null>(null);
 
-    const load = () => {
-        dispatch(fetchGetVouchers({}));
+    const load = (page = 1) => {
+        dispatch(fetchGetVouchers({
+            PageNumber: page,
+            PageSize: 10,
+            EventId: eventId
+        }));
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(currentPage); }, [currentPage, eventId]);
 
     const items: VoucherItem[] = vouchers?.items ?? [];
 
@@ -564,12 +571,18 @@ export default function VoucherManagementPage() {
                         );
                     })}
                 </div>
+                <Pagination
+                    currentPage={vouchers?.pageNumber ?? 1}
+                    totalPages={vouchers?.totalPages ?? 1}
+                    onPageChange={(page) => setCurrentPage(page)}
+                />
             </div>
 
             {/* Modals */}
             {createOpen && (
                 <VoucherModal
                     mode="create"
+                    eventId={eventId}
                     onClose={() => setCreateOpen(false)}
                     onSaved={load}
                 />

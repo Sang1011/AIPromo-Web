@@ -19,7 +19,15 @@ const voucherService = {
     getVouchers: (
         params?: GetVouchersParams
     ): Promise<AxiosResponse<GetVouchersListResponse>> => {
-        return interceptorAPI().get("/ticketing/vouchers", { params });
+        const cleanParams = params
+            ? Object.fromEntries(
+                Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+            )
+            : undefined;
+        console.log("cleanParams:", cleanParams);
+        return interceptorAPI().get("/ticketing/vouchers", {
+            ...(cleanParams && Object.keys(cleanParams).length > 0 && { params: cleanParams }),
+        });
     },
 
     getVoucherById: (
