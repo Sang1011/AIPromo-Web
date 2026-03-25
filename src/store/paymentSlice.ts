@@ -3,6 +3,7 @@ import type {  PaymentHistoryParamsRequest, PaymentMyOrderResponse, PaymentOrder
 import paymentService from "../services/paymentService";
 
 
+
 const name = "payment";
 
 interface PaymentState {
@@ -54,9 +55,8 @@ const paymentSlice = createSlice({
     extraReducers: (builder) => {
       builder.addCase(fetchPaymentOrder.fulfilled, (state, action: PayloadAction<any>) => {
            const response = action.payload;
-           if (response?.isSuccess) {
-               state.paymentOrder = response.data;
-           }
+           state.paymentOrder = response.data;
+           
       });
           builder.addCase(fetchPaymentMyAllOrder.fulfilled, (state, action: PayloadAction<any>) => {
            const response = action.payload;
