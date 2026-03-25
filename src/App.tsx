@@ -45,6 +45,7 @@ import ProfileLayout from "./pages/User";
 import OrganizerAccountPage from "./pages/Organizer/OrganizerAccountPage";
 import VerifyOrganizer from "./pages/Organizer/VerifyOrganizer";
 import PaymentTicket from "./components/Payment";
+import EventUser from "./pages/User/EventUser";
 
 
 function App() {
@@ -74,6 +75,7 @@ function App() {
         <Route path="/verify-organizer" element={<VerifyOrganizer />} />
         <Route path="/profile" element={<ProfileLayout />}>
           <Route path="account" element={<ProfileUser />} />
+          <Route path="events" element={<EventUser />} />
         </Route>
 
         {/* Organizer */}

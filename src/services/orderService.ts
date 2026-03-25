@@ -7,7 +7,7 @@ const orderService = {
     return interceptorAPI().get(`/ticketing/${orderId}`)
    },
    getAllOrder: (data: GetAllOrderRequest): Promise<AxiosResponse<GetAllOrderResponse>>=>{
-       return interceptorAPI().get("/ticketing", {
+       return interceptorAPI().get("/ticketing/orders/me", {
             params: data
         })
    }
