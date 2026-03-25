@@ -1080,16 +1080,20 @@ const SeatMapViewerPage: React.FC = () => {
             }));
         }
 
-        const request: CreatePendingOrderRequest = { tickets };
-
+         const request: CreatePendingOrderRequest = {
+            eventId: eventId!,
+            tickets: tickets
+            };
+        
         console.log('=== CreatePendingOrderRequest ===');
         console.log(JSON.stringify(request, null, 2));
 
         const result = await dispatch(fetchCreatePendingOrder(request));
 
+        
         if (fetchCreatePendingOrder.fulfilled.match(result)) {
             const orderId = result.payload.data;
-            console.log(orderId);
+     
             await clearOldOrderFromFirebase();
             localStorage.setItem("currentOrderId", orderId);
             navigate(`/event-detail/${eventId}/payment`);
