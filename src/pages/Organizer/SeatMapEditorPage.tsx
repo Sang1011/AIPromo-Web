@@ -214,7 +214,7 @@ const SeatMapEditorPage: React.FC = () => {
         const idMap = new Map<string, string>();
 
         clipboard.forEach(entity => {
-            const newId = `${entity.id}-copy-${Date.now()}-${Math.random()}`;
+            const newId = crypto.randomUUID();
             idMap.set(entity.id, newId);
 
             const isSection = 'ticketTypeId' in entity;
@@ -304,10 +304,6 @@ const SeatMapEditorPage: React.FC = () => {
                 if (dragStartPosRef.current[t.id]) {
                     return { ...t, x: snapToGrid(t.x), y: snapToGrid(t.y) };
                 }
-                const delta = sectionDeltas[t.attachedAreaId ?? ''];
-                if (delta) {
-                    return { ...t, x: snapToGrid(t.x + delta.dx), y: snapToGrid(t.y + delta.dy) };
-                }
                 return t;
             })
         );
@@ -318,6 +314,35 @@ const SeatMapEditorPage: React.FC = () => {
         groupDragAnchorRef.current = null;
         saveToHistory();
     }, [saveToHistory]);
+
+    const serializeSeatMap = (): SeatMapData => ({
+        areas: sections.map(area => ({
+            ...area,
+            x: Math.round(area.x),
+            y: Math.round(area.y),
+            width: Math.round(area.width),
+            height: Math.round(area.height),
+            rotation: Math.round(area.rotation),
+            seats: seats
+                .filter(seat => seat.sectionId === area.id)
+                .map(seat => ({
+                    ...seat,
+                    x: Math.round(seat.x),
+                    y: Math.round(seat.y),
+                    width: Math.round(seat.width),
+                    height: Math.round(seat.height),
+                    rotation: Math.round(seat.rotation),
+                })),
+        })),
+        texts: textEntities.map(t => ({
+            ...t,
+            x: Math.round(t.x),
+            y: Math.round(t.y),
+            width: Math.round(t.width),
+            height: Math.round(t.height),
+            rotation: Math.round(t.rotation),
+        })),
+    });
 
     const handleDragEnd = useCallback(
         (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
@@ -426,8 +451,10 @@ const SeatMapEditorPage: React.FC = () => {
                             ...t,
                             x: area.x,
                             y: area.y,
-                            width: area.width,
-                            height: area.height,
+                            width: Math.round(area.width),
+                            height: Math.round(area.height),
+                            rotation: Math.round(area.rotation),
+                            labelFontSize: Math.round(Math.max(10, (t as any).labelFontSize * scale || 14)),
                         }
                         : t
                 )
@@ -623,7 +650,7 @@ const SeatMapEditorPage: React.FC = () => {
 
         rowLabels.forEach((row, rowIndex) => {
             for (let i = 0; i < gridColumns; i++) {
-                const newId = `seat-${selectedSection.id}-${row}-${i + 1}-${Date.now()}-${rowIndex}-${i}`;
+                const newId = crypto.randomUUID();
                 newSeatIds.push(newId);
 
                 newSeats.push({
@@ -682,7 +709,7 @@ const SeatMapEditorPage: React.FC = () => {
             const angle = angleDeg * Math.PI / 180;
             const x = centerX + radius * Math.cos(angle) - seatSize / 2;
             const y = centerY + radius * Math.sin(angle) - seatSize / 2;
-            const newId = `seat-${selectedSection.id}-arc-${i}-${Date.now()}`;
+            const newId = crypto.randomUUID();
             newSeatIds.push(newId);
 
             newSeats.push({
@@ -760,7 +787,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let rowIndex = 0; rowIndex < rows && count < total; rowIndex++) {
                 const row = String.fromCharCode(65 + (rowIndex % 26));
                 for (let i = 0; i < cols && count < total; i++) {
-                    const newId = `seat-${selectedSection.id}-custom-${Date.now()}-${rowIndex}-${i}`;
+                    const newId = crypto.randomUUID();
                     newSeatIds.push(newId);
                     newSeats.push({
                         id: newId,
@@ -795,7 +822,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let i = 0; i < total; i++) {
                 const angleDeg = startAngle + i * angleStep;
                 const angle = angleDeg * Math.PI / 180;
-                const newId = `seat-${selectedSection.id}-custom-arc-${Date.now()}-${i}`;
+                const newId = crypto.randomUUID();
                 newSeatIds.push(newId);
                 newSeats.push({
                     id: newId,
@@ -845,7 +872,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let rowIndex = 0; rowIndex < rows && count < total; rowIndex++) {
                 const row = String.fromCharCode(65 + (rowIndex % 26));
                 for (let i = 0; i < cols && count < total; i++) {
-                    const newId = `seat-${selectedSection.id}-${row}-${i + 1}-${Date.now()}-${rowIndex}-${i}`;
+                    const newId = crypto.randomUUID();
                     newSeatIds.push(newId);
                     newSeats.push({
                         id: newId,
@@ -880,7 +907,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let i = 0; i < total; i++) {
                 const angleDeg = startAngle + i * angleStep;
                 const angle = angleDeg * Math.PI / 180;
-                const newId = `seat-${selectedSection.id}-arc-${i}-${Date.now()}`;
+                const newId = crypto.randomUUID();
                 newSeatIds.push(newId);
                 newSeats.push({
                     id: newId,
@@ -1439,14 +1466,16 @@ const SeatMapEditorPage: React.FC = () => {
 
     useEffect(() => {
         if (!eventId) return;
-        dispatch(fetchGetAllTicketTypes({ eventId }))
+        const sessionId = currentEvent?.sessions?.[0]?.id;
+        if (!sessionId) return;
+        dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId: sessionId }))
             .finally(() => {
                 ticketTypesFetchedRef.current = true;
                 if (reduxTicketTypes.length === 0) {
                     navigate(`/organizer/my-events/${eventId}/edit`);
                 }
             });
-    }, [eventId]);
+    }, [eventId, currentEvent]);
 
     useEffect(() => {
         if (reduxTicketTypes.length === 0) return;
@@ -1888,18 +1917,10 @@ const SeatMapEditorPage: React.FC = () => {
                                 validation.errors.forEach(err => notify.error(err.message));
                                 return;
                             }
-                            const data: SeatMapData = {
-                                areas: sections.map(area => ({
-                                    ...area,
-                                    seats: seats.filter(seat => seat.sectionId === area.id),
-                                })),
-                                texts: textEntities,
-                            };
-
+                            const data = serializeSeatMap();
                             const spec = JSON.stringify(data, null, 2);
 
                             try {
-                                console.log(spec);
                                 await dispatch(fetchUpdateSeatMap({ eventId: eventId!, spec })).unwrap();
                                 await new Promise(resolve => setTimeout(resolve, 1000));
                                 const mappings = sections
@@ -1947,18 +1968,11 @@ const SeatMapEditorPage: React.FC = () => {
                     >
                         {seatMapLoading ? 'Đang lưu...' : 'Lưu sơ đồ'}
                     </button>
-                    <button
+                    {/* <button
                         onClick={() => {
-                            const data: SeatMapData = {
-                                areas: sections.map(area => ({
-                                    ...area,
-                                    seats: seats.filter(seat => seat.sectionId === area.id),
-                                })),
-                                texts: textEntities,
-                            };
-                            const spec = JSON.stringify(data, null, 2);
+                            const data = serializeSeatMap();
                             console.log('=== SPEC ===');
-                            console.log(spec);
+                            console.log(JSON.stringify(data, null, 2));
                         }}
                         style={{
                             background: 'transparent',
@@ -1972,7 +1986,7 @@ const SeatMapEditorPage: React.FC = () => {
                         }}
                     >
                         Log spec
-                    </button>
+                    </button> */}
                 </div>
             </div>
 
@@ -3503,66 +3517,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                 <option value="italic">Nghiêng</option>
                                                 <option value="bold italic">Đậm nghiêng</option>
                                             </select>
-                                        </div>
-
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label
-                                                style={{
-                                                    display: 'block',
-                                                    fontSize: '12px',
-                                                    fontWeight: 600,
-                                                    color: '#9ca3af',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.05em',
-                                                    marginBottom: '12px',
-                                                }}
-                                            >
-                                                GẮN VỚI KHU VỰC
-                                            </label>
-
-                                            <select
-                                                value={selectedText.attachedAreaId ?? ''}
-                                                onChange={(e) =>
-                                                    updateTextProperty(
-                                                        'attachedAreaId',
-                                                        e.target.value || undefined
-                                                    )
-                                                }
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#16162a',
-                                                    border: '1px solid #2a2a3e',
-                                                    borderRadius: '8px',
-                                                    padding: '10px 12px',
-                                                    color: '#e5e7eb',
-                                                    fontSize: '14px',
-                                                    outline: 'none',
-                                                    cursor: 'pointer',
-                                                    appearance: 'none',
-                                                    WebkitAppearance: 'none',
-                                                    MozAppearance: 'none',
-                                                }}
-                                            >
-                                                <option value="">Không gắn</option>
-                                                {sections.map(sec => (
-                                                    <option key={sec.id} value={sec.id}>
-                                                        {sec.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <span
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: '12px',
-                                                    top: '50%',
-                                                    transform: 'translateY(-50%)',
-                                                    pointerEvents: 'none',
-                                                    color: '#9ca3af',
-                                                    fontSize: '18px',
-                                                }}
-                                            >
-                                                ▾
-                                            </span>
                                         </div>
 
                                         <div style={{ marginBottom: '24px' }}>

@@ -66,8 +66,10 @@ function Login() {
               navigate("/organizer/my-events");
           } else if (roles.includes('Staff')) {
               navigate("/staff/event-approval");
-          } else {
-              navigate("/");
+          } else if(roles.includes('admin')) {
+              navigate("/admin");
+          }else{
+            navigate("/");
           }
           
         } else {

@@ -770,9 +770,9 @@ const ProfileUser: React.FC = () => {
                           </div>
                           <span
                             className="text-xs font-bold shrink-0 ml-2"
-                            style={{ color: tx.direction === "in" ? "#4ade80" : "#f87171" }}
+                            style={{ color: tx.direction === "In" ? "#4ade80" : "#f87171" }}
                           >
-                            {tx.direction === "in" ? "+" : "-"}{formatVND(tx.amount)}
+                            {tx.direction === "In" ? "+" : "-"}{formatVND(tx.amount)}
                           </span>
                         </div>
                       ))}

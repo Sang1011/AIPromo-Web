@@ -14,6 +14,7 @@ import type {
     UpdateTicketTypeRequest,
 } from "../../../types/ticketType/ticketType";
 import { notify } from "../../../utils/notify";
+import type { EventSession } from "../../../types/event/event";
 
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
@@ -92,8 +93,8 @@ function PriceInput({
             tabIndex={readOnly ? -1 : 0}
             onClick={() => !readOnly && inputRef.current?.focus()}
             className={`flex items-center rounded-xl bg-black/30 border px-4 py-2.5 transition-all ${readOnly
-                    ? "opacity-40 cursor-not-allowed"
-                    : "focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-white/8"
+                ? "opacity-40 cursor-not-allowed"
+                : "focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-white/8"
                 } ${hasError ? "border-red-500/60" : "border-white/8"}`}
         >
             <input
@@ -490,9 +491,10 @@ interface TicketTypeModalProps {
     onClose: () => void;
     eventId: string;
     isAllowUpdate?: boolean;
+    sessions: EventSession[]
 }
 
-export default function TicketTypeModal({ open, onClose, eventId, isAllowUpdate = true }: TicketTypeModalProps) {
+export default function TicketTypeModal({ open, onClose, eventId, isAllowUpdate = true, sessions }: TicketTypeModalProps) {
     const dispatch = useDispatch<AppDispatch>();
     const tickets = useSelector((state: RootState) => state.TICKET_TYPE.ticketTypes);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -505,7 +507,7 @@ export default function TicketTypeModal({ open, onClose, eventId, isAllowUpdate 
     const handleAdd = async (data: CreateTicketTypeRequest) => {
         try {
             await dispatch(fetchCreateTicketType({ eventId, data })).unwrap();
-            await dispatch(fetchGetAllTicketTypes({ eventId }));
+            await dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId: sessions[0].id }));
             notify.success("Đã thêm loại vé");
         } catch {
             notify.error("Không thể thêm loại vé");
