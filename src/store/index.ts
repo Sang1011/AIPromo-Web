@@ -9,6 +9,9 @@ import organizerProfileReducer from "./organizerProfileSlice";
 import seatMapReducer from "./seatMapSlice";
 import ticketingReducer from "./ticketingSlice";
 import walletReducer from "./walletSlice"
+import orderReducer from "./orderSlice"
+import paymentReducer from "./paymentSlice"
+
 
 const store = configureStore({
     reducer: {
@@ -22,6 +25,8 @@ const store = configureStore({
         SEATMAP: seatMapReducer,
         TICKETING: ticketingReducer,
         WALLET: walletReducer,
+        ORDER: orderReducer,
+        PAYMENT: paymentReducer,
     }
 })
 
