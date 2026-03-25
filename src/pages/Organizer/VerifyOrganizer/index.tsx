@@ -64,13 +64,33 @@ export default function VerifyOrganizer() {
     }
   };
 
+ const buildPayload = () => {
+  return {
+    type: formData.type,
+    logo: formData.businessInfo.logo,
+    displayName: formData.businessInfo.displayName,
+    description: formData.businessInfo.description,
+    address: formData.businessInfo.address,
+    socialLink: formData.businessInfo.socialLink,
+    businessType: formData.businessInfo.businessType,
+    taxCode: formData.businessInfo.taxCode,
+    identityNumber: formData.businessInfo.identityNumber,
+    companyName: formData.businessInfo.companyName,
+    accountName: formData.bankInfo.accountName,
+    accountNumber: formData.bankInfo.accountNumber,
+    bankCode: formData.bankInfo.bankCode,
+    branch: formData.bankInfo.branch,
+  };
+};
+
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
-      console.log("formData",formData);
+        const payload = buildPayload();
+   
       
       // 1. Gọi tạo Profile
-      const createAction = await dispatch(fetchCreateProfileOrganizer(formData));
+      const createAction = await dispatch(fetchCreateProfileOrganizer(payload));
       
       if (fetchCreateProfileOrganizer.fulfilled.match(createAction)) {
         // 2. Gọi xác minh Profile nếu bước 1 thành công
