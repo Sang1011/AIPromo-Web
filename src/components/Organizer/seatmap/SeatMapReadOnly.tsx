@@ -2,14 +2,26 @@
 import Konva from 'konva';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage } from 'react-konva';
-import type { Area, Seat, SeatMapData, TextEntity, TicketType } from '../../../types/config/seatmap';
+import type { Area, Seat, SeatMapData, TextEntity } from '../../../types/config/seatmap';
+import type { TicketTypeItem } from '../../../types/ticketType/ticketType';
 
 const CANVAS_WIDTH = 1550;
 const CANVAS_HEIGHT = 900;
 
+const fmtVND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
+
 interface SeatMapReadOnlyProps {
     seatMapData: SeatMapData;
-    ticketTypes?: TicketType[];
+    ticketTypes?: TicketTypeItem[];
+}
+
+interface AreaTooltip {
+    x: number;
+    y: number;
+    name: string;
+    quantity: number;
+    price: number;
+    color: string;
 }
 
 const SeatMapReadOnly: React.FC<SeatMapReadOnlyProps> = ({ seatMapData, ticketTypes = [] }) => {
@@ -20,6 +32,7 @@ const SeatMapReadOnly: React.FC<SeatMapReadOnlyProps> = ({ seatMapData, ticketTy
     const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
     const isPanningRef = useRef(false);
     const panStartRef = useRef({ x: 0, y: 0 });
+    const [tooltip, setTooltip] = useState<AreaTooltip | null>(null);
 
     const allSeats = useMemo<Seat[]>(() =>
         seatMapData.areas.flatMap(a => a.seats ?? []), [seatMapData]);
@@ -29,6 +42,10 @@ const SeatMapReadOnly: React.FC<SeatMapReadOnlyProps> = ({ seatMapData, ticketTy
 
     const texts = useMemo<TextEntity[]>(() =>
         seatMapData.texts ?? [], [seatMapData]);
+
+    const areasWithSeats = useMemo(() =>
+        new Set(seatMapData.areas.filter(a => (a.seats?.length ?? 0) > 0).map(a => a.id)),
+        [seatMapData]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -98,6 +115,16 @@ const SeatMapReadOnly: React.FC<SeatMapReadOnlyProps> = ({ seatMapData, ticketTy
         return () => window.removeEventListener('mouseup', stop);
     }, []);
 
+    // Helper lấy tooltip data từ area
+    const getTooltipData = (area: Area, tt: TicketTypeItem | undefined, pos: { x: number; y: number }): AreaTooltip => ({
+        x: pos.x,
+        y: pos.y,
+        name: area.name,
+        quantity: tt?.quantity ?? 0,
+        price: tt?.price ?? area.price ?? 0,
+        color: tt?.color ?? area.fill ?? '#6b7280',
+    });
+
     const renderAreaShape = (area: Area, fillColor: string) => {
         const common = { stroke: area.stroke ?? 'white', strokeWidth: 1, fill: fillColor };
         if (area.type === 'circle') return <Circle radius={area.width / 2} {...common} />;
@@ -106,6 +133,31 @@ const SeatMapReadOnly: React.FC<SeatMapReadOnlyProps> = ({ seatMapData, ticketTy
         if (area.type === 'trapezoid') return <Line points={[area.width * 0.2, 0, area.width * 0.8, 0, area.width, area.height, 0, area.height]} closed {...common} />;
         if (area.type === 'polygon' && area.points) return <Line points={area.points} closed {...common} />;
         return <Rect width={area.width} height={area.height} cornerRadius={4} {...common} />;
+    };
+
+    const renderZoneLabel = (area: Area, tt: TicketTypeItem | undefined) => {
+        const isCircle = area.type === 'circle';
+        const cx = isCircle ? -area.width / 2 : 0;
+        const fontSize = Math.max(11, area.labelFontSize ?? 14);
+        const lineH = fontSize + 4;
+        const totalH = lineH * 3;
+        const startY = isCircle ? -(totalH / 2) : (area.height / 2) - (totalH / 2);
+
+        return (
+            <>
+                <KonvaText x={cx} y={startY} width={area.width}
+                    text={area.name} fontSize={fontSize} fontStyle="bold"
+                    fill="white" align="center" listening={false} />
+                <KonvaText x={cx} y={startY + lineH} width={area.width}
+                    text={`SL: ${tt?.quantity ?? 0}`}
+                    fontSize={Math.max(9, fontSize - 2)}
+                    fill="rgba(134,239,172,0.9)" align="center" listening={false} />
+                <KonvaText x={cx} y={startY + lineH * 2} width={area.width}
+                    text={fmtVND(tt?.price ?? area.price ?? 0)}
+                    fontSize={Math.max(9, fontSize - 2)}
+                    fill="rgba(255,255,255,0.75)" align="center" listening={false} />
+            </>
+        );
     };
 
     return (
@@ -131,22 +183,53 @@ const SeatMapReadOnly: React.FC<SeatMapReadOnlyProps> = ({ seatMapData, ticketTy
                                 const fillColor = area.isAreaType
                                     ? (tt?.color ?? area.fill ?? '#6b7280')
                                     : (area.fill ?? '#374151');
+                                const hasSeat = areasWithSeats.has(area.id);
+                                // Bật listening cho tất cả isAreaType để hover tooltip
+                                const needsHover = area.isAreaType;
+
                                 return (
-                                    <Group key={area.id} x={area.x} y={area.y} rotation={area.rotation} listening={false}>
+                                    <Group
+                                        key={area.id}
+                                        x={area.x}
+                                        y={area.y}
+                                        rotation={area.rotation}
+                                        listening={needsHover}
+                                        onMouseEnter={needsHover ? () => {
+                                            const pos = stageRef.current?.getPointerPosition();
+                                            if (!pos) return;
+                                            setTooltip(getTooltipData(area, tt, pos));
+                                        } : undefined}
+                                        onMouseMove={needsHover ? () => {
+                                            const pos = stageRef.current?.getPointerPosition();
+                                            if (!pos) return;
+                                            setTooltip(prev => prev ? { ...prev, x: pos.x, y: pos.y } : null);
+                                        } : undefined}
+                                        onMouseLeave={needsHover ? () => setTooltip(null) : undefined}
+                                    >
                                         {renderAreaShape(area, fillColor)}
+
                                         {texts.filter(t => t.attachedAreaId === area.id).map(t => (
-                                            <KonvaText key={t.id} x={0} y={0} text={t.text} fontSize={t.fontSize} fill={t.fill} align={t.align} width={area.width} height={area.height} verticalAlign={t.verticalAlign} />
+                                            <KonvaText key={t.id} x={0} y={0} text={t.text}
+                                                fontSize={t.fontSize} fill={t.fill} align={t.align}
+                                                width={area.width} height={area.height}
+                                                verticalAlign={t.verticalAlign} listening={false} />
                                         ))}
-                                        {area.isAreaType && (
+
+                                        {/* Zone: label trực tiếp */}
+                                        {area.isAreaType && !hasSeat && renderZoneLabel(area, tt)}
+
+                                        {/* Seat area: chỉ hiện name nhỏ trên cùng */}
+                                        {area.isAreaType && hasSeat && (
                                             <KonvaText
                                                 x={area.type === 'circle' ? -area.width / 2 : 0}
-                                                y={area.type === 'circle' ? -8 : area.height / 2 - 8}
+                                                y={area.type === 'circle' ? -(area.height / 2) : 4}
                                                 width={area.width}
                                                 text={area.name}
                                                 fontSize={Math.max(11, area.labelFontSize ?? 14)}
                                                 fontStyle="bold"
                                                 fill="white"
                                                 align="center"
+                                                listening={false}
                                             />
                                         )}
                                     </Group>
@@ -156,10 +239,8 @@ const SeatMapReadOnly: React.FC<SeatMapReadOnlyProps> = ({ seatMapData, ticketTy
                             {allSeats.map(seat => (
                                 <Rect
                                     key={seat.id}
-                                    x={seat.x}
-                                    y={seat.y}
-                                    width={seat.width}
-                                    height={seat.height}
+                                    x={seat.x} y={seat.y}
+                                    width={seat.width} height={seat.height}
                                     rotation={seat.rotation}
                                     fill={seat.status === 'blocked' ? '#9ca3af' : '#ffffff'}
                                     stroke="rgba(0,0,0,0.15)"
@@ -190,6 +271,34 @@ const SeatMapReadOnly: React.FC<SeatMapReadOnlyProps> = ({ seatMapData, ticketTy
                     </Stage>
                 )}
             </div>
+
+            {/* Tooltip cho cả zone lẫn seat area */}
+            {tooltip && (
+                <div style={{
+                    position: 'absolute',
+                    left: tooltip.x + 14,
+                    top: tooltip.y - 10,
+                    background: '#1e1b2e',
+                    border: `1px solid ${tooltip.color}`,
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    pointerEvents: 'none',
+                    zIndex: 100,
+                    minWidth: 150,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 3, background: tooltip.color, flexShrink: 0 }} />
+                        <span style={{ fontWeight: 700, fontSize: 13, color: '#f3f4f6' }}>{tooltip.name}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'rgba(134,239,172,0.9)', marginBottom: 2 }}>
+                        Số lượng: {tooltip.quantity}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                        {fmtVND(tooltip.price)} / vé
+                    </div>
+                </div>
+            )}
 
             {/* Zoom controls */}
             <div style={{ position: 'absolute', left: 12, bottom: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
