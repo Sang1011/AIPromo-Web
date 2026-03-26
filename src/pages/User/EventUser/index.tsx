@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchGetAllOrder } from "../../../store/orderSlice";
 import type { OrderItem } from "../../../types/order/order";
+import { useNavigate } from "react-router-dom";
 
 type Tab = "Pending" | "Paid" | "Cancelled" | "all";
 
@@ -13,14 +14,15 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "all", label: "Tất cả" },
 ];
 
-// Hàm xử lý khoảng trắng thừa từ API (ví dụ: "Cancelled ")
 const normalize = (s: string) => s?.trim() || "";
 
-// --- CÁC COMPONENT CARD (GIỮ NGUYÊN UI CŨ) ---
 
 function PaidCard({ event }: { event: OrderItem }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="glass-card rounded-2xl overflow-hidden flex flex-col sm:flex-row group neon-glow-hover transition-all duration-300">
+    <div  onClick={() => navigate(`/profile/order-detail-user/orderid=${event.orderId}`)} 
+    className="glass-card rounded-2xl overflow-hidden flex flex-col sm:flex-row group neon-glow-hover transition-all duration-300">
       <div className="sm:w-48 h-48 sm:h-auto overflow-hidden flex-shrink-0">
         <img
           src={event.bannerUrl ?? "https://placehold.co/192x192?text=No+Image"}
@@ -55,7 +57,11 @@ function PaidCard({ event }: { event: OrderItem }) {
               {event.totalPrice.toLocaleString("vi-VN")} <span className="text-xs font-medium text-slate-400">VNĐ</span>
             </p>
           </div>
-          <button className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:bg-violet-500/20 hover:text-violet-400 transition-all">
+          {/* ← Chỉ thay đổi ở đây */}
+          <button
+            onClick={() => navigate(`/profile/order-detail-user/orderid=${event.orderId}`)}
+            className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:bg-violet-500/20 hover:text-violet-400 transition-all"
+          >
             <span className="material-symbols-outlined">visibility</span>
           </button>
         </div>
