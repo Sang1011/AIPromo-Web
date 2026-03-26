@@ -7,7 +7,7 @@ import { fetchPaymentOrder } from "../../store/paymentSlice";
 import { fetchToUpWallet, fetchWalletUser } from "../../store/walletSlice";
 import type { PaymentOrderPaymentResponse } from "../../types/payment/payment";
 import type { ToUpWalletResponse } from "../../types/wallet/wallet";
-import { fetchGetVouchers } from "../../store/voucherSlice";
+// import { fetchGetVouchers } from "../../store/voucherSlice";
 
 
 
@@ -179,12 +179,12 @@ export default function PaymentTicket() {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("wallet");
   const { orderDetail } = useSelector((state: RootState) => state.ORDER);
   const { currentWallet } = useSelector((state: RootState) => state.WALLET);
-  const { vouchers } = useSelector((state: RootState) => state.VOUCHER);
+  // const { vouchers } = useSelector((state: RootState) => state.VOUCHER);
 
   const dispatch = useDispatch<AppDispatch>();
-  useEffect(() => {
-    dispatch(fetchGetVouchers())
-  }, [dispatch])
+  // useEffect(() => {
+  //   dispatch(fetchGetVouchers())
+  // }, [dispatch])
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletNotFound, setWalletNotFound] = useState(false);
   const [walletLoadError, setWalletLoadError] = useState<string | null>(null);
