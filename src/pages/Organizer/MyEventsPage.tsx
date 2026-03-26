@@ -14,7 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchAllEventsByMe } from "../../store/eventSlice";
 import { convertFilterToApiStatus, mapStatus } from "../../utils/mapStatus";
-import type { EventItem } from "../../types/event/event";
+import type { EventItemByMe } from "../../types/event/event";
 
 type DashboardContext = {
     setConfig: (config: DashboardLayoutConfig) => void;
@@ -24,7 +24,7 @@ export default function MyEventsPage() {
     const { setConfig } = useOutletContext<DashboardContext>();
     const [loading, setLoading] = useState(false);
     const dispatch = useDispatch<AppDispatch>();
-    const { events, pagination } = useSelector(
+    const { myEvents, pagination: myEventsPagination } = useSelector(
         (state: RootState) => state.EVENT
     );
 
@@ -33,24 +33,62 @@ export default function MyEventsPage() {
     const [activeFilter, setActiveFilter] = useState<FilterStatus>("Draft");
     const [currentPage, setCurrentPage] = useState(1);
 
-    const filteredEvents = events.filter((event) =>
+    const filteredEvents = myEvents.filter((event) =>
         event.title?.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
 
-    const mapEvent = (event: EventItem): EventItemMapUI => {
+    const formatDate = (date: string | null) => {
+        if (!date) return "Chưa xác định";
+        return new Date(date).toLocaleString("vi-VN");
+    };
+    const formatRange = (start: string | null, end: string | null) => {
+        if (!start && !end) return "Chưa có thời gian";
+        if (!start) return `Đến ${formatDate(end)}`;
+        if (!end) return `Từ ${formatDate(start)}`;
+        return `${formatDate(start)} - ${formatDate(end)}`;
+    };
+
+    const mapEvent = (event: EventItemByMe): EventItemMapUI => {
         const status = mapStatus(event.status);
+
+        const getReasonInfo = () => {
+            switch (event.status) {
+                case "Draft":
+                    return event.publishRejectionReason
+                        ? { reason: event.publishRejectionReason, label: "Từ chối duyệt", color: "red" as const }
+                        : undefined;
+                case "Suspended":
+                    return event.suspensionReason
+                        ? { reason: event.suspensionReason, label: "Lý do trì hoãn", color: "cyan" as const }
+                        : undefined;
+                case "Cancelled":
+                    return event.cancellationReason
+                        ? { reason: event.cancellationReason, label: "Lý do huỷ", color: "red" as const }
+                        : undefined;
+                case "PendingCancellation":
+                    return event.cancellationRejectionReason
+                        ? { reason: event.cancellationRejectionReason, label: "Từ chối huỷ", color: "orange" as const }
+                        : undefined;
+                default:
+                    return undefined;
+            }
+        };
+
+        const reasonInfo = getReasonInfo();
 
         return {
             id: event.id,
             title: event.title,
             image: event.bannerUrl,
             location: event.location,
-            time: new Date(event.eventStartAt).toLocaleString("vi-VN") + " - " + new Date(event.eventEndAt).toLocaleString("vi-VN"),
+            time: formatRange(event.eventStartAt, event.eventEndAt),
             status: status.status as EventStatusUI,
             statusLabel: status.label,
-            category: event.categories?.[0]?.name,
             color: status.color,
-            statusCheck: event.status
+            statusCheck: event.status,
+            rejectReason: reasonInfo?.reason,
+            rejectReasonLabel: reasonInfo?.label,
+            rejectColor: reasonInfo?.color,
         };
     };
 
@@ -64,7 +102,7 @@ export default function MyEventsPage() {
 
     useEffect(() => {
         setLoading(false);
-    }, [events]);
+    }, [myEvents]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -136,7 +174,7 @@ export default function MyEventsPage() {
 
             <Pagination
                 currentPage={currentPage}
-                totalPages={pagination?.totalPages || 1}
+                totalPages={myEventsPagination?.totalPages || 1}
                 onPageChange={setCurrentPage}
             />
         </div>
