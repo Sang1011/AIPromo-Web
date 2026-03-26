@@ -72,6 +72,7 @@ function App() {
         <Route path="/event-detail/:id" element={<EventDetail />} />
         <Route path="/all-event" element={<AllEvent />} />
         <Route path="/history-event" element={<HistoryEvent />} />
+        <Route path="/payment-ticket/:id" element={<PaymentTicket />} />
         <Route path="/payment-ticket" element={<PaymentTicket />} />
         <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
         <Route path="/verify-organizer" element={<VerifyOrganizer />} />
