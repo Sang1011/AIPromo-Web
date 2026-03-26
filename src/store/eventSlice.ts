@@ -16,6 +16,7 @@ import type {
     EventSession,
     GetPendingEventsRequest,
     PendingEventsData,
+    EventItemByMe,
 } from "../types/event/event";
 import type { ApiResponse } from "../types/api";
 
@@ -33,13 +34,24 @@ interface EventState {
         hasPrevious: boolean;
         hasNext: boolean;
     } | null;
+    myEvents: EventItemByMe[];
+    myEventsPagination: {
+        pageNumber: number;
+        pageSize: number;
+        totalCount: number;
+        totalPages: number;
+        hasPrevious: boolean;
+        hasNext: boolean;
+    } | null;
 }
 
 const initialState: EventState = {
     events: [],
     currentEvent: null,
     sessions: [],
-    pagination: null
+    pagination: null,
+    myEvents: [],
+    myEventsPagination: null,
 };
 
 
@@ -361,17 +373,21 @@ const eventSlice = createSlice({
             };
         });
 
-        builder.addCase(fetchAllEventsByMe.fulfilled, (state, action: PayloadAction<GetAllCreateResponseForPrivate>) => {
-            state.events = action.payload.items;
-            state.pagination = {
-                pageNumber: action.payload.pageNumber,
-                pageSize: action.payload.pageSize,
-                totalCount: action.payload.totalCount,
-                totalPages: action.payload.totalPages,
-                hasPrevious: action.payload.hasPrevious,
-                hasNext: action.payload.hasNext,
-            };
-        });
+        builder.addCase(
+            fetchAllEventsByMe.fulfilled,
+            (state, action: PayloadAction<GetAllCreateResponseForPrivate>) => {
+                state.myEvents = action.payload.items;
+
+                state.myEventsPagination = {
+                    pageNumber: action.payload.pageNumber,
+                    pageSize: action.payload.pageSize,
+                    totalCount: action.payload.totalCount,
+                    totalPages: action.payload.totalPages,
+                    hasPrevious: action.payload.hasPrevious,
+                    hasNext: action.payload.hasNext,
+                };
+            }
+        );
 
         builder.addCase(
             fetchEventById.fulfilled,

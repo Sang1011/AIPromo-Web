@@ -133,6 +133,18 @@ export interface EventDetailTicketTypes {
     areaType: string;
 }
 
+export interface EventDetailTicketTypes {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    soldQuantity: number;
+    remainingQuantity: number;
+    areaId: string;
+    areaName: string;
+    areaType: string;
+}
+
 export interface GetEventDetailResponse {
     id: string;
     organizerId: string;
@@ -150,6 +162,13 @@ export interface GetEventDetailResponse {
     eventEndAt: string;
     policy: string;
     isEmailReminderEnabled: boolean;
+    cancellationReason?: string;
+    publishRejectionReason?: string;
+    cancellationRejectionReason?: string;
+    suspensionReason?: string;
+    suspendedAt?: string;
+    suspendedUntilAt?: string;
+    suspendedBy?: string;
     createdAt: string;
     modifiedAt: string;
     categories: EventCategory[];
@@ -157,7 +176,7 @@ export interface GetEventDetailResponse {
     sessions: EventSession[];
     hashtags: EventHashtag[];
     actorImages: EventActorImage[];
-    ticketTypes: EventDetailTicketTypes[]
+    ticketTypes: EventDetailTicketTypes[];
 }
 
 export type GetAllSessionResponse = EventSession[];
@@ -167,8 +186,27 @@ export interface GetAllRequestByMe extends GetAllRequest {
     Statuses?: string;
 }
 
+export interface EventItemByMe {
+    id: string;
+    title: string;
+    status: EventStatus;
+    bannerUrl: string;
+    location: string;
+    eventStartAt: string | null;
+    eventEndAt: string | null;
+    urlPath: string | null;
+    createdAt: string;
+    cancellationReason: string | null;
+    publishRejectionReason: string | null;
+    cancellationRejectionReason: string | null;
+    suspensionReason: string | null;
+    suspendedAt: string | null;
+    suspendedUntilAt: string | null;
+    suspendedBy: string | null;
+}
+
 export type GetAllCreateResponseForPrivate = {
-    items: EventItem[];
+    items: EventItemByMe[];
     pageNumber: number;
     pageSize: number;
     totalCount: number;
