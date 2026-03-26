@@ -1,6 +1,6 @@
 import type { ApiResponse } from "../api";
 
-export interface OrganizerProfile {
+export interface OrganizerProfileDetail {
     id: string;
     userId: string;
     logo: string;
@@ -23,25 +23,6 @@ export interface OrganizerProfile {
 
 export type GetOrganizerProfileResponse = ApiResponse<OrganizerProfile>;
 
-export interface UpdateOrganizerProfileRequest {
-    logo: string;
-    displayName: string;
-    description: string;
-    address: string;
-    socialLink: string;
-    businessType: "company" | string;
-    taxCode: string;
-    identityNumber: string;
-    companyName: string;
-}
-
-export interface UpdateOrganizerBankRequest {
-    accountName: string;
-    accountNumber: string;
-    bankCode: string;
-    branch: string;
-}
-
 // request để tạo tổ chức
 export interface CreateProfileOrganizerRequest {
     type: string;
@@ -58,4 +39,15 @@ export interface CreateProfileOrganizerRequest {
     accountNumber: string;
     bankCode: string;
     branch: string;
+}
+
+export interface OrganizerProfile {
+    profileId: string;
+    userId: string;
+    displayName: string;
+    logo: string;
+    status: string;
+    rejectionReason: null;
+    canEdit: boolean;
+    canSubmit: boolean;
 }
