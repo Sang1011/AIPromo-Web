@@ -8,7 +8,7 @@ const seatmapService = {
         return interceptorAPI().get(`/events/${eventId}/sessions/${sessionId}/spec`);
     },
     updateSeatMap: (eventId: string, spec: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/spec`, spec, {
+        return interceptorAPI().patch(`/organizer/events/${eventId}/spec`, spec, {
             headers: {
                 "Content-Type": "application/json",
             },

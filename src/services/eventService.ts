@@ -24,7 +24,7 @@ const eventService = {
     },
 
     updateEvent: (id: string, data: UpdateEventInfoRequest): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${id}`, data);
+        return interceptorAPI().patch(`/organizer/events/${id}`, data);
     },
 
     deleteEvent: (id: string): Promise<AxiosResponse<any>> => {
@@ -42,7 +42,7 @@ const eventService = {
     },
 
     getAllEventsByMe: (request: GetAllRequestByMe): Promise<AxiosResponse<GetAllEventByMeResponse>> => {
-        return interceptorAPI().get("/events/me", {
+        return interceptorAPI().get("/organizer/events/me", {
             params: request
         });
     },
@@ -61,7 +61,7 @@ const eventService = {
     updateEventBanner: (eventId: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
         const formData = new FormData();
         formData.append("file", file);
-        return interceptorAPI().patch(`/events/${eventId}/banner`, formData, {
+        return interceptorAPI().patch(`/organizer/events/${eventId}/banner`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
             },
@@ -71,7 +71,7 @@ const eventService = {
     createImage: (eventId: string, file: File): Promise<AxiosResponse<{ id: string; imageUrl: string }>> => {
         const formData = new FormData();
         formData.append("file", file);
-        return interceptorAPI().post(`/events/${eventId}/images`, formData, {
+        return interceptorAPI().post(`/organizer/events/${eventId}/images`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
         });
     },
@@ -79,7 +79,7 @@ const eventService = {
     updateImage: (eventId: string, imageId: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
         const formData = new FormData();
         formData.append("file", file);
-        return interceptorAPI().put(`/events/${eventId}/images/${imageId}`, formData, {
+        return interceptorAPI().put(`/organizer/events/${eventId}/images/${imageId}`, formData, {
             headers: {
                 "Content-Type": "multipart/form-data",
             },
@@ -87,29 +87,29 @@ const eventService = {
     },
 
     deleteImage: (eventId: string, imageId: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().delete(`/events/${eventId}/images/${imageId}`);
+        return interceptorAPI().delete(`/organizer/events/${eventId}/images/${imageId}`);
     },
 
     updateEventSettings: (
         eventId: string,
         data: UpdateEventSettingsRequest
     ): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/settings`, data);
+        return interceptorAPI().patch(`/organizer/events/${eventId}/settings`, data);
     },
 
     createEventSessions: (
         eventId: string,
         data: CreateEventSessionRequest
     ): Promise<AxiosResponse<string[]>> => {
-        return interceptorAPI().post(`/events/${eventId}/sessions`, data);
+        return interceptorAPI().post(`/organizer/events/${eventId}/sessions`, data);
     },
 
     getSessions: (eventId: string): Promise<AxiosResponse<ApiResponse<GetAllSessionResponse>>> => {
-        return interceptorAPI().get(`/events/${eventId}/sessions`);
+        return interceptorAPI().get(`/organizer/events/${eventId}/sessions`);
     },
 
     deleteSession: (eventId: string, sessionId: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().delete(`/events/${eventId}/sessions/${sessionId}`);
+        return interceptorAPI().delete(`/organizer/events/${eventId}/sessions/${sessionId}`);
     },
 
     updateSession: (
@@ -117,11 +117,11 @@ const eventService = {
         sessionId: string,
         data: UpdateEventSessionRequest
     ): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/sessions/${sessionId}`, data);
+        return interceptorAPI().patch(`/organizer/events/${eventId}/sessions/${sessionId}`, data);
     },
 
     requestCancelEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/request-cancellation`, { reason });
+        return interceptorAPI().patch(`/organizer/events/${eventId}/request-cancellation`, { reason });
     },
 
     publishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
@@ -142,7 +142,7 @@ const eventService = {
         return interceptorAPI().patch(`/events/${eventId}/unpublish`);
     },
     requestPublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/request-publish`);
+        return interceptorAPI().patch(`/organizer/events/${eventId}/request-publish`);
     },
     getPendingEvents: (request: GetPendingEventsRequest): Promise<AxiosResponse<GetPendingEventsResponse>> => {
         return interceptorAPI().get("/events/pending", {
@@ -150,7 +150,7 @@ const eventService = {
         });
     },
     updateEventPolicy: (eventId: string, policy: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/policy`, { policy });
+        return interceptorAPI().patch(`/organizer/events/${eventId}/policy`, { policy });
     },
 
 }

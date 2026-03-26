@@ -13,7 +13,7 @@ const ticketTypeService = {
         eventId: string,
         data: CreateTicketTypeRequest
     ): Promise<AxiosResponse<CreateTicketTypeResponse>> => {
-        return interceptorAPI().post(`/events/${eventId}/ticket-types`, data);
+        return interceptorAPI().post(`/organizer/events/${eventId}/ticket-types`, data);
     },
 
     getAllTicketTypes: (
@@ -28,14 +28,14 @@ const ticketTypeService = {
         ticketTypeId: string,
         data: UpdateTicketTypeRequest
     ): Promise<AxiosResponse<void>> => {
-        return interceptorAPI().patch(`/events/${eventId}/ticket-types/${ticketTypeId}`, data);
+        return interceptorAPI().patch(`/organizer/events/${eventId}/ticket-types/${ticketTypeId}`, data);
     },
 
     deleteTicketType: (
         eventId: string,
         ticketTypeId: string
     ): Promise<AxiosResponse<void>> => {
-        return interceptorAPI().delete(`/events/${eventId}/ticket-types/${ticketTypeId}`);
+        return interceptorAPI().delete(`/organizer/events/${eventId}/ticket-types/${ticketTypeId}`);
     },
 
     assignArea: (
@@ -43,7 +43,7 @@ const ticketTypeService = {
         ticketTypeId: string,
         data: AssignAreaRequest
     ): Promise<AxiosResponse<void>> => {
-        return interceptorAPI().patch(`/events/${eventId}/ticket-types/${ticketTypeId}/assign-area`, data);
+        return interceptorAPI().patch(`/organizer/events/${eventId}/ticket-types/${ticketTypeId}/assign-area`, data);
     },
 };
 
