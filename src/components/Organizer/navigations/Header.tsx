@@ -1,16 +1,18 @@
 import { useEffect } from "react";
 import {
-    FiPlus,
-    FiChevronDown,
-    FiUser,
     FiArrowLeft,
+    FiPlus,
+    FiUser
 } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchEventById } from "../../../store/eventSlice";
 import type { OrganizerProfileDetail } from "../../../types/organizerProfile/organizerProfile";
-import { fetchOrganizerProfile } from "../../../store/organizerProfileSlice";
+import { fetchMe } from "../../../store/authSlice";
+import { fetchGetOrganizerProfileDetailById } from "../../../store/organizerProfileSlice";
+import type { MeInfo } from "../../../types/auth/auth";
+import type { ApiResponse } from "../../../types/api";
 
 interface HeaderProps {
     title?: string;
@@ -78,18 +80,25 @@ export default function Header({
         const current = window.location.pathname === "/organizer/create-event";
         if (current) return;
 
-        const result = await dispatch(fetchOrganizerProfile());
-        if (fetchOrganizerProfile.fulfilled.match(result)) {
-            const profile = result.payload.data as OrganizerProfileDetail;
-            const { fields, tab } = getMissingFields(profile);
+        const meResult = await dispatch(fetchMe());
+        if (!fetchMe.fulfilled.match(meResult)) return;
 
-            if (fields.length > 0) {
-                navigate("/organizer/accounts", {
-                    state: { missingFields: fields, tab },
-                });
-                return;
-            }
+        const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
+        if (!userId) return;
+
+        const detailResult = await dispatch(fetchGetOrganizerProfileDetailById(userId));
+        if (!fetchGetOrganizerProfileDetailById.fulfilled.match(detailResult)) return;
+
+        const profile = (detailResult.payload as ApiResponse<OrganizerProfileDetail>)?.data;
+        const { fields, tab } = getMissingFields(profile);
+
+        if (fields.length > 0) {
+            navigate("/organizer/accounts", {
+                state: { missingFields: fields, tab },
+            });
+            return;
         }
+
         navigate("/organizer/create-event");
     };
 
