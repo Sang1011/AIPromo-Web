@@ -101,15 +101,22 @@ function CancelledCard({ event }: { event: OrderItem }) {
 }
 
 function PendingCard({ event }: { event: OrderItem }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="glass-card rounded-2xl overflow-hidden flex flex-col sm:flex-row group neon-glow-hover transition-all duration-300 border-amber-500/20">
+    <div
+      onClick={() => navigate(`/payment-ticket/orderid=${event.orderId}`)}
+      className="glass-card rounded-2xl overflow-hidden flex flex-col sm:flex-row group neon-glow-hover transition-all duration-300 border-amber-500/20 cursor-pointer"
+    >
       <div className="sm:w-48 h-48 sm:h-auto overflow-hidden flex-shrink-0">
         <img src={event.bannerUrl ?? ""} className="w-full h-full object-cover" />
       </div>
       <div className="flex-grow p-6 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-start mb-2 gap-2">
-            <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-1">{event.eventTitle}</h3>
+            <h3 className="text-lg font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-1">
+              {event.eventTitle}
+            </h3>
             <span className="bg-amber-500/10 text-amber-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase border border-amber-500/20">
               Chờ thanh toán
             </span>
@@ -118,7 +125,13 @@ function PendingCard({ event }: { event: OrderItem }) {
         </div>
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
           <p className="text-lg font-bold text-white">{event.totalPrice.toLocaleString("vi-VN")} VNĐ</p>
-          <button className="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-xs font-bold hover:bg-amber-500 hover:text-white transition-all">
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); // tránh trigger 2 lần vì div cha đã có onClick
+              navigate(`/payment-ticket/${event.orderId}`);
+            }}
+            className="px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg text-xs font-bold hover:bg-amber-500 hover:text-white transition-all"
+          >
             Thanh toán ngay
           </button>
         </div>
