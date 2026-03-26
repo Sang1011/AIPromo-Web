@@ -44,7 +44,21 @@ export const fetchGetAllOrder = createAsyncThunk<
     }
 );
 
+export const fetchExportExcelOrder = createAsyncThunk<
+    Blob,
+    string
+>(
+    `${name}/fetchExportExcelOrder`,
+    async (eventId, thunkAPI) => {
+        try {
+            const response = await orderService.exportExcelOrder(eventId);
 
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
 
 const orderSlice = createSlice({
     name,
@@ -62,7 +76,7 @@ const orderSlice = createSlice({
             (state, action: PayloadAction<any>) => {
                 state.allOrder = action.payload.data;
             }
-        );
+        )
     },
 });
 
