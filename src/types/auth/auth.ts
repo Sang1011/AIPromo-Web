@@ -16,7 +16,7 @@ export interface RegisterRequest {
   phoneNumber: string;
   address: string;
 }
- 
+
 export interface UserProfile {
   email: string;
   userName: string;
@@ -48,4 +48,21 @@ export interface UserProfileRequest {
   description: string | null;
   socialLink: string | null;
   profileImageUrl: string | null;
+}
+
+export interface MeInfo {
+  userId: string;
+  email: string;
+  name: string;
+  roles: string[];
+  jti: string;
+  ipAddress: string;
+  deviceId: string;
+  deviceName: string;
+  browser: string;
+  operatingSystem: string;
+  deviceType: string;
+  browserVersion: string;
+  osVersion: string;
+  userAgent: string;
 }
