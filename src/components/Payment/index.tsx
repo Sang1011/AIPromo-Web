@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchGetDetailOrder } from "../../store/orderSlice";
 import { fetchPaymentOrder } from "../../store/paymentSlice";
@@ -185,9 +185,10 @@ export default function PaymentTicket() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletNotFound, setWalletNotFound] = useState(false);
   const [walletLoadError, setWalletLoadError] = useState<string | null>(null);
-
+  const { id } = useParams<{ id: string }>();
+  const orderIdFromUrl = id?.replace("orderid=", "");
   const orderIdFromStorage = localStorage.getItem("currentOrderId");
-  const resolvedOrderId = orderIdFromStorage;
+  const resolvedOrderId = orderIdFromUrl || orderIdFromStorage;
 
   const walletBalance = currentWallet?.balance ?? 0;
 
