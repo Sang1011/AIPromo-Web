@@ -1,17 +1,21 @@
-import { useEffect, useState } from "react";
-import { FiCheck, FiCreditCard, FiGlobe, FiMapPin, FiFileText, FiUser } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
+import { FiCheck, FiCreditCard, FiGlobe, FiMapPin, FiFileText, FiUser, FiCamera } from "react-icons/fi";
 import { MdOutlineBusiness, MdOutlinePerson } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useOutletContext } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store";
 import {
-    fetchOrganizerProfile,
-    fetchUpdateOrganizerBank,
-    fetchUpdateOrganizerProfile,
+    fetchGetOrganizerProfileDetailById,
+    fetchCreateProfileOrganizer,
+    fetchUpdateOrganizerDraftLogo,
 } from "../../store/organizerProfileSlice";
+import { fetchMe } from "../../store/authSlice";
 import { notify } from "../../utils/notify";
 import BankSelect from "../../components/Organizer/bank/BankSelect";
 import type { DashboardLayoutConfig } from "../../types/config/dashboard.config";
+import ImageViewer from "../../components/Organizer/shared/ImagePreview";
+import type { MeInfo } from "../../types/auth/auth";
+import type { ApiResponse } from "../../types/api";
 
 const BANKS = [
     { code: "VCB", name: "Vietcombank" },
@@ -30,7 +34,7 @@ const BANKS = [
     { code: "OCB", name: "OCB" },
 ];
 
-type Tab = "profile" | "bank";
+type Tab = "profileDetail" | "bank";
 type BusinessType = "individual" | "company";
 
 interface ProfileErrors {
@@ -53,12 +57,12 @@ type DashboardContext = {
 
 export default function OrganizerAccountPage() {
     const dispatch = useDispatch<AppDispatch>();
-    const profile = useSelector((state: RootState) => state.ORGANIZER_PROFILE.profile);
+    const profileDetail = useSelector((state: RootState) => state.ORGANIZER_PROFILE.profileDetail);
     const { setConfig } = useOutletContext<DashboardContext>();
 
-    const [activeTab, setActiveTab] = useState<Tab>("profile");
+    const [activeTab, setActiveTab] = useState<Tab>("profileDetail");
 
-    // Profile fields
+    // profileDetail fields
     const [displayName, setDisplayName] = useState("");
     const [description, setDescription] = useState("");
     const [socialLink, setSocialLink] = useState("");
@@ -78,6 +82,47 @@ export default function OrganizerAccountPage() {
     const [bankErrors, setBankErrors] = useState<BankErrors>({});
     const [bankLoading, setBankLoading] = useState(false);
     const location = useLocation();
+
+    // logo
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string>("");
+    const [logoLoading, setLogoLoading] = useState(false);
+    const [viewingLogo, setViewingLogo] = useState(false);
+    const logoInputRef = useRef<HTMLInputElement>(null);
+
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setLogoFile(file);
+        setLogoPreview(URL.createObjectURL(file));
+    };
+
+    const refetchProfile = async () => {
+        const meResult = await dispatch(fetchMe());
+        if (fetchMe.fulfilled.match(meResult)) {
+            const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
+            if (userId) dispatch(fetchGetOrganizerProfileDetailById(userId));
+        }
+    };
+
+    const handleSaveLogo = async () => {
+        if (!logoFile || !profileDetail?.userId) return;
+        setLogoLoading(true);
+        try {
+            const result = await dispatch(
+                fetchUpdateOrganizerDraftLogo({ userId: profileDetail.userId, file: logoFile })
+            );
+            if (fetchUpdateOrganizerDraftLogo.rejected.match(result)) {
+                notify.error("Không thể cập nhật logo");
+            } else {
+                notify.success("Cập nhật logo thành công");
+                setLogoFile(null);
+                await refetchProfile();
+            }
+        } finally {
+            setLogoLoading(false);
+        }
+    };
 
     useEffect(() => {
         setConfig({ title: "Quản lý tài khoản" });
@@ -115,26 +160,38 @@ export default function OrganizerAccountPage() {
     }, [location.state]);
 
     useEffect(() => {
-        dispatch(fetchOrganizerProfile());
+        const init = async () => {
+            const meResult = await dispatch(fetchMe());
+            if (fetchMe.fulfilled.match(meResult)) {
+                const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
+                console.log(userId);
+                if (userId) {
+                    dispatch(fetchGetOrganizerProfileDetailById(userId));
+                }
+            }
+        };
+        init();
     }, [dispatch]);
 
     useEffect(() => {
-        if (!profile) return;
-        setDisplayName(profile.displayName ?? "");
-        setDescription(profile.description ?? "");
-        setSocialLink(profile.socialLink ?? "");
-        setAddress(profile.address ?? "");
+        console.log(profileDetail)
+        if (!profileDetail) return;
+        setDisplayName(profileDetail.displayName ?? "");
+        setDescription(profileDetail.description ?? "");
+        setSocialLink(profileDetail.socialLink ?? "");
+        setAddress(profileDetail.address ?? "");
         setBusinessType(
-            (profile.businessType?.toLowerCase() as BusinessType) ?? "individual"
+            (profileDetail.businessType?.toLowerCase() as BusinessType) ?? "individual"
         );
-        setCompanyName(profile.companyName ?? "");
-        setTaxCode(profile.taxCode ?? "");
-        setIdentityNumber(profile.identityNumber ?? "");
-        setBankCode(profile.bankCode ?? "");
-        setAccountName(profile.accountName ?? "");
-        setAccountNumber(profile.accountNumber ?? "");
-        setBranch(profile.branch ?? "");
-    }, [profile]);
+        setCompanyName(profileDetail.companyName ?? "");
+        setTaxCode(profileDetail.taxCode ?? "");
+        setIdentityNumber(profileDetail.identityNumber ?? "");
+        setBankCode(profileDetail.bankCode ?? "");
+        setAccountName(profileDetail.accountName ?? "");
+        setAccountNumber(profileDetail.accountNumber ?? "");
+        setBranch(profileDetail.branch ?? "");
+        setLogoPreview(profileDetail.logo ?? "");
+    }, [profileDetail]);
 
     const validateProfile = (): boolean => {
         const errors: ProfileErrors = {};
@@ -178,23 +235,28 @@ export default function OrganizerAccountPage() {
         setProfileLoading(true);
         try {
             const result = await dispatch(
-                fetchUpdateOrganizerProfile({
-                    logo: profile?.logo ?? "",
+                fetchCreateProfileOrganizer({
+                    type: profileDetail?.type ?? "",
+                    logo: profileDetail?.logo ?? null,
                     displayName,
                     description,
                     socialLink,
                     address,
                     businessType,
                     companyName: businessType === "company" ? companyName : "",
-                    taxCode: taxCode,
+                    taxCode,
                     identityNumber,
+                    accountName,
+                    accountNumber,
+                    bankCode,
+                    branch,
                 })
             );
-            if (fetchUpdateOrganizerProfile.rejected.match(result)) {
+            if (fetchCreateProfileOrganizer.rejected.match(result)) {
                 notify.error("Không thể cập nhật thông tin");
             } else {
                 notify.success("Cập nhật thông tin thành công");
-                dispatch(fetchOrganizerProfile());
+                await refetchProfile();
             }
         } finally {
             setProfileLoading(false);
@@ -206,13 +268,28 @@ export default function OrganizerAccountPage() {
         setBankLoading(true);
         try {
             const result = await dispatch(
-                fetchUpdateOrganizerBank({ accountName, accountNumber, bankCode, branch })
+                fetchCreateProfileOrganizer({
+                    type: profileDetail?.type ?? "",
+                    logo: profileDetail?.logo ?? null,
+                    displayName,
+                    description,
+                    socialLink,
+                    address,
+                    businessType,
+                    companyName,
+                    taxCode,
+                    identityNumber,
+                    accountName,
+                    accountNumber,
+                    bankCode,
+                    branch,
+                })
             );
-            if (fetchUpdateOrganizerBank.rejected.match(result)) {
+            if (fetchCreateProfileOrganizer.rejected.match(result)) {
                 notify.error("Không thể cập nhật tài khoản ngân hàng");
             } else {
                 notify.success("Cập nhật tài khoản ngân hàng thành công");
-                dispatch(fetchOrganizerProfile());
+                await refetchProfile();
             }
         } finally {
             setBankLoading(false);
@@ -220,7 +297,7 @@ export default function OrganizerAccountPage() {
     };
 
     const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
-        { key: "profile", label: "Thông tin tổ chức", icon: <MdOutlineBusiness /> },
+        { key: "profileDetail", label: "Thông tin tổ chức", icon: <MdOutlineBusiness /> },
         { key: "bank", label: "Tài khoản ngân hàng", icon: <FiCreditCard /> },
     ];
 
@@ -248,12 +325,57 @@ export default function OrganizerAccountPage() {
             </div>
 
             {/* ── Tab: Thông tin tổ chức ── */}
-            {activeTab === "profile" && (
+            {activeTab === "profileDetail" && (
                 <div className="space-y-6">
 
                     {/* Thông tin cơ bản */}
                     <Section icon={<FiUser />} title="Thông tin cơ bản">
                         <div className="grid grid-cols-1 gap-6">
+                            {/* Logo Upload */}
+                            {/* Logo Upload */}
+                            <div className="flex flex-col items-center gap-4 py-2">
+                                {/* Avatar */}
+                                <div className="relative group">
+                                    <div
+                                        onClick={() => logoPreview && setViewingLogo(true)}
+                                        className={`w-32 h-32 rounded-2xl border-2 border-white/10 bg-black/30 overflow-hidden flex items-center justify-center
+                ${logoPreview ? "cursor-zoom-in" : "cursor-default"}`}
+                                    >
+                                        {logoPreview
+                                            ? <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                                            : <FiCamera size={36} className="text-slate-600" />
+                                        }
+                                    </div>
+
+                                    <input
+                                        ref={logoInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleLogoChange}
+                                    />
+                                </div>
+
+                                {/* Label */}
+                                <div className="text-center space-y-0.5">
+                                    <p className="text-sm font-medium text-white">Logo tổ chức</p>
+                                    <p className="text-xs text-slate-500">JPG, PNG, WEBP · Tối đa 5MB</p>
+                                </div>
+
+                                {/* Buttons */}
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => logoInputRef.current?.click()}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 hover:text-white hover:border-primary/40 transition"
+                                    >
+                                        <FiCamera size={14} />
+                                        Chọn ảnh
+                                    </button>
+                                    {logoFile && (
+                                        <SaveButton loading={logoLoading} onClick={handleSaveLogo} label="Lưu logo" />
+                                    )}
+                                </div>
+                            </div>
                             <FieldInput
                                 label="Tên hiển thị"
                                 required
@@ -446,6 +568,9 @@ export default function OrganizerAccountPage() {
                         <SaveButton loading={bankLoading} onClick={handleSaveBank} label="Lưu tài khoản" />
                     </div>
                 </div>
+            )}
+            {viewingLogo && logoPreview && (
+                <ImageViewer url={logoPreview} onClose={() => setViewingLogo(false)} />
             )}
         </div>
     );
