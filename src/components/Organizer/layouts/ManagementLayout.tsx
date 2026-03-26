@@ -11,8 +11,8 @@ export default function ManagementLayout() {
     const [collapsed, setCollapsed] = useState(false);
     const { eventId } = useParams<{ eventId: string }>();
     const navigate = useNavigate();
+
     useEffect(() => {
-        // fetch eventDetail
     }, [eventId])
 
     const isMarketingDetail = useMatch(
@@ -44,11 +44,6 @@ export default function ManagementLayout() {
                     icon: <MdAnalytics />,
                     label: "Phân tích",
                     path: buildEventPath("analytics"),
-                },
-                {
-                    icon: <MdCampaign />,
-                    label: "Marketing",
-                    path: buildEventPath("marketing"),
                 },
                 {
                     icon: <MdShoppingCart />,
@@ -89,6 +84,11 @@ export default function ManagementLayout() {
                     icon: <MdConfirmationNumber />,
                     label: "Mã giảm giá (Voucher)",
                     path: buildEventPath("vouchers"),
+                },
+                {
+                    icon: <MdCampaign />,
+                    label: "Marketing",
+                    path: buildEventPath("marketing"),
                 },
             ],
         },

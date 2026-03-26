@@ -11,12 +11,12 @@ import { fetchEventById } from '../../store/eventSlice';
 import { fetchAssignAreas, fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
 import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
 import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity } from '../../types/config/seatmap';
+import type { EventSession } from '../../types/event/event';
 import type { TicketTypeItem } from '../../types/ticketType/ticketType';
 import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
 import { getWorldPointer } from '../../utils/getWorldPointer';
 import { notify } from '../../utils/notify';
 import { validateSeatMap } from '../../utils/validateSeatMap';
-import type { EventSession } from '../../types/event/event';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -46,14 +46,20 @@ const TICKET_TYPE_COLORS = [
     '#65a30d',
     '#0891b2',
     '#008080',
-    '#8b5cf6',
-    '#d97706',
+    '#ffc901',
+    '#aa0000',
     '#6366f1',
+    '#ffff66',
+    '#888608',
+    '#c71585',
+    '#ffc0b0',
+    '#9999FF',
+    '#0000cc'
 ];
 
 
 const SeatMapEditorPage: React.FC = () => {
-    const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
+    const snapToGrid = (value: number) => round2(Math.round(value / GRID_SIZE) * GRID_SIZE);
     const [sections, setSections] = useState<Area[]>([]);
     const [seats, setSeats] = useState<Seat[]>([]);
     const [selectedShape, setSelectedShape] = useState<Area['type']>('rect');
@@ -149,6 +155,7 @@ const SeatMapEditorPage: React.FC = () => {
         (state: RootState) => state.TICKET_TYPE
     );
     const { currentEvent } = useSelector((state: RootState) => state.EVENT);
+    const [isTicketTypesReady, setIsTicketTypesReady] = useState(false);
 
     const ticketTypesFetchedRef = useRef(false);
 
@@ -158,27 +165,35 @@ const SeatMapEditorPage: React.FC = () => {
     }
 
     const handleDelete = useCallback(() => {
-        if (selectedIds.length > 0) {
-            const sectionIdsToDelete = selectedIds.filter(id =>
-                sections.some(s => s.id === id)
-            );
-            const seatIdsToDelete = selectedIds.filter(id =>
-                seats.some(s => s.id === id)
-            );
-            const textIdsToDelete = selectedIds.filter(id =>
-                textEntities.some(t => t.id === id)
-            );
+        const allSelectedIds = [
+            ...selectedIds,
+            ...(seatMoveMode || activeAreaId ? selectedSeatIds : [])
+        ];
 
-            setSections(prev => prev.filter(s => !sectionIdsToDelete.includes(s.id)));
-            setSeats(prev => {
-                const seatsAfterDirectDelete = prev.filter(s => !seatIdsToDelete.includes(s.id));
-                return seatsAfterDirectDelete.filter(s => !sectionIdsToDelete.includes(s.sectionId));
-            });
-            setTextEntities(prev => prev.filter(t => !textIdsToDelete.includes(t.id)));
-            setSelectedIds([]);
-            saveToHistory();
-        }
-    }, [selectedIds, sections, seats, textEntities, saveToHistory]);
+        if (allSelectedIds.length === 0) return;
+
+        const sectionIdsToDelete = selectedIds.filter(id =>
+            sections.some(s => s.id === id)
+        );
+        const seatIdsToDelete = allSelectedIds.filter(id =>
+            seats.some(s => s.id === id)
+        );
+        const textIdsToDelete = selectedIds.filter(id =>
+            textEntities.some(t => t.id === id)
+        );
+
+        setSections(prev => prev.filter(s => !sectionIdsToDelete.includes(s.id)));
+        setSeats(prev => {
+            const afterDirect = prev.filter(s => !seatIdsToDelete.includes(s.id));
+            return afterDirect.filter(s => !sectionIdsToDelete.includes(s.sectionId));
+        });
+        setTextEntities(prev => prev.filter(t => !textIdsToDelete.includes(t.id)));
+
+        setSelectedIds([]);
+        setSelectedSeatIds([]);
+        saveToHistory();
+    }, [selectedIds, selectedSeatIds, sections, seats, textEntities,
+        seatMoveMode, activeAreaId, saveToHistory]);
 
     const handleCopy = useCallback(() => {
         const copiedEntities: Entity[] = [
@@ -199,7 +214,7 @@ const SeatMapEditorPage: React.FC = () => {
         const idMap = new Map<string, string>();
 
         clipboard.forEach(entity => {
-            const newId = `${entity.id}-copy-${Date.now()}-${Math.random()}`;
+            const newId = crypto.randomUUID();
             idMap.set(entity.id, newId);
 
             const isSection = 'ticketTypeId' in entity;
@@ -289,10 +304,6 @@ const SeatMapEditorPage: React.FC = () => {
                 if (dragStartPosRef.current[t.id]) {
                     return { ...t, x: snapToGrid(t.x), y: snapToGrid(t.y) };
                 }
-                const delta = sectionDeltas[t.attachedAreaId ?? ''];
-                if (delta) {
-                    return { ...t, x: snapToGrid(t.x + delta.dx), y: snapToGrid(t.y + delta.dy) };
-                }
                 return t;
             })
         );
@@ -304,23 +315,61 @@ const SeatMapEditorPage: React.FC = () => {
         saveToHistory();
     }, [saveToHistory]);
 
+    const round2 = (v: number) => Math.round(v * 100) / 100;
+
+    const serializeSeatMap = (): SeatMapData => ({
+        areas: sections.map(area => ({
+            ...area,
+            x: round2(area.x),
+            y: round2(area.y),
+            width: round2(area.width),
+            height: round2(area.height),
+            rotation: round2(area.rotation),
+            seats: seats
+                .filter(seat => seat.sectionId === area.id)
+                .map(seat => ({
+                    ...seat,
+                    x: round2(seat.x),
+                    y: round2(seat.y),
+                    width: round2(seat.width),
+                    height: round2(seat.height),
+                    rotation: round2(seat.rotation),
+                })),
+        })),
+        texts: textEntities.map(t => ({
+            ...t,
+            x: round2(t.x),
+            y: round2(t.y),
+            width: round2(t.width),
+            height: round2(t.height),
+            rotation: round2(t.rotation),
+        })),
+    });
+
     const handleDragEnd = useCallback(
         (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
             if (isGroupDragging) return;
 
-            const node = e.target;
+            const node = (
+                e.target.id() === id
+                    ? e.target
+                    : layerRef.current?.findOne(`#${id}`)
+            ) as Konva.Group | null;
+
+            if (!node) return;
+
             const startPos = dragStartPosRef.current[id];
             if (!startPos) return;
 
-            const dx = snapToGrid(node.x()) - startPos.x;
-            const dy = snapToGrid(node.y()) - startPos.y;
+            const dx = round2(snapToGrid(node.x())) - startPos.x;
+            const dy = round2(snapToGrid(node.y())) - startPos.y;
 
             const isSection = sections.some(s => s.id === id);
 
             setSections(prev =>
                 prev.map(s =>
                     s.id === id
-                        ? { ...s, x: snapToGrid(startPos.x + dx), y: snapToGrid(startPos.y + dy) }
+                        ? { ...s, x: round2(startPos.x + dx), y: round2(startPos.y + dy) }
                         : s
                 )
             );
@@ -329,14 +378,14 @@ const SeatMapEditorPage: React.FC = () => {
                 setSeats(prev =>
                     prev.map(seat =>
                         seat.sectionId === id
-                            ? { ...seat, x: seat.x + dx, y: seat.y + dy }
+                            ? { ...seat, x: round2(seat.x + dx), y: round2(seat.y + dy) }
                             : seat
                     )
                 );
                 setTextEntities(prev =>
                     prev.map(t =>
                         t.attachedAreaId === id
-                            ? { ...t, x: t.x + dx, y: t.y + dy }
+                            ? { ...t, x: round2(t.x + dx), y: round2(t.y + dy) }
                             : t
                     )
                 );
@@ -344,7 +393,7 @@ const SeatMapEditorPage: React.FC = () => {
                 setSeats(prev =>
                     prev.map(seat =>
                         seat.id === id
-                            ? { ...seat, x: snapToGrid(startPos.x + dx), y: snapToGrid(startPos.y + dy) }
+                            ? { ...seat, x: round2(startPos.x + dx), y: round2(startPos.y + dy) }
                             : seat
                     )
                 );
@@ -353,7 +402,7 @@ const SeatMapEditorPage: React.FC = () => {
             setTextEntities(prev =>
                 prev.map(t =>
                     t.id === id
-                        ? { ...t, x: snapToGrid(startPos.x + dx), y: snapToGrid(startPos.y + dy) }
+                        ? { ...t, x: round2(startPos.x + dx), y: round2(startPos.y + dy) }
                         : t
                 )
             );
@@ -393,12 +442,12 @@ const SeatMapEditorPage: React.FC = () => {
                     s.id === id
                         ? {
                             ...s,
-                            width: newWidth,
-                            height: newHeight,
-                            x: node.x(),
-                            y: node.y(),
-                            rotation: node.rotation(),
-                            labelFontSize: Math.max(10, (s as any).labelFontSize * scale || 14),
+                            width: round2(newWidth),
+                            height: round2(newHeight),
+                            x: round2(node.x()),
+                            y: round2(node.y()),
+                            rotation: round2(node.rotation()),
+                            labelFontSize: round2(Math.max(10, (s as any).labelFontSize * scale || 14)),
                         }
                         : s
                 )
@@ -411,8 +460,10 @@ const SeatMapEditorPage: React.FC = () => {
                             ...t,
                             x: area.x,
                             y: area.y,
-                            width: area.width,
-                            height: area.height,
+                            width: Math.round(area.width),
+                            height: Math.round(area.height),
+                            rotation: Math.round(area.rotation),
+                            labelFontSize: Math.round(Math.max(10, (t as any).labelFontSize * scale || 14)),
                         }
                         : t
                 )
@@ -493,7 +544,7 @@ const SeatMapEditorPage: React.FC = () => {
             const newTicketType = ticketTypes.find(t => t.id === value);
             setSections(prev => prev.map(s =>
                 s.id === selectedSection.id
-                    ? { ...s, ticketTypeId: value, fill: newTicketType?.color ?? s.fill, name: newTicketType?.name ?? s.name }
+                    ? { ...s, ticketTypeId: value, fill: newTicketType?.color ?? s.fill, name: newTicketType?.name ?? s.name, price: newTicketType?.price ?? s.price }
                     : s
             ));
             saveToHistory();
@@ -594,6 +645,12 @@ const SeatMapEditorPage: React.FC = () => {
     const createGridSeatsForSection = useCallback(() => {
         if (!isSingleSectionSelected || !selectedSection) return;
 
+        const tt = ticketTypes.find(t => t.id === selectedSection.ticketTypeId);
+        const alreadyCreated = seats.filter(s => s.sectionId === selectedSection.id).length;
+        const remaining = (selectedSection.isAreaType && tt?.quantity != null)
+            ? tt.quantity - alreadyCreated
+            : Infinity;
+
         const newSeats: Seat[] = [];
         const seatW = seatWidth;
         const seatH = seatHeight;
@@ -601,16 +658,17 @@ const SeatMapEditorPage: React.FC = () => {
         const box = getSeatsBoundingBox(seats, selectedSection.id);
         const startX = box ? box.maxX + 30 : selectedSection.x + 20;
         const startY = box ? box.minY : selectedSection.y + 40;
-        const rowLabels = Array.from({ length: gridRows }, (_, i) =>
-            String.fromCharCode(65 + i)
-        );
         const newSeatIds: string[] = [];
 
-        rowLabels.forEach((row, rowIndex) => {
-            for (let i = 0; i < gridColumns; i++) {
-                const newId = `seat-${selectedSection.id}-${row}-${i + 1}-${Date.now()}-${rowIndex}-${i}`;
-                newSeatIds.push(newId);
 
+        let count = 0;
+        for (let rowIndex = 0; rowIndex < gridRows; rowIndex++) {
+            if (remaining !== Infinity && count >= remaining) break;
+            const row = String.fromCharCode(65 + (rowIndex % 26));
+            for (let i = 0; i < gridColumns; i++) {
+                if (remaining !== Infinity && count >= remaining) break;
+                const newId = crypto.randomUUID();
+                newSeatIds.push(newId);
                 newSeats.push({
                     id: newId,
                     sectionId: selectedSection.id,
@@ -624,32 +682,30 @@ const SeatMapEditorPage: React.FC = () => {
                     rotation: 0,
                     status: 'available',
                 });
+                count++;
             }
-        });
+        }
 
         setSeats(prev => [...prev, ...newSeats]);
-
-        setTimeout(() => {
-            setSelectedIds(newSeatIds);
-            forceUpdate({});
-        }, 0);
-
+        setTimeout(() => { setSelectedIds(newSeatIds); forceUpdate({}); }, 0);
         saveToHistory();
     }, [
-        isSingleSectionSelected,
-        selectedSection,
-        gridRows,
-        gridColumns,
-        seatWidth,
-        seatHeight,
-        seatSpacing,
-        seatFillColor,
-        saveToHistory,
-        seats,
+        isSingleSectionSelected, selectedSection, ticketTypes,
+        gridRows, gridColumns, seatWidth, seatHeight, seatSpacing,
+        seatFillColor, saveToHistory, seats,
     ]);
 
     const createArcSeatsForSection = useCallback(() => {
         if (!isSingleSectionSelected || !selectedSection) return;
+
+        const tt = ticketTypes.find(t => t.id === selectedSection.ticketTypeId);
+        const alreadyCreated = seats.filter(s => s.sectionId === selectedSection.id).length;
+        const remaining = (selectedSection.isAreaType && tt?.quantity != null)
+            ? tt.quantity - alreadyCreated
+            : Infinity;
+
+        const total = remaining === Infinity ? arcTotalSeats : Math.min(arcTotalSeats, remaining);
+        if (total <= 0) return;
 
         const newSeats: Seat[] = [];
         const newSeatIds: string[] = [];
@@ -660,23 +716,20 @@ const SeatMapEditorPage: React.FC = () => {
         const isFullCircle = arcCurvature >= 300;
         const totalAngle = isFullCircle ? 360 : arcCurvature;
         const startAngle = isFullCircle ? -90 : -totalAngle / 2;
-        const angleStep = totalAngle / arcTotalSeats;
+        const angleStep = totalAngle / total;
 
-        for (let i = 0; i < arcTotalSeats; i++) {
+        for (let i = 0; i < total; i++) {
             const angleDeg = startAngle + i * angleStep;
             const angle = angleDeg * Math.PI / 180;
-            const x = centerX + radius * Math.cos(angle) - seatSize / 2;
-            const y = centerY + radius * Math.sin(angle) - seatSize / 2;
-            const newId = `seat-${selectedSection.id}-arc-${i}-${Date.now()}`;
+            const newId = crypto.randomUUID();
             newSeatIds.push(newId);
-
             newSeats.push({
                 id: newId,
                 sectionId: selectedSection.id,
                 row: 'ARC',
                 number: i + 1,
-                x,
-                y,
+                x: centerX + radius * Math.cos(angle) - seatSize / 2,
+                y: centerY + radius * Math.sin(angle) - seatSize / 2,
                 fill: seatFillColor,
                 width: seatWidth,
                 height: seatHeight,
@@ -686,19 +739,12 @@ const SeatMapEditorPage: React.FC = () => {
         }
 
         setSeats(prev => [...prev, ...newSeats]);
-        setTimeout(() => {
-            setSelectedIds(newSeatIds);
-            forceUpdate({});
-        }, 0);
-
+        setTimeout(() => { setSelectedIds(newSeatIds); forceUpdate({}); }, 0);
         saveToHistory();
     }, [
-        isSingleSectionSelected,
-        selectedSection,
-        arcTotalSeats,
-        arcCurvature,
-        seatFillColor,
-        saveToHistory,
+        isSingleSectionSelected, selectedSection, ticketTypes,
+        arcTotalSeats, arcCurvature, seatWidth, seatHeight,
+        seatFillColor, saveToHistory, seats,
     ]);
 
     const getMultiSelectBoundingBox = (
@@ -724,11 +770,16 @@ const SeatMapEditorPage: React.FC = () => {
 
     const createCustomCountSeats = useCallback(() => {
         if (!isSingleSectionSelected || !selectedSection) return;
-        const total = customSeatCount;
+        const tt = ticketTypes.find(t => t.id === selectedSection.ticketTypeId);
+        const alreadyCreated = seats.filter(s => s.sectionId === selectedSection.id).length;
+        const remaining = (selectedSection.isAreaType && tt?.quantity != null)
+            ? tt.quantity - alreadyCreated
+            : customSeatCount;
+        const total = Math.min(customSeatCount, Math.max(0, remaining));
         if (total <= 0) return;
 
         if (seatLayoutType === 'grid') {
-            const cols = Math.ceil(Math.sqrt(total));
+            const cols = Math.ceil(Math.sqrt(total * (4 / 3)));
             const rows = Math.ceil(total / cols);
             const newSeats: Seat[] = [];
             const newSeatIds: string[] = [];
@@ -740,7 +791,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let rowIndex = 0; rowIndex < rows && count < total; rowIndex++) {
                 const row = String.fromCharCode(65 + (rowIndex % 26));
                 for (let i = 0; i < cols && count < total; i++) {
-                    const newId = `seat-${selectedSection.id}-custom-${Date.now()}-${rowIndex}-${i}`;
+                    const newId = crypto.randomUUID();
                     newSeatIds.push(newId);
                     newSeats.push({
                         id: newId,
@@ -775,7 +826,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let i = 0; i < total; i++) {
                 const angleDeg = startAngle + i * angleStep;
                 const angle = angleDeg * Math.PI / 180;
-                const newId = `seat-${selectedSection.id}-custom-arc-${Date.now()}-${i}`;
+                const newId = crypto.randomUUID();
                 newSeatIds.push(newId);
                 newSeats.push({
                     id: newId,
@@ -813,7 +864,7 @@ const SeatMapEditorPage: React.FC = () => {
         if (total <= 0) return;
 
         if (seatLayoutType === 'grid') {
-            const cols = Math.ceil(Math.sqrt(total));
+            const cols = Math.ceil(Math.sqrt(total * (4 / 3)));
             const rows = Math.ceil(total / cols);
             const newSeats: Seat[] = [];
             const newSeatIds: string[] = [];
@@ -825,7 +876,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let rowIndex = 0; rowIndex < rows && count < total; rowIndex++) {
                 const row = String.fromCharCode(65 + (rowIndex % 26));
                 for (let i = 0; i < cols && count < total; i++) {
-                    const newId = `seat-${selectedSection.id}-${row}-${i + 1}-${Date.now()}-${rowIndex}-${i}`;
+                    const newId = crypto.randomUUID();
                     newSeatIds.push(newId);
                     newSeats.push({
                         id: newId,
@@ -860,7 +911,7 @@ const SeatMapEditorPage: React.FC = () => {
             for (let i = 0; i < total; i++) {
                 const angleDeg = startAngle + i * angleStep;
                 const angle = angleDeg * Math.PI / 180;
-                const newId = `seat-${selectedSection.id}-arc-${i}-${Date.now()}`;
+                const newId = crypto.randomUUID();
                 newSeatIds.push(newId);
                 newSeats.push({
                     id: newId,
@@ -909,10 +960,15 @@ const SeatMapEditorPage: React.FC = () => {
             isArea: boolean
         ) => {
             const newId = crypto.randomUUID();
+            const usedTicketTypeIds = new Set(
+                sections.filter(s => s.isAreaType).map(s => s.ticketTypeId)
+            );
+            const unusedTicketType = ticketTypes.find(t => !usedTicketTypeIds.has(t.id))
+                ?? ticketTypes[0];
             const newSection: Area = {
-                fill: ticketTypes[0]?.color || TICKET_TYPE_COLORS[0],
+                fill: isArea ? (unusedTicketType?.color || TICKET_TYPE_COLORS[0]) : '#374151',
                 id: newId,
-                name: ticketTypes[0]?.name,
+                name: unusedTicketType?.name,
                 type: shape,
                 x: snapToGrid(x),
                 y: snapToGrid(y),
@@ -920,8 +976,8 @@ const SeatMapEditorPage: React.FC = () => {
                 height: 150,
                 rotation: 0,
                 stroke: 'white',
-                ticketTypeId: ticketTypes[0]?.id ?? '',
-                price: ticketTypes[0]?.price ?? 0,
+                ticketTypeId: isArea ? (unusedTicketType?.id ?? '') : '',
+                price: isArea ? (unusedTicketType?.price ?? 0) : 0,
                 draggable: true,
                 isAreaType: isArea,
             };
@@ -992,6 +1048,11 @@ const SeatMapEditorPage: React.FC = () => {
     const areAllSelectedAreasLocked =
         selectedAreas.length > 0 && selectedAreas.every(s => s.locked);
 
+    const usedTicketTypeIds = new Set(
+        sections.filter(s => s.isAreaType).map(s => s.ticketTypeId).filter(Boolean)
+    );
+    const hasAvailableTicketType = ticketTypes.some(t => !usedTicketTypeIds.has(t.id));
+
     const handleStageMouseDown = useCallback(
         (e: Konva.KonvaEventObject<MouseEvent>) => {
             console.log('Current editorMode:', editorMode);
@@ -1013,6 +1074,10 @@ const SeatMapEditorPage: React.FC = () => {
             if (!pointerPos) return;
 
             if (editorMode === 'CREATE_AREA') {
+                if (!hasAvailableTicketType) {
+                    setEditorMode('SELECT');
+                    return;
+                }
                 createAreaAtPosition(pointerPos.x, pointerPos.y);
                 setEditorMode('SELECT');
                 return;
@@ -1176,27 +1241,6 @@ const SeatMapEditorPage: React.FC = () => {
         setIsSelecting(false);
         setSelectionBox(null);
     }, [isSelecting, selectionBox, seats, sections, textEntities, activeAreaId, seatMoveMode]);
-
-    const updateTicketTypeColor = useCallback(
-        (ticketTypeId: string, color: string) => {
-            setTicketTypes(prev =>
-                prev.map(t => t.id === ticketTypeId ? { ...t, color } : t)
-            );
-
-            setSections(prev =>
-                prev.map(s =>
-                    s.isAreaType && s.ticketTypeId === ticketTypeId
-                        ? { ...s, fill: color }
-                        : s
-                )
-            );
-        },
-        []
-    );
-
-    const currentTicketType = selectedSection && ticketTypes.find(
-        t => t.id === selectedSection.ticketTypeId
-    );
 
     const beginGroupDrag = (draggedId: string) => {
         setIsGroupDragging(true);
@@ -1426,6 +1470,43 @@ const SeatMapEditorPage: React.FC = () => {
 
     useEffect(() => {
         if (!eventId) return;
+        const sessionId = currentEvent?.sessions?.[0]?.id;
+        if (!sessionId) return;
+        dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId: sessionId }))
+            .finally(() => {
+                ticketTypesFetchedRef.current = true;
+                if (reduxTicketTypes.length === 0) {
+                    navigate(`/organizer/my-events/${eventId}/edit`);
+                }
+            });
+    }, [eventId, currentEvent]);
+
+    useEffect(() => {
+        if (reduxTicketTypes.length === 0) return;
+
+        const updatedTicketTypes = reduxTicketTypes.map((t, index) => {
+            const existing = ticketTypes.find(p => p.id === t.id);
+            return {
+                ...t,
+                color: existing?.color ?? TICKET_TYPE_COLORS[index % TICKET_TYPE_COLORS.length],
+            };
+        });
+        setTicketTypes(updatedTicketTypes);
+        setIsTicketTypesReady(true);
+
+        setSections(prev => prev.map(s => {
+            if (!s.isAreaType) return s;
+            const matched = updatedTicketTypes.find(t => t.id === s.ticketTypeId);
+            if (!matched) {
+                return { ...s, ticketTypeId: updatedTicketTypes[0].id, fill: updatedTicketTypes[0].color };
+            }
+            return { ...s, fill: matched.color };
+        }));
+    }, [reduxTicketTypes]);
+
+    useEffect(() => {
+        if (!eventId) return;
+        if (!isTicketTypesReady) return;
 
         dispatch(fetchEventById(eventId))
             .unwrap()
@@ -1449,11 +1530,14 @@ const SeatMapEditorPage: React.FC = () => {
                                 });
                             });
 
-                            const currentTicketTypes = ticketTypes.length > 0 ? ticketTypes : [];
                             const sectionsWithColor = importedSections.map(s => {
                                 if (!s.isAreaType) return s;
-                                const matched = currentTicketTypes.find(t => t.id === s.ticketTypeId);
-                                if (matched?.color) return { ...s, fill: matched.color };
+                                const matched = reduxTicketTypes.find(t => t.id === s.ticketTypeId);
+                                if (matched) {
+                                    const color = ticketTypes.find(p => p.id === matched.id)?.color
+                                        ?? TICKET_TYPE_COLORS[reduxTicketTypes.indexOf(matched) % TICKET_TYPE_COLORS.length];
+                                    return { ...s, fill: color };
+                                }
                                 return s;
                             });
 
@@ -1470,41 +1554,13 @@ const SeatMapEditorPage: React.FC = () => {
                         console.warn('No seatmap found or failed to load:', err);
                     });
             });
-    }, [eventId]);
+    }, [isTicketTypesReady, eventId]);
 
     useEffect(() => {
-        if (!eventId) return;
-        dispatch(fetchGetAllTicketTypes({ eventId }))
-            .finally(() => {
-                ticketTypesFetchedRef.current = true;
-            });
-    }, [eventId]);
-
-    useEffect(() => {
-        if (!ticketTypesFetchedRef.current) return;
-        if (reduxTicketTypes.length === 0) {
+        if (!isTicketTypesReady && reduxTicketTypes.length === 0 && ticketTypesFetchedRef.current) {
             navigate(`/organizer/my-events/${eventId}/edit`);
-            return;
         }
-
-        const updatedTicketTypes = reduxTicketTypes.map((t, index) => {
-            const existing = ticketTypes.find(p => p.id === t.id);
-            return {
-                ...t,
-                color: existing?.color ?? TICKET_TYPE_COLORS[index % TICKET_TYPE_COLORS.length],
-            };
-        });
-        setTicketTypes(updatedTicketTypes);
-
-        setSections(prev => prev.map(s => {
-            if (!s.isAreaType) return s;
-            const matched = updatedTicketTypes.find(t => t.id === s.ticketTypeId);
-            if (!matched) {
-                return { ...s, ticketTypeId: updatedTicketTypes[0].id, fill: updatedTicketTypes[0].color };
-            }
-            return { ...s, fill: matched.color };
-        }));
-    }, [reduxTicketTypes, currentEvent]);
+    }, [reduxTicketTypes, isTicketTypesReady]);
 
     const renderSection = (area: Area) => {
         const ticketType = ticketTypes.find(t => t.id === area.ticketTypeId);
@@ -1609,7 +1665,6 @@ const SeatMapEditorPage: React.FC = () => {
             >
                 {area.type === 'circle' ? (
                     <Circle
-                        id={area.id}
                         radius={area.width / 2}
                         stroke={area.stroke}
                         fill={fillColor}
@@ -1617,7 +1672,6 @@ const SeatMapEditorPage: React.FC = () => {
                     />
                 ) : area.type === 'triangle' ? (
                     <Line
-                        id={area.id}
                         points={[
                             area.width / 2, 0,
                             area.width, area.height,
@@ -1629,7 +1683,6 @@ const SeatMapEditorPage: React.FC = () => {
                     />
                 ) : area.type === 'parallelogram' ? (
                     <Line
-                        id={area.id}
                         points={[
                             area.width * 0.2, 0,
                             area.width, 0,
@@ -1642,7 +1695,6 @@ const SeatMapEditorPage: React.FC = () => {
                     />
                 ) : area.type === 'trapezoid' ? (
                     <Line
-                        id={area.id}
                         points={[
                             area.width * 0.2, 0,
                             area.width * 0.8, 0,
@@ -1655,7 +1707,6 @@ const SeatMapEditorPage: React.FC = () => {
                     />
                 ) : area.type === 'polygon' && area.points ? (
                     <Line
-                        id={area.id}
                         points={area.points}
                         closed
                         stroke={area.stroke}
@@ -1664,7 +1715,6 @@ const SeatMapEditorPage: React.FC = () => {
                     />
                 ) : (
                     <Rect
-                        id={area.id}
                         width={area.width}
                         height={area.height}
                         stroke={area.stroke}
@@ -1763,7 +1813,7 @@ const SeatMapEditorPage: React.FC = () => {
                             }
     `}
                     >
-                        Đang trong chế độ: {seatMoveMode ? 'chỉ di chuyển GHẾ' : 'Di chuyển cả KHU VỰC'} khi chọn nhiều (Bấm để đổi)
+                        Đang trong chế độ: {seatMoveMode ? 'Chế độ: Ghế' : 'Chế độ: Khu vực'}
                     </button>
                     <button
                         onClick={() => setShowLockModal(true)}
@@ -1774,11 +1824,14 @@ const SeatMapEditorPage: React.FC = () => {
 
                     <button
                         onClick={enterCreateSectionMode}
+                        disabled={!hasAvailableTicketType}
+                        title={!hasAvailableTicketType ? 'Tất cả loại vé đã có khu vực' : undefined}
                         className={
-                            editorMode === "CREATE_AREA"
-                                ? "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold " +
-                                "bg-emerald-500 text-white shadow-md shadow-emerald-500/30"
-                                : baseBtn
+                            !hasAvailableTicketType
+                                ? "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold border border-slate-700 text-slate-600 cursor-not-allowed opacity-50"
+                                : editorMode === "CREATE_AREA"
+                                    ? "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-emerald-500 text-white shadow-md shadow-emerald-500/30"
+                                    : baseBtn
                         }
                     >
                         Vẽ khu vực
@@ -1862,18 +1915,10 @@ const SeatMapEditorPage: React.FC = () => {
                                 validation.errors.forEach(err => notify.error(err.message));
                                 return;
                             }
-                            const data: SeatMapData = {
-                                areas: sections.map(area => ({
-                                    ...area,
-                                    seats: seats.filter(seat => seat.sectionId === area.id),
-                                })),
-                                texts: textEntities,
-                            };
-
+                            const data = serializeSeatMap();
                             const spec = JSON.stringify(data, null, 2);
 
                             try {
-                                console.log(spec);
                                 await dispatch(fetchUpdateSeatMap({ eventId: eventId!, spec })).unwrap();
                                 await new Promise(resolve => setTimeout(resolve, 1000));
                                 const mappings = sections
@@ -1923,16 +1968,9 @@ const SeatMapEditorPage: React.FC = () => {
                     </button>
                     <button
                         onClick={() => {
-                            const data: SeatMapData = {
-                                areas: sections.map(area => ({
-                                    ...area,
-                                    seats: seats.filter(seat => seat.sectionId === area.id),
-                                })),
-                                texts: textEntities,
-                            };
-                            const spec = JSON.stringify(data, null, 2);
+                            const data = serializeSeatMap();
                             console.log('=== SPEC ===');
-                            console.log(spec);
+                            console.log(JSON.stringify(data, null, 2));
                         }}
                         style={{
                             background: 'transparent',
@@ -2511,209 +2549,78 @@ const SeatMapEditorPage: React.FC = () => {
 
                         {isSingleEntitySelected && (
                             <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                                {isSingleSectionSelected && activeTab === 'AREA' && (
-                                    <>
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label style={{
-                                                display: 'block',
-                                                fontSize: '12px',
-                                                fontWeight: 600,
-                                                color: '#9ca3af',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                                marginBottom: '12px'
-                                            }}>
-                                                TÊN KHU VỰC
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={selectedSection.name}
-                                                onChange={(e) => updateSectionProperty('name', e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#16162a',
-                                                    border: '1px solid #2a2a3e',
-                                                    borderRadius: '8px',
-                                                    padding: '10px 12px',
-                                                    color: '#e5e7eb',
-                                                    fontSize: '14px',
-                                                    outline: 'none'
-                                                }}
-                                            />
-                                        </div>
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label>
-                                                <input className='mr-2'
-                                                    type="checkbox"
-                                                    checked={!!selectedSection.locked}
-                                                    onChange={(e) =>
-                                                        updateSectionProperty('locked', e.target.checked)
-                                                    }
-                                                />
-                                                Khóa khu vực
-                                            </label>
-                                        </div>
-
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label style={{
-                                                display: 'block',
-                                                fontSize: '12px',
-                                                fontWeight: 600,
-                                                color: '#9ca3af',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                                marginBottom: '12px'
-                                            }}>
-                                                SỐ GHẾ TRONG KHU VỰC
-                                            </label>
-                                            <div style={{
-                                                background: '#16162a',
-                                                border: '1px solid #2a2a3e',
-                                                borderRadius: '8px',
-                                                padding: '10px 12px',
-                                                color: '#10b981',
-                                                fontSize: '18px',
-                                                fontWeight: 600,
-                                                textAlign: 'center'
-                                            }}>
-                                                {getSectionSeatCount(selectedSection.id)} ghế
-                                            </div>
-                                        </div>
-
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label style={{
-                                                display: 'block',
-                                                fontSize: '12px',
-                                                fontWeight: 600,
-                                                color: '#9ca3af',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                                marginBottom: '12px'
-                                            }}>
-                                                MÀU GHẾ
-                                            </label>
-                                            <div style={{
-                                                background: '#16162a',
-                                                border: '1px solid #2a2a3e',
-                                                borderRadius: '8px',
-                                                padding: '10px 12px',
-                                                color: '#9ca3af',
-                                                fontSize: '13px',
-                                            }}>
-                                                Ghế màu trắng
-                                            </div>
-                                        </div>
-
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label style={{
-                                                display: 'block',
-                                                fontSize: '12px',
-                                                fontWeight: 600,
-                                                color: '#9ca3af',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                                marginBottom: '12px'
-                                            }}>
-                                                BỐ TRÍ GHẾ
-                                            </label>
-                                            <div style={{
-                                                display: 'flex',
-                                                gap: '8px',
-                                                background: '#16162a',
-                                                borderRadius: '8px',
-                                                padding: '4px',
-                                                marginBottom: '16px'
-                                            }}>
-                                                <button
-                                                    onClick={() => setSeatLayoutType('grid')}
-                                                    style={{
-                                                        flex: 1,
-                                                        background: seatLayoutType === 'grid' ? '#8B5CF6' : 'transparent',
-                                                        border: 'none',
-                                                        borderRadius: '6px',
-                                                        padding: '8px 12px',
-                                                        color: seatLayoutType === 'grid' ? 'white' : '#6b7280',
-                                                        fontSize: '12px',
-                                                        fontWeight: 500,
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                >
-                                                    Lưới
-                                                </button>
-                                                <button
-                                                    onClick={() => setSeatLayoutType('arc')}
-                                                    style={{
-                                                        flex: 1,
-                                                        background: seatLayoutType === 'arc' ? '#8B5CF6' : 'transparent',
-                                                        border: 'none',
-                                                        borderRadius: '6px',
-                                                        padding: '8px 12px',
-                                                        color: seatLayoutType === 'arc' ? 'white' : '#6b7280',
-                                                        fontSize: '12px',
-                                                        fontWeight: 500,
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                >
-                                                    Vòng cung
-                                                </button>
-                                            </div>
-
-                                            <div style={{ marginBottom: '16px' }}>
+                                {isSingleSectionSelected && activeTab === 'AREA' && (() => {
+                                    const _tt = ticketTypes.find(t => t.id === selectedSection?.ticketTypeId);
+                                    const _alreadyCreated = seats.filter(s => s.sectionId === selectedSection?.id).length;
+                                    const remaining = (selectedSection?.isAreaType && _tt?.quantity != null)
+                                        ? _tt.quantity - _alreadyCreated
+                                        : Infinity;
+                                    const isSeatFull = remaining <= 0;
+                                    return (
+                                        <>
+                                            <div style={{ marginBottom: '24px' }}>
                                                 <label style={{
                                                     display: 'block',
                                                     fontSize: '12px',
                                                     fontWeight: 600,
                                                     color: '#9ca3af',
-                                                    marginBottom: '8px'
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em',
+                                                    marginBottom: '12px'
                                                 }}>
-                                                    KÍCH THƯỚC GHẾ
+                                                    TÊN KHU VỰC
                                                 </label>
+                                                <input
+                                                    type="text"
+                                                    value={selectedSection.name}
+                                                    onChange={(e) => updateSectionProperty('name', e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        background: '#16162a',
+                                                        border: '1px solid #2a2a3e',
+                                                        borderRadius: '8px',
+                                                        padding: '10px 12px',
+                                                        color: '#e5e7eb',
+                                                        fontSize: '14px',
+                                                        outline: 'none'
+                                                    }}
+                                                />
+                                            </div>
 
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <input
-                                                        type="number"
-                                                        min={10}
-                                                        max={100}
-                                                        value={seatWidthStr}
-                                                        onChange={(e) => setSeatWidthStr(e.target.value)}
-                                                        onBlur={() => {
-                                                            const v = Math.max(10, Number(seatWidthStr) || 10);
-                                                            setSeatWidth(v);
-                                                            setSeatWidthStr(String(v));
-                                                        }}
-                                                        placeholder="Rộng"
-                                                        style={{
-                                                            flex: 1,
-                                                            background: '#16162a',
-                                                            border: '1px solid #2a2a3e',
-                                                            borderRadius: '6px',
-                                                            padding: '8px',
-                                                            color: '#e5e7eb'
-                                                        }}
+                                            <div style={{ marginBottom: '24px' }}>
+                                                <label>
+                                                    <input className='mr-2'
+                                                        type="checkbox"
+                                                        checked={!!selectedSection.locked}
+                                                        onChange={(e) => updateSectionProperty('locked', e.target.checked)}
                                                     />
-                                                    <input
-                                                        min={10}
-                                                        max={100}
-                                                        type="number"
-                                                        value={seatHeightStr}
-                                                        onChange={(e) => setSeatHeightStr(e.target.value)}
-                                                        onBlur={() => {
-                                                            const v = Math.max(10, Number(seatHeightStr) || 10);
-                                                            setSeatHeight(v);
-                                                            setSeatHeightStr(String(v));
-                                                        }}
-                                                        placeholder="Cao"
-                                                        style={{
-                                                            flex: 1,
-                                                            background: '#16162a',
-                                                            border: '1px solid #2a2a3e',
-                                                            borderRadius: '6px',
-                                                            padding: '8px',
-                                                            color: '#e5e7eb'
-                                                        }}
-                                                    />
+                                                    Khóa khu vực
+                                                </label>
+                                            </div>
+
+                                            <div style={{ marginBottom: '24px' }}>
+                                                <label style={{
+                                                    display: 'block',
+                                                    fontSize: '12px',
+                                                    fontWeight: 600,
+                                                    color: '#9ca3af',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em',
+                                                    marginBottom: '12px'
+                                                }}>
+                                                    SỐ GHẾ TRONG KHU VỰC
+                                                </label>
+                                                <div style={{
+                                                    background: '#16162a',
+                                                    border: '1px solid #2a2a3e',
+                                                    borderRadius: '8px',
+                                                    padding: '10px 12px',
+                                                    color: '#10b981',
+                                                    fontSize: '18px',
+                                                    fontWeight: 600,
+                                                    textAlign: 'center'
+                                                }}>
+                                                    {getSectionSeatCount(selectedSection.id)} ghế
                                                 </div>
                                             </div>
 
@@ -2723,310 +2630,510 @@ const SeatMapEditorPage: React.FC = () => {
                                                     fontSize: '12px',
                                                     fontWeight: 600,
                                                     color: '#9ca3af',
-                                                    marginBottom: '8px'
-                                                }}>
-                                                    KHOẢNG CÁCH GHẾ
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min={0}
-                                                    max={50}
-                                                    value={seatSpacingStr}
-                                                    onChange={(e) => setSeatSpacingStr(e.target.value)}
-                                                    onBlur={() => {
-                                                        const v = Math.max(0, Number(seatSpacingStr) || 0);
-                                                        setSeatSpacing(v);
-                                                        setSeatSpacingStr(String(v));
-                                                    }}
-                                                    style={{
-                                                        width: '100%',
-                                                        background: '#16162a',
-                                                        border: '1px solid #2a2a3e',
-                                                        borderRadius: '6px',
-                                                        padding: '8px',
-                                                        color: '#e5e7eb'
-                                                    }}
-                                                />
-                                            </div>
-
-                                            {seatLayoutType === 'grid' && (
-                                                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                                                    <div style={{ flex: 1 }}>
-                                                        <label style={{
-                                                            display: 'block',
-                                                            fontSize: '11px',
-                                                            color: '#9ca3af',
-                                                            marginBottom: '8px'
-                                                        }}>
-                                                            Số hàng
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            max="20"
-                                                            value={gridRows}
-                                                            onChange={(e) => setGridRows(Math.max(1, Number(e.target.value)))}
-                                                            style={{
-                                                                width: '100%',
-                                                                background: '#16162a',
-                                                                border: '1px solid #2a2a3e',
-                                                                borderRadius: '6px',
-                                                                padding: '8px 10px',
-                                                                color: '#e5e7eb',
-                                                                fontSize: '13px',
-                                                                outline: 'none'
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <label style={{
-                                                            display: 'block',
-                                                            fontSize: '11px',
-                                                            color: '#9ca3af',
-                                                            marginBottom: '8px'
-                                                        }}>
-                                                            Số cột
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="1"
-                                                            max="30"
-                                                            value={gridColumns}
-                                                            onChange={(e) => setGridColumns(Math.max(1, Number(e.target.value)))}
-                                                            style={{
-                                                                width: '100%',
-                                                                background: '#16162a',
-                                                                border: '1px solid #2a2a3e',
-                                                                borderRadius: '6px',
-                                                                padding: '8px 10px',
-                                                                color: '#e5e7eb',
-                                                                fontSize: '13px',
-                                                                outline: 'none'
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {seatLayoutType === 'arc' && (
-                                                <>
-                                                    <div style={{ marginBottom: '12px' }}>
-                                                        <label style={{
-                                                            display: 'block',
-                                                            fontSize: '11px',
-                                                            color: '#9ca3af',
-                                                            marginBottom: '8px'
-                                                        }}>
-                                                            Tổng số ghế
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            min="2"
-                                                            max="50"
-                                                            value={arcTotalSeats}
-                                                            onChange={(e) => setArcTotalSeats(Math.max(2, Number(e.target.value)))}
-                                                            style={{
-                                                                width: '100%',
-                                                                background: '#16162a',
-                                                                border: '1px solid #2a2a3e',
-                                                                borderRadius: '6px',
-                                                                padding: '8px 10px',
-                                                                color: '#e5e7eb',
-                                                                fontSize: '13px',
-                                                                outline: 'none'
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <div style={{ marginBottom: '12px' }}>
-                                                        <label style={{
-                                                            display: 'block',
-                                                            fontSize: '11px',
-                                                            color: '#9ca3af',
-                                                            marginBottom: '8px'
-                                                        }}>
-                                                            Độ cong (độ)
-                                                        </label>
-
-                                                        <select
-                                                            value={arcCurvature}
-                                                            onChange={(e) => setArcCurvature(Number(e.target.value))}
-                                                            style={{
-                                                                width: '100%',
-                                                                background: '#16162a',
-                                                                border: '1px solid #2a2a3e',
-                                                                borderRadius: '6px',
-                                                                padding: '8px 10px',
-                                                                color: '#e5e7eb',
-                                                                fontSize: '13px',
-                                                                outline: 'none',
-                                                            }}
-                                                        >
-                                                            <option value={120}>1/3 vòng (120°)</option>
-                                                            <option value={180}>Nửa vòng (180°)</option>
-                                                            <option value={240}>2/3 vòng (240°)</option>
-                                                            <option value={270}>3/4 vòng (270°)</option>
-                                                            <option value={325}>Gần tròn (325°)</option>
-                                                        </select>
-                                                    </div>
-                                                </>
-                                            )}
-
-                                            <button
-                                                onClick={handleCreateSeats}
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#10b981',
-                                                    border: 'none',
-                                                    borderRadius: '8px',
-                                                    padding: '12px',
-                                                    color: 'white',
-                                                    fontSize: '14px',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '8px',
-                                                    marginBottom: '12px',
-                                                }}
-                                            >
-                                                TẠO THÊM GHẾ
-                                            </button>
-                                            <div style={{ marginBottom: '12px' }}>
-                                                <label style={{
-                                                    display: 'block',
-                                                    fontSize: '11px',
-                                                    color: '#9ca3af',
-                                                    marginBottom: '6px',
-                                                    fontWeight: 600,
                                                     textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em',
+                                                    marginBottom: '12px'
                                                 }}>
-                                                    TẠO NHANH THEO SỐ LƯỢNG
+                                                    MÀU GHẾ
                                                 </label>
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <input
-                                                        type="number"
-                                                        min={1}
-                                                        max={5000}
-                                                        value={customSeatCount}
-                                                        onChange={(e) => setCustomSeatCount(Math.max(1, Number(e.target.value)))}
-                                                        style={{
-                                                            flex: 1,
-                                                            background: '#16162a',
-                                                            border: '1px solid #2a2a3e',
-                                                            borderRadius: '6px',
-                                                            padding: '8px 10px',
-                                                            color: '#e5e7eb',
-                                                            fontSize: '13px',
-                                                            outline: 'none',
-                                                        }}
-                                                    />
-                                                    <button
-                                                        onClick={createCustomCountSeats}
-                                                        style={{
-                                                            background: '#7c3aed',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            padding: '8px 14px',
-                                                            color: 'white',
-                                                            fontSize: '13px',
-                                                            fontWeight: 600,
-                                                            cursor: 'pointer',
-                                                            whiteSpace: 'nowrap',
-                                                        }}
-                                                    >
-                                                        Tạo {customSeatCount} ghế
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            {(() => {
-                                                const tt = ticketTypes.find(t => t.id === selectedSection?.ticketTypeId);
-                                                if (!tt?.quantity) return null;
-                                                const alreadyCreated = seats.filter(s => s.sectionId === selectedSection?.id).length;
-                                                const remaining = tt.quantity - alreadyCreated;
-                                                return (
-                                                    <button
-                                                        onClick={createSeatsFromTicketQuantity}
-                                                        disabled={remaining <= 0}
-                                                        style={{
-                                                            width: '100%',
-                                                            background: remaining <= 0 ? '#374151' : '#1d4ed8',
-                                                            border: `1px solid ${remaining <= 0 ? '#4b5563' : '#3b82f6'}`,
-                                                            borderRadius: '8px',
-                                                            padding: '12px',
-                                                            color: remaining <= 0 ? '#6b7280' : 'white',
-                                                            fontSize: '13px',
-                                                            fontWeight: 600,
-                                                            cursor: remaining <= 0 ? 'not-allowed' : 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '6px',
-                                                            marginBottom: '12px',
-                                                        }}
-                                                    >
-                                                        {remaining <= 0
-                                                            ? `✓ Đã đủ ${tt.quantity.toLocaleString('vi-VN')} ghế`
-                                                            : `Tạo ${remaining.toLocaleString('vi-VN')} ghế còn lại (${alreadyCreated}/${tt.quantity.toLocaleString('vi-VN')})`
-                                                        }
-                                                    </button>
-                                                );
-                                            })()}
-
-                                            <button
-                                                onClick={deleteSectionSeats}
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#dc2626',
-                                                    border: 'none',
-                                                    borderRadius: '8px',
-                                                    padding: '12px',
-                                                    color: 'white',
-                                                    fontSize: '14px',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '8px',
-                                                }}
-                                            >
-                                                XÓA GHẾ KHU VỰC
-                                            </button>
-                                        </div>
-
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label style={{
-                                                display: 'block',
-                                                fontSize: '12px',
-                                                fontWeight: 600,
-                                                color: '#9ca3af',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                                marginBottom: '12px'
-                                            }}>
-                                                XOAY (độ)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={Math.round(selectedSection.rotation)}
-                                                onChange={(e) => updateSectionProperty('rotation', Number(e.target.value))}
-                                                style={{
-                                                    width: '100%',
+                                                <div style={{
                                                     background: '#16162a',
                                                     border: '1px solid #2a2a3e',
                                                     borderRadius: '8px',
                                                     padding: '10px 12px',
-                                                    color: '#e5e7eb',
-                                                    fontSize: '14px',
-                                                    outline: 'none'
-                                                }}
-                                            />
-                                        </div>
+                                                    color: '#9ca3af',
+                                                    fontSize: '13px',
+                                                }}>
+                                                    Ghế màu trắng
+                                                </div>
+                                            </div>
 
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label
-                                                style={{
+                                            <div style={{ marginBottom: '24px' }}>
+                                                <label style={{
+                                                    display: 'block',
+                                                    fontSize: '12px',
+                                                    fontWeight: 600,
+                                                    color: '#9ca3af',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em',
+                                                    marginBottom: '12px'
+                                                }}>
+                                                    BỐ TRÍ GHẾ
+                                                </label>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    gap: '8px',
+                                                    background: '#16162a',
+                                                    borderRadius: '8px',
+                                                    padding: '4px',
+                                                    marginBottom: '16px'
+                                                }}>
+                                                    <button
+                                                        onClick={() => setSeatLayoutType('grid')}
+                                                        style={{
+                                                            flex: 1,
+                                                            background: seatLayoutType === 'grid' ? '#8B5CF6' : 'transparent',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            padding: '8px 12px',
+                                                            color: seatLayoutType === 'grid' ? 'white' : '#6b7280',
+                                                            fontSize: '12px',
+                                                            fontWeight: 500,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                    >
+                                                        Lưới
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setSeatLayoutType('arc')}
+                                                        style={{
+                                                            flex: 1,
+                                                            background: seatLayoutType === 'arc' ? '#8B5CF6' : 'transparent',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            padding: '8px 12px',
+                                                            color: seatLayoutType === 'arc' ? 'white' : '#6b7280',
+                                                            fontSize: '12px',
+                                                            fontWeight: 500,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                    >
+                                                        Vòng cung
+                                                    </button>
+                                                </div>
+
+                                                <div style={{ marginBottom: '16px' }}>
+                                                    <label style={{
+                                                        display: 'block',
+                                                        fontSize: '12px',
+                                                        fontWeight: 600,
+                                                        color: '#9ca3af',
+                                                        marginBottom: '8px'
+                                                    }}>
+                                                        KÍCH THƯỚC GHẾ
+                                                    </label>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <input
+                                                            type="number"
+                                                            min={10}
+                                                            max={100}
+                                                            value={seatWidthStr}
+                                                            onChange={(e) => setSeatWidthStr(e.target.value)}
+                                                            onBlur={() => {
+                                                                const v = Math.max(10, Number(seatWidthStr) || 10);
+                                                                setSeatWidth(v);
+                                                                setSeatWidthStr(String(v));
+                                                            }}
+                                                            placeholder="Rộng"
+                                                            style={{
+                                                                flex: 1,
+                                                                background: '#16162a',
+                                                                border: '1px solid #2a2a3e',
+                                                                borderRadius: '6px',
+                                                                padding: '8px',
+                                                                color: '#e5e7eb'
+                                                            }}
+                                                        />
+                                                        <input
+                                                            min={10}
+                                                            max={100}
+                                                            type="number"
+                                                            value={seatHeightStr}
+                                                            onChange={(e) => setSeatHeightStr(e.target.value)}
+                                                            onBlur={() => {
+                                                                const v = Math.max(10, Number(seatHeightStr) || 10);
+                                                                setSeatHeight(v);
+                                                                setSeatHeightStr(String(v));
+                                                            }}
+                                                            placeholder="Cao"
+                                                            style={{
+                                                                flex: 1,
+                                                                background: '#16162a',
+                                                                border: '1px solid #2a2a3e',
+                                                                borderRadius: '6px',
+                                                                padding: '8px',
+                                                                color: '#e5e7eb'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ marginBottom: '24px' }}>
+                                                    <label style={{
+                                                        display: 'block',
+                                                        fontSize: '12px',
+                                                        fontWeight: 600,
+                                                        color: '#9ca3af',
+                                                        marginBottom: '8px'
+                                                    }}>
+                                                        KHOẢNG CÁCH GHẾ
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        max={50}
+                                                        value={seatSpacingStr}
+                                                        onChange={(e) => setSeatSpacingStr(e.target.value)}
+                                                        onBlur={() => {
+                                                            const v = Math.max(0, Number(seatSpacingStr) || 0);
+                                                            setSeatSpacing(v);
+                                                            setSeatSpacingStr(String(v));
+                                                        }}
+                                                        style={{
+                                                            width: '100%',
+                                                            background: '#16162a',
+                                                            border: '1px solid #2a2a3e',
+                                                            borderRadius: '6px',
+                                                            padding: '8px',
+                                                            color: '#e5e7eb'
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                {seatLayoutType === 'grid' && (
+                                                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <label style={{
+                                                                display: 'block',
+                                                                fontSize: '11px',
+                                                                color: '#9ca3af',
+                                                                marginBottom: '8px'
+                                                            }}>
+                                                                Số hàng
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                max={remaining === Infinity ? 20 : Math.max(1, Math.floor(remaining / Math.max(1, gridColumns)))}
+                                                                value={gridRows}
+                                                                disabled={isSeatFull}
+                                                                onChange={(e) => {
+                                                                    const v = Math.max(1, Number(e.target.value));
+                                                                    if (remaining !== Infinity) {
+                                                                        const maxRows = Math.max(1, Math.floor(remaining / Math.max(1, gridColumns)));
+                                                                        setGridRows(Math.min(v, maxRows));
+                                                                    } else {
+                                                                        setGridRows(v);
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    background: '#16162a',
+                                                                    border: '1px solid #2a2a3e',
+                                                                    borderRadius: '6px',
+                                                                    padding: '8px 10px',
+                                                                    color: isSeatFull ? '#6b7280' : '#e5e7eb',
+                                                                    fontSize: '13px',
+                                                                    outline: 'none',
+                                                                    cursor: isSeatFull ? 'not-allowed' : undefined,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <label style={{
+                                                                display: 'block',
+                                                                fontSize: '11px',
+                                                                color: '#9ca3af',
+                                                                marginBottom: '8px'
+                                                            }}>
+                                                                Số cột
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                max={remaining === Infinity ? 30 : Math.max(1, Math.floor(remaining / Math.max(1, gridRows)))}
+                                                                value={gridColumns}
+                                                                disabled={isSeatFull}
+                                                                onChange={(e) => {
+                                                                    const v = Math.max(1, Number(e.target.value));
+                                                                    if (remaining !== Infinity) {
+                                                                        const maxCols = Math.max(1, Math.floor(remaining / Math.max(1, gridRows)));
+                                                                        setGridColumns(Math.min(v, maxCols));
+                                                                    } else {
+                                                                        setGridColumns(v);
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    background: '#16162a',
+                                                                    border: '1px solid #2a2a3e',
+                                                                    borderRadius: '6px',
+                                                                    padding: '8px 10px',
+                                                                    color: isSeatFull ? '#6b7280' : '#e5e7eb',
+                                                                    fontSize: '13px',
+                                                                    outline: 'none',
+                                                                    cursor: isSeatFull ? 'not-allowed' : undefined,
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {seatLayoutType === 'arc' && (
+                                                    <>
+                                                        <div style={{ marginBottom: '12px' }}>
+                                                            <label style={{
+                                                                display: 'block',
+                                                                fontSize: '11px',
+                                                                color: '#9ca3af',
+                                                                marginBottom: '8px'
+                                                            }}>
+                                                                Tổng số ghế
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="2"
+                                                                max="50"
+                                                                value={arcTotalSeats}
+                                                                onChange={(e) => setArcTotalSeats(Math.max(2, Number(e.target.value)))}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    background: '#16162a',
+                                                                    border: '1px solid #2a2a3e',
+                                                                    borderRadius: '6px',
+                                                                    padding: '8px 10px',
+                                                                    color: '#e5e7eb',
+                                                                    fontSize: '13px',
+                                                                    outline: 'none'
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div style={{ marginBottom: '12px' }}>
+                                                            <label style={{
+                                                                display: 'block',
+                                                                fontSize: '11px',
+                                                                color: '#9ca3af',
+                                                                marginBottom: '8px'
+                                                            }}>
+                                                                Độ cong (độ)
+                                                            </label>
+                                                            <select
+                                                                value={arcCurvature}
+                                                                onChange={(e) => setArcCurvature(Number(e.target.value))}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    background: '#16162a',
+                                                                    border: '1px solid #2a2a3e',
+                                                                    borderRadius: '6px',
+                                                                    padding: '8px 10px',
+                                                                    color: '#e5e7eb',
+                                                                    fontSize: '13px',
+                                                                    outline: 'none',
+                                                                }}
+                                                            >
+                                                                <option value={120}>1/3 vòng (120°)</option>
+                                                                <option value={180}>Nửa vòng (180°)</option>
+                                                                <option value={240}>2/3 vòng (240°)</option>
+                                                                <option value={270}>3/4 vòng (270°)</option>
+                                                                <option value={325}>Gần tròn (325°)</option>
+                                                            </select>
+                                                        </div>
+                                                    </>
+                                                )}
+
+                                                {(() => {
+                                                    const tt = ticketTypes.find(t => t.id === selectedSection?.ticketTypeId);
+                                                    const alreadyCreated = seats.filter(s => s.sectionId === selectedSection?.id).length;
+                                                    const isFull = selectedSection?.isAreaType && tt?.quantity != null && alreadyCreated >= tt.quantity;
+                                                    const _remaining = (selectedSection?.isAreaType && tt?.quantity != null)
+                                                        ? tt.quantity - alreadyCreated
+                                                        : null;
+                                                    const willCreate = seatLayoutType === 'grid'
+                                                        ? gridRows * gridColumns
+                                                        : arcTotalSeats;
+                                                    const effectiveCreate = _remaining !== null ? Math.min(willCreate, _remaining) : willCreate;
+                                                    return (
+                                                        <button
+                                                            onClick={handleCreateSeats}
+                                                            disabled={!!isFull}
+                                                            style={{
+                                                                width: '100%',
+                                                                background: isFull ? '#374151' : '#10b981',
+                                                                border: `1px solid ${isFull ? '#4b5563' : 'transparent'}`,
+                                                                borderRadius: '8px',
+                                                                padding: '12px',
+                                                                color: isFull ? '#6b7280' : 'white',
+                                                                fontSize: '14px',
+                                                                fontWeight: 600,
+                                                                cursor: isFull ? 'not-allowed' : 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '8px',
+                                                                marginBottom: '12px',
+                                                            }}
+                                                        >
+                                                            {isFull
+                                                                ? `✓ ĐÃ ĐỦ ${tt?.quantity?.toLocaleString('vi-VN')} GHẾ`
+                                                                : _remaining !== null && effectiveCreate < willCreate
+                                                                    ? `TẠO THÊM ${effectiveCreate} GHẾ (còn thiếu)`
+                                                                    : 'TẠO THÊM GHẾ'
+                                                            }
+                                                        </button>
+                                                    );
+                                                })()}
+
+                                                <div style={{ marginBottom: '12px' }}>
+                                                    <label style={{
+                                                        display: 'block',
+                                                        fontSize: '12px',
+                                                        fontWeight: 600,
+                                                        color: '#9ca3af',
+                                                        marginBottom: '8px',
+                                                        marginTop: '8px'
+                                                    }}>
+                                                        TẠO NHANH THEO SỐ LƯỢNG
+                                                    </label>
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        <input
+                                                            type="number"
+                                                            min={1}
+                                                            max={remaining === Infinity ? 5000 : Math.max(1, remaining)}
+                                                            value={customSeatCount}
+                                                            disabled={isSeatFull}
+                                                            onChange={(e) => {
+                                                                const v = Math.max(1, Number(e.target.value));
+                                                                setCustomSeatCount(
+                                                                    remaining !== Infinity ? Math.min(v, Math.max(1, remaining)) : v
+                                                                );
+                                                            }}
+                                                            style={{
+                                                                flex: 1,
+                                                                background: '#16162a',
+                                                                border: '1px solid #2a2a3e',
+                                                                borderRadius: '6px',
+                                                                padding: '8px 10px',
+                                                                color: isSeatFull ? '#6b7280' : '#e5e7eb',
+                                                                fontSize: '13px',
+                                                                outline: 'none',
+                                                                cursor: isSeatFull ? 'not-allowed' : undefined,
+                                                            }}
+                                                        />
+                                                        {(() => {
+                                                            const tt = ticketTypes.find(t => t.id === selectedSection?.ticketTypeId);
+                                                            const alreadyCreated = seats.filter(s => s.sectionId === selectedSection?.id).length;
+                                                            const _rem = (selectedSection?.isAreaType && tt?.quantity != null)
+                                                                ? tt.quantity - alreadyCreated
+                                                                : Infinity;
+                                                            const isFull = _rem <= 0;
+                                                            const effectiveCount = Math.min(customSeatCount, _rem === Infinity ? customSeatCount : _rem);
+                                                            return (
+                                                                <button
+                                                                    onClick={createCustomCountSeats}
+                                                                    disabled={isFull}
+                                                                    style={{
+                                                                        background: isFull ? '#374151' : '#7c3aed',
+                                                                        border: 'none',
+                                                                        borderRadius: '6px',
+                                                                        padding: '8px 14px',
+                                                                        color: isFull ? '#6b7280' : 'white',
+                                                                        fontSize: '13px',
+                                                                        fontWeight: 600,
+                                                                        cursor: isFull ? 'not-allowed' : 'pointer',
+                                                                        whiteSpace: 'nowrap',
+                                                                    }}
+                                                                >
+                                                                    {isFull
+                                                                        ? 'Đã đủ'
+                                                                        : effectiveCount < customSeatCount
+                                                                            ? `Tạo ${effectiveCount} ghế (còn thiếu)`
+                                                                            : `Tạo ${effectiveCount} ghế`
+                                                                    }
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+
+                                                {(() => {
+                                                    const tt = ticketTypes.find(t => t.id === selectedSection?.ticketTypeId);
+                                                    if (!tt?.quantity) return null;
+                                                    const alreadyCreated = seats.filter(s => s.sectionId === selectedSection?.id).length;
+                                                    const _rem = tt.quantity - alreadyCreated;
+                                                    return (
+                                                        <button
+                                                            onClick={createSeatsFromTicketQuantity}
+                                                            disabled={_rem <= 0}
+                                                            style={{
+                                                                width: '100%',
+                                                                background: _rem <= 0 ? '#374151' : '#1d4ed8',
+                                                                border: `1px solid ${_rem <= 0 ? '#4b5563' : '#3b82f6'}`,
+                                                                borderRadius: '8px',
+                                                                padding: '12px',
+                                                                color: _rem <= 0 ? '#6b7280' : 'white',
+                                                                fontSize: '13px',
+                                                                fontWeight: 600,
+                                                                cursor: _rem <= 0 ? 'not-allowed' : 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '6px',
+                                                                marginBottom: '12px',
+                                                            }}
+                                                        >
+                                                            {_rem <= 0
+                                                                ? `✓ Đã đủ ${tt.quantity.toLocaleString('vi-VN')} ghế`
+                                                                : `Tạo ${_rem.toLocaleString('vi-VN')} ghế còn lại (${alreadyCreated}/${tt.quantity.toLocaleString('vi-VN')})`
+                                                            }
+                                                        </button>
+                                                    );
+                                                })()}
+
+                                                <button
+                                                    onClick={deleteSectionSeats}
+                                                    style={{
+                                                        width: '100%',
+                                                        background: '#dc2626',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        padding: '12px',
+                                                        color: 'white',
+                                                        fontSize: '14px',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '8px',
+                                                    }}
+                                                >
+                                                    XÓA GHẾ KHU VỰC
+                                                </button>
+                                            </div>
+
+                                            <div style={{ marginBottom: '24px' }}>
+                                                <label style={{
+                                                    display: 'block',
+                                                    fontSize: '12px',
+                                                    fontWeight: 600,
+                                                    color: '#9ca3af',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em',
+                                                    marginBottom: '12px'
+                                                }}>
+                                                    XOAY (độ)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    value={Math.round(selectedSection.rotation)}
+                                                    onChange={(e) => updateSectionProperty('rotation', Number(e.target.value))}
+                                                    style={{
+                                                        width: '100%',
+                                                        background: '#16162a',
+                                                        border: '1px solid #2a2a3e',
+                                                        borderRadius: '8px',
+                                                        padding: '10px 12px',
+                                                        color: '#e5e7eb',
+                                                        fontSize: '14px',
+                                                        outline: 'none'
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div style={{ marginBottom: '24px' }}>
+                                                <label style={{
                                                     display: 'block',
                                                     fontSize: '12px',
                                                     fontWeight: 600,
@@ -3034,48 +3141,35 @@ const SeatMapEditorPage: React.FC = () => {
                                                     textTransform: 'uppercase',
                                                     letterSpacing: '0.05em',
                                                     marginBottom: '12px',
-                                                }}
-                                            >
-                                                LOẠI VÉ ÁP DỤNG
-                                            </label>
-
-                                            <div style={{ position: 'relative' }}>
-                                                <select
-                                                    value={selectedSection.ticketTypeId}
-                                                    onChange={(e) =>
-                                                        updateSectionProperty('ticketTypeId', e.target.value)
-                                                    }
-                                                    style={{
-                                                        width: '100%',
-                                                        background: '#16162a',
-                                                        border: '1px solid #2a2a3e',
-                                                        borderRadius: '8px',
-                                                        padding: '12px 40px 12px 12px',
-                                                        color: '#e5e7eb',
-                                                        fontSize: '14px',
-                                                        outline: 'none',
-                                                        cursor: 'pointer',
-                                                        appearance: 'none',
-                                                        WebkitAppearance: 'none',
-                                                        MozAppearance: 'none',
-                                                    }}
-                                                >
-                                                    {ticketTypes.map(t => (
-                                                        <option
-                                                            key={t.id}
-                                                            value={t.id}
-                                                            style={{
-                                                                background: '#16162a',
-                                                                color: '#e5e7eb',
-                                                            }}
-                                                        >
-                                                            {t.name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-
-                                                <span
-                                                    style={{
+                                                }}>
+                                                    LOẠI VÉ ÁP DỤNG
+                                                </label>
+                                                <div style={{ position: 'relative' }}>
+                                                    <select
+                                                        value={selectedSection.ticketTypeId}
+                                                        onChange={(e) => updateSectionProperty('ticketTypeId', e.target.value)}
+                                                        style={{
+                                                            width: '100%',
+                                                            background: '#16162a',
+                                                            border: '1px solid #2a2a3e',
+                                                            borderRadius: '8px',
+                                                            padding: '12px 40px 12px 12px',
+                                                            color: '#e5e7eb',
+                                                            fontSize: '14px',
+                                                            outline: 'none',
+                                                            cursor: 'pointer',
+                                                            appearance: 'none',
+                                                            WebkitAppearance: 'none',
+                                                            MozAppearance: 'none',
+                                                        }}
+                                                    >
+                                                        {ticketTypes.map(t => (
+                                                            <option key={t.id} value={t.id} style={{ background: '#16162a', color: '#e5e7eb' }}>
+                                                                {t.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <span style={{
                                                         position: 'absolute',
                                                         right: '12px',
                                                         top: '50%',
@@ -3083,42 +3177,14 @@ const SeatMapEditorPage: React.FC = () => {
                                                         pointerEvents: 'none',
                                                         color: '#9ca3af',
                                                         fontSize: '18px',
-                                                    }}
-                                                >
-                                                    ▾
-                                                </span>
+                                                    }}>
+                                                        ▾
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </>
-                                )}
-                                {isSingleSectionSelected &&
-                                    activeTab === 'SHAPE' &&
-                                    selectedSection.type === 'polygon' && (
-                                        <div
-                                            style={{
-                                                padding: '16px',
-                                                background: '#16162a',
-                                                border: '1px dashed #3b82f6',
-                                                borderRadius: '8px',
-                                                color: '#93c5fd',
-                                                fontSize: '13px',
-                                                lineHeight: 1.5,
-                                            }}
-                                        >
-                                            <strong>⚠ Khu vực được tạo tự động từ hình ảnh</strong>
-                                            <br />
-                                            Hình dạng này được hệ thống phát hiện từ sơ đồ gốc.
-                                            <br />
-                                            Bạn có thể:
-                                            <ul style={{ margin: '8px 0 0 16px' }}>
-                                                <li>Di chuyển</li>
-                                                <li>Thu phóng</li>
-                                                <li>Xoay</li>
-                                                <li>Tạo ghế bên trong</li>
-                                            </ul>
-                                            Không thể chỉnh sửa hình dạng chi tiết.
-                                        </div>
-                                    )}
+                                        </>
+                                    );
+                                })()}
                                 {isSingleSectionSelected && activeTab === 'SHAPE' && selectedSection.type !== 'polygon' && (
                                     <>
                                         <div style={{ marginBottom: '24px' }}>
@@ -3198,16 +3264,13 @@ const SeatMapEditorPage: React.FC = () => {
                                                 {['#8B5CF6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'].map(color => (
                                                     <button
                                                         key={color}
-                                                        onClick={() => {
-                                                            if (!currentTicketType) return;
-                                                            updateSectionProperty('fill', color);
-                                                        }}
+                                                        onClick={() => updateSectionProperty('fill', color)}
                                                         style={{
                                                             width: '48px',
                                                             height: '48px',
                                                             background: color,
                                                             border:
-                                                                currentTicketType?.color === color
+                                                                selectedSection?.fill === color
                                                                     ? '3px solid white'
                                                                     : '1px solid rgba(255,255,255,0.15)',
                                                             borderRadius: '8px',
@@ -3226,7 +3289,7 @@ const SeatMapEditorPage: React.FC = () => {
                                                         cursor: 'pointer',
                                                         position: 'relative',
                                                         overflow: 'hidden',
-                                                        background: currentTicketType?.color ?? '#1f2937',
+                                                        background: selectedSection?.fill ?? '#1f2937',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
@@ -3238,11 +3301,8 @@ const SeatMapEditorPage: React.FC = () => {
                                                     <MdOutlinePalette />
                                                     <input
                                                         type="color"
-                                                        value={currentTicketType?.color}
-                                                        onChange={(e) => {
-                                                            if (!currentTicketType) return;
-                                                            updateTicketTypeColor(currentTicketType.id, e.target.value);
-                                                        }}
+                                                        value={selectedSection?.fill ?? '#374151'}
+                                                        onChange={(e) => updateSectionProperty('fill', e.target.value)}
                                                         style={{
                                                             position: 'absolute',
                                                             inset: 0,
@@ -3491,66 +3551,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                 <option value="italic">Nghiêng</option>
                                                 <option value="bold italic">Đậm nghiêng</option>
                                             </select>
-                                        </div>
-
-                                        <div style={{ marginBottom: '24px' }}>
-                                            <label
-                                                style={{
-                                                    display: 'block',
-                                                    fontSize: '12px',
-                                                    fontWeight: 600,
-                                                    color: '#9ca3af',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.05em',
-                                                    marginBottom: '12px',
-                                                }}
-                                            >
-                                                GẮN VỚI KHU VỰC
-                                            </label>
-
-                                            <select
-                                                value={selectedText.attachedAreaId ?? ''}
-                                                onChange={(e) =>
-                                                    updateTextProperty(
-                                                        'attachedAreaId',
-                                                        e.target.value || undefined
-                                                    )
-                                                }
-                                                style={{
-                                                    width: '100%',
-                                                    background: '#16162a',
-                                                    border: '1px solid #2a2a3e',
-                                                    borderRadius: '8px',
-                                                    padding: '10px 12px',
-                                                    color: '#e5e7eb',
-                                                    fontSize: '14px',
-                                                    outline: 'none',
-                                                    cursor: 'pointer',
-                                                    appearance: 'none',
-                                                    WebkitAppearance: 'none',
-                                                    MozAppearance: 'none',
-                                                }}
-                                            >
-                                                <option value="">Không gắn</option>
-                                                {sections.map(sec => (
-                                                    <option key={sec.id} value={sec.id}>
-                                                        {sec.name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <span
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: '12px',
-                                                    top: '50%',
-                                                    transform: 'translateY(-50%)',
-                                                    pointerEvents: 'none',
-                                                    color: '#9ca3af',
-                                                    fontSize: '18px',
-                                                }}
-                                            >
-                                                ▾
-                                            </span>
                                         </div>
 
                                         <div style={{ marginBottom: '24px' }}>

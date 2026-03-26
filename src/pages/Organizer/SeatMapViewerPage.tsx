@@ -1,17 +1,17 @@
 import Konva from 'konva';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FiArrowLeft } from 'react-icons/fi';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage } from 'react-konva';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../store';
+import { fetchEventById } from '../../store/eventSlice';
 import { fetchGetSeatMap } from '../../store/seatMapSlice';
+import { fetchCreatePendingOrder } from '../../store/ticketingSlice';
 import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
 import type { Area, Seat, SeatMapData, TextEntity, TicketType } from '../../types/config/seatmap';
-import { FiArrowLeft } from 'react-icons/fi';
 import type { CreatePendingOrderRequest, TicketRequest } from '../../types/ticketing/ticketing';
-import { fetchCreatePendingOrder } from '../../store/ticketingSlice';
 import { notify } from '../../utils/notify';
-import { fetchEventById } from '../../store/eventSlice';
 import { clearOldOrderFromFirebase } from '../../utils/orderFirebase';
 
 type ViewerMode = 'zone' | 'seat';
@@ -44,6 +44,9 @@ interface SeatMapViewerProps {
     mode: ViewerMode;
     ticketTypes: TicketType[];
     onConfirm?: (payload: ConfirmPayload) => void;
+    confirmLabel?: string;
+    extraActions?: React.ReactNode;
+    onSelectionChange?: (seats: SelectedSeat[]) => void;
 }
 
 interface ConfirmPayload {
@@ -54,10 +57,6 @@ interface ConfirmPayload {
     seats?: SelectedSeat[];
     totalPrice: number;
 }
-
-// ─────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────
 
 const CANVAS_WIDTH = 1550;
 const CANVAS_HEIGHT = 900;
@@ -78,6 +77,9 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
     mode,
     ticketTypes,
     onConfirm,
+    confirmLabel,
+    extraActions,
+    onSelectionChange,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const stageRef = useRef<Konva.Stage>(null);
@@ -144,6 +146,10 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         }
         return 0;
     }, [mode, selectedSeatsInfo, selectedZone]);
+
+    useEffect(() => {
+        onSelectionChange?.(selectedSeatsInfo);
+    }, [selectedSeatsInfo]);
 
     // ── Resize observer ──
     useEffect(() => {
@@ -804,9 +810,10 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                     }}
                 >
                     {canConfirm ? (
-                        <>Tiếp tục · {fmtVND(totalPrice)} <span style={{ fontSize: 16 }}>»</span></>
+                        <>{confirmLabel ?? 'Tiếp tục'} · {fmtVND(totalPrice)} <span style={{ fontSize: 16 }}>»</span></>
                     ) : 'Vui lòng chọn vé'}
                 </button>
+                {extraActions}
             </div>
 
             {/* ── Zone Popup Modal ── */}
@@ -1004,7 +1011,7 @@ const SeatMapViewerPage: React.FC = () => {
         if (!eventId || !eventSessionId) return;
 
         dispatch(fetchGetSeatMap({ eventId, sessionId: eventSessionId }));
-        dispatch(fetchGetAllTicketTypes({ eventId }));
+        dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId: eventSessionId }));
     }, [eventId, eventSessionId, dispatch]);
 
     const seatMapData = useMemo<SeatMapData>(() => {
@@ -1073,19 +1080,23 @@ const SeatMapViewerPage: React.FC = () => {
             }));
         }
 
-        const request: CreatePendingOrderRequest = { tickets };
-
+         const request: CreatePendingOrderRequest = {
+            eventId: eventId!,
+            tickets: tickets
+            };
+        
         console.log('=== CreatePendingOrderRequest ===');
         console.log(JSON.stringify(request, null, 2));
 
         const result = await dispatch(fetchCreatePendingOrder(request));
 
+        
         if (fetchCreatePendingOrder.fulfilled.match(result)) {
             const orderId = result.payload.data;
-            console.log(orderId);
+     
             await clearOldOrderFromFirebase();
             localStorage.setItem("currentOrderId", orderId);
-            navigate(`/event-detail/${eventId}/payment`);
+            navigate(`/payment-ticket`);
             notify.success("Tạo order thành công");
         } else {
             notify.error("Tạo order thất bại, vé đã không còn");
@@ -1176,3 +1187,4 @@ const SeatMapViewerPage: React.FC = () => {
 export { SeatMapViewer };
 export type { ConfirmPayload, SeatMapViewerProps, ViewerMode };
 export default SeatMapViewerPage;
+export type { SelectedSeat };

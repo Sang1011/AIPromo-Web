@@ -40,6 +40,13 @@ import { fetchMe, fetchRefreshToken } from "./store/authSlice";
 import type { AppDispatch } from "./store";
 import CreateEventPage from "./pages/Organizer/CreateEventPage";
 import ForgotPassword from "./pages/ForgotPassword";
+import ProfileUser from "./pages/User/ProfileUser";
+import ProfileLayout from "./pages/User";
+import OrganizerAccountPage from "./pages/Organizer/OrganizerAccountPage";
+import VerifyOrganizer from "./pages/Organizer/VerifyOrganizer";
+import PaymentTicket from "./components/Payment";
+import EventUser from "./pages/User/EventUser";
+
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -63,7 +70,13 @@ function App() {
         <Route path="/event-detail/:id" element={<EventDetail />} />
         <Route path="/all-event" element={<AllEvent />} />
         <Route path="/history-event" element={<HistoryEvent />} />
+        <Route path="/payment-ticket" element={<PaymentTicket />} />
         <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
+        <Route path="/verify-organizer" element={<VerifyOrganizer />} />
+        <Route path="/profile" element={<ProfileLayout />}>
+          <Route path="account" element={<ProfileUser />} />
+          <Route path="events" element={<EventUser />} />
+        </Route>
 
         {/* Organizer */}
         {/* Organizer - Dashboard group */}
@@ -72,6 +85,7 @@ function App() {
           <Route path="reports" element={<ReportManagementPage />} />
           <Route path="legals" element={<LegalPage />} />
           <Route path="create-event" element={<CreateEventPage />} />
+          <Route path="accounts" element={<OrganizerAccountPage />} />
         </Route>
 
         {/* Organizer - Event group */}

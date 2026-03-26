@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import organizerProfileService from "../services/organizerProfileService";
 import type {
+    CreateProfileOrganizerRequest,
     GetOrganizerProfileResponse,
     OrganizerProfile,
     UpdateOrganizerBankRequest,
@@ -53,6 +54,32 @@ export const fetchUpdateOrganizerBank = createAsyncThunk<any, UpdateOrganizerBan
     }
 );
 
+export const fetchCreateProfileOrganizer = createAsyncThunk<any, CreateProfileOrganizerRequest>(
+    `${name}/fetchCreateProfileOrganizer`,
+    async (data, thunkAPI) => {
+        try {
+            const response = await organizerProfileService.createProfile(data);
+            return response.data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchVerifyProfileOrganizer = createAsyncThunk<
+  any,
+  void
+>(
+  `${name}/fetchVerifyProfileOrganizer`,
+  async (_, thunkAPI) => {
+    try {
+      const response = await organizerProfileService.verifyProfile();
+      return response.data;
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
 const organizerProfileSlice = createSlice({
     name,
     initialState,

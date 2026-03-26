@@ -1,7 +1,7 @@
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { MenuItem } from "../shared/MenuItem";
 import { type ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export interface MenuItemConfig {
     icon: ReactNode;
@@ -36,14 +36,36 @@ export default function Sidebar({
         border-r border-slate-200 dark:border-slate-800`}
         >
             <div className="p-6 flex items-center gap-3">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">
-                    A
-                </div>
-                {!collapsed && (
-                    <span className="text-xl font-bold text-primary">
-                        AIPromo
+                <Link
+                    to="/"
+                    className="group relative flex items-center gap-3 cursor-pointer"
+                >
+                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">
+                        A
+                    </div>
+
+                    {!collapsed && (
+                        <span className="text-xl font-bold text-primary">
+                            AIPromo
+                        </span>
+                    )}
+
+                    <span
+                        className="
+                    absolute left-full ml-2
+                    whitespace-nowrap
+                    rounded-md px-3 py-1.5
+                    text-xs font-medium
+                    bg-black text-white
+                    opacity-0 scale-95
+                    group-hover:opacity-100 group-hover:scale-100
+                    transition-all duration-200
+                    pointer-events-none
+                "
+                    >
+                        Bấm để quay về trang chủ
                     </span>
-                )}
+                </Link>
             </div>
 
             <nav className="px-3 space-y-6 flex-1">

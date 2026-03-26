@@ -10,7 +10,6 @@ export default function AdminCategoryStats() {
     const categories = useSelector((s: RootState) => s.CATEGORY.categories) ?? [];
 
     useEffect(() => {
-        // fetch categories for dashboard stats
         dispatch(fetchAllCategories({}));
     }, [dispatch]);
 

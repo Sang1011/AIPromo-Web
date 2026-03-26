@@ -57,6 +57,20 @@ export default function AdminUserManagementTable() {
         setPageNumber(newPage);
     };
 
+    const getRoleStyles = (role: string) => {
+        switch (role) {
+            case "Admin":
+                return "bg-red-500/10 text-red-400 border-red-500/20";
+            case "Staff":
+                return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+            case "Organizer":
+                return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+            case "Attendee":
+            default:
+                return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+        }
+    };
+
     return (
         <div className={`${glassCard} rounded-xl overflow-hidden`}>
             {/* Header */}
@@ -122,11 +136,7 @@ export default function AdminUserManagementTable() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-5">
-                                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${
-                                                user.role === "Organizer" 
-                                                    ? "bg-primary/10 text-primary" 
-                                                    : "bg-indigo-500/10 text-indigo-400"
-                                            }`}>
+                                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${getRoleStyles(user.role)}`}>
                                                 {user.role}
                                             </span>
                                         </td>

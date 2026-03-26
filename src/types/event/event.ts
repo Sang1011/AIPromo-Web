@@ -1,6 +1,7 @@
 import type { ApiResponse } from "../api";
 
 export interface GetAllRequest {
+    CategoryId?: number,
     PageNumber?: number;
     PageSize?: number;
     SortColumn?: string;
@@ -73,6 +74,8 @@ export interface EventItem {
     eventStartAt: string;
     eventEndAt: string;
     urlPath: string;
+    minPrice: number;
+    maxPrice: number;
     createdAt: string;
     categories: EventCategory[];
 }
@@ -99,6 +102,7 @@ export interface CreateEventSessionRequest {
 export interface UpdateEventSettingsRequest {
     isEmailReminderEnabled: boolean;
     urlPath?: string;
+    specImage?: string;
     ticketSaleStartAt?: string;
     ticketSaleEndAt?: string;
     eventStartAt?: string;
@@ -135,6 +139,7 @@ export interface GetEventDetailResponse {
     title: string;
     status: EventStatus;
     bannerUrl: string;
+    specImage: string;
     location: string;
     mapUrl: string;
     description: string;

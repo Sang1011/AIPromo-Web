@@ -619,7 +619,7 @@ function EventDetail() {
                               >
                                 <div>
                                   <p className="text-sm font-bold">{ticket.name}</p>
-                                  <p className="text-xs text-gray-400">{ticket.areaName}</p>
+                                  {/* <p className="text-xs text-gray-400">{ticket.areaName}</p> */}
                                 </div>
                                 <span className="text-primary font-bold text-sm">
                                   {formatPrice(ticket.price)} VNĐ

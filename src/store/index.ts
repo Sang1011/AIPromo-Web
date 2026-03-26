@@ -8,6 +8,10 @@ import eventMemberReducer from "./eventMemberSlice";
 import organizerProfileReducer from "./organizerProfileSlice";
 import seatMapReducer from "./seatMapSlice";
 import ticketingReducer from "./ticketingSlice";
+import walletReducer from "./walletSlice"
+import orderReducer from "./orderSlice"
+import paymentReducer from "./paymentSlice"
+import voucherReducer from "./voucherSlice"
 import userReducer from "./userSlice";
 
 const store = configureStore({
@@ -21,6 +25,10 @@ const store = configureStore({
         ORGANIZER_PROFILE: organizerProfileReducer,
         SEATMAP: seatMapReducer,
         TICKETING: ticketingReducer,
+        WALLET: walletReducer,
+        ORDER: orderReducer,
+        PAYMENT: paymentReducer,
+        VOUCHER: voucherReducer,
         USER: userReducer,
     }
 })

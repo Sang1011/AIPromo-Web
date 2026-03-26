@@ -9,6 +9,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchEventById } from "../../../store/eventSlice";
+import type { OrganizerProfile } from "../../../types/organizerProfile/organizerProfile";
+import { fetchOrganizerProfile } from "../../../store/organizerProfileSlice";
 
 interface HeaderProps {
     title?: string;
@@ -40,6 +42,56 @@ export default function Header({
         }
     };
 
+    function getMissingFields(profile: OrganizerProfile | null): { fields: string[]; tab: "profile" | "bank" } {
+        if (!profile) return { fields: ["displayName"], tab: "profile" };
+
+        const missing: string[] = [];
+        const isCompany = profile.businessType?.toLowerCase() === "company";
+
+        if (!profile.displayName?.trim()) missing.push("displayName");
+        if (!profile.identityNumber?.trim()) missing.push("identityNumber");
+        if (isCompany) {
+            if (!profile.companyName?.trim()) missing.push("companyName");
+        }
+        if (!profile.taxCode?.trim()) missing.push("taxCode");
+
+        if (!profile.accountName?.trim()) missing.push("accountName");
+        if (!profile.accountNumber?.trim()) missing.push("accountNumber");
+        if (!profile.bankCode?.trim()) missing.push("bankCode");
+        if (!profile.branch?.trim()) missing.push("branch");
+
+        const profileFields = ["displayName", "identityNumber", "companyName", "taxCode"];
+        const hasProfileError = missing.some((f) => profileFields.includes(f));
+        const tab = hasProfileError ? "profile" : "bank";
+
+        return { fields: missing, tab };
+    }
+
+    const handleLogout = () => {
+        localStorage.removeItem("ACCESS_TOKEN");
+        localStorage.removeItem("REFRESH_TOKEN");
+        localStorage.removeItem("DEVICE_ID");
+        navigate("/login");
+    }
+
+    const handleCreateEvent = async () => {
+        const current = window.location.pathname === "/organizer/create-event";
+        if (current) return;
+
+        const result = await dispatch(fetchOrganizerProfile());
+        if (fetchOrganizerProfile.fulfilled.match(result)) {
+            const profile = result.payload.data as OrganizerProfile;
+            const { fields, tab } = getMissingFields(profile);
+
+            if (fields.length > 0) {
+                navigate("/organizer/accounts", {
+                    state: { missingFields: fields, tab },
+                });
+                return;
+            }
+        }
+        navigate("/organizer/create-event");
+    };
 
     useEffect(() => {
         if (!eventId) return;
@@ -71,34 +123,20 @@ export default function Header({
 
                 <div className="flex items-center gap-6">
                     <button
-                        onClick={() => {
-                            const current = window.location.pathname === "/organizer/create-event";
-                            if (!current) {
-                                navigate("/organizer/create-event");
-                            }
-                        }}
+                        onClick={handleCreateEvent}
                         className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30"
                     >
                         <FiPlus />
                         Tạo sự kiện mới
                     </button>
 
-                    <div className="flex items-center gap-3 cursor-pointer">
-                        <div className="text-right leading-tight">
-                            <p className="text-sm font-semibold text-white">
-                                Organizer
-                            </p>
-                            <p className="text-xs text-amethyst-smoke">
-                                Tài khoản
-                            </p>
-                        </div>
-
-                        <div className="w-10 h-10 rounded-full bg-ebony flex items-center justify-center">
-                            <FiUser className="text-amethyst-smoke" />
-                        </div>
-
-                        <FiChevronDown className="text-amethyst-smoke" />
-                    </div>
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 px-6 py-2.5 rounded-full border font-semibold border-white/10 text-amethyst-smoke hover:text-red-400 hover:border-red-400/40 hover:bg-white/5 transition"
+                    >
+                        <FiUser className="text-lg" />
+                        <span>Đăng xuất</span>
+                    </button>
                 </div>
             </div>
         </header>

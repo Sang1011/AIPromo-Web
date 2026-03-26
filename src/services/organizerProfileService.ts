@@ -1,5 +1,6 @@
 import type { AxiosResponse } from "axios";
 import type {
+    CreateProfileOrganizerRequest,
     GetOrganizerProfileResponse,
     UpdateOrganizerBankRequest,
     UpdateOrganizerProfileRequest
@@ -16,6 +17,12 @@ const organizerProfileService = {
     updateBank: (data: UpdateOrganizerBankRequest): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch("/organizers/bank", data);
     },
+    createProfile:(data: CreateProfileOrganizerRequest): Promise<AxiosResponse<any>>=>{
+        return interceptorAPI().post("organizer/profile/start-or-update",data)
+    },
+    verifyProfile :(): Promise<AxiosResponse<any>>=>{
+        return interceptorAPI().post(`/organizers/submit`)
+    }
 };
 
 export default organizerProfileService;
