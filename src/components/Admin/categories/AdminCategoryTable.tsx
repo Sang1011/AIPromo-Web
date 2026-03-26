@@ -107,8 +107,8 @@ export default function AdminCategoryTable() {
                                 <tr key={c.id} className="hover:bg-white/5 transition-colors">
                                     <td className="px-8 py-5">
                                         <div>
-                                                    <p className="text-sm font-semibold text-white">{c.name}</p>
-                                                </div>
+                                            <p className="text-sm font-semibold text-white">{c.name}</p>
+                                        </div>
                                     </td>
                                     <td className="px-8 py-5">
                                         {(() => {
@@ -116,7 +116,12 @@ export default function AdminCategoryTable() {
                                             const grad = opt?.gradient ?? 'transparent';
                                             return (
                                                 <div className="flex items-center">
-                                                    <div className="rounded-lg w-16 h-8 flex items-center justify-center text-sm font-bold text-white" style={{ background: grad, boxShadow: 'inset 0 -6px 18px rgba(0,0,0,0.12)' }}>
+                                                    <div className="rounded-lg px-3 min-w-[64px] h-8 flex items-center justify-center text-sm font-bold text-white whitespace-nowrap"
+                                                         style={{
+                                                            background: grad,
+                                                            boxShadow: 'inset 0 -6px 18px rgba(0,0,0,0.12)'
+                                                        }}
+                                                    >
                                                         {c.code}
                                                     </div>
                                                 </div>
@@ -164,7 +169,6 @@ export default function AdminCategoryTable() {
                 </div>
             </div>
             {editingId !== null && (
-                // modal lazy load
                 <AdminEditCategoryModal categoryId={editingId} onClose={() => setEditingId(null)} />
             )}
             {openCreate && (
@@ -255,5 +259,3 @@ export default function AdminCategoryTable() {
         </div>
     );
 }
-
- 

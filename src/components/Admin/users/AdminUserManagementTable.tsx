@@ -26,20 +26,18 @@ export default function AdminUserManagementTable() {
     const [pageNumber, setPageNumber] = useState(1);
     const pageSize = 10;
 
-    // ====================== CALL API ======================
     useEffect(() => {
         dispatch(fetchAllUsers({
             PageNumber: pageNumber,
             PageSize: pageSize,
-            SortColumn: "userId",   // hoặc "email", "userName" tùy bạn
-            Dir: "desc",            // ← Bắt buộc phải có
+            SortColumn: "userId",   
+            Dir: "desc",            
         })).unwrap().catch((err: any) => {
             console.error(err);
             toast.error("Không thể tải danh sách người dùng");
         });
     }, [dispatch, pageNumber]);
 
-    // ====================== MAP DATA ======================
     const tableUsers: UserItem[] = users.map((user: any) => ({
         id: user.userId,
         name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.userName,
@@ -120,7 +118,6 @@ export default function AdminUserManagementTable() {
                                                 )}
                                                 <div>
                                                     <p className="text-sm font-semibold text-white">{user.name}</p>
-                                                    <p className="text-[10px] text-[#a592c8]">ID: {user.id}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -162,8 +159,6 @@ export default function AdminUserManagementTable() {
                     {(() => {
                         const serverTotal = pagination?.totalCount ?? 0;
                         const localTotal = users.length;
-                        // If server reports a larger total but current returned rows are fewer than a full page,
-                        // prefer the local total to avoid showing an inflated totalCount from stale/mocked responses.
                         const total = (serverTotal > localTotal && localTotal < pageSize) ? localTotal : (serverTotal || localTotal);
                         const totalPages = Math.max(1, Math.ceil(total / pageSize));
                         return (
