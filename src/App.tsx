@@ -46,6 +46,8 @@ import OrganizerAccountPage from "./pages/Organizer/OrganizerAccountPage";
 import VerifyOrganizer from "./pages/Organizer/VerifyOrganizer";
 import PaymentTicket from "./components/Payment";
 import EventUser from "./pages/User/EventUser";
+import OrderDetailUser from "./pages/User/EventUser/OrderDetailUser";
+
 
 
 function App() {
@@ -76,6 +78,7 @@ function App() {
         <Route path="/profile" element={<ProfileLayout />}>
           <Route path="account" element={<ProfileUser />} />
           <Route path="events" element={<EventUser />} />
+          <Route path="order-detail-user/:id" element={<OrderDetailUser />} />
         </Route>
 
         {/* Organizer */}
