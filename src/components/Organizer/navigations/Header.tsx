@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
     FiArrowLeft,
     FiPlus,
-    FiUser
+    FiUser,
+    FiAlertTriangle
 } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -11,8 +12,10 @@ import { fetchEventById } from "../../../store/eventSlice";
 import type { OrganizerProfileDetail } from "../../../types/organizerProfile/organizerProfile";
 import { fetchMe } from "../../../store/authSlice";
 import { fetchGetOrganizerProfileDetailById } from "../../../store/organizerProfileSlice";
+import { fetchRequestCancelEvent } from "../../../store/eventSlice";
 import type { MeInfo } from "../../../types/auth/auth";
 import type { ApiResponse } from "../../../types/api";
+import { notify } from "../../../utils/notify";
 
 interface HeaderProps {
     title?: string;
@@ -34,6 +37,13 @@ export default function Header({
     const dispatch = useDispatch<AppDispatch>();
     const { currentEvent } = useSelector((state: RootState) => state.EVENT);
     const isEventHeader = !!eventId;
+
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [cancelReason, setCancelReason] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const MAX_REASON = 500;
+
     const handleBack = () => {
         if (onBack) {
             onBack();
@@ -56,7 +66,6 @@ export default function Header({
             if (!profile.companyName?.trim()) missing.push("companyName");
         }
         if (!profile.taxCode?.trim()) missing.push("taxCode");
-
         if (!profile.accountName?.trim()) missing.push("accountName");
         if (!profile.accountNumber?.trim()) missing.push("accountNumber");
         if (!profile.bankCode?.trim()) missing.push("bankCode");
@@ -74,7 +83,7 @@ export default function Header({
         localStorage.removeItem("REFRESH_TOKEN");
         localStorage.removeItem("DEVICE_ID");
         navigate("/login");
-    }
+    };
 
     const handleCreateEvent = async () => {
         const current = window.location.pathname === "/organizer/create-event";
@@ -102,52 +111,165 @@ export default function Header({
         navigate("/organizer/create-event");
     };
 
+    const handleCancelEvent = async () => {
+        if (!eventId || !cancelReason.trim()) return;
+
+        setIsSubmitting(true);
+        const result = await dispatch(
+            fetchRequestCancelEvent({ eventId, reason: cancelReason.trim() })
+        );
+        setIsSubmitting(false);
+
+        if (fetchRequestCancelEvent.fulfilled.match(result)) {
+            notify.success("Yêu cầu huỷ sự kiện thành công");
+            setShowCancelModal(false);
+            setCancelReason("");
+        } else {
+            notify.error("Huỷ thất bại");
+        }
+    };
+
+    const handleCloseModal = () => {
+        setShowCancelModal(false);
+        setCancelReason("");
+    };
+
     useEffect(() => {
         if (!eventId) return;
         dispatch(fetchEventById(eventId));
     }, [eventId, dispatch]);
 
     return (
-        <header className="sticky top-0 z-40 h-20 bg-gradient-to-b from-black/40 to-black/20 backdrop-blur-xl border-b border-white/10">
-            <div className="h-full flex items-center justify-between px-10">
-                <div className="flex items-center gap-4">
-                    {canGoBack && (
-                        <button
-                            onClick={handleBack}
-                            className="p-2 rounded-full hover:bg-white/10 transition flex items-center font-semibold gap-1 text-sm text-white"
-                        >
-                            <FiArrowLeft className="text-white text-lg" />
-                            <span>Trở về</span>
-                        </button>
-                    )}
+        <>
+            <header className="sticky top-0 z-40 h-20 bg-gradient-to-b from-black/40 to-black/20 backdrop-blur-xl border-b border-white/10">
+                <div className="h-full flex items-center justify-between px-10">
+                    <div className="flex items-center gap-4">
+                        {canGoBack && (
+                            <button
+                                onClick={handleBack}
+                                className="p-2 rounded-full hover:bg-white/10 transition flex items-center font-semibold gap-1 text-sm text-white"
+                            >
+                                <FiArrowLeft className="text-white text-lg" />
+                                <span>Trở về</span>
+                            </button>
+                        )}
+                        <div className="flex flex-col justify-center">
+                            <h1 className="text-2xl font-bold text-white max-w-[870px] truncate">
+                                {haveTitle && isEventHeader
+                                    ? "Sự kiện " + currentEvent?.title || "Đang tải..."
+                                    : title}
+                            </h1>
+                        </div>
+                    </div>
 
-                    <div className="flex flex-col justify-center">
-                        <h1 className="text-2xl font-bold text-white max-w-[870px] truncate">
-                            {haveTitle && isEventHeader
-                                ? "Sự kiện " + currentEvent?.title || "Đang tải..."
-                                : title}
-                        </h1>
+                    <div className="flex items-center gap-4">
+                        {isEventHeader &&
+                            currentEvent &&
+                            (currentEvent.status === "Published" ||
+                                currentEvent.status === "Suspended") && (
+                                <button
+                                    onClick={() => setShowCancelModal(true)}
+                                    className="px-5 py-2.5 rounded-full font-semibold border border-red-400/30 text-red-400 hover:bg-red-500/10 transition"
+                                >
+                                    Huỷ sự kiện
+                                </button>
+                            )}
+
+                        <button
+                            onClick={handleCreateEvent}
+                            className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30"
+                        >
+                            <FiPlus />
+                            Tạo sự kiện mới
+                        </button>
+
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 px-6 py-2.5 rounded-full border font-semibold border-white/10 text-amethyst-smoke hover:text-red-400 hover:border-red-400/40 hover:bg-white/5 transition"
+                        >
+                            <FiUser className="text-lg" />
+                            <span>Đăng xuất</span>
+                        </button>
                     </div>
                 </div>
+            </header>
 
-                <div className="flex items-center gap-6">
-                    <button
-                        onClick={handleCreateEvent}
-                        className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30"
-                    >
-                        <FiPlus />
-                        Tạo sự kiện mới
-                    </button>
+            {/* Cancel Modal */}
+            {showCancelModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+                    onClick={(e) => { if (e.target === e.currentTarget) handleCloseModal(); }}
+                >
+                    <div className="bg-[#18122B] border border-white/10 rounded-2xl p-8 w-full max-w-md shadow-2xl">
 
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-full border font-semibold border-white/10 text-amethyst-smoke hover:text-red-400 hover:border-red-400/40 hover:bg-white/5 transition"
-                    >
-                        <FiUser className="text-lg" />
-                        <span>Đăng xuất</span>
-                    </button>
+                        {/* Header */}
+                        <div className="flex items-start gap-4 mb-6">
+                            <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/25 flex items-center justify-center shrink-0">
+                                <FiAlertTriangle className="text-red-400 text-lg" />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-semibold text-white mb-1">Huỷ sự kiện</h2>
+                                <p className="text-sm text-slate-400 leading-relaxed">
+                                    Hành động này sẽ gửi yêu cầu huỷ đến staff. Vui lòng cung cấp lý do rõ ràng.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Textarea */}
+                        <div className="mb-4">
+                            <label className="block text-sm text-slate-400 mb-2">
+                                Lý do huỷ <span className="text-red-400">*</span>
+                            </label>
+                            <textarea
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value.slice(0, MAX_REASON))}
+                                placeholder="Ví dụ: Ban tổ chức không thể chuẩn bị kịp do điều kiện khách quan..."
+                                rows={4}
+                                className="w-full resize-none text-sm bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 outline-none focus:border-red-500/50 transition"
+                            />
+                            <div className="flex justify-between mt-1.5">
+                                <span className={`text-xs transition ${cancelReason.trim().length === 0 ? "text-red-400" : "text-transparent"}`}>
+                                    Vui lòng nhập lý do huỷ
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                    {cancelReason.length} / {MAX_REASON}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Warning note */}
+                        <div className="flex items-start gap-2 bg-red-500/[0.06] border border-red-500/20 rounded-xl px-4 py-3 mb-6">
+                            <svg className="mt-0.5 shrink-0 text-red-400" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3" />
+                                <path d="M7 4.5v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                                <circle cx="7" cy="9.5" r="0.6" fill="currentColor" />
+                            </svg>
+                            <p className="text-xs text-red-300/75 leading-relaxed">
+                                Sau khi gửi, sự kiện sẽ chuyển sang trạng thái{" "}
+                                <span className="font-semibold text-red-400">Chờ huỷ</span>{" "}
+                                và không thể chỉnh sửa cho đến khi staff xử lý.
+                            </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleCloseModal}
+                                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold border border-white/10 text-slate-400 hover:bg-white/5 transition"
+                            >
+                                Đóng
+                            </button>
+                            <button
+                                onClick={handleCancelEvent}
+                                disabled={!cancelReason.trim() || isSubmitting}
+                                className="flex-[2] px-4 py-2.5 rounded-xl text-sm font-semibold border border-red-400/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            >
+                                {isSubmitting ? "Đang gửi..." : "Gửi yêu cầu huỷ"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </header>
+            )}
+        </>
     );
 }
