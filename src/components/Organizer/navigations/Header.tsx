@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchEventById } from "../../../store/eventSlice";
-import type { OrganizerProfile } from "../../../types/organizerProfile/organizerProfile";
+import type { OrganizerProfileDetail } from "../../../types/organizerProfile/organizerProfile";
 import { fetchOrganizerProfile } from "../../../store/organizerProfileSlice";
 
 interface HeaderProps {
@@ -42,7 +42,7 @@ export default function Header({
         }
     };
 
-    function getMissingFields(profile: OrganizerProfile | null): { fields: string[]; tab: "profile" | "bank" } {
+    function getMissingFields(profile: OrganizerProfileDetail | null): { fields: string[]; tab: "profile" | "bank" } {
         if (!profile) return { fields: ["displayName"], tab: "profile" };
 
         const missing: string[] = [];
@@ -80,7 +80,7 @@ export default function Header({
 
         const result = await dispatch(fetchOrganizerProfile());
         if (fetchOrganizerProfile.fulfilled.match(result)) {
-            const profile = result.payload.data as OrganizerProfile;
+            const profile = result.payload.data as OrganizerProfileDetail;
             const { fields, tab } = getMissingFields(profile);
 
             if (fields.length > 0) {

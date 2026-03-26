@@ -49,7 +49,8 @@ export default function MyEventsPage() {
             status: status.status as EventStatusUI,
             statusLabel: status.label,
             category: event.categories?.[0]?.name,
-            color: status.color
+            color: status.color,
+            statusCheck: event.status
         };
     };
 

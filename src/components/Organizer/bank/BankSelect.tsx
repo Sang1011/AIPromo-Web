@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FiChevronDown } from "react-icons/fi";
 
 interface Bank {
     code: string;
@@ -36,13 +37,22 @@ export default function BankSelect({
             <div
                 onClick={() => setOpen(!open)}
                 className={`
-                    w-full px-4 py-3 rounded-xl
-                    bg-black/30 border
-                    text-white cursor-pointer
-                    ${error ? "border-red-500" : "border-white/10"}
-                `}
+        w-full px-4 py-3 rounded-xl
+        bg-black/30 border
+        text-white cursor-pointer
+        flex items-center justify-between
+        ${error ? "border-red-500" : "border-white/10"}
+    `}
             >
-                {value ? banks.find((b: any) => b.code === value)?.name : "Chọn ngân hàng"}
+                <span>
+                    {value
+                        ? banks.find((b: any) => b.code === value)?.name
+                        : "Chọn ngân hàng"}
+                </span>
+
+                <FiChevronDown
+                    className={`text-lg transition-transform ${open ? "rotate-180" : ""}`}
+                />
             </div>
 
             {open && (

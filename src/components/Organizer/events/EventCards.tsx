@@ -1,10 +1,12 @@
 import {
     FiCalendar,
     FiMapPin,
-    FiEdit
+    FiEdit,
+    FiEye
 } from "react-icons/fi";
 import { MdDashboard, MdEventSeat, MdGroup, MdShoppingCart } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
+import type { EventStatus } from "../../../types/event/event";
 
 export type EventStatusUI = "draft" | "pending" | "upcoming" | "past" | "suspend";
 
@@ -18,6 +20,7 @@ export interface EventItemMapUI {
     statusLabel: string;
     category?: string;
     color?: string;
+    statusCheck: EventStatus;
 }
 
 interface EventCardProps {
@@ -101,11 +104,17 @@ export default function EventCard({ event }: EventCardProps) {
                     <FooterButton icon={<MdShoppingCart />} label="Đơn hàng" onClick={() => goToEvent(event.id, "orders")} />
                     <FooterButton icon={<MdEventSeat />} label="Sơ đồ" onClick={() => goToEvent(event.id, "seat-map")} />
                 </div>
-
-                <button onClick={() => goToEvent(event.id, "edit")} className="bg-slate-100 dark:bg-white/5 hover:bg-primary/20 text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 rounded-xl transition-all flex items-center gap-2">
-                    <FiEdit className="text-lg" />
-                    <span className="text-sm font-semibold">Chỉnh sửa</span>
-                </button>
+                {event.statusCheck === "Draft" || event.statusCheck === "Suspended" ? (
+                    <button onClick={() => goToEvent(event.id, "edit")} className="bg-slate-100 dark:bg-white/5 hover:bg-primary/20 text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                        <FiEdit className="text-lg" />
+                        <span className="text-sm font-semibold">Chỉnh sửa</span>
+                    </button>
+                ) : (
+                    <button onClick={() => goToEvent(event.id, "edit")} className="bg-slate-100 dark:bg-white/5 hover:bg-primary/20 text-slate-600 dark:text-slate-300 hover:text-primary px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                        <FiEye className="text-lg" />
+                        <span className="text-sm font-semibold">Xem chi tiết</span>
+                    </button>
+                )}
             </div>
         </div>
     );
