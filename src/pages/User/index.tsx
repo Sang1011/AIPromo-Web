@@ -33,7 +33,7 @@ const ProfileLayout: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">manage_accounts</span>
                 Thông tin cá nhân
               </NavLink>
-              <NavLink to="/profile/tickets" className={navClass}>
+              <NavLink to="/profile/ticking-user" className={navClass}>
                 <span className="material-symbols-outlined text-[20px]">confirmation_number</span>
                 Vé của tôi
               </NavLink>
