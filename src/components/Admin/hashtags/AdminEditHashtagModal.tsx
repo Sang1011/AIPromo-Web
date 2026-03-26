@@ -55,7 +55,6 @@ export default function AdminEditHashtagModal({ hashtagId, onClose }: { hashtagI
                     <div>
                         <label className="text-sm text-slate-400 mb-1 block">Tên</label>
                         <input value={form.name} onChange={(e) => setForm(s => ({ ...s, name: e.target.value }))} className="w-full rounded-xl bg-black/40 border border-white/10 py-2 px-3 text-white text-sm outline-none focus:ring-1 focus:ring-primary" />
-                        <p className="text-[10px] text-[#a592c8] mt-1">Slug sẽ được giữ/auto update bởi backend</p>
                     </div>
                 </div>
 

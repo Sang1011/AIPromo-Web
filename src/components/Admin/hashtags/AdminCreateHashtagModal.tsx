@@ -3,7 +3,7 @@ import { FiX } from "react-icons/fi";
 import { createPortal } from "react-dom";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../store";
-import { fetchCreateHashtag, fetchAllHashtags } from "../../../store/hashtagSlice";
+import { fetchCreateHashtag } from "../../../store/hashtagSlice";
 import toast from "react-hot-toast";
 
 export default function AdminCreateHashtagModal({ onClose }: { onClose: () => void }) {
@@ -19,7 +19,6 @@ export default function AdminCreateHashtagModal({ onClose }: { onClose: () => vo
         try {
             await dispatch(fetchCreateHashtag({ name: name.trim() })).unwrap();
             toast.success("Tạo hashtag thành công");
-            await dispatch(fetchAllHashtags()).unwrap();
             onClose();
         } catch (err: any) {
             console.error(err);
@@ -42,7 +41,6 @@ export default function AdminCreateHashtagModal({ onClose }: { onClose: () => vo
                     <div>
                         <label className="text-sm text-slate-400 mb-1 block">Tên</label>
                         <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl bg-black/40 border border-white/10 py-2 px-3 text-white text-sm outline-none focus:ring-1 focus:ring-primary" />
-                        <p className="text-[10px] text-[#a592c8] mt-1">Slug sẽ được tạo tự động bởi backend</p>
                     </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import { MdFilterList, MdAdd } from "react-icons/md";
+import { MdFilterList, MdAdd, MdRefresh } from "react-icons/md";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
@@ -39,7 +39,6 @@ export default function AdminHashtagTable() {
     }, []);
 
     useEffect(() => {
-        // if current page is out of range after data change, reset to last page
         const totalPages = Math.max(1, Math.ceil((hashtags || []).length / pageSize));
         if (page > totalPages) setPage(totalPages);
     }, [hashtags, page]);
@@ -48,7 +47,8 @@ export default function AdminHashtagTable() {
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const currentSlice = useMemo(() => {
         const start = (page - 1) * pageSize;
-        return (hashtags || []).slice(start, start + pageSize);
+        const sorted = [...(hashtags || [])].sort((a, b) => b.id - a.id);
+        return sorted.slice(start, start + pageSize);
     }, [hashtags, page]);
 
     return (
@@ -66,7 +66,7 @@ export default function AdminHashtagTable() {
                         <MdAdd className="text-base" /> Thêm Hashtag
                     </button>
                     <button onClick={load} className="bg-[#1b1230] text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center gap-2 hover:bg-white/10 transition-colors">
-                        <MdFilterList />
+                        <MdRefresh className={loading ? 'animate-spin' : ''} />
                     </button>
                 </div>
             </div>

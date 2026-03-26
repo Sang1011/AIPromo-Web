@@ -26,20 +26,18 @@ export default function AdminUserManagementTable() {
     const [pageNumber, setPageNumber] = useState(1);
     const pageSize = 10;
 
-    // ====================== CALL API ======================
     useEffect(() => {
         dispatch(fetchAllUsers({
             PageNumber: pageNumber,
             PageSize: pageSize,
-            SortColumn: "userId",   // hoặc "email", "userName" tùy bạn
-            Dir: "desc",            // ← Bắt buộc phải có
+            SortColumn: "userId",   
+            Dir: "desc",            
         })).unwrap().catch((err: any) => {
             console.error(err);
             toast.error("Không thể tải danh sách người dùng");
         });
     }, [dispatch, pageNumber]);
 
-    // ====================== MAP DATA ======================
     const tableUsers: UserItem[] = users.map((user: any) => ({
         id: user.userId,
         name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.userName,
@@ -57,6 +55,20 @@ export default function AdminUserManagementTable() {
         const totalPages = Math.max(1, Math.ceil(total / pageSize));
         if (newPage < 1 || newPage > totalPages) return;
         setPageNumber(newPage);
+    };
+
+    const getRoleStyles = (role: string) => {
+        switch (role) {
+            case "Admin":
+                return "bg-red-500/10 text-red-400 border-red-500/20";
+            case "Staff":
+                return "bg-amber-500/10 text-amber-400 border-amber-500/20";
+            case "Organizer":
+                return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+            case "Attendee":
+            default:
+                return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+        }
     };
 
     return (
@@ -120,16 +132,11 @@ export default function AdminUserManagementTable() {
                                                 )}
                                                 <div>
                                                     <p className="text-sm font-semibold text-white">{user.name}</p>
-                                                    <p className="text-[10px] text-[#a592c8]">ID: {user.id}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-8 py-5">
-                                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${
-                                                user.role === "Organizer" 
-                                                    ? "bg-primary/10 text-primary" 
-                                                    : "bg-indigo-500/10 text-indigo-400"
-                                            }`}>
+                                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${getRoleStyles(user.role)}`}>
                                                 {user.role}
                                             </span>
                                         </td>
@@ -162,8 +169,6 @@ export default function AdminUserManagementTable() {
                     {(() => {
                         const serverTotal = pagination?.totalCount ?? 0;
                         const localTotal = users.length;
-                        // If server reports a larger total but current returned rows are fewer than a full page,
-                        // prefer the local total to avoid showing an inflated totalCount from stale/mocked responses.
                         const total = (serverTotal > localTotal && localTotal < pageSize) ? localTotal : (serverTotal || localTotal);
                         const totalPages = Math.max(1, Math.ceil(total / pageSize));
                         return (

@@ -1,4 +1,4 @@
-import { MdCategory, MdAddBox, MdList } from "react-icons/md";
+import { MdCategory, MdList } from "react-icons/md";
 import AdminStatsCard from "../shared/AdminStatsCard";
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,13 +10,12 @@ export default function AdminCategoryStats() {
     const categories = useSelector((s: RootState) => s.CATEGORY.categories) ?? [];
 
     useEffect(() => {
-        // fetch categories for dashboard stats
         dispatch(fetchAllCategories({}));
     }, [dispatch]);
 
     const today = useMemo(() => new Date(), []);
 
-    const { total, active, newToday } = useMemo(() => {
+    const { total, active } = useMemo(() => {
         const total = categories.length;
         const active = categories.filter((c: any) => !!c?.isActive).length;
 
@@ -50,13 +49,7 @@ export default function AdminCategoryStats() {
                 iconBg="bg-purple-500/10"
                 iconColor="text-purple-400"
             />
-            <AdminStatsCard
-                label="Mới hôm nay"
-                value={String(newToday)}
-                icon={<MdAddBox className="text-sm" />}
-                iconBg="bg-emerald-500/10"
-                iconColor="text-emerald-400"
-            />
+            
         </div>
     );
 }

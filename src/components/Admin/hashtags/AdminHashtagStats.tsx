@@ -1,4 +1,4 @@
-import { MdTag, MdTrendingUp, MdAdd } from "react-icons/md";
+import { MdTag, MdTrendingUp } from "react-icons/md";
 import AdminStatsCard from "../shared/AdminStatsCard";
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -15,7 +15,7 @@ export default function AdminHashtagStats() {
 
     const today = useMemo(() => new Date(), []);
 
-    const { total, topTag, newToday } = useMemo(() => {
+    const { total, topTag } = useMemo(() => {
         const total = hashtags.length;
         const top = (hashtags || []).reduce((best, h) => {
             if (!best) return h;
@@ -50,13 +50,6 @@ export default function AdminHashtagStats() {
                 icon={<MdTrendingUp className="text-sm" />}
                 iconBg="bg-indigo-500/10"
                 iconColor="text-indigo-400"
-            />
-            <AdminStatsCard
-                label="Mới hôm nay"
-                value={String(newToday)}
-                icon={<MdAdd className="text-sm" />}
-                iconBg="bg-emerald-500/10"
-                iconColor="text-emerald-400"
             />
         </div>
     );
