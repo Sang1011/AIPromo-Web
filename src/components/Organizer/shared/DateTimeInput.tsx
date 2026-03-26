@@ -7,7 +7,8 @@ interface DateTimeInputProps {
     value?: string;
     onChange?: (value: string) => void;
     required?: boolean;
-    disabled?: boolean; // 👈 thêm
+    disabled?: boolean;
+    min?: string;
 }
 
 export default function DateTimeInput({
@@ -16,9 +17,12 @@ export default function DateTimeInput({
     onChange,
     required,
     disabled,
+    min
 }: DateTimeInputProps) {
 
     const inputRef = useRef<HTMLInputElement>(null);
+    const normalizedValue = value ? value.slice(0, 16) : "";
+    const normalizedMin = min ? min.slice(0, 16) : undefined;
 
     const openPicker = () => {
         if (disabled) return;
@@ -40,9 +44,10 @@ export default function DateTimeInput({
                     ref={inputRef}
                     type="datetime-local"
                     lang="vi"
-                    value={value}
+                    value={normalizedValue}
+                    min={normalizedMin}
                     onChange={(e) => onChange?.(e.target.value)}
-                    disabled={disabled} // 👈
+                    disabled={disabled}
                     className={`
                         w-full px-4 py-2 pr-10
                         rounded-xl

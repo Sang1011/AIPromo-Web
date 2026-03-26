@@ -42,6 +42,12 @@ type VoucherFormData = {
 
 type FormErrors = Partial<Record<keyof VoucherFormData, string>>;
 
+const getNowLocal = () => {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now.toISOString().slice(0, 16);
+};
+
 function validateVoucherForm(form: VoucherFormData, isCreate: boolean): FormErrors {
     const errors: FormErrors = {};
 
@@ -66,8 +72,16 @@ function validateVoucherForm(form: VoucherFormData, isCreate: boolean): FormErro
     if (!form.startDate) errors.startDate = "Vui lòng chọn ngày bắt đầu";
     if (!form.endDate) errors.endDate = "Vui lòng chọn ngày kết thúc";
 
-    if (form.startDate && form.endDate && form.startDate >= form.endDate) {
-        errors.endDate = "Ngày kết thúc phải sau ngày bắt đầu";
+    if (form.startDate) {
+        const now = new Date();
+        const start = new Date(form.startDate);
+
+        now.setSeconds(0, 0);
+        start.setSeconds(0, 0);
+
+        if (start < now) {
+            errors.startDate = "Ngày bắt đầu phải lớn hơn hoặc bằng hiện tại";
+        }
     }
 
     if (isCreate && !form.eventId.trim()) {
@@ -84,9 +98,15 @@ const EMPTY_FORM: VoucherFormData = {
     type: "Percentage",
     value: "",
     maxUse: "1",
-    startDate: "",
+    startDate: getNowLocal(),
     endDate: "",
     eventId: "",
+};
+
+const toLocalDateTime = (isoString: string) => {
+    const date = new Date(isoString);
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 };
 
 function voucherToForm(v: VoucherItem): VoucherFormData {
@@ -95,8 +115,8 @@ function voucherToForm(v: VoucherItem): VoucherFormData {
         type: v.type,
         value: String(v.value),
         maxUse: String(v.maxUse),
-        startDate: v.startDate?.slice(0, 16) ?? "",
-        endDate: v.endDate?.slice(0, 16) ?? "",
+        startDate: v.startDate ? toLocalDateTime(v.startDate) : "",
+        endDate: v.endDate ? toLocalDateTime(v.endDate) : "",
         eventId: v.eventId,
     };
 }
@@ -130,11 +150,11 @@ interface VoucherModalProps {
 }
 
 
-function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
+function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModalProps) {
     const dispatch = useDispatch<AppDispatch>();
 
     const [form, setForm] = useState<VoucherFormData>(
-        initial ? voucherToForm(initial) : { ...EMPTY_FORM }
+        initial ? voucherToForm(initial) : { ...EMPTY_FORM, eventId: eventId ?? "" }
     );
     const [errors, setErrors] = useState<FormErrors>({});
     const [saving, setSaving] = useState(false);
@@ -185,6 +205,7 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
         setSaving(true);
         try {
             if (mode === "create") {
+                if (!eventId) return notify.error("Vui lòng chọn sự kiện");
                 const payload: CreateVoucherRequest = {
                     couponCode: form.couponCode.trim(),
                     type: form.type,
@@ -194,6 +215,7 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
                     endDate: new Date(form.endDate).toISOString(),
                     eventId: form.eventId.trim(),
                 };
+                console.log(payload);
                 await dispatch(fetchCreateVoucher(payload)).unwrap();
                 notify.success("Tạo voucher thành công");
             } else {
@@ -224,6 +246,12 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
             setSaving(false);
         }
     };
+
+    useEffect(() => {
+        if (mode === "create") {
+            update("startDate", getNowLocal());
+        }
+    }, []);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -300,6 +328,7 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
                                 required
                                 value={form.startDate}
                                 onChange={(v: any) => update("startDate", v)}
+                                min={new Date().toISOString()}
                             />
                             {errors.startDate && (
                                 <p className="text-xs text-red-400 mt-1">{errors.startDate}</p>
@@ -311,6 +340,7 @@ function VoucherModal({ mode, initial, onClose, onSaved }: VoucherModalProps) {
                                 required
                                 value={form.endDate}
                                 onChange={(v: any) => update("endDate", v)}
+                                min={new Date().toISOString()}
                             />
                             {errors.endDate && (
                                 <p className="text-xs text-red-400 mt-1">{errors.endDate}</p>
@@ -423,6 +453,7 @@ export default function VoucherManagementPage() {
     };
 
     useEffect(() => { load(currentPage); }, [currentPage, eventId]);
+
 
     const items: VoucherItem[] = vouchers?.items ?? [];
 
