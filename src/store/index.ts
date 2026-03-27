@@ -13,6 +13,7 @@ import orderReducer from "./orderSlice"
 import paymentReducer from "./paymentSlice"
 import voucherReducer from "./voucherSlice"
 import userReducer from "./userSlice";
+import adminEventReducer from "./adminEventSlice";
 
 const store = configureStore({
     reducer: {
@@ -30,6 +31,7 @@ const store = configureStore({
         PAYMENT: paymentReducer,
         VOUCHER: voucherReducer,
         USER: userReducer,
+        ADMIN_EVENT: adminEventReducer,
     }
 })
 

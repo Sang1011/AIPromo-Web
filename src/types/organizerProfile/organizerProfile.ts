@@ -51,3 +51,29 @@ export interface OrganizerProfile {
     canEdit: boolean;
     canSubmit: boolean;
 }
+
+// Types for pending organizers (Admin/Staff)
+export interface PendingOrganizerItem {
+    userId: string;
+    profileId: string;
+    displayName: string;
+    status: string;
+    businessType: string;
+    versionNumber: number;
+    createdAt: string;
+}
+
+export interface PendingOrganizersData {
+    items: PendingOrganizerItem[];
+    pageNumber: number;
+    pageSize: number;
+    totalCount: number;
+    currentPageSize: number;
+    currentStartIndex: number;
+    currentEndIndex: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+}
+
+export type GetPendingOrganizersResponse = ApiResponse<PendingOrganizersData>;

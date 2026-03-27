@@ -1,29 +1,52 @@
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchPendingOrganizers } from "../../../store/organizerProfileSlice";
+import type { RootState, AppDispatch } from "../../../store/index";
+
 const glassCard =
     "bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.1)]";
 
-const stats = [
-    {
-        label: "Hồ sơ đang chờ",
-        value: "15",
-        valueColor: "text-amber-500",
-        blurColor: "bg-amber-500/10",
-    },
-    {
-        label: "Đã xác minh hôm nay",
-        value: "8",
-        valueColor: "text-emerald-500",
-        blurColor: "bg-emerald-500/10",
-    },
-    {
-        label: "Thời gian xử lý TB",
-        value: "20",
-        suffix: "phút",
-        valueColor: "text-primary",
-        blurColor: "bg-primary/10",
-    },
-];
-
 export default function StaffOrganizerStats() {
+    const dispatch = useDispatch<AppDispatch>();
+    const { pendingOrganizers } = useSelector(
+        (state: RootState) => state.ORGANIZER_PROFILE
+    );
+
+    useEffect(() => {
+        dispatch(
+            fetchPendingOrganizers({
+                PageNumber: 1,
+                PageSize: 10,
+                SortColumn: "CreatedAt",
+                SortOrder: "desc",
+            })
+        );
+    }, [dispatch]);
+
+    const pendingCount = pendingOrganizers.length;
+
+    const stats = [
+        {
+            label: "Hồ sơ đang chờ",
+            value: pendingCount.toString(),
+            valueColor: "text-amber-500",
+            blurColor: "bg-amber-500/10",
+        },
+        {
+            label: "Đã xác minh hôm nay",
+            value: "8",
+            valueColor: "text-emerald-500",
+            blurColor: "bg-emerald-500/10",
+        },
+        {
+            label: "Thời gian xử lý TB",
+            value: "20",
+            suffix: "phút",
+            valueColor: "text-primary",
+            blurColor: "bg-primary/10",
+        },
+    ];
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {stats.map((stat) => (

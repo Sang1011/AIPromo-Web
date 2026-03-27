@@ -4,7 +4,9 @@ import type {
     CreateProfileOrganizerRequest,
     GetOrganizerProfileResponse,
     OrganizerProfile,
-    OrganizerProfileDetail
+    OrganizerProfileDetail,
+    GetPendingOrganizersResponse,
+    PendingOrganizerItem,
 } from "../types/organizerProfile/organizerProfile";
 import type { ApiResponse } from "../types/api";
 
@@ -13,11 +15,24 @@ const name = "organizerProfile";
 interface OrganizerProfileState {
     profile: OrganizerProfile | null;
     profileDetail: OrganizerProfileDetail | null;
+    pendingOrganizers: PendingOrganizerItem[];
+    pagination: {
+        pageNumber: number;
+        pageSize: number;
+        totalCount: number;
+        totalPages: number;
+        hasPrevious: boolean;
+        hasNext: boolean;
+    } | null;
+    selectedOrganizerDetail: OrganizerProfileDetail | null;
 }
 
 const initialState: OrganizerProfileState = {
     profile: null,
     profileDetail: null,
+    pendingOrganizers: [],
+    pagination: null,
+    selectedOrganizerDetail: null,
 };
 
 export const fetchOrganizerProfile = createAsyncThunk<GetOrganizerProfileResponse, void>(
@@ -85,6 +100,40 @@ export const fetchVerifyProfileOrganizer = createAsyncThunk<
         }
     }
 );
+
+export const fetchPendingOrganizers = createAsyncThunk<
+    GetPendingOrganizersResponse,
+    {
+        PageNumber: number;
+        PageSize: number;
+        SortColumn: string;
+        SortOrder: string;
+        Keyword?: string;
+        BusinessType?: string;
+    }
+>(
+    `${name}/fetchPendingOrganizers`,
+    async (params, thunkAPI) => {
+        try {
+            const response = await organizerProfileService.getPendingOrganizers(params);
+            return response.data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error?.response?.data || error.message);
+        }
+    }
+);
+
+export const fetchGetOrganizerDetail = createAsyncThunk<ApiResponse<OrganizerProfileDetail>, string>(
+    `${name}/fetchGetOrganizerDetail`,
+    async (userId, thunkAPI) => {
+        try {
+            const response = await organizerProfileService.getOrganizerDetail(userId);
+            return response.data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error?.response?.data || error.message);
+        }
+    }
+);
 const organizerProfileSlice = createSlice({
     name,
     initialState,
@@ -114,6 +163,30 @@ const organizerProfileSlice = createSlice({
                     }
                 }
             )
+            .addCase(
+                fetchPendingOrganizers.fulfilled,
+                (state, action: PayloadAction<GetPendingOrganizersResponse>) => {
+                    if (action.payload?.isSuccess && action.payload.data) {
+                        state.pendingOrganizers = action.payload.data.items;
+                        state.pagination = {
+                            pageNumber: action.payload.data.pageNumber,
+                            pageSize: action.payload.data.pageSize,
+                            totalCount: action.payload.data.totalCount,
+                            totalPages: action.payload.data.totalPages,
+                            hasPrevious: action.payload.data.hasPrevious,
+                            hasNext: action.payload.data.hasNext,
+                        };
+                    }
+                }
+            )
+            .addCase(
+                fetchGetOrganizerDetail.fulfilled,
+                (state, action: PayloadAction<ApiResponse<OrganizerProfileDetail>>) => {
+                    if (action.payload?.isSuccess) {
+                        state.selectedOrganizerDetail = action.payload.data;
+                    }
+                }
+            );
     },
 });
 

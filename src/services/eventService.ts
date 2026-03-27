@@ -145,7 +145,7 @@ const eventService = {
         return interceptorAPI().patch(`/organizer/events/${eventId}/request-publish`);
     },
     getPendingEvents: (request: GetPendingEventsRequest): Promise<AxiosResponse<GetPendingEventsResponse>> => {
-        return interceptorAPI().get("/events/pending", {
+        return interceptorAPI().get("/staff/events/pending", {
             params: request
         });
     },

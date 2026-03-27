@@ -16,12 +16,15 @@ import {
   Trash2,
   Loader2
 } from "lucide-react"
+import { fetchGetSeatMap } from "../../../store/seatMapSlice"
+import SeatMapReadOnly from "../../Organizer/seatmap/SeatMapReadOnly"
 
 export default function StaffEventApprovalQueue() {
 
   const dispatch = useDispatch<AppDispatch>()
 
   const events = useSelector((state: RootState) => state.EVENT.events)
+  const seatMapData = useSelector((state: RootState) => state.SEATMAP.spec)
 
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
@@ -38,6 +41,7 @@ export default function StaffEventApprovalQueue() {
 
   const currentEvent = useSelector((state: RootState) => state.EVENT.currentEvent)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  
 
   useEffect(() => {
 
@@ -218,20 +222,34 @@ export default function StaffEventApprovalQueue() {
 
   const openDetailModal = async (eventId: string) => {
 
-  if (currentEvent?.id === eventId) {
-    setShowDetailModal(true)
+  const sessionId = currentEvent?.sessions?.[0]?.id
+
+if (currentEvent?.id === eventId && sessionId) {
+  setShowDetailModal(true)
+  return
+}
+
+try {
+  setLoadingId(eventId)
+
+  await dispatch(fetchEventById(eventId)).unwrap()
+
+  const newSessionId = currentEvent?.sessions?.[0]?.id
+
+  if (!newSessionId) {
+    toast.error("Không tìm thấy session")
     return
   }
 
-  try {
-    setLoadingId(eventId)
+  await dispatch(fetchGetSeatMap({
+    eventId,
+    sessionId: newSessionId
+  })).unwrap()
 
-    await dispatch(fetchEventById(eventId)).unwrap()
-
-    setShowDetailModal(true)
-  } catch (err) {
-    toast.error("Không thể tải chi tiết sự kiện")
-  }
+  setShowDetailModal(true)
+} catch (err) {
+  toast.error("Không thể tải chi tiết sự kiện")
+}
 
   setLoadingId(null)
 }
@@ -696,6 +714,21 @@ export default function StaffEventApprovalQueue() {
                 </div>
               )}
             </div>
+
+            {/* {seatMapData && currentEvent.ticketTypes?.length > 0 && (
+            <div>
+              <h3 className="text-2xl font-bold text-white mb-5">
+                Sơ đồ chỗ ngồi
+              </h3>
+
+              <div className="w-full h-[500px] bg-black rounded-2xl border border-white/10 overflow-hidden">
+                <SeatMapReadOnly
+                  seatMapData={seatMapData as any }
+                  ticketTypes={currentEvent.ticketTypes}
+                />
+              </div>
+            </div>
+          )} */}
 
             {/* Footer cố định */}
             <div className="border-t border-white/10 p-6 flex justify-end bg-slate-950">
