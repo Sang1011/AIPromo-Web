@@ -61,6 +61,7 @@ export interface PendingOrganizerItem {
     businessType: string;
     versionNumber: number;
     createdAt: string;
+    logo: string;
 }
 
 export interface PendingOrganizersData {

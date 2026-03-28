@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPendingOrganizers } from "../../../store/organizerProfileSlice";
 import type { RootState, AppDispatch } from "../../../store/index";
@@ -16,12 +16,33 @@ export default function StaffOrganizerStats() {
         dispatch(
             fetchPendingOrganizers({
                 PageNumber: 1,
-                PageSize: 10,
+                PageSize: 1000, // Lấy tất cả để thống kê
                 SortColumn: "CreatedAt",
                 SortOrder: "desc",
             })
         );
     }, [dispatch]);
+
+    // Thống kê business type
+    const businessTypeStats = useMemo(() => {
+        const stats: Record<string, number> = {};
+        pendingOrganizers.forEach((org) => {
+            const type = org.businessType || "Khác";
+            stats[type] = (stats[type] || 0) + 1;
+        });
+
+        // Tìm loại hình nhiều nhất
+        let maxType = "";
+        let maxCount = 0;
+        Object.entries(stats).forEach(([type, count]) => {
+            if (count > maxCount) {
+                maxType = type;
+                maxCount = count;
+            }
+        });
+
+        return { type: maxType, count: maxCount };
+    }, [pendingOrganizers]);
 
     const pendingCount = pendingOrganizers.length;
 
@@ -33,15 +54,15 @@ export default function StaffOrganizerStats() {
             blurColor: "bg-amber-500/10",
         },
         {
-            label: "Đã xác minh hôm nay",
-            value: "8",
+            label: "Loại hình phổ biến nhất",
+            value: businessTypeStats.type || "N/A",
+            suffix: businessTypeStats.count > 0 ? `(${businessTypeStats.count} hồ sơ)` : undefined,
             valueColor: "text-emerald-500",
             blurColor: "bg-emerald-500/10",
         },
         {
-            label: "Thời gian xử lý TB",
-            value: "20",
-            suffix: "phút",
+            label: "Tổng số hồ sơ",
+            value: pendingCount.toString(),
             valueColor: "text-primary",
             blurColor: "bg-primary/10",
         },
@@ -65,7 +86,7 @@ export default function StaffOrganizerStats() {
                     >
                         {stat.value}{" "}
                         {stat.suffix && (
-                            <span className="text-lg font-normal">
+                            <span className="text-lg font-normal text-slate-400">
                                 {stat.suffix}
                             </span>
                         )}

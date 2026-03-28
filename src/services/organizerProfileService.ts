@@ -43,6 +43,12 @@ const organizerProfileService = {
     },
     getOrganizerDetail: (userId: string): Promise<AxiosResponse<ApiResponse<OrganizerProfileDetail>>> => {
         return interceptorAPI().get(`/organizers/detail/${userId}`);
+    },
+    verifyOrganizer: (userId: string): Promise<AxiosResponse<ApiResponse<any>>> => {
+        return interceptorAPI().post("/admin/organizers/verify", { userId });
+    },
+    rejectOrganizer: (data: { userId: string; reason: string }): Promise<AxiosResponse<ApiResponse<any>>> => {
+        return interceptorAPI().post("/admin/organizers/reject", data);
     }
 };
 

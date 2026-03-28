@@ -134,6 +134,30 @@ export const fetchGetOrganizerDetail = createAsyncThunk<ApiResponse<OrganizerPro
         }
     }
 );
+
+export const fetchVerifyOrganizer = createAsyncThunk<ApiResponse<any>, string>(
+    `${name}/fetchVerifyOrganizer`,
+    async (userId, thunkAPI) => {
+        try {
+            const response = await organizerProfileService.verifyOrganizer(userId);
+            return response.data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error?.response?.data || error.message);
+        }
+    }
+);
+
+export const fetchRejectOrganizer = createAsyncThunk<ApiResponse<any>, { userId: string; reason: string }>(
+    `${name}/fetchRejectOrganizer`,
+    async ({ userId, reason }, thunkAPI) => {
+        try {
+            const response = await organizerProfileService.rejectOrganizer({ userId, reason });
+            return response.data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error?.response?.data || error.message);
+        }
+    }
+);
 const organizerProfileSlice = createSlice({
     name,
     initialState,
