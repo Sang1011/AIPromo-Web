@@ -8,6 +8,12 @@ import { notify } from "../../../utils/notify";
 import { downloadFileExcel } from "../../../utils/downloadFileExcel";
 import { fetchOrdersByOrganizer } from "../../../store/ticketingSlice";
 import { FiDownload } from "react-icons/fi";
+import { saveReportToFirebase } from "../../../utils/saveReportToFirebase";
+import { fetchMe } from "../../../store/authSlice";
+import type { ApiResponse } from "../../../types/api";
+import type { MeInfo } from "../../../types/auth/auth";
+import { useEventTitle } from "../../../hooks/useEventTitle";
+import { getCurrentDateTime } from "../../../utils/getCurrentDateTime";
 
 // ── Icons (inline svg) ────────────────────────────────────────────────────────
 const IconBox = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4m-8-4V7m16 0L12 11M4 7l8 4" /></svg>;
@@ -62,7 +68,7 @@ export default function OrderList({ eventId }: OrderListProps) {
     const dispatch = useDispatch<AppDispatch>();
 
     const { orders, pagination, loading } = useSelector((state: RootState) => state.TICKETING);
-
+    const eventName = useEventTitle();
     const [search, setSearch] = useState("");
     const [tab, setTab] = useState<TabKey>("all");
     const [currentPage, setCurrentPage] = useState(1);
@@ -106,6 +112,28 @@ export default function OrderList({ eventId }: OrderListProps) {
         cancelledOrders: orders.filter(o => o.status.toLowerCase() === "cancelled").length,
     }), [orders, pagination.totalCount]);
 
+    const handleExportExcel = async () => {
+        if (!eventId) return notify.error("Không tìm thấy eventId");
+        try {
+            const blob = await dispatch(fetchExportExcelOrder(eventId)).unwrap();
+            const { iso, formatted } = getCurrentDateTime();
+            const fileName = `orders_${eventName}_${formatted}.xlsx`;
+            downloadFileExcel(blob, fileName);
+            const meResult = await dispatch(fetchMe()).unwrap();
+            const email = (meResult as ApiResponse<MeInfo>)?.data?.email;
+            await saveReportToFirebase({
+                eventId,
+                eventName: eventName ?? eventId,
+                fileName,
+                createdBy: email ?? "",
+                createdAt: iso
+            });
+            notify.success("Xuất Excel thành công");
+        } catch (err) {
+            notify.error("Xuất Excel thất bại");
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* ── Page header ── */}
@@ -123,16 +151,7 @@ export default function OrderList({ eventId }: OrderListProps) {
                 <div className="flex gap-3">
                     <button
                         className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 transition"
-                        onClick={async () => {
-                            if (!eventId) return notify.error("Không tìm thấy eventId");
-                            try {
-                                const blob = await dispatch(fetchExportExcelOrder(eventId)).unwrap();
-                                downloadFileExcel(blob, "orders.xlsx");
-                                notify.success("Xuất Excel thành công");
-                            } catch (err) {
-                                notify.error("Xuất Excel thất bại");
-                            }
-                        }}
+                        onClick={handleExportExcel}
                     >
                         <FiDownload /> Xuất Excel
                     </button>
