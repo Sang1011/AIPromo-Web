@@ -165,19 +165,6 @@ const EmptyState: React.FC = () => (
     </div>
 );
 
-// ── Skeleton Row ───────────────────────────────────────────────────
-const SkeletonRow: React.FC = () => (
-    <div className="flex items-center gap-4 px-6 py-4 animate-pulse">
-        <div className="w-9 h-9 rounded-xl shrink-0" style={{ background: "rgba(255,255,255,0.05)" }} />
-        <div className="flex-1 space-y-2">
-            <div className="h-3 w-32 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
-            <div className="h-2.5 w-20 rounded-full" style={{ background: "rgba(255,255,255,0.04)" }} />
-        </div>
-        <div className="h-3 w-20 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
-        <div className="h-6 w-20 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
-        <div className="h-3 w-24 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
-    </div>
-);
 
 // ── Main Component ─────────────────────────────────────────────────
 const PaymentHistoryUser: React.FC = () => {
