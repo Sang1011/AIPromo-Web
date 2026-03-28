@@ -41,6 +41,10 @@ const ProfileLayout: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">event</span>
                 Sự kiện của tôi
               </NavLink>
+              <NavLink to="/profile/payment-history" className={navClass}>
+                <span className="material-symbols-outlined text-[20px]">receipt_long</span>
+                Lịch sử giao dịch
+              </NavLink>
             </nav>
 
           </div>
@@ -84,7 +88,7 @@ const ProfileLayout: React.FC = () => {
         </NavLink>
       </nav>
 
-     
+
     </div>
   );
 };
