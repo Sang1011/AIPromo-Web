@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GetPostDetailResponse, UpdatePostContentRequest } from "../types/post/post";
+import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, UpdatePostContentRequest } from "../types/post/post";
 import type { ApiResponse, ApiResponseNoData } from "../types/api";
 
 const postService = {
@@ -19,12 +19,32 @@ const postService = {
     publishApprovedPost: (postId: string): Promise<AxiosResponse<ApiResponseNoData>> => {
         return interceptorAPI().post(`/posts/${postId}/publish`)
     },
-    generateContentPostUsingAI: (eventId: string): Promise<AxiosResponse<GenerateContentPostDraftUsingAIResponse>> => {
-        return interceptorAPI().post(`/posts/generate/${eventId}`)
+    generateContentPostUsingAI: (eventId: string, userPromptRequirement?: string): Promise<AxiosResponse<GenerateContentPostDraftUsingAIResponse>> => {
+        let url = `/posts/generate/${eventId}`;
+        if (userPromptRequirement) url = url + `?UserPromptRequirement=${userPromptRequirement}`
+        return interceptorAPI().post(url);
     },
     createPostDraft: (data: CreatePostDraftRequest): Promise<AxiosResponse<ApiResponse<string>>> => {
         return interceptorAPI().post(`/posts`, data)
-    }
+    },
+    getOrganizerPosts: (p: GetPostsParams): Promise<AxiosResponse<GetOrganizerPostsResponse>> => {
+        const params: Record<string, any> = {
+            PageNumber: p.pageNumber,
+            PageSize: p.pageSize,
+            SortColumn: p.sortColumn,
+            SortOrder: p.sortOrder,
+            ...(p.eventId && { EventId: p.eventId }),
+            ...(p.search && { Search: p.search }),
+            ...(p.status && { Status: p.status }),
+            ...(p.submittedFrom && { SubmittedFrom: p.submittedFrom }),
+            ...(p.submittedTo && { SubmittedTo: p.submittedTo }),
+            ...(p.publishedFrom && { PublishedFrom: p.publishedFrom }),
+            ...(p.publishedTo && { PublishedTo: p.publishedTo }),
+            ...(p.isPublished !== undefined && { IsPublished: p.isPublished }),
+            ...(p.hasExternalPostUrl !== undefined && { HasExternalPostUrl: p.hasExternalPostUrl }),
+        };
+        return interceptorAPI().get(`/organizers/posts`, { params });
+    },
 }
 
 export default postService;
