@@ -94,7 +94,6 @@ export default function CreateSessionModal({
                 {/* NEW: show event window hint when it's set */}
                 {(eventStartAt || eventEndAt) && (
                     <div className="mb-5 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-slate-400">
-                        <span className="text-primary/60">⏱</span>
                         Suất diễn phải nằm trong khung giờ sự kiện
                         {eventStartAt && <> từ <span className="text-slate-300">{new Date(eventStartAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></>}
                         {eventEndAt && <> đến <span className="text-slate-300">{new Date(eventEndAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></>}

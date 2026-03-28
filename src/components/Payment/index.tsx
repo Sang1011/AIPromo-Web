@@ -7,12 +7,11 @@ import { fetchPaymentOrder } from "../../store/paymentSlice";
 import { fetchToUpWallet, fetchWalletUser } from "../../store/walletSlice";
 import type { PaymentOrderPaymentResponse } from "../../types/payment/payment";
 import type { ToUpWalletResponse } from "../../types/wallet/wallet";
+// import { fetchGetVouchers } from "../../store/voucherSlice";
 
 
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const SERVICE_FEE_RATE = 0.02;
-const VAT_RATE = 0.1;
 
 function formatVND(amount: number) {
   return amount.toLocaleString("vi-VN") + " VND";
@@ -180,8 +179,12 @@ export default function PaymentTicket() {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("wallet");
   const { orderDetail } = useSelector((state: RootState) => state.ORDER);
   const { currentWallet } = useSelector((state: RootState) => state.WALLET);
-  const dispatch = useDispatch<AppDispatch>();
+  // const { vouchers } = useSelector((state: RootState) => state.VOUCHER);
 
+  const dispatch = useDispatch<AppDispatch>();
+  // useEffect(() => {
+  //   dispatch(fetchGetVouchers())
+  // }, [dispatch])
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletNotFound, setWalletNotFound] = useState(false);
   const [walletLoadError, setWalletLoadError] = useState<string | null>(null);
@@ -213,9 +216,7 @@ export default function PaymentTicket() {
       ? orderDetail.subTotal
       : groupedTickets.reduce((sum, t) => sum + t.quantity * t.unitPrice, 0);
 
-  const serviceFee = Math.round(orderSubTotal * SERVICE_FEE_RATE);
-  const vat = Math.round(orderSubTotal * VAT_RATE);
-  const computedTotal = orderSubTotal + serviceFee + vat - discountAmount;
+  const computedTotal = orderSubTotal - discountAmount;
   const total = typeof orderDetail?.totalPrice === "number" ? orderDetail.totalPrice : computedTotal;
 
   const isWalletInsufficient =
@@ -490,8 +491,6 @@ export default function PaymentTicket() {
               {[
                 { label: "Tạm tính", value: orderSubTotal },
                 ...(discountAmount > 0 ? [{ label: "Giảm giá", value: discountAmount }] : []),
-                { label: "Phí dịch vụ (2%)", value: serviceFee },
-                { label: "Thuế VAT (10%)", value: vat },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between text-sm text-slate-400">
                   <span>{label}</span>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { FiEdit2, FiPlus, FiSearch, FiSliders, FiTrash2, FiX } from "react-icons/fi";
+import { FiDownload, FiEdit2, FiPlus, FiSearch, FiSliders, FiTrash2, FiX } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import DateTimeInput from "../../components/Organizer/shared/DateTimeInput";
 import Pagination from "../../components/Organizer/shared/Pagination";
 import type { AppDispatch, RootState } from "../../store";
-import { fetchCreateVoucher, fetchDeleteVoucher, fetchGetVouchers, fetchUpdateVoucher } from "../../store/voucherSlice";
+import { fetchCreateVoucher, fetchDeleteVoucher, fetchExportExcelVoucher, fetchGetVouchers, fetchUpdateVoucher } from "../../store/voucherSlice";
 import type { CreateVoucherRequest, UpdateVoucherRequest, VoucherItem } from "../../types/voucher/voucher";
+import { downloadFileExcel } from "../../utils/downloadFileExcel";
 import { notify } from "../../utils/notify";
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -476,13 +477,31 @@ export default function VoucherManagementPage() {
                         </span>
                     </h1>
                 </div>
-                <button
-                    onClick={() => setCreateOpen(true)}
-                    className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 transition"
-                >
-                    <FiPlus size={15} />
-                    Tạo Voucher mới
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={async () => {
+                            if (!eventId) return notify.error("Không tìm thấy eventId");
+                            try {
+                                const blob = await dispatch(fetchExportExcelVoucher(eventId)).unwrap();
+                                downloadFileExcel(blob, "vouchers.xlsx");
+                                notify.success("Xuất Excel thành công");
+                            } catch (err) {
+                                notify.error("Xuất Excel thất bại");
+                            }
+                        }}
+                        className="bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 transition"
+                    >
+                        <FiDownload size={15} />
+                        Xuất Excel
+                    </button>
+                    <button
+                        onClick={() => setCreateOpen(true)}
+                        className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 transition"
+                    >
+                        <FiPlus size={15} />
+                        Tạo Voucher mới
+                    </button>
+                </div>
             </div>
 
             {/* Search + Filter */}

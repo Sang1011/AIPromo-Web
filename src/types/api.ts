@@ -4,3 +4,9 @@ export interface ApiResponse<T> {
     message: string | null;
     timestamp: string;
 }
+
+export interface ApiResponseNoData {
+    isSuccess: boolean;
+    message: string | null;
+    timestamp: string;
+}

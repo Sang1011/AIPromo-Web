@@ -18,9 +18,11 @@ export interface EventItemMapUI {
     location: string;
     status: EventStatusUI;
     statusLabel: string;
-    category?: string;
     color?: string;
     statusCheck: EventStatus;
+    rejectReason?: string;
+    rejectReasonLabel?: string;
+    rejectColor?: "red" | "orange" | "cyan";
 }
 
 interface EventCardProps {
@@ -45,6 +47,16 @@ export default function EventCard({ event }: EventCardProps) {
         navigate(`/organizer/my-events/${eventId}/${sub}`);
     };
 
+    const reasonInfo = event.rejectReason
+        ? { reason: event.rejectReason, label: event.rejectReasonLabel, color: event.rejectColor ?? "red" }
+        : null;
+
+    const REASON_STYLES = {
+        red: { border: "#ef4444", bg: "bg-red-500/[0.07]", borderClass: "border-red-500/20", text: "text-red-300/80", label: "text-red-400" },
+        orange: { border: "#f97316", bg: "bg-orange-500/[0.07]", borderClass: "border-orange-500/20", text: "text-orange-300/80", label: "text-orange-400" },
+        cyan: { border: "#06b6d4", bg: "bg-cyan-500/[0.07]", borderClass: "border-cyan-500/20", text: "text-cyan-300/80", label: "text-cyan-400" },
+    };
+
     return (
         <div className="glass rounded-3xl overflow-hidden group hover:border-primary/50 transition-all duration-300">
             <div className="p-6 flex gap-6">
@@ -55,11 +67,6 @@ export default function EventCard({ event }: EventCardProps) {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    {event.category && (
-                        <span className="absolute bottom-3 left-3 bg-primary text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
-                            {event.category}
-                        </span>
-                    )}
                 </div>
 
                 <div className="flex-1 space-y-3">
@@ -75,11 +82,9 @@ export default function EventCard({ event }: EventCardProps) {
                             {event.status === "upcoming" && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             )}
-
                             {event.status === "pending" && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                             )}
-
                             {event.statusLabel}
                         </span>
                     </div>
@@ -94,6 +99,26 @@ export default function EventCard({ event }: EventCardProps) {
                             <span>{event.location}</span>
                         </div>
                     </div>
+
+                    {reasonInfo && (() => {
+                        const s = REASON_STYLES[reasonInfo.color];
+                        return (
+                            <div
+                                className={`flex items-start gap-2 rounded-lg border ${s.borderClass} ${s.bg} px-3 py-2`}
+                                style={{ borderLeftWidth: "2px", borderLeftColor: s.border }}
+                            >
+                                <svg className={`mt-0.5 shrink-0 ${s.label}`} width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                    <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3" />
+                                    <path d="M7 4.5v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                                    <circle cx="7" cy="9.5" r="0.6" fill="currentColor" />
+                                </svg>
+                                <p className={`text-xs ${s.text} leading-relaxed`}>
+                                    <span className={`font-semibold ${s.label}`}>{reasonInfo.label}: </span>
+                                    {reasonInfo.reason}
+                                </p>
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
 
