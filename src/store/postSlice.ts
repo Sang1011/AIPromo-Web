@@ -6,7 +6,10 @@ import type {
     CreatePostDraftRequest,
     UpdatePostContentRequest,
     GenerateContentPostDraftUsingAIDetail,
+    PostListItem,
+    GetPostsParams,
 } from "../types/post/post";
+import type { PaginatedResponse } from "../types/api";
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -14,6 +17,10 @@ interface PostState {
     postDetail: PostDetail | null;
     generatedDraft: GenerateContentPostDraftUsingAIDetail | null;
     createdPostId: string | null;
+
+    posts: PostListItem[];
+    pagination: Omit<PaginatedResponse<PostListItem>, "items"> | null;
+    filters: Partial<GetPostsParams>;
 
     loading: {
         fetchDetail: boolean;
@@ -23,6 +30,7 @@ interface PostState {
         publishPost: boolean;
         generateAI: boolean;
         createDraft: boolean;
+        fetchList: boolean;
     };
 
     error: {
@@ -33,6 +41,7 @@ interface PostState {
         publishPost: string | null;
         generateAI: string | null;
         createDraft: string | null;
+        fetchList: string | null;
     };
 }
 
@@ -40,7 +49,14 @@ const initialState: PostState = {
     postDetail: null,
     generatedDraft: null,
     createdPostId: null,
-
+    posts: [],
+    pagination: null,
+    filters: {
+        pageNumber: 1,
+        pageSize: 5,
+        sortColumn: "CreatedAt",
+        sortOrder: "desc",
+    },
     loading: {
         fetchDetail: false,
         updateContent: false,
@@ -49,6 +65,7 @@ const initialState: PostState = {
         publishPost: false,
         generateAI: false,
         createDraft: false,
+        fetchList: false,
     },
 
     error: {
@@ -59,6 +76,7 @@ const initialState: PostState = {
         publishPost: null,
         generateAI: null,
         createDraft: null,
+        fetchList: null,
     },
 };
 
@@ -75,6 +93,21 @@ export const fetchPostDetail = createAsyncThunk(
             return res.data.data;
         } catch (error: any) {
             return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch post detail");
+        }
+    }
+);
+
+export const fetchOrganizerPosts = createAsyncThunk(
+    "post/fetchOrganizerPosts",
+    async (params: GetPostsParams, { rejectWithValue }) => {
+        try {
+            const res = await postService.getOrganizerPosts(params);
+            if (!res.data.isSuccess) {
+                return rejectWithValue(res.data.message ?? "Failed to fetch posts");
+            }
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch posts");
         }
     }
 );
@@ -141,9 +174,9 @@ export const publishApprovedPost = createAsyncThunk(
 
 export const generateContentPostUsingAI = createAsyncThunk(
     "post/generateContentPostUsingAI",
-    async (eventId: string, { rejectWithValue }) => {
+    async ({ eventId, userPromptRequirement }: { eventId: string; userPromptRequirement?: string }, { rejectWithValue }) => {
         try {
-            const res = await postService.generateContentPostUsingAI(eventId);
+            const res = await postService.generateContentPostUsingAI(eventId, userPromptRequirement);
             if (!res.data.isSuccess) {
                 return rejectWithValue(res.data.message ?? "Failed to generate AI content");
             }
@@ -183,6 +216,16 @@ const postSlice = createSlice({
         },
         clearCreatedPostId(state) {
             state.createdPostId = null;
+        },
+        clearPostList(state) {
+            state.posts = [];
+            state.pagination = null;
+        },
+        setPostFilters(state, action: PayloadAction<Partial<GetPostsParams>>) {
+            state.filters = { ...state.filters, ...action.payload };
+        },
+        resetPostFilters(state) {
+            state.filters = initialState.filters;
         },
         clearErrors(state) {
             state.error = initialState.error;
@@ -257,6 +300,22 @@ const postSlice = createSlice({
                 state.error.submitPost = action.payload as string;
             });
 
+        builder
+            .addCase(fetchOrganizerPosts.pending, (state) => {
+                state.loading.fetchList = true;
+                state.error.fetchList = null;
+            })
+            .addCase(fetchOrganizerPosts.fulfilled, (state, action: PayloadAction<PaginatedResponse<PostListItem>>) => {
+                state.loading.fetchList = false;
+                const { items, ...pagination } = action.payload;
+                state.posts = items;
+                state.pagination = pagination;
+            })
+            .addCase(fetchOrganizerPosts.rejected, (state, action) => {
+                state.loading.fetchList = false;
+                state.error.fetchList = action.payload as string;
+            });
+
         // ── publishApprovedPost ──────────────────────────────────────────────
         builder
             .addCase(publishApprovedPost.pending, (state) => {
@@ -267,7 +326,7 @@ const postSlice = createSlice({
                 state.loading.publishPost = false;
                 if (state.postDetail) {
                     state.postDetail.canPublish = false;
-                    state.postDetail.status = "published";
+                    state.postDetail.status = "Published";
                 }
             })
             .addCase(publishApprovedPost.rejected, (state, action) => {
@@ -309,5 +368,13 @@ const postSlice = createSlice({
     },
 });
 
-export const { clearPostDetail, clearGeneratedDraft, clearCreatedPostId, clearErrors } = postSlice.actions;
+export const {
+    clearPostDetail,
+    clearGeneratedDraft,
+    clearCreatedPostId,
+    clearPostList,
+    setPostFilters,
+    resetPostFilters,
+    clearErrors,
+} = postSlice.actions;
 export default postSlice.reducer;

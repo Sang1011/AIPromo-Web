@@ -54,12 +54,12 @@ export const fetchAddEventMember = createAsyncThunk<
 
 export const fetchUpdateEventMemberPermissions = createAsyncThunk<
     any,
-    { eventId: string; staffId: string; data: UpdateEventMemberPermissionsRequest }
+    { eventId: string; memberId: string; data: UpdateEventMemberPermissionsRequest }
 >(
     `${name}/fetchUpdateEventMemberPermissions`,
-    async ({ eventId, staffId, data }, thunkAPI) => {
+    async ({ eventId, memberId, data }, thunkAPI) => {
         try {
-            const response = await eventMemberService.updateMemberPermissions(eventId, staffId, data);
+            const response = await eventMemberService.updateMemberPermissions(eventId, memberId, data);
             return response.data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
@@ -69,15 +69,30 @@ export const fetchUpdateEventMemberPermissions = createAsyncThunk<
 
 export const fetchRemoveEventMember = createAsyncThunk<
     any,
-    { eventId: string; staffId: string }
+    { eventId: string; memberId: string }
 >(
     `${name}/fetchRemoveEventMember`,
-    async ({ eventId, staffId }, thunkAPI) => {
+    async ({ eventId, memberId }, thunkAPI) => {
         try {
-            const response = await eventMemberService.removeMember(eventId, staffId);
+            const response = await eventMemberService.removeMember(eventId, memberId);
             return response.data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchExportExcelMember = createAsyncThunk<
+    Blob,
+    string
+>(
+    `${name}/fetchExportExcelMember`,
+    async (eventId, { rejectWithValue }) => {
+        try {
+            const res = await eventMemberService.exportExcelMember(eventId);
+            return res.data;
+        } catch (err) {
+            return rejectWithValue("Không thể export member");
         }
     }
 );
@@ -116,7 +131,7 @@ const eventMemberSlice = createSlice({
 
             .addCase(fetchUpdateEventMemberPermissions.fulfilled, (state, action) => {
                 if (action.payload?.isSuccess) {
-                    const { staffId, data } = action.meta.arg;
+                    const { memberId: staffId, data } = action.meta.arg;
                     const index = state.members.findIndex((m) => m.id === staffId);
                     if (index !== -1) {
                         state.members[index] = {
@@ -129,7 +144,7 @@ const eventMemberSlice = createSlice({
 
             .addCase(fetchRemoveEventMember.fulfilled, (state, action) => {
                 if (action.payload?.isSuccess) {
-                    const removedId = action.meta.arg.staffId;
+                    const removedId = action.meta.arg.memberId;
                     state.members = state.members.filter((m) => m.id !== removedId);
                 }
             });
