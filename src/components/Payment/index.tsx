@@ -7,7 +7,7 @@ import { fetchPaymentOrder } from "../../store/paymentSlice";
 import { fetchToUpWallet, fetchWalletUser } from "../../store/walletSlice";
 import type { PaymentOrderPaymentResponse } from "../../types/payment/payment";
 import type { ToUpWalletResponse } from "../../types/wallet/wallet";
-import { fetchGetVouchers } from "../../store/voucherSlice";
+import { fetchApplyVoucher, fetchGetVouchers } from "../../store/voucherSlice";
 import { notify } from "../../utils/notify";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -707,7 +707,7 @@ export default function PaymentTicket() {
   };
 
   // ── handlePayment ──────────────────────────────────────────────────────────
-  const handlePayment = async () => {
+const handlePayment = async () => {
     setPayError(null);
     if (!resolvedOrderId) {
       setPayError("Không tìm thấy thông tin đơn hàng để thanh toán.");
@@ -743,13 +743,30 @@ export default function PaymentTicket() {
         return;
       }
 
+      // ── Áp dụng voucher nếu người dùng đã chọn ──────────────────────────
+      if (appliedVoucher) {
+        const voucherResult = await dispatch(
+          fetchApplyVoucher({
+            orderId: resolvedOrderId,
+            couponCode: appliedVoucher.couponCode,
+          })
+        );
+
+        if (fetchApplyVoucher.rejected.match(voucherResult)) {
+          const errMsg =
+            (voucherResult.payload as any)?.message ??
+            "Áp dụng voucher thất bại, vui lòng thử lại.";
+          setPayError(errMsg);
+          return;
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       const result = await dispatch(
         fetchPaymentOrder({
           orderId: resolvedOrderId,
           method: selectedMethod === "wallet" ? "BatchWalletPay" : "BatchDirectPay",
           description: `Thanh toán đơn ${resolvedOrderId} bằng ${selectedMethod === "wallet" ? "Ví" : "VNPay"}`,
-          // Nếu API cần voucherId, thêm vào đây:
-          // voucherId: appliedVoucher?.id,
         })
       );
 
