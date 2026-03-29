@@ -48,6 +48,9 @@ const voucherService = {
     ): Promise<AxiosResponse<ApiResponse<null>>> => {
         return interceptorAPI().delete(`/ticketing/vouchers/${voucherId}`);
     },
+    applyVoucher: (orderId: string, couponCode: string): Promise<AxiosResponse<ApiResponse<any>>> => {
+        return interceptorAPI().post(`/ticketing/${orderId}/apply-voucher`, { couponCode });
+    },
 };
 
 export default voucherService;
