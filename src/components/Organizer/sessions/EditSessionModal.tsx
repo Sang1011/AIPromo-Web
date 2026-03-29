@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
 import { FiX } from "react-icons/fi";
+import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../store";
 import { fetchUpdateSession } from "../../../store/eventSlice";
 import type { EventSession } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
 
 // ── NEW: pure validation helper ───────────────────────────────────────────────
-import { validateSession, errorsToFieldMap } from "../../../utils/eventValidation";
+import { isoToLocal, localToIso } from "../../../utils/dateTimeVN";
+import { errorsToFieldMap, validateSession } from "../../../utils/eventValidation";
 import DateTimeInput from "../shared/DateTimeInput";
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -23,8 +24,6 @@ interface SessionFormErrors {
     startTime?: string;
     endTime?: string;
 }
-
-const toDatetimeLocal = (iso: string) => (iso ? iso.slice(0, 16) : "");
 
 interface EditSessionModalProps {
     open: boolean;
@@ -47,8 +46,8 @@ export default function EditSessionModal({
     const initialForm = (): SessionFormState => ({
         title: session.title,
         description: session.description ?? "",
-        startTime: toDatetimeLocal(session.startTime),
-        endTime: toDatetimeLocal(session.endTime),
+        startTime: isoToLocal(session.startTime),
+        endTime: isoToLocal(session.startTime),
     });
 
     const [form, setForm] = useState<SessionFormState>(initialForm);
@@ -107,8 +106,8 @@ export default function EditSessionModal({
                 data: {
                     title: form.title.trim(),
                     description: form.description.trim(),
-                    startTime: new Date(form.startTime).toISOString(),
-                    endTime: new Date(form.endTime).toISOString(),
+                    startTime: localToIso(form.startTime),
+                    endTime: localToIso(form.endTime),
                 },
             })).unwrap();
 
