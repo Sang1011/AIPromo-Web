@@ -25,6 +25,7 @@ export type GetOrganizerProfileResponse = ApiResponse<OrganizerProfile>;
 
 // request để tạo tổ chức
 export interface CreateProfileOrganizerRequest {
+    logoFile: File,
     type: string;
     logo: string | null;
     displayName: string;
