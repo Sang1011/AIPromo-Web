@@ -7,6 +7,7 @@ import { notify } from "../../../utils/notify";
 // ── NEW: pure validation helper ───────────────────────────────────────────────
 import { validateSession, errorsToFieldMap } from "../../../utils/eventValidation";
 import DateTimeInput from "../shared/DateTimeInput";
+import { localToIso } from "../../../utils/dateTimeVN";
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface SessionFormErrors {
@@ -64,8 +65,8 @@ export default function CreateSessionModal({
                             {
                                 title: title.trim(),
                                 description: description.trim(),
-                                startTime: new Date(startTime).toISOString(),
-                                endTime: new Date(endTime).toISOString(),
+                                startTime: localToIso(startTime),
+                                endTime: localToIso(endTime),
                             },
                         ],
                     },

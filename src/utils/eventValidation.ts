@@ -1,10 +1,4 @@
-/**
- * eventValidation.ts
- * Pure validation helpers — zero UI coupling, zero side effects.
- * Import these anywhere: components, thunks, unit tests.
- */
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { formatVN } from "./dateTimeVN";
 
 export interface EventTimeWindow {
     ticketSaleStartAt: string; // ISO or datetime-local string
@@ -16,7 +10,7 @@ export interface EventTimeWindow {
 export interface SessionWindow {
     id: string;
     title: string;
-    startTime: string; // ISO or datetime-local string
+    startTime: string;
     endTime: string;
 }
 
@@ -46,15 +40,6 @@ export interface InvalidSessionsResult {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const d = (v: string) => new Date(v).getTime();
-const fmt = (v: string) =>
-    new Date(v).toLocaleString("vi-VN", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
 
 // ─── 1. validateEventTime ─────────────────────────────────────────────────────
 /**
@@ -161,7 +146,7 @@ export function validateSession(
     } else if (eventStartAt && d(startTime) < d(eventStartAt)) {
         errors.push({
             field: "startTime",
-            message: `Suất diễn phải bắt đầu từ ${fmt(eventStartAt)} trở đi`,
+            message: `Suất diễn phải bắt đầu từ ${formatVN(eventStartAt)} trở đi`,
         });
     }
 
@@ -183,7 +168,7 @@ export function validateSession(
         if (eventEndAt && d(endTime) > d(eventEndAt))
             errors.push({
                 field: "endTime",
-                message: `Suất diễn phải kết thúc trước hoặc đúng lúc ${fmt(eventEndAt)}`,
+                message: `Suất diễn phải kết thúc trước hoặc đúng lúc ${formatVN(eventEndAt)}`,
             });
     }
 
@@ -227,12 +212,12 @@ export function getInvalidSessions(
 
             if (d(session.startTime) < eventStart)
                 reasons.push(
-                    `Bắt đầu (${fmt(session.startTime)}) trước khi sự kiện mở cửa (${fmt(eventStartAt)})`
+                    `Bắt đầu (${formatVN(session.startTime)}) trước khi sự kiện mở cửa (${formatVN(eventStartAt)})`
                 );
 
             if (d(session.endTime) > eventEnd)
                 reasons.push(
-                    `Kết thúc (${fmt(session.endTime)}) sau khi sự kiện đóng cửa (${fmt(eventEndAt)})`
+                    `Kết thúc (${formatVN(session.endTime)}) sau khi sự kiện đóng cửa (${formatVN(eventEndAt)})`
                 );
 
             if (reasons.length > 0) acc.push({ ...session, reasons });

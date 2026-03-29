@@ -25,27 +25,10 @@ import {
     type InvalidSessionsResult,
 } from "../../../utils/eventValidation";
 import ConfirmModal from "../shared/ConfirmModal";
-
-const formatDateTime = (iso: string) => {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleString("vi-VN", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
+import { formatVN, isoToLocal } from "../../../utils/dateTimeVN";
 
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
-
-const toLocalDateTime = (iso: string) => {
-    const date = new Date(iso);
-    const offset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-};
 
 function SectionHeader({
     icon, title, subtitle, count, action,
@@ -116,12 +99,12 @@ function SessionCard({
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5">
                     <span className="flex items-center gap-1.5 text-xs text-slate-400">
                         <FiCalendar size={11} className="text-primary/60" />
-                        {formatDateTime(session.startTime)}
+                        {formatVN(session.startTime)}
                     </span>
                     <span className="text-slate-700 text-xs hidden sm:block">→</span>
                     <span className="flex items-center gap-1.5 text-xs text-slate-400">
                         <FiClock size={11} className="text-primary/60" />
-                        {formatDateTime(session.endTime)}
+                        {formatVN(session.endTime)}
                     </span>
                 </div>
             </div>
@@ -424,10 +407,10 @@ export default function Step2Schedule({
     useEffect(() => {
         if (!eventData || initialTimeForm) return;
         const form: TimeForm = {
-            ticketSaleStartAt: eventData.ticketSaleStartAt ? toLocalDateTime(eventData.ticketSaleStartAt) : "",
-            ticketSaleEndAt: eventData.ticketSaleEndAt ? toLocalDateTime(eventData.ticketSaleEndAt) : "",
-            eventStartAt: eventData.eventStartAt ? toLocalDateTime(eventData.eventStartAt) : "",
-            eventEndAt: eventData.eventEndAt ? toLocalDateTime(eventData.eventEndAt) : "",
+            ticketSaleStartAt: eventData.ticketSaleStartAt ? isoToLocal(eventData.ticketSaleStartAt) : "",
+            ticketSaleEndAt: eventData.ticketSaleEndAt ? isoToLocal(eventData.ticketSaleEndAt) : "",
+            eventStartAt: eventData.eventStartAt ? isoToLocal(eventData.eventStartAt) : "",
+            eventEndAt: eventData.eventEndAt ? isoToLocal(eventData.eventEndAt) : "",
         };
         setTimeForm(form);
         setInitialTimeForm(form);
@@ -607,7 +590,6 @@ export default function Step2Schedule({
                     isAllowUpdate={isAllowUpdate}
                     onCreated={async () => {
                         loadSessions();
-                        await reloadEvent?.();
                     }}
                 />
             )}
@@ -622,7 +604,6 @@ export default function Step2Schedule({
                     eventEndAt={timeForm.eventEndAt}
                     onUpdated={async () => {
                         loadSessions();
-                        await reloadEvent?.();
                     }}
                 />
             )}
@@ -633,7 +614,6 @@ export default function Step2Schedule({
                     isAllowUpdate={isAllowUpdate}
                     onClose={async () => {
                         setOpenTicketModal(false);
-                        await reloadEvent?.();
                     }}
                     eventId={eventId}
                 />
