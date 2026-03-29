@@ -17,7 +17,7 @@ import ImageViewer from "../../components/Organizer/shared/ImagePreview";
 import type { MeInfo } from "../../types/auth/auth";
 import type { ApiResponse } from "../../types/api";
 import ConfirmModal from "../../components/Organizer/shared/ConfirmModal";
-import type { OrganizerProfileDetail } from "../../types/organizerProfile/organizerProfile";
+import { OrganizerStatus, type OrganizerProfileDetail } from "../../types/organizerProfile/organizerProfile";
 
 const BANKS = [
     { code: "VCB", name: "Vietcombank" },
@@ -182,6 +182,53 @@ export default function OrganizerAccountPage() {
         init();
     }, [dispatch]);
 
+    const statusBannerInfo = (status: OrganizerStatus | undefined) => {
+        switch (status) {
+            case OrganizerStatus.Draft:
+                return {
+                    bg: "bg-yellow-500/5",
+                    border: "border-yellow-500/20",
+                    color: "#eab308",
+                    textColor: "text-yellow-400",
+                    subColor: "text-yellow-300/70",
+                    label: "Hồ sơ chưa được nộp",
+                    reason: "Hồ sơ của bạn đang ở trạng thái nháp. Vui lòng điền đầy đủ thông tin, lưu lại và nộp lên để được kiểm duyệt.",
+                };
+            case OrganizerStatus.Pending:
+                return {
+                    bg: "bg-blue-500/5",
+                    border: "border-blue-500/20",
+                    color: "#3b82f6",
+                    textColor: "text-blue-400",
+                    subColor: "text-blue-300/70",
+                    label: "Hồ sơ đang được kiểm duyệt",
+                    reason: "Hồ sơ của bạn đang được xem xét bởi đội ngũ staff. Quá trình này thường mất 2–3 ngày làm việc.",
+                };
+            case OrganizerStatus.Verified:
+                return {
+                    bg: "bg-emerald-500/5",
+                    border: "border-emerald-500/20",
+                    color: "#10b981",
+                    textColor: "text-emerald-400",
+                    subColor: "text-emerald-300/70",
+                    label: "Hồ sơ đã được xác minh",
+                    reason: "Hồ sơ của bạn đã được kiểm duyệt thành công. Bạn có thể đăng sự kiện public.",
+                };
+            case OrganizerStatus.Rejected:
+                return {
+                    bg: "bg-red-500/5",
+                    border: "border-red-500/20",
+                    color: "#ef4444",
+                    textColor: "text-red-400",
+                    subColor: "text-red-300/70",
+                    label: "Hồ sơ bị từ chối",
+                    reason: "Hồ sơ của bạn không được chấp thuận. Vui lòng kiểm tra lại thông tin và nộp lại.",
+                };
+            default:
+                return null;
+        }
+    };
+
     const validateProfile = (): boolean => {
         const errors: ProfileErrors = {};
         if (!displayName.trim()) errors.displayName = "Tên hiển thị không được để trống";
@@ -296,7 +343,26 @@ export default function OrganizerAccountPage() {
 
     return (
         <div className="space-y-6 mx-auto">
-
+            {(() => {
+                const info = statusBannerInfo(profileDetail?.status);
+                if (!info) return null;
+                return (
+                    <div
+                        className={`flex gap-3 rounded-xl border ${info.border} ${info.bg} px-5 py-4`}
+                        style={{ borderLeftWidth: "3px", borderLeftColor: info.color }}
+                    >
+                        <svg className={`mt-0.5 shrink-0 ${info.textColor}`} width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <circle cx="9" cy="9" r="8" stroke="currentColor" strokeWidth="1.4" />
+                            <path d="M9 5.5v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                            <circle cx="9" cy="12.5" r="0.7" fill="currentColor" />
+                        </svg>
+                        <div className="space-y-1">
+                            <p className={`text-sm font-semibold ${info.textColor}`}>{info.label}</p>
+                            <p className={`text-sm ${info.subColor}`}>{info.reason}</p>
+                        </div>
+                    </div>
+                );
+            })()}
             {/* Tabs */}
             <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
                 {tabs.map((tab) => (
