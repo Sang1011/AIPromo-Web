@@ -605,9 +605,10 @@ export default function PaymentTicket() {
   const [topUpError, setTopUpError] = useState<string | null>(null);
 
   // ── Effects ────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    dispatch(fetchGetVouchers());
-  }, [dispatch]);
+ useEffect(() => {
+  if (!orderDetail?.eventId) return;
+  dispatch(fetchGetVouchers({ EventId: orderDetail.eventId }));
+}, [dispatch, orderDetail?.eventId]);
 
   useEffect(() => {
     if (orderIdFromStorage) {
