@@ -29,10 +29,10 @@ export function buildContextPrompt(
     if (actors) context += `, Actors: ${actors}`;
     if (sessions) context += `, Sessions: ${sessions}`;
     context += hasImage
-        ? `. Include ImageUrl.`
+        ? ``
         : `. Exclude ImageUrl.`;
     context += event.bannerUrl
-        ? `. Include BannerUrl.`
+        ? ``
         : `. Exclude BannerUrl.`;
 
     if (event.urlPath) {
