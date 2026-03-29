@@ -84,6 +84,20 @@ export const fetchDeleteVoucher = createAsyncThunk(
     }
 );
 
+export const fetchApplyVoucher = createAsyncThunk(
+  "VOUCHER/fetchApplyVoucher",
+  async ({ orderId, couponCode }: { orderId: string; couponCode: string },{ rejectWithValue }) => {
+    try {
+      const response = await voucherService.applyVoucher(orderId, couponCode);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error?.response?.data || "Apply voucher failed"
+      );
+    }
+  }
+);
+
 const voucherSlice = createSlice({
     name: "VOUCHER",
     initialState,
