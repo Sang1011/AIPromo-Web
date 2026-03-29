@@ -24,6 +24,7 @@ import {
     type SessionWindow,
     type InvalidSessionsResult,
 } from "../../../utils/eventValidation";
+import ConfirmModal from "../shared/ConfirmModal";
 
 const formatDateTime = (iso: string) => {
     if (!iso) return "—";
@@ -87,9 +88,8 @@ function SessionCard({
     hasConflict?: boolean;
 }) {
     const [deleting, setDeleting] = useState(false);
-
+    const [showConfirm, setShowConfirm] = useState(false);
     const handleDelete = async () => {
-        if (!confirm(`Bạn có chắc muốn xoá suất diễn "${session.title}"?`)) return;
         setDeleting(true);
         try { onDelete(); } finally { setDeleting(false); }
     };
@@ -133,13 +133,21 @@ function SessionCard({
                     <FiEdit2 size={12} /> Sửa
                 </button>
                 <button
-                    onClick={handleDelete}
+                    onClick={() => setShowConfirm(true)}
                     disabled={deleting}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/8 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 font-medium text-xs transition-all border border-red-500/10 disabled:opacity-50"
                 >
                     <FiTrash2 size={12} /> {deleting ? "..." : "Xoá"}
                 </button>
             </div>
+            <ConfirmModal
+                open={showConfirm}
+                title="Xóa xuất diễn"
+                description="Bạn có chắc muốn xóa suất diễn này? Hành động này có thể không hoàn tác."
+                confirmText="Xóa"
+                onCancel={() => setShowConfirm(false)}
+                onConfirm={handleDelete}
+            />
         </div>
     );
 }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import type { EventMember } from "../../../types/eventMember/eventMember";
+import { EventMemberStatus } from "../../../types/eventMember/eventMember";
 import { fetchRemoveEventMember, fetchUpdateEventMemberPermissions } from "../../../store/eventMemberSlice";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import { notify } from "../../../utils/notify";
@@ -13,6 +14,13 @@ const permissionLabel: Record<string, string> = {
     ViewReports: "Xem báo cáo",
 };
 
+const statusConfig: Record<EventMemberStatus, { label: string; className: string }> = {
+    Active: { label: "Hoạt động", className: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" },
+    Pending: { label: "Chờ duyệt", className: "text-amber-400 bg-amber-400/10 border-amber-400/20" },
+    Rejected: { label: "Từ chối", className: "text-red-400 bg-red-400/10 border-red-400/20" },
+    Inactive: { label: "Không hoạt động", className: "text-slate-400 bg-slate-400/10 border-slate-400/20" },
+};
+
 interface MembersTableProps {
     eventId: string;
     members: EventMember[];
@@ -21,11 +29,15 @@ interface MembersTableProps {
 
 function SkeletonRow() {
     return (
-        <div className="grid grid-cols-[2fr_2fr_80px] px-6 py-4 items-center">
+        <div className="grid grid-cols-[2.5fr_1.2fr_2fr_80px] px-6 py-4 items-center">
             <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/5 animate-pulse" />
-                <div className="h-4 w-40 rounded-lg bg-white/5 animate-pulse" />
+                <div className="space-y-1.5">
+                    <div className="h-4 w-32 rounded-lg bg-white/5 animate-pulse" />
+                    <div className="h-3 w-24 rounded-lg bg-white/5 animate-pulse" />
+                </div>
             </div>
+            <div className="h-5 w-20 rounded-full bg-white/5 animate-pulse" />
             <div className="flex gap-2">
                 <div className="h-5 w-20 rounded-full bg-white/5 animate-pulse" />
                 <div className="h-5 w-20 rounded-full bg-white/5 animate-pulse" />
@@ -56,9 +68,9 @@ export default function MembersTable({ eventId, members, filteredMembers }: Memb
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
-    const handleRemove = async (staffId: string) => {
-        setLoadingId(staffId);
-        await dispatch(fetchRemoveEventMember({ eventId, staffId }));
+    const handleRemove = async (memberId: string) => {
+        setLoadingId(memberId);
+        await dispatch(fetchRemoveEventMember({ eventId, memberId }));
         setLoadingId(null);
         setOpenMenuId(null);
         notify.success("Đã xóa thành viên");
@@ -76,7 +88,7 @@ export default function MembersTable({ eventId, members, filteredMembers }: Memb
         const result = await dispatch(
             fetchUpdateEventMemberPermissions({
                 eventId,
-                staffId: editMember.id,
+                memberId: editMember.id,
                 data: { permissions: selectedPermissions },
             })
         );
@@ -102,8 +114,9 @@ export default function MembersTable({ eventId, members, filteredMembers }: Memb
                     thành viên trong đội ngũ
                 </div>
 
-                <div className="grid grid-cols-[2fr_2fr_80px] px-6 py-3 text-xs font-semibold tracking-widest text-slate-400 uppercase">
+                <div className="grid grid-cols-[2.5fr_1.2fr_2fr_80px] px-6 py-3 text-xs font-semibold tracking-widest text-slate-400 uppercase">
                     <div>Thành viên</div>
+                    <div>Trạng thái</div>
                     <div>Quyền hạn</div>
                     <div className="text-center">Hành động</div>
                 </div>
@@ -116,13 +129,24 @@ export default function MembersTable({ eventId, members, filteredMembers }: Memb
                             {members.map((m) => (
                                 <div
                                     key={m.id}
-                                    className="grid grid-cols-[2fr_2fr_80px] px-6 py-4 items-center hover:bg-white/5 transition relative"
+                                    className="grid grid-cols-[2.5fr_1.2fr_2fr_80px] px-6 py-4 items-center hover:bg-white/5 transition relative"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
-                                            {m.email && m.email.charAt(0).toUpperCase()}
+                                            {(m.fullName || m.email).charAt(0).toUpperCase()}
                                         </div>
-                                        <p className="text-white text-sm font-medium">{m.email}</p>
+                                        <div>
+                                            <p className="text-white text-sm font-medium">{m.fullName || m.email}</p>
+                                            {m.fullName && (
+                                                <p className="text-slate-500 text-xs">{m.email}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${statusConfig[m.status].className}`}>
+                                            {statusConfig[m.status].label}
+                                        </span>
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
@@ -234,9 +258,7 @@ export default function MembersTable({ eventId, members, filteredMembers }: Memb
                             </button>
                         </div>
                     </div>
-
                 </div>
-
             )}
         </>
     );

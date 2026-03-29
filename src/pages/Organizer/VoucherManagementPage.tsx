@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
-import { FiEdit2, FiPlus, FiSearch, FiSliders, FiTrash2, FiX } from "react-icons/fi";
+import { FiDownload, FiEdit2, FiPlus, FiSearch, FiSliders, FiTrash2, FiX } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import DateTimeInput from "../../components/Organizer/shared/DateTimeInput";
 import Pagination from "../../components/Organizer/shared/Pagination";
+import { useEventTitle } from "../../hooks/useEventTitle";
 import type { AppDispatch, RootState } from "../../store";
-import { fetchCreateVoucher, fetchDeleteVoucher, fetchGetVouchers, fetchUpdateVoucher } from "../../store/voucherSlice";
+import { fetchMe } from "../../store/authSlice";
+import { fetchCreateVoucher, fetchDeleteVoucher, fetchExportExcelVoucher, fetchGetVouchers, fetchUpdateVoucher } from "../../store/voucherSlice";
+import type { ApiResponse } from "../../types/api";
+import type { MeInfo } from "../../types/auth/auth";
 import type { CreateVoucherRequest, UpdateVoucherRequest, VoucherItem } from "../../types/voucher/voucher";
+import { downloadFileExcel } from "../../utils/downloadFileExcel";
+import { getCurrentDateTime } from "../../utils/getCurrentDateTime";
 import { notify } from "../../utils/notify";
+import { saveReportToFirebase } from "../../utils/saveReportToFirebase";
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string) {
@@ -443,7 +450,7 @@ export default function VoucherManagementPage() {
     const [createOpen, setCreateOpen] = useState(false);
     const [editTarget, setEditTarget] = useState<VoucherItem | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<VoucherItem | null>(null);
-
+    const eventName = useEventTitle();
     const load = (page = 1) => {
         dispatch(fetchGetVouchers({
             PageNumber: page,
@@ -464,6 +471,28 @@ export default function VoucherManagementPage() {
         return matchSearch && matchFilter;
     });
 
+    const handleExportExcel = async () => {
+        if (!eventId) return notify.error("Không tìm thấy eventId");
+        try {
+            const blob = await dispatch(fetchExportExcelVoucher(eventId)).unwrap();
+            const { iso, formatted } = getCurrentDateTime();
+            const fileName = `vouchers_${eventName}_${formatted}.xlsx`;
+            downloadFileExcel(blob, fileName);
+            const meResult = await dispatch(fetchMe()).unwrap();
+            const email = (meResult as ApiResponse<MeInfo>)?.data?.email;
+            await saveReportToFirebase({
+                eventId,
+                eventName: eventName ?? eventId,
+                fileName,
+                createdBy: email ?? "",
+                createdAt: iso
+            });
+            notify.success("Xuất Excel thành công");
+        } catch (err) {
+            notify.error("Xuất Excel thất bại");
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -476,13 +505,22 @@ export default function VoucherManagementPage() {
                         </span>
                     </h1>
                 </div>
-                <button
-                    onClick={() => setCreateOpen(true)}
-                    className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 transition"
-                >
-                    <FiPlus size={15} />
-                    Tạo Voucher mới
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleExportExcel}
+                        className="bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 transition"
+                    >
+                        <FiDownload size={15} />
+                        Xuất Excel
+                    </button>
+                    <button
+                        onClick={() => setCreateOpen(true)}
+                        className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 transition"
+                    >
+                        <FiPlus size={15} />
+                        Tạo Voucher mới
+                    </button>
+                </div>
             </div>
 
             {/* Search + Filter */}

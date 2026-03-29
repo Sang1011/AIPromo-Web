@@ -84,6 +84,21 @@ export const fetchDeleteVoucher = createAsyncThunk(
     }
 );
 
+export const fetchExportExcelVoucher = createAsyncThunk<
+    Blob,
+    string
+>(
+    "VOUCHER/exportExcel",
+    async (eventId, { rejectWithValue }) => {
+        try {
+            const res = await voucherService.exportExcelVoucher(eventId);
+            return res.data;
+        } catch (err) {
+            return rejectWithValue("Không thể export voucher");
+        }
+    }
+);
+
 export const fetchApplyVoucher = createAsyncThunk(
   "VOUCHER/fetchApplyVoucher",
   async ({ orderId, couponCode }: { orderId: string; couponCode: string },{ rejectWithValue }) => {
@@ -155,6 +170,19 @@ const voucherSlice = createSlice({
                     state.error = action.payload as string;
                 });
         });
+
+        builder
+            .addCase(fetchExportExcelVoucher.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchExportExcelVoucher.fulfilled, (state) => {
+                state.loading = false;
+            })
+            .addCase(fetchExportExcelVoucher.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload as string;
+            });
     },
 });
 

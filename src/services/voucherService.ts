@@ -48,6 +48,14 @@ const voucherService = {
     ): Promise<AxiosResponse<ApiResponse<null>>> => {
         return interceptorAPI().delete(`/ticketing/vouchers/${voucherId}`);
     },
+    exportExcelVoucher: (eventId: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().get(
+            `/organizer/ticketing/vouchers/export?eventId=${eventId}`,
+            {
+                responseType: "blob",
+            }
+        );
+    },
     applyVoucher: (orderId: string, couponCode: string): Promise<AxiosResponse<ApiResponse<any>>> => {
         return interceptorAPI().post(`/ticketing/${orderId}/apply-voucher`, { couponCode });
     },
