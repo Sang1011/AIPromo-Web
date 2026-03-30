@@ -2,7 +2,6 @@ import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/tool
 import adminEventService from "../services/adminEventService";
 import type {
     AdminEventItem,
-    AdminEventsData,
     GetAllAdminEventsResponse,
 } from "../types/adminEvent/adminEvent";
 
