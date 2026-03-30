@@ -13,7 +13,9 @@ import orderReducer from "./orderSlice"
 import paymentReducer from "./paymentSlice"
 import voucherReducer from "./voucherSlice"
 import userReducer from "./userSlice";
+import adminEventReducer from "./adminEventSlice";
 import postReducer from "./postSlice";
+import staffEventReducer from "./staffEventSlice";
 
 const store = configureStore({
     reducer: {
@@ -31,7 +33,9 @@ const store = configureStore({
         PAYMENT: paymentReducer,
         VOUCHER: voucherReducer,
         USER: userReducer,
-        POST: postReducer
+        ADMIN_EVENT: adminEventReducer,
+        POST: postReducer,
+        STAFF_EVENT: staffEventReducer
     }
 })
 

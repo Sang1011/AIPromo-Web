@@ -125,27 +125,27 @@ const eventService = {
     },
 
     publishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/publish`);
+        return interceptorAPI().patch(`/staff/events/${eventId}/publish`);
     },
 
     rejectPublishEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/reject-publish`, { reason }, {
+        return interceptorAPI().patch(`/staff/events/${eventId}/reject-publish`, { reason }, {
             headers: { "Content-Type": "application/json" }
         });
     },
 
     cancelEvent: (eventId: string, reason: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/cancel`, { reason });
+        return interceptorAPI().patch(`/staff/events/${eventId}/cancel`, { reason });
     },
 
     unpublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/unpublish`);
+        return interceptorAPI().patch(`/staff/events/${eventId}/unpublish`);
     },
     requestPublishEvent: (eventId: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch(`/organizer/events/${eventId}/request-publish`);
     },
     getPendingEvents: (request: GetPendingEventsRequest): Promise<AxiosResponse<GetPendingEventsResponse>> => {
-        return interceptorAPI().get("/events/pending", {
+        return interceptorAPI().get("/staff/events/pending", {
             params: request
         });
     },
