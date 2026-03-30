@@ -8,6 +8,7 @@ import { fetchGetSeatMap } from "../../../store/seatMapSlice";
 import type { EventSession, GetEventDetailResponse } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
 import ImageViewer from "../shared/ImagePreview";
+import { UnsavedBanner } from "../shared/UnsavedBanner";
 
 interface Step3SettingsProps {
     onNext?: () => void;
@@ -197,13 +198,61 @@ export default function Step3Settings({
         if (newForm.specImage) setPreviewUrl(newForm.specImage);
     }, [eventData]);
 
-    // Ảnh hiện tại để hiển thị (ưu tiên preview local)
     const displayImage = previewUrl || settingsForm.specImage;
+    const isDirty = isFormChanged();
 
+    useEffect(() => {
+        if (!isDirty) return;
+        const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [isDirty]);
+
+    const [bannerSaving, setBannerSaving] = useState(false);
+
+    const handleBannerSave = async () => {
+        if (!validateForm()) return;
+        if (!eventId) return;
+        setBannerSaving(true);
+        try {
+            let finalSpecImageUrl = settingsForm.specImage;
+            if (pendingFile) {
+                setUploading(true);
+                finalSpecImageUrl = await dispatch(fetchUpload({
+                    folder: "spec-images",
+                    file: pendingFile,
+                })).unwrap();
+                setUploading(false);
+                setPendingFile(null);
+                setPreviewUrl(finalSpecImageUrl);
+                updateForm("specImage", finalSpecImageUrl);
+            }
+            await dispatch(fetchUpdateEventSettings({
+                eventId,
+                data: {
+                    ...settingsForm,
+                    specImage: finalSpecImageUrl,
+                    ticketSaleStartAt: eventData?.ticketSaleStartAt ?? "",
+                    ticketSaleEndAt: eventData?.ticketSaleEndAt ?? "",
+                    eventStartAt: eventData?.eventStartAt ?? "",
+                    eventEndAt: eventData?.eventEndAt ?? "",
+                }
+            })).unwrap();
+            await reloadEvent?.();
+            setInitialForm({ ...settingsForm, specImage: finalSpecImageUrl });
+            notify.success("Đã lưu cài đặt sự kiện");
+        } catch {
+            notify.error("Không thể lưu cài đặt sự kiện");
+        } finally {
+            setBannerSaving(false);
+            setUploading(false);
+        }
+    };
     return (
         <div className="space-y-8">
-
-            {/* ===== Cài đặt tùy chỉnh ===== */}
+            {isDirty && isAllowUpdate && (
+                <UnsavedBanner onSave={handleBannerSave} saving={bannerSaving} />
+            )}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                 <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">

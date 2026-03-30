@@ -54,8 +54,8 @@ export default function Header({
         }
     };
 
-    function getMissingFields(profile: OrganizerProfileDetail | null): { fields: string[]; tab: "profile" | "bank" } {
-        if (!profile) return { fields: ["displayName"], tab: "profile" };
+    function getMissingFields(profile: OrganizerProfileDetail | null): { fields: string[]; tab: "profileDetail" | "bank" } {
+        if (!profile) return { fields: ["displayName"], tab: "profileDetail" };
 
         const missing: string[] = [];
         const isCompany = profile.businessType?.toLowerCase() === "company";
@@ -73,7 +73,7 @@ export default function Header({
 
         const profileFields = ["displayName", "identityNumber", "companyName", "taxCode"];
         const hasProfileError = missing.some((f) => profileFields.includes(f));
-        const tab = hasProfileError ? "profile" : "bank";
+        const tab = hasProfileError ? "profileDetail" : "bank";
 
         return { fields: missing, tab };
     }

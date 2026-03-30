@@ -105,7 +105,7 @@ const eventService = {
     },
 
     getSessions: (eventId: string): Promise<AxiosResponse<ApiResponse<GetAllSessionResponse>>> => {
-        return interceptorAPI().get(`/organizer/events/${eventId}/sessions`);
+        return interceptorAPI().get(`/events/${eventId}/sessions`);
     },
 
     deleteSession: (eventId: string, sessionId: string): Promise<AxiosResponse<any>> => {

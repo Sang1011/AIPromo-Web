@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { FiDownload } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "../../store";
-import MembersTable from "../../components/Organizer/members/MembersTable";
-import { fetchAddEventMember, fetchEventMembers } from "../../store/eventMemberSlice";
 import { useParams } from "react-router-dom";
+import MembersTable from "../../components/Organizer/members/MembersTable";
 import Pagination from "../../components/Organizer/shared/Pagination";
+import { useEventTitle } from "../../hooks/useEventTitle";
+import type { AppDispatch, RootState } from "../../store";
+import { fetchMe } from "../../store/authSlice";
+import { fetchAddEventMember, fetchEventMembers, fetchExportExcelMember } from "../../store/eventMemberSlice";
+import type { ApiResponse } from "../../types/api";
+import type { MeInfo } from "../../types/auth/auth";
+import { downloadFileExcel } from "../../utils/downloadFileExcel";
+import { getCurrentDateTime } from "../../utils/getCurrentDateTime";
 import { notify } from "../../utils/notify";
+import { saveReportToFirebase } from "../../utils/saveReportToFirebase";
 
 const PERMISSIONS = ["CheckIn", "ViewReports"];
 
@@ -29,7 +37,7 @@ export default function MemberManagementPage() {
     const [addError, setAddError] = useState("");
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 10;
-
+    const eventName = useEventTitle();
     if (!eventId) return null;
 
     const loadMembers = () => {
@@ -38,7 +46,6 @@ export default function MemberManagementPage() {
 
     const filteredMembers = useMemo(() => {
         const keyword = search.toLowerCase();
-
         return members.filter((m) => {
             const email = m.email?.toLowerCase() || "";
             return email.includes(keyword);
@@ -88,15 +95,12 @@ export default function MemberManagementPage() {
         );
         if (fetchAddEventMember.fulfilled.match(result)) {
             notify.success("Thêm thành viên thành công");
-
             setShowAddModal(false);
             setNewEmail("");
             setNewPermissions([]);
             setPage(1);
-        }
-        else if (fetchAddEventMember.rejected.match(result)) {
+        } else if (fetchAddEventMember.rejected.match(result)) {
             const status = result.payload?.status;
-
             if (status === 404) {
                 notify.warning("Thành viên này không tồn tại");
             } else {
@@ -110,6 +114,28 @@ export default function MemberManagementPage() {
         setNewEmail("");
         setNewPermissions([]);
         setAddError("");
+    };
+
+    const handleExportExcel = async () => {
+        if (!eventId) return notify.error("Không tìm thấy eventId");
+        try {
+            const blob = await dispatch(fetchExportExcelMember(eventId)).unwrap();
+            const { iso, formatted } = getCurrentDateTime();
+            const fileName = `members_${eventName}_${formatted}.xlsx`;
+            downloadFileExcel(blob, fileName);
+            const meResult = await dispatch(fetchMe()).unwrap();
+            const email = (meResult as ApiResponse<MeInfo>)?.data?.email;
+            await saveReportToFirebase({
+                eventId,
+                eventName: eventName ?? eventId,
+                fileName,
+                createdBy: email ?? "",
+                createdAt: iso
+            });
+            notify.success("Xuất Excel thành công");
+        } catch (err) {
+            notify.error("Xuất Excel thất bại");
+        }
     };
 
     useEffect(() => {
@@ -143,12 +169,20 @@ export default function MemberManagementPage() {
                         </h1>
                     </div>
 
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 transition"
-                    >
-                        + Thêm thành viên
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleExportExcel}
+                            className="bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 transition"
+                        >
+                            <FiDownload /> Xuất Excel
+                        </button>
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 transition"
+                        >
+                            + Thêm thành viên
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-4">

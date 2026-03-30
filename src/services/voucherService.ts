@@ -55,7 +55,10 @@ const voucherService = {
                 responseType: "blob",
             }
         );
-    }
+    },
+    applyVoucher: (orderId: string, couponCode: string): Promise<AxiosResponse<ApiResponse<any>>> => {
+        return interceptorAPI().post(`/ticketing/${orderId}/apply-voucher`, { couponCode });
+    },
 };
 
 export default voucherService;

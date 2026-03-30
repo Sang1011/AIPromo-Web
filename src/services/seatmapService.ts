@@ -15,7 +15,7 @@ const seatmapService = {
         })
     },
     assignAreas: (eventId: string, data: AssignAreasRequest): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/events/${eventId}/ticket-types/assign-area`, data,
+        return interceptorAPI().patch(`organizer/events/${eventId}/ticket-types/assign-area`, data,
             { headers: { 'Content-Type': 'application/json' } }
         );
     },

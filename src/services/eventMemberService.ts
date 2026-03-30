@@ -8,21 +8,29 @@ import { interceptorAPI } from "../utils/attachInterceptors";
 
 const eventMemberService = {
     getMembers: (eventId: string): Promise<AxiosResponse<GetEventMembersResponse>> => {
-        return interceptorAPI().get(`/events/${eventId}/staff`);
+        return interceptorAPI().get(`/organizer/events/${eventId}/member`);
     },
     addMember: (eventId: string, data: AddEventMemberRequest): Promise<AxiosResponse<any>> => {
         return interceptorAPI().post(`/organizer/events/${eventId}/member`, data);
     },
     updateMemberPermissions: (
         eventId: string,
-        staffId: string,
+        memberId: string,
         data: UpdateEventMemberPermissionsRequest
     ): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().patch(`/organizer/events/${eventId}/member/${staffId}`, data);
+        return interceptorAPI().patch(`/organizer/events/${eventId}/member/${memberId}`, data);
     },
-    removeMember: (eventId: string, staffId: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().delete(`/organizer/events/${eventId}/member/${staffId}`);
+    removeMember: (eventId: string, memberId: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().delete(`/organizer/events/${eventId}/member/${memberId}`);
     },
+    exportExcelMember: (eventId: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().get(
+            `/organizer/events/${eventId}/members/export`,
+            {
+                responseType: "blob",
+            }
+        );
+    }
 };
 
 export default eventMemberService;

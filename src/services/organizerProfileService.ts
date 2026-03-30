@@ -26,7 +26,11 @@ const organizerProfileService = {
         return interceptorAPI().get(`/organizers/detail/${userId}`);
     },
     createProfile: (data: CreateProfileOrganizerRequest): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().post("/organizer/profile/start-or-update", data)
+        return interceptorAPI().post("/organizer/profile/start-or-update", data, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        })
     },
     verifyProfile: (): Promise<AxiosResponse<any>> => {
         return interceptorAPI().post(`/organizers/submit`)

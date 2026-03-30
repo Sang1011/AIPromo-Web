@@ -10,3 +10,16 @@ export interface ApiResponseNoData {
     message: string | null;
     timestamp: string;
 }
+
+export interface PaginatedResponse<T> {
+    items: T[];
+    pageNumber: number;
+    pageSize: number;
+    totalCount: number;
+    currentPageSize: number;
+    currentStartIndex: number;
+    currentEndIndex: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+}

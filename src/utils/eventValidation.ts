@@ -1,13 +1,7 @@
-/**
- * eventValidation.ts
- * Pure validation helpers — zero UI coupling, zero side effects.
- * Import these anywhere: components, thunks, unit tests.
- */
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { formatVN } from "./dateTimeVN";
 
 export interface EventTimeWindow {
-    ticketSaleStartAt: string; // ISO or datetime-local string
+    ticketSaleStartAt: string;
     ticketSaleEndAt: string;
     eventStartAt: string;
     eventEndAt: string;
@@ -16,7 +10,7 @@ export interface EventTimeWindow {
 export interface SessionWindow {
     id: string;
     title: string;
-    startTime: string; // ISO or datetime-local string
+    startTime: string;
     endTime: string;
 }
 
@@ -39,43 +33,19 @@ export interface SessionValidationResult {
 
 export interface InvalidSessionsResult {
     hasConflicts: boolean;
-    /** Sessions whose time window falls (partly or fully) outside the new event window */
     conflicts: Array<SessionWindow & { reasons: string[] }>;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const d = (v: string) => new Date(v).getTime();
-const fmt = (v: string) =>
-    new Date(v).toLocaleString("vi-VN", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
 
 // ─── 1. validateEventTime ─────────────────────────────────────────────────────
-/**
- * Validates the four event-level timestamps.
- *
- * Rules enforced:
- *   saleStart < saleEnd <= eventStart < eventEnd
- *
- * @example
- *   const result = validateEventTime(timeForm);
- *   if (!result.valid) showErrors(result.errors);
- */
+
 export function validateEventTime(
     event: Partial<EventTimeWindow>
 ): EventTimeValidationResult {
     const errors: FieldError<EventTimeField>[] = [];
+    const { ticketSaleStartAt, ticketSaleEndAt, eventStartAt, eventEndAt } = event;
 
-    const { ticketSaleStartAt, ticketSaleEndAt, eventStartAt, eventEndAt } =
-        event;
-
-    // Required fields
     if (!ticketSaleStartAt)
         errors.push({ field: "ticketSaleStartAt", message: "Vui lòng chọn thời gian bắt đầu bán vé" });
     if (!ticketSaleEndAt)
@@ -85,14 +55,7 @@ export function validateEventTime(
     if (!eventEndAt)
         errors.push({ field: "eventEndAt", message: "Vui lòng chọn thời gian kết thúc sự kiện" });
 
-    // Cross-field rules (only when both fields are present)
-    //
-    // Scenario coverage:
-    //   S1: saleEnd=11:00 > eventStart=10:00  → fires on ticketSaleEndAt ✅
-    //   S5: saleEnd=10:00 = eventStart=10:00  → 10>10 is false → passes ✅
-
     if (ticketSaleStartAt && ticketSaleEndAt) {
-        // Rule: saleStart < saleEnd
         if (d(ticketSaleStartAt) >= d(ticketSaleEndAt))
             errors.push({
                 field: "ticketSaleEndAt",
@@ -101,8 +64,6 @@ export function validateEventTime(
     }
 
     if (ticketSaleEndAt && eventStartAt) {
-        // Rule: saleEnd <= eventStart
-        // The field the user must fix is saleEnd (it is too late), not eventStart.
         if (d(ticketSaleEndAt) > d(eventStartAt))
             errors.push({
                 field: "ticketSaleEndAt",
@@ -111,7 +72,6 @@ export function validateEventTime(
     }
 
     if (eventStartAt && eventEndAt) {
-        // Rule: eventStart < eventEnd  (strict — event must have positive duration)
         if (d(eventStartAt) >= d(eventEndAt))
             errors.push({
                 field: "eventEndAt",
@@ -123,23 +83,7 @@ export function validateEventTime(
 }
 
 // ─── 2. validateSession ───────────────────────────────────────────────────────
-/**
- * Validates a single session's time window against the event window.
- *
- * Rules enforced:
- *   session.startTime >= eventStartAt
- *   session.endTime   <= eventEndAt
- *   session.startTime <  session.endTime
- *
- * `event` fields are optional — if absent the boundary check is skipped,
- * allowing validation to work even before event time is set.
- *
- * @example
- *   const result = validateSession(
- *     { id, title, startTime, endTime },
- *     { eventStartAt: timeForm.eventStartAt, eventEndAt: timeForm.eventEndAt }
- *   );
- */
+
 export function validateSession(
     session: Partial<SessionWindow>,
     event: Pick<Partial<EventTimeWindow>, "eventStartAt" | "eventEndAt"> = {}
@@ -152,38 +96,43 @@ export function validateSession(
     if (!title?.trim())
         errors.push({ field: "title", message: "Tiêu đề không được để trống" });
 
-    // Scenario coverage:
-    //   S4: start=08:00 < eventStart=10:00          → startTime error fires ✅
-    //   S5: start=10:00 = eventStart=10:00           → 10<10 is false → passes ✅
-    //   S3: start=12:00 < new eventStart=13:00       → startTime error fires ✅
+    // ── startTime validation ──────────────────────────────────────────────────
     if (!startTime) {
         errors.push({ field: "startTime", message: "Vui lòng chọn thời gian bắt đầu" });
-    } else if (eventStartAt && d(startTime) < d(eventStartAt)) {
-        errors.push({
-            field: "startTime",
-            message: `Suất diễn phải bắt đầu từ ${fmt(eventStartAt)} trở đi`,
-        });
+    } else {
+        // startTime phải >= eventStartAt
+        if (eventStartAt && d(startTime) < d(eventStartAt))
+            errors.push({
+                field: "startTime",
+                message: `Suất diễn phải bắt đầu từ ${formatVN(eventStartAt)} trở đi`,
+            });
+
+        // startTime phải < eventEndAt (bug cũ: thiếu check này)
+        if (eventEndAt && d(startTime) >= d(eventEndAt))
+            errors.push({
+                field: "startTime",
+                message: `Thời gian bắt đầu phải trước khi sự kiện kết thúc (${formatVN(eventEndAt)})`,
+            });
     }
 
+    // ── endTime validation ────────────────────────────────────────────────────
     if (!endTime) {
         errors.push({ field: "endTime", message: "Vui lòng chọn thời gian kết thúc" });
     } else {
-        // Self-overlap: only check when startTime itself has no boundary error
-        // (avoids confusing double errors when both are outside the event window).
-        // Rule: startTime < endTime  (strict)
-        // S5: start=10:00, end=20:00 → 20<=10 is false → passes ✅
-        if (startTime && d(endTime) <= d(startTime))
+        // Chỉ check endTime <= startTime khi startTime không có lỗi boundary
+        // Tránh double-error gây rối người dùng
+        const startHasBoundaryError = errors.some(e => e.field === "startTime");
+
+        if (!startHasBoundaryError && startTime && d(endTime) <= d(startTime))
             errors.push({
                 field: "endTime",
                 message: "Thời gian kết thúc phải sau thời gian bắt đầu",
             });
 
-        // Rule: endTime <= eventEndAt
-        // S5: end=20:00 = eventEnd=20:00 → 20>20 is false → passes ✅
         if (eventEndAt && d(endTime) > d(eventEndAt))
             errors.push({
                 field: "endTime",
-                message: `Suất diễn phải kết thúc trước hoặc đúng lúc ${fmt(eventEndAt)}`,
+                message: `Suất diễn phải kết thúc trước hoặc đúng lúc ${formatVN(eventEndAt)}`,
             });
     }
 
@@ -191,22 +140,7 @@ export function validateSession(
 }
 
 // ─── 3. getInvalidSessions ────────────────────────────────────────────────────
-/**
- * Given a (potentially large) list of sessions and a proposed new event window,
- * returns every session that would fall outside the new boundaries.
- *
- * Does NOT mutate or delete anything — the caller decides what to do.
- *
- * Complexity: O(n) — safe for large session lists.
- *
- * @example
- *   const result = getInvalidSessions(sessions, newEventTime);
- *   if (result.hasConflicts) {
- *     // show confirmation dialog listing result.conflicts
- *   } else {
- *     proceedWithSave();
- *   }
- */
+
 export function getInvalidSessions(
     sessions: SessionWindow[],
     event: Pick<EventTimeWindow, "eventStartAt" | "eventEndAt">
@@ -215,24 +149,18 @@ export function getInvalidSessions(
     const eventStart = d(eventStartAt);
     const eventEnd = d(eventEndAt);
 
-    // Scenario coverage:
-    //   S2 Session A: start=12:00 < newEventStart=13:00         → reason added ✅
-    //   S2 Session B: end=19:00   > newEventEnd=17:00           → reason added ✅
-    //   S2 both checks independent → partial overlap caught ✅
-    //   S3: session start=12:00 after eventStart set to 13:00   → caught ✅
-    //   S5: start=10:00=eventStart, end=20:00=eventEnd          → 10<10 false, 20>20 false → no conflict ✅
     const conflicts = sessions.reduce<InvalidSessionsResult["conflicts"]>(
         (acc, session) => {
             const reasons: string[] = [];
 
             if (d(session.startTime) < eventStart)
                 reasons.push(
-                    `Bắt đầu (${fmt(session.startTime)}) trước khi sự kiện mở cửa (${fmt(eventStartAt)})`
+                    `Bắt đầu (${formatVN(session.startTime)}) trước khi sự kiện mở cửa (${formatVN(eventStartAt)})`
                 );
 
             if (d(session.endTime) > eventEnd)
                 reasons.push(
-                    `Kết thúc (${fmt(session.endTime)}) sau khi sự kiện đóng cửa (${fmt(eventEndAt)})`
+                    `Kết thúc (${formatVN(session.endTime)}) sau khi sự kiện đóng cửa (${formatVN(eventEndAt)})`
                 );
 
             if (reasons.length > 0) acc.push({ ...session, reasons });
@@ -245,15 +173,7 @@ export function getInvalidSessions(
 }
 
 // ─── 4. errorsToFieldMap ──────────────────────────────────────────────────────
-/**
- * Convenience: converts an errors array into a field→message map,
- * compatible with the existing `TimeFormErrors` / `SessionFormErrors` pattern
- * already used in the codebase.
- *
- * @example
- *   const { errors } = validateEventTime(timeForm);
- *   setTimeErrors(errorsToFieldMap(errors));
- */
+
 export function errorsToFieldMap<T extends string>(
     errors: FieldError<T>[]
 ): Partial<Record<T, string>> {

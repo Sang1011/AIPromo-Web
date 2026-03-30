@@ -7,7 +7,7 @@ import type { AppDispatch, RootState } from "../../store";
 import {
     fetchGetOrganizerProfileDetailById,
     fetchCreateProfileOrganizer,
-    fetchUpdateOrganizerDraftLogo,
+    fetchVerifyProfileOrganizer,
 } from "../../store/organizerProfileSlice";
 import { fetchMe } from "../../store/authSlice";
 import { notify } from "../../utils/notify";
@@ -16,6 +16,8 @@ import type { DashboardLayoutConfig } from "../../types/config/dashboard.config"
 import ImageViewer from "../../components/Organizer/shared/ImagePreview";
 import type { MeInfo } from "../../types/auth/auth";
 import type { ApiResponse } from "../../types/api";
+import ConfirmModal from "../../components/Organizer/shared/ConfirmModal";
+import { OrganizerStatus, type OrganizerProfileDetail } from "../../types/organizerProfile/organizerProfile";
 
 const BANKS = [
     { code: "VCB", name: "Vietcombank" },
@@ -60,9 +62,10 @@ export default function OrganizerAccountPage() {
     const profileDetail = useSelector((state: RootState) => state.ORGANIZER_PROFILE.profileDetail);
     const { setConfig } = useOutletContext<DashboardContext>();
 
+    const [pageLoading, setPageLoading] = useState(!profileDetail);
     const [activeTab, setActiveTab] = useState<Tab>("profileDetail");
 
-    // profileDetail fields
+    // profile fields
     const [displayName, setDisplayName] = useState("");
     const [description, setDescription] = useState("");
     const [socialLink, setSocialLink] = useState("");
@@ -74,21 +77,25 @@ export default function OrganizerAccountPage() {
     const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
     const [profileLoading, setProfileLoading] = useState(false);
 
-    // Bank fields
+    // bank fields
     const [bankCode, setBankCode] = useState("");
     const [accountName, setAccountName] = useState("");
     const [accountNumber, setAccountNumber] = useState("");
     const [branch, setBranch] = useState("");
     const [bankErrors, setBankErrors] = useState<BankErrors>({});
     const [bankLoading, setBankLoading] = useState(false);
+
     const location = useLocation();
 
     // logo
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string>("");
-    const [logoLoading, setLogoLoading] = useState(false);
     const [viewingLogo, setViewingLogo] = useState(false);
     const logoInputRef = useRef<HTMLInputElement>(null);
+
+    // confirm modal
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [pendingSaveType, setPendingSaveType] = useState<"profile" | "bank" | null>(null);
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -101,26 +108,7 @@ export default function OrganizerAccountPage() {
         const meResult = await dispatch(fetchMe());
         if (fetchMe.fulfilled.match(meResult)) {
             const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
-            if (userId) dispatch(fetchGetOrganizerProfileDetailById(userId));
-        }
-    };
-
-    const handleSaveLogo = async () => {
-        if (!logoFile || !profileDetail?.userId) return;
-        setLogoLoading(true);
-        try {
-            const result = await dispatch(
-                fetchUpdateOrganizerDraftLogo({ userId: profileDetail.userId, file: logoFile })
-            );
-            if (fetchUpdateOrganizerDraftLogo.rejected.match(result)) {
-                notify.error("Không thể cập nhật logo");
-            } else {
-                notify.success("Cập nhật logo thành công");
-                setLogoFile(null);
-                await refetchProfile();
-            }
-        } finally {
-            setLogoLoading(false);
+            if (userId) await dispatch(fetchGetOrganizerProfileDetailById(userId));
         }
     };
 
@@ -134,86 +122,126 @@ export default function OrganizerAccountPage() {
         if (state?.tab) setActiveTab(state.tab);
         if (state?.missingFields?.length) {
             const fields = state.missingFields;
-
             const newProfileErrors: ProfileErrors = {};
-            if (fields.includes("displayName"))
-                newProfileErrors.displayName = "Tên hiển thị không được để trống";
-            if (fields.includes("identityNumber"))
-                newProfileErrors.identityNumber = "Số CMND / CCCD không được để trống";
-            if (fields.includes("taxCode"))
-                newProfileErrors.taxCode = "Mã số thuế không được để trống";
-            if (fields.includes("companyName"))
-                newProfileErrors.companyName = "Tên công ty không được để trống";
+            if (fields.includes("displayName")) newProfileErrors.displayName = "Tên hiển thị không được để trống";
+            if (fields.includes("identityNumber")) newProfileErrors.identityNumber = "Số CMND / CCCD không được để trống";
+            if (fields.includes("taxCode")) newProfileErrors.taxCode = "Mã số thuế không được để trống";
+            if (fields.includes("companyName")) newProfileErrors.companyName = "Tên công ty không được để trống";
             setProfileErrors(newProfileErrors);
 
             const newBankErrors: BankErrors = {};
-            if (fields.includes("accountName"))
-                newBankErrors.accountName = "Chủ tài khoản không được để trống";
-            if (fields.includes("accountNumber"))
-                newBankErrors.accountNumber = "Số tài khoản không được để trống";
-            if (fields.includes("bankCode"))
-                newBankErrors.bankCode = "Vui lòng chọn ngân hàng";
-            if (fields.includes("branch"))
-                newBankErrors.branch = "Chi nhánh không được để trống";
+            if (fields.includes("accountName")) newBankErrors.accountName = "Chủ tài khoản không được để trống";
+            if (fields.includes("accountNumber")) newBankErrors.accountNumber = "Số tài khoản không được để trống";
+            if (fields.includes("bankCode")) newBankErrors.bankCode = "Vui lòng chọn ngân hàng";
+            if (fields.includes("branch")) newBankErrors.branch = "Chi nhánh không được để trống";
             setBankErrors(newBankErrors);
         }
     }, [location.state]);
 
+    const fillForm = (data: OrganizerProfileDetail) => {
+        setDisplayName(data.displayName ?? "");
+        setDescription(data.description ?? "");
+        setSocialLink(data.socialLink ?? "");
+        setAddress(data.address ?? "");
+        setBusinessType((data.businessType?.toLowerCase() as BusinessType) ?? "individual");
+        setCompanyName(data.companyName ?? "");
+        setTaxCode(data.taxCode ?? "");
+        setIdentityNumber(data.identityNumber ?? "");
+        setBankCode(data.bankCode ?? "");
+        setAccountName(data.accountName ?? "");
+        setAccountNumber(data.accountNumber ?? "");
+        setBranch(data.branch ?? "");
+        setLogoPreview(data.logo ?? "");
+    };
+
     useEffect(() => {
         const init = async () => {
+            if (!profileDetail) setPageLoading(true);
+
             const meResult = await dispatch(fetchMe());
-            if (fetchMe.fulfilled.match(meResult)) {
-                const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
-                console.log(userId);
-                if (userId) {
-                    dispatch(fetchGetOrganizerProfileDetailById(userId));
-                }
+            if (!fetchMe.fulfilled.match(meResult)) {
+                setPageLoading(false);
+                return;
             }
+
+            const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
+            if (!userId) {
+                setPageLoading(false);
+                return;
+            }
+
+            const detailResult = await dispatch(fetchGetOrganizerProfileDetailById(userId));
+
+            if (fetchGetOrganizerProfileDetailById.fulfilled.match(detailResult)) {
+                const data = (detailResult.payload as ApiResponse<OrganizerProfileDetail>)?.data;
+                if (data) fillForm(data);
+            }
+
+            setPageLoading(false);
         };
         init();
     }, [dispatch]);
 
-    useEffect(() => {
-        console.log(profileDetail)
-        if (!profileDetail) return;
-        setDisplayName(profileDetail.displayName ?? "");
-        setDescription(profileDetail.description ?? "");
-        setSocialLink(profileDetail.socialLink ?? "");
-        setAddress(profileDetail.address ?? "");
-        setBusinessType(
-            (profileDetail.businessType?.toLowerCase() as BusinessType) ?? "individual"
-        );
-        setCompanyName(profileDetail.companyName ?? "");
-        setTaxCode(profileDetail.taxCode ?? "");
-        setIdentityNumber(profileDetail.identityNumber ?? "");
-        setBankCode(profileDetail.bankCode ?? "");
-        setAccountName(profileDetail.accountName ?? "");
-        setAccountNumber(profileDetail.accountNumber ?? "");
-        setBranch(profileDetail.branch ?? "");
-        setLogoPreview(profileDetail.logo ?? "");
-    }, [profileDetail]);
+    const statusBannerInfo = (status: OrganizerStatus | undefined) => {
+        switch (status) {
+            case OrganizerStatus.Draft:
+                return {
+                    bg: "bg-yellow-500/5",
+                    border: "border-yellow-500/20",
+                    color: "#eab308",
+                    textColor: "text-yellow-400",
+                    subColor: "text-yellow-300/70",
+                    label: "Hồ sơ chưa được nộp",
+                    reason: "Hồ sơ của bạn đang ở trạng thái nháp. Vui lòng điền đầy đủ thông tin, lưu lại và nộp lên để được kiểm duyệt.",
+                };
+            case OrganizerStatus.Pending:
+                return {
+                    bg: "bg-blue-500/5",
+                    border: "border-blue-500/20",
+                    color: "#3b82f6",
+                    textColor: "text-blue-400",
+                    subColor: "text-blue-300/70",
+                    label: "Hồ sơ đang được kiểm duyệt",
+                    reason: "Hồ sơ của bạn đang được xem xét bởi đội ngũ staff. Quá trình này thường mất 2–3 ngày làm việc.",
+                };
+            case OrganizerStatus.Verified:
+                return {
+                    bg: "bg-emerald-500/5",
+                    border: "border-emerald-500/20",
+                    color: "#10b981",
+                    textColor: "text-emerald-400",
+                    subColor: "text-emerald-300/70",
+                    label: "Hồ sơ đã được xác minh",
+                    reason: "Hồ sơ của bạn đã được kiểm duyệt thành công. Bạn có thể đăng sự kiện public.",
+                };
+            case OrganizerStatus.Rejected:
+                return {
+                    bg: "bg-red-500/5",
+                    border: "border-red-500/20",
+                    color: "#ef4444",
+                    textColor: "text-red-400",
+                    subColor: "text-red-300/70",
+                    label: "Hồ sơ bị từ chối",
+                    reason: "Hồ sơ của bạn không được chấp thuận. Vui lòng kiểm tra lại thông tin và nộp lại.",
+                };
+            default:
+                return null;
+        }
+    };
 
     const validateProfile = (): boolean => {
         const errors: ProfileErrors = {};
-        if (!displayName.trim())
-            errors.displayName = "Tên hiển thị không được để trống";
+        if (!displayName.trim()) errors.displayName = "Tên hiển thị không được để trống";
         if (businessType === "individual") {
-            if (identityNumber && !/^\d{9}$|^\d{12}$/.test(identityNumber))
-                errors.identityNumber = "Số CMND / CCCD phải có 9 hoặc 12 chữ số";
-            if (!identityNumber.trim())
-                errors.identityNumber = "Số CMND / CCCD không được để trống";
-            if (!taxCode.trim())
-                errors.taxCode = "Mã số thuế không được để trống";
-            else if (!/^[0-9]{10}(-[0-9]{3})?$/.test(taxCode))
-                errors.taxCode = "Mã số thuế không hợp lệ (10 hoặc 13 chữ số)";
+            if (!identityNumber.trim()) errors.identityNumber = "Số CMND / CCCD không được để trống";
+            else if (!/^\d{9}$|^\d{12}$/.test(identityNumber)) errors.identityNumber = "Số CMND / CCCD phải có 9 hoặc 12 chữ số";
+            if (!taxCode.trim()) errors.taxCode = "Mã số thuế không được để trống";
+            else if (!/^[0-9]{10}(-[0-9]{3})?$/.test(taxCode)) errors.taxCode = "Mã số thuế không hợp lệ (10 hoặc 13 chữ số)";
         }
         if (businessType === "company") {
-            if (!companyName.trim())
-                errors.companyName = "Tên công ty không được để trống";
-            if (!taxCode.trim())
-                errors.taxCode = "Mã số thuế không được để trống";
-            else if (!/^[0-9]{10}(-[0-9]{3})?$/.test(taxCode))
-                errors.taxCode = "Mã số thuế không hợp lệ (10 hoặc 13 chữ số)";
+            if (!companyName.trim()) errors.companyName = "Tên công ty không được để trống";
+            if (!taxCode.trim()) errors.taxCode = "Mã số thuế không được để trống";
+            else if (!/^[0-9]{10}(-[0-9]{3})?$/.test(taxCode)) errors.taxCode = "Mã số thuế không hợp lệ (10 hoặc 13 chữ số)";
         }
         setProfileErrors(errors);
         return Object.keys(errors).length === 0;
@@ -230,13 +258,14 @@ export default function OrganizerAccountPage() {
         return Object.keys(errors).length === 0;
     };
 
-    const handleSaveProfile = async () => {
-        if (!validateProfile()) return;
-        setProfileLoading(true);
+    const executeCreateAndVerify = async (type: "profile" | "bank") => {
+        const setLoading = type === "profile" ? setProfileLoading : setBankLoading;
+        setLoading(true);
         try {
             const result = await dispatch(
                 fetchCreateProfileOrganizer({
                     type: profileDetail?.type ?? "",
+                    logoFile: logoFile ?? (profileDetail?.logo as unknown as File),
                     logo: profileDetail?.logo ?? null,
                     displayName,
                     description,
@@ -252,48 +281,47 @@ export default function OrganizerAccountPage() {
                     branch,
                 })
             );
+
             if (fetchCreateProfileOrganizer.rejected.match(result)) {
                 notify.error("Không thể cập nhật thông tin");
-            } else {
-                notify.success("Cập nhật thông tin thành công");
-                await refetchProfile();
+                return;
             }
+
+            const verifyResult = await dispatch(fetchVerifyProfileOrganizer());
+            if (fetchVerifyProfileOrganizer.rejected.match(verifyResult)) {
+                notify.error("Cập nhật thành công nhưng không thể gửi kiểm duyệt");
+            } else {
+                notify.success("Cập nhật thành công. Hồ sơ đang chờ kiểm duyệt.");
+                setLogoFile(null);
+            }
+
+            await refetchProfile();
         } finally {
-            setProfileLoading(false);
+            setLoading(false);
         }
     };
 
-    const handleSaveBank = async () => {
+    const handleSaveProfile = () => {
+        if (!validateProfile()) return;
+        setPendingSaveType("profile");
+        setConfirmOpen(true);
+    };
+
+    const handleSaveBank = () => {
         if (!validateBank()) return;
-        setBankLoading(true);
-        try {
-            const result = await dispatch(
-                fetchCreateProfileOrganizer({
-                    type: profileDetail?.type ?? "",
-                    logo: profileDetail?.logo ?? null,
-                    displayName,
-                    description,
-                    socialLink,
-                    address,
-                    businessType,
-                    companyName,
-                    taxCode,
-                    identityNumber,
-                    accountName,
-                    accountNumber,
-                    bankCode,
-                    branch,
-                })
-            );
-            if (fetchCreateProfileOrganizer.rejected.match(result)) {
-                notify.error("Không thể cập nhật tài khoản ngân hàng");
-            } else {
-                notify.success("Cập nhật tài khoản ngân hàng thành công");
-                await refetchProfile();
-            }
-        } finally {
-            setBankLoading(false);
-        }
+        setPendingSaveType("bank");
+        setConfirmOpen(true);
+    };
+
+    const handleConfirm = async () => {
+        setConfirmOpen(false);
+        if (pendingSaveType) await executeCreateAndVerify(pendingSaveType);
+        setPendingSaveType(null);
+    };
+
+    const handleCancelConfirm = () => {
+        setConfirmOpen(false);
+        setPendingSaveType(null);
     };
 
     const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
@@ -301,9 +329,40 @@ export default function OrganizerAccountPage() {
         { key: "bank", label: "Tài khoản ngân hàng", icon: <FiCreditCard /> },
     ];
 
+    // ✅ Loading screen
+    if (pageLoading) {
+        return (
+            <div className="flex items-center justify-center py-40">
+                <div className="flex flex-col items-center gap-3 text-slate-500">
+                    <span className="w-8 h-8 border-2 border-white/10 border-t-primary rounded-full animate-spin" />
+                    <p className="text-sm">Đang tải thông tin...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 mx-auto">
-
+            {(() => {
+                const info = statusBannerInfo(profileDetail?.status);
+                if (!info) return null;
+                return (
+                    <div
+                        className={`flex gap-3 rounded-xl border ${info.border} ${info.bg} px-5 py-4`}
+                        style={{ borderLeftWidth: "3px", borderLeftColor: info.color }}
+                    >
+                        <svg className={`mt-0.5 shrink-0 ${info.textColor}`} width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <circle cx="9" cy="9" r="8" stroke="currentColor" strokeWidth="1.4" />
+                            <path d="M9 5.5v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                            <circle cx="9" cy="12.5" r="0.7" fill="currentColor" />
+                        </svg>
+                        <div className="space-y-1">
+                            <p className={`text-sm font-semibold ${info.textColor}`}>{info.label}</p>
+                            <p className={`text-sm ${info.subColor}`}>{info.reason}</p>
+                        </div>
+                    </div>
+                );
+            })()}
             {/* Tabs */}
             <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
                 {tabs.map((tab) => (
@@ -327,25 +386,36 @@ export default function OrganizerAccountPage() {
             {/* ── Tab: Thông tin tổ chức ── */}
             {activeTab === "profileDetail" && (
                 <div className="space-y-6">
-
-                    {/* Thông tin cơ bản */}
                     <Section icon={<FiUser />} title="Thông tin cơ bản">
-                        <div className="grid grid-cols-1 gap-6">
-                            {/* Logo Upload */}
-                            {/* Logo Upload */}
-                            <div className="flex flex-col items-center gap-4 py-2">
-                                {/* Avatar */}
-                                <div className="relative group">
+                        <div className="flex gap-8 items-start">
+
+                            {/* Cột trái — Logo */}
+                            <div className="flex flex-col items-center gap-3 shrink-0">
+                                <div className="relative">
                                     <div
                                         onClick={() => logoPreview && setViewingLogo(true)}
-                                        className={`w-32 h-32 rounded-2xl border-2 border-white/10 bg-black/30 overflow-hidden flex items-center justify-center
-                ${logoPreview ? "cursor-zoom-in" : "cursor-default"}`}
+                                        className={`w-40 h-40 rounded-2xl overflow-hidden flex items-center justify-center
+                                            border-2 border-dashed border-white/20 bg-white/5
+                                            ${logoPreview ? "cursor-zoom-in hover:border-primary/60 border-solid" : "cursor-default"}
+                                            transition-all duration-300`}
                                     >
                                         {logoPreview
                                             ? <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
-                                            : <FiCamera size={36} className="text-slate-600" />
+                                            : (
+                                                <div className="flex flex-col items-center gap-2 text-slate-600">
+                                                    <FiCamera size={32} />
+                                                    <span className="text-xs text-center px-2">JPG, PNG hoặc SVG</span>
+                                                </div>
+                                            )
                                         }
                                     </div>
+
+                                    <button
+                                        onClick={() => logoInputRef.current?.click()}
+                                        className="absolute bottom-2 right-2 w-9 h-9 rounded-full bg-primary border-4 border-[#140f2a] flex items-center justify-center shadow-xl hover:bg-primary/80 hover:scale-110 active:scale-95 transition-all"
+                                    >
+                                        <FiCamera size={13} className="text-white" />
+                                    </button>
 
                                     <input
                                         ref={logoInputRef}
@@ -356,70 +426,64 @@ export default function OrganizerAccountPage() {
                                     />
                                 </div>
 
-                                {/* Label */}
                                 <div className="text-center space-y-0.5">
-                                    <p className="text-sm font-medium text-white">Logo tổ chức</p>
-                                    <p className="text-xs text-slate-500">JPG, PNG, WEBP · Tối đa 5MB</p>
+                                    <p className="text-xs font-semibold text-white uppercase tracking-wider">Tải lên logo</p>
+                                    <p className="text-[11px] text-slate-500">JPG, PNG, WEBP · Tối đa 5MB</p>
                                 </div>
 
-                                {/* Buttons */}
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={() => logoInputRef.current?.click()}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 hover:text-white hover:border-primary/40 transition"
-                                    >
-                                        <FiCamera size={14} />
-                                        Chọn ảnh
-                                    </button>
-                                    {logoFile && (
-                                        <SaveButton loading={logoLoading} onClick={handleSaveLogo} label="Lưu logo" />
-                                    )}
+                                {logoFile && (
+                                    <p className="text-[11px] text-primary/80 bg-primary/10 px-3 py-1 rounded-full border border-primary/20 text-center">
+                                        ✓ Lưu khi nhấn "Lưu thay đổi"
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Cột phải — Fields */}
+                            <div className="flex-1 grid grid-cols-1 gap-5">
+                                <FieldInput
+                                    label="Tên hiển thị"
+                                    required
+                                    placeholder="Công ty TNHH Acme..."
+                                    maxLength={100}
+                                    value={displayName}
+                                    onChange={(v) => { setDisplayName(v); setProfileErrors((p) => ({ ...p, displayName: undefined })); }}
+                                    error={profileErrors.displayName}
+                                />
+
+                                <div className="space-y-2">
+                                    <FieldLabel required>Mô tả tổ chức</FieldLabel>
+                                    <textarea
+                                        placeholder="Mô tả ngắn về sứ mệnh và lĩnh vực hoạt động..."
+                                        maxLength={500}
+                                        rows={4}
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-black/30 border border-white/10 text-white outline-none focus:border-primary resize-none text-sm transition"
+                                    />
+                                    <p className="text-xs text-slate-500 text-right">{description.length} / 500</p>
                                 </div>
-                            </div>
-                            <FieldInput
-                                label="Tên hiển thị"
-                                required
-                                placeholder="Tên tổ chức hoặc ban nhạc..."
-                                maxLength={100}
-                                value={displayName}
-                                onChange={(v) => { setDisplayName(v); setProfileErrors((p) => ({ ...p, displayName: undefined })); }}
-                                error={profileErrors.displayName}
-                            />
 
-                            <div className="space-y-2">
-                                <FieldLabel>Mô tả</FieldLabel>
-                                <textarea
-                                    placeholder="Giới thiệu về tổ chức của bạn..."
-                                    maxLength={500}
-                                    rows={4}
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl bg-black/30 border border-white/10 text-white outline-none focus:border-primary resize-none text-sm transition"
-                                />
-                                <p className="text-xs text-slate-500 text-right">{description.length} / 500</p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FieldInput
-                                    label="Website / Mạng xã hội"
-                                    placeholder="https://..."
-                                    value={socialLink}
-                                    onChange={setSocialLink}
-                                    icon={<FiGlobe />}
-                                />
-                                <FieldInput
-                                    label="Địa chỉ"
-                                    placeholder="Nhập địa chỉ..."
-                                    maxLength={200}
-                                    value={address}
-                                    onChange={setAddress}
-                                    icon={<FiMapPin />}
-                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FieldInput
+                                        label="Website / Mạng xã hội"
+                                        placeholder="https://..."
+                                        value={socialLink}
+                                        onChange={setSocialLink}
+                                        icon={<FiGlobe />}
+                                    />
+                                    <FieldInput
+                                        label="Địa chỉ"
+                                        placeholder="Nhập địa chỉ..."
+                                        maxLength={200}
+                                        value={address}
+                                        onChange={setAddress}
+                                        icon={<FiMapPin />}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </Section>
 
-                    {/* Thông tin pháp lý */}
                     <Section icon={<FiFileText />} title="Thông tin pháp lý">
                         <div className="space-y-3">
                             <FieldLabel>Loại hình kinh doanh</FieldLabel>
@@ -527,7 +591,6 @@ export default function OrganizerAccountPage() {
                                 onChange={(v) => { setAccountName(v); setBankErrors((p) => ({ ...p, accountName: undefined })); }}
                                 error={bankErrors.accountName}
                             />
-
                             <FieldInput
                                 label="Số tài khoản"
                                 required
@@ -537,7 +600,6 @@ export default function OrganizerAccountPage() {
                                 onChange={(v) => { setAccountNumber(v); setBankErrors((p) => ({ ...p, accountNumber: undefined })); }}
                                 error={bankErrors.accountNumber}
                             />
-
                             <div className="space-y-2">
                                 <BankSelect
                                     label="Tên ngân hàng"
@@ -551,7 +613,6 @@ export default function OrganizerAccountPage() {
                                     <p className="text-xs text-red-400">{bankErrors.bankCode}</p>
                                 )}
                             </div>
-
                             <FieldInput
                                 label="Chi nhánh"
                                 required
@@ -569,9 +630,29 @@ export default function OrganizerAccountPage() {
                     </div>
                 </div>
             )}
+
             {viewingLogo && logoPreview && (
                 <ImageViewer url={logoPreview} onClose={() => setViewingLogo(false)} />
             )}
+
+            <ConfirmModal
+                open={confirmOpen}
+                title="Xác nhận cập nhật hồ sơ"
+                description={
+                    <span>
+                        Sau khi lưu, hồ sơ của bạn sẽ được chuyển sang trạng thái{" "}
+                        <span className="font-semibold text-yellow-400">Đang kiểm duyệt</span>.
+                        <br /><br />
+                        Bạn chỉ có thể đăng sự kiện <span className="font-semibold text-white">public</span> khi
+                        hồ sơ được kiểm duyệt và phê duyệt thành công.
+                    </span>
+                }
+                confirmText="Xác nhận lưu"
+                cancelText="Huỷ"
+                loading={profileLoading || bankLoading}
+                onConfirm={handleConfirm}
+                onCancel={handleCancelConfirm}
+            />
         </div>
     );
 }
@@ -590,42 +671,21 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
     );
 }
 
-function RadioCard({
-    icon, label, checked, onChange,
-}: {
-    icon: React.ReactNode; label: string; checked: boolean; onChange: () => void;
-}) {
+function RadioCard({ icon, label, checked, onChange }: { icon: React.ReactNode; label: string; checked: boolean; onChange: () => void }) {
     return (
-        <label className={`
-            flex items-center gap-3 p-4 rounded-xl cursor-pointer border transition-all duration-200
-            ${checked
-                ? "border-primary bg-primary/10 text-white"
-                : "border-white/10 bg-white/5 text-slate-400 hover:border-primary/40 hover:text-white"
-            }
-        `}>
+        <label className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer border transition-all duration-200 ${checked ? "border-primary bg-primary/10 text-white" : "border-white/10 bg-white/5 text-slate-400 hover:border-primary/40 hover:text-white"}`}>
             <input type="radio" checked={checked} onChange={onChange} className="hidden" />
             <span className={checked ? "text-primary" : ""}>{icon}</span>
             <span className="text-sm font-medium">{label}</span>
-            {checked && (
-                <span className="ml-auto w-4 h-4 rounded-full bg-primary flex items-center justify-center">
-                    <FiCheck size={10} className="text-white" />
-                </span>
-            )}
+            {checked && <span className="ml-auto w-4 h-4 rounded-full bg-primary flex items-center justify-center"><FiCheck size={10} className="text-white" /></span>}
         </label>
     );
 }
 
 function SaveButton({ loading, onClick, label }: { loading: boolean; onClick: () => void; label: string }) {
     return (
-        <button
-            onClick={onClick}
-            disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition shadow-lg shadow-primary/20"
-        >
-            {loading
-                ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                : <FiCheck size={15} />
-            }
+        <button onClick={onClick} disabled={loading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] transition shadow-lg shadow-primary/20">
+            {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FiCheck size={15} />}
             {loading ? "Đang lưu..." : label}
         </button>
     );
@@ -640,10 +700,7 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
     );
 }
 
-function FieldInput({
-    label, required, placeholder, maxLength, uppercase, noAccent,
-    onlyNumber, onlyLetter, value, onChange, error, icon,
-}: {
+function FieldInput({ label, required, placeholder, maxLength, uppercase, noAccent, onlyNumber, onlyLetter, value, onChange, error, icon }: {
     label: string; required?: boolean; placeholder: string; maxLength?: number;
     uppercase?: boolean; noAccent?: boolean; onlyNumber?: boolean; onlyLetter?: boolean;
     value: string; onChange: (val: string) => void; error?: string; icon?: React.ReactNode;
@@ -656,35 +713,19 @@ function FieldInput({
         if (uppercase) v = v.toUpperCase();
         return v;
     }
-
     return (
         <div className="space-y-2">
             <FieldLabel required={required}>{label}</FieldLabel>
             <div className="relative">
-                {icon && (
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm pointer-events-none">
-                        {icon}
-                    </span>
-                )}
+                {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm pointer-events-none">{icon}</span>}
                 <input
                     placeholder={placeholder}
                     maxLength={maxLength}
                     value={value}
                     onChange={(e) => onChange(normalize(e.target.value))}
-                    className={`
-                        w-full py-3 rounded-xl bg-black/30 border text-white outline-none
-                        focus:border-primary transition text-sm
-                        ${error ? "border-red-500" : "border-white/10"}
-                        ${icon ? "pl-9" : "pl-4"}
-                        ${maxLength ? "pr-[52px]" : "pr-4"}
-                        ${uppercase ? "uppercase" : ""}
-                    `}
+                    className={`w-full py-3 rounded-xl bg-black/30 border text-white outline-none focus:border-primary transition text-sm ${error ? "border-red-500" : "border-white/10"} ${icon ? "pl-9" : "pl-4"} ${maxLength ? "pr-[52px]" : "pr-4"} ${uppercase ? "uppercase" : ""}`}
                 />
-                {maxLength && (
-                    <span className="absolute right-3 top-3.5 text-[10px] text-slate-500">
-                        {value.length}/{maxLength}
-                    </span>
-                )}
+                {maxLength && <span className="absolute right-3 top-3.5 text-[10px] text-slate-500">{value.length}/{maxLength}</span>}
             </div>
             {error && <p className="text-xs text-red-400">{error}</p>}
         </div>

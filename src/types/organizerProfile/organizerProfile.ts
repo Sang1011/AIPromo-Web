@@ -16,15 +16,28 @@ export interface OrganizerProfileDetail {
     accountNumber: string;
     bankCode: string;
     branch: string;
-    status: string;
+    status: OrganizerStatus;
     type: string;
     verifiedAt: string;
 }
+
+export const OrganizerStatus = {
+    Draft: "Draft",
+    Pending: "Pending",
+    Verified: "Verified",
+    Rejected: "Rejected",
+    Suspended: "Suspended",
+    Archived: "Archived",
+} as const;
+
+export type OrganizerStatus =
+    typeof OrganizerStatus[keyof typeof OrganizerStatus];
 
 export type GetOrganizerProfileResponse = ApiResponse<OrganizerProfile>;
 
 // request để tạo tổ chức
 export interface CreateProfileOrganizerRequest {
+    logoFile: File,
     type: string;
     logo: string | null;
     displayName: string;

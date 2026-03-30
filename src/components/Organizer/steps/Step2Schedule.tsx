@@ -1,50 +1,43 @@
-import { useEffect, useState, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useCallback, useEffect, useState } from "react";
 import {
-    FiPlus, FiEdit2, FiTrash2, FiCalendar, FiClock,
-    FiTag, FiLayers, FiAlertTriangle, FiLock, FiInfo
+    FiAlertTriangle,
+    FiCalendar, FiClock,
+    FiEdit2,
+    FiInfo,
+    FiLayers,
+    FiLock,
+    FiPlus,
+    FiTag,
+    FiTrash2
 } from "react-icons/fi";
+import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchDeleteSession, fetchSessions, fetchUpdateEventSettings } from "../../../store/eventSlice";
-import type { EventSession, GetEventDetailResponse } from "../../../types/event/event";
-import CreateSessionModal from "../sessions/CreateSessionModal";
-import EditSessionModal from "../sessions/EditSessionModal";
-import TicketTypeModal from "../ticket/TicketTypeModal";
 import { fetchGetAllTicketTypes } from "../../../store/ticketTypeSlice";
+import type { EventSession, GetEventDetailResponse } from "../../../types/event/event";
 import type { TicketTypeItem } from "../../../types/ticketType/ticketType";
 import { notify } from "../../../utils/notify";
+import CreateSessionModal from "../sessions/CreateSessionModal";
+import EditSessionModal from "../sessions/EditSessionModal";
 import DateTimeInput from "../shared/DateTimeInput";
+import TicketTypeModal from "../ticket/TicketTypeModal";
 
+import { isoToLocal, localToIso } from "../../../utils/dateTimeVN";
 import {
-    validateEventTime,
-    getInvalidSessions,
     errorsToFieldMap,
+    getInvalidSessions,
+    validateEventTime,
     type EventTimeWindow,
-    type SessionWindow,
     type InvalidSessionsResult,
+    type SessionWindow,
 } from "../../../utils/eventValidation";
-
-const formatDateTime = (iso: string) => {
-    if (!iso) return "—";
-    return new Date(iso).toLocaleString("vi-VN", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
+import { formatDateTime } from "../../../utils/formatDateTime";
+import ConfirmModal from "../shared/ConfirmModal";
+import { UnsavedBanner } from "../shared/UnsavedBanner";
 
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
-
-const toLocalDateTime = (iso: string) => {
-    const date = new Date(iso);
-    const offset = date.getTimezoneOffset() * 60000;
-    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-};
 
 function SectionHeader({
     icon, title, subtitle, count, action,
@@ -87,9 +80,8 @@ function SessionCard({
     hasConflict?: boolean;
 }) {
     const [deleting, setDeleting] = useState(false);
-
+    const [showConfirm, setShowConfirm] = useState(false);
     const handleDelete = async () => {
-        if (!confirm(`Bạn có chắc muốn xoá suất diễn "${session.title}"?`)) return;
         setDeleting(true);
         try { onDelete(); } finally { setDeleting(false); }
     };
@@ -133,13 +125,21 @@ function SessionCard({
                     <FiEdit2 size={12} /> Sửa
                 </button>
                 <button
-                    onClick={handleDelete}
+                    onClick={() => setShowConfirm(true)}
                     disabled={deleting}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/8 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 font-medium text-xs transition-all border border-red-500/10 disabled:opacity-50"
                 >
                     <FiTrash2 size={12} /> {deleting ? "..." : "Xoá"}
                 </button>
             </div>
+            <ConfirmModal
+                open={showConfirm}
+                title="Xóa xuất diễn"
+                description="Bạn có chắc muốn xóa suất diễn này? Hành động này có thể không hoàn tác."
+                confirmText="Xóa"
+                onCancel={() => setShowConfirm(false)}
+                onConfirm={handleDelete}
+            />
         </div>
     );
 }
@@ -173,7 +173,7 @@ function TicketTypeRow({ ticket }: { ticket: TicketTypeItem }) {
             </div>
             <div className="text-right shrink-0">
                 <span className="text-sm font-black text-primary">{formatPrice(ticket.price)}</span>
-                <p className="text-[10px] text-slate-600 mt-0.5">mỗi vé</p>
+                <p className="text-[10px] text-[#fffd] font-bold mt-0.5">mỗi vé</p>
             </div>
         </div>
     );
@@ -208,12 +208,6 @@ function Divider() {
     );
 }
 
-// ─── NEW: Conflict warning banner ─────────────────────────────────────────────
-/**
- * Shown above the sessions list when the current event window does not cover
- * all existing sessions. The caller passes the live conflict result so this
- * component stays purely presentational.
- */
 function ConflictBanner({
     result,
     onDismiss,
@@ -336,10 +330,13 @@ export default function Step2Schedule({
                     startTime: s.startTime,
                     endTime: s.endTime,
                 })) satisfies SessionWindow[],
-                { eventStartAt: form.eventStartAt, eventEndAt: form.eventEndAt }
+                {
+                    eventStartAt: localToIso(form.eventStartAt),
+                    eventEndAt: localToIso(form.eventEndAt),
+                }
             );
             setSessionConflicts(result);
-            if (result.hasConflicts) setConflictDismissed(false); // re-show banner
+            if (result.hasConflicts) setConflictDismissed(false);
         },
         []
     );
@@ -393,6 +390,7 @@ export default function Step2Schedule({
                     },
                 })).unwrap();
                 await reloadEvent?.();
+                setInitialTimeForm({ ...timeForm });
                 notify.success("Đã lưu thời gian sự kiện");
             } catch {
                 notify.error("Không thể lưu thời gian sự kiện");
@@ -401,6 +399,34 @@ export default function Step2Schedule({
         }
 
         onNext();
+    };
+
+    const [bannerSaving, setBannerSaving] = useState(false);
+
+    const handleBannerSave = async () => {
+        if (!runTimeValidation()) return;
+        if (!eventId) return;
+        setBannerSaving(true);
+        try {
+            await dispatch(fetchUpdateEventSettings({
+                eventId,
+                data: {
+                    ticketSaleStartAt: toUTC(timeForm.ticketSaleStartAt),
+                    ticketSaleEndAt: toUTC(timeForm.ticketSaleEndAt),
+                    eventStartAt: toUTC(timeForm.eventStartAt),
+                    eventEndAt: toUTC(timeForm.eventEndAt),
+                    isEmailReminderEnabled: eventData?.isEmailReminderEnabled ?? false,
+                    urlPath: eventData?.urlPath ?? "",
+                },
+            })).unwrap();
+            setInitialTimeForm({ ...timeForm });
+            await reloadEvent?.();
+            notify.success("Đã lưu thời gian sự kiện");
+        } catch {
+            notify.error("Không thể lưu thời gian sự kiện");
+        } finally {
+            setBannerSaving(false);
+        }
     };
 
     const handleDelete = async (sessionId: string) => {
@@ -416,17 +442,32 @@ export default function Step2Schedule({
     useEffect(() => {
         if (!eventData || initialTimeForm) return;
         const form: TimeForm = {
-            ticketSaleStartAt: eventData.ticketSaleStartAt ? toLocalDateTime(eventData.ticketSaleStartAt) : "",
-            ticketSaleEndAt: eventData.ticketSaleEndAt ? toLocalDateTime(eventData.ticketSaleEndAt) : "",
-            eventStartAt: eventData.eventStartAt ? toLocalDateTime(eventData.eventStartAt) : "",
-            eventEndAt: eventData.eventEndAt ? toLocalDateTime(eventData.eventEndAt) : "",
+            ticketSaleStartAt: eventData.ticketSaleStartAt ? isoToLocal(eventData.ticketSaleStartAt) : "",
+            ticketSaleEndAt: eventData.ticketSaleEndAt ? isoToLocal(eventData.ticketSaleEndAt) : "",
+            eventStartAt: eventData.eventStartAt ? isoToLocal(eventData.eventStartAt) : "",
+            eventEndAt: eventData.eventEndAt ? isoToLocal(eventData.eventEndAt) : "",
         };
         setTimeForm(form);
         setInitialTimeForm(form);
     }, [eventData]);
 
+    const isDirty = isTimeFormChanged();
+
+    useEffect(() => {
+        if (!isDirty) return;
+        const handler = (e: BeforeUnloadEvent) => {
+            e.preventDefault();
+            e.returnValue = "";
+        };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [isDirty]);
+
     return (
         <div className="space-y-8 max-w-3xl mx-auto">
+            {isDirty && isAllowUpdate && (
+                <UnsavedBanner onSave={handleBannerSave} saving={bannerSaving} />
+            )}
             <div>
                 <h2 className="text-xl font-extrabold text-white tracking-tight">Thời gian biểu & Loại vé</h2>
                 <p className="text-sm text-slate-500 mt-1">Thiết lập các suất diễn và hạng vé cho sự kiện.</p>
@@ -585,7 +626,7 @@ export default function Step2Schedule({
                     onClick={handleNext}
                     className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-all"
                 >
-                    Tiếp theo →
+                    {isTimeFormChanged() ? "Lưu & tiếp tục →" : "Tiếp theo →"}
                 </button>
             </div>
 
@@ -599,7 +640,6 @@ export default function Step2Schedule({
                     isAllowUpdate={isAllowUpdate}
                     onCreated={async () => {
                         loadSessions();
-                        await reloadEvent?.();
                     }}
                 />
             )}
@@ -614,7 +654,6 @@ export default function Step2Schedule({
                     eventEndAt={timeForm.eventEndAt}
                     onUpdated={async () => {
                         loadSessions();
-                        await reloadEvent?.();
                     }}
                 />
             )}
@@ -625,7 +664,6 @@ export default function Step2Schedule({
                     isAllowUpdate={isAllowUpdate}
                     onClose={async () => {
                         setOpenTicketModal(false);
-                        await reloadEvent?.();
                     }}
                     eventId={eventId}
                 />

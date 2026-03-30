@@ -7,12 +7,25 @@ import { fetchPaymentOrder } from "../../store/paymentSlice";
 import { fetchToUpWallet, fetchWalletUser } from "../../store/walletSlice";
 import type { PaymentOrderPaymentResponse } from "../../types/payment/payment";
 import type { ToUpWalletResponse } from "../../types/wallet/wallet";
-// import { fetchGetVouchers } from "../../store/voucherSlice";
+import { fetchApplyVoucher, fetchGetVouchers } from "../../store/voucherSlice";
+import { notify } from "../../utils/notify";
 
-
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface Voucher {
+  id: string;
+  couponCode: string;
+  type: "Fixed" | "Percentage";
+  value: number;
+  totalUse: number;
+  maxUse: number;
+  startDate: string;
+  endDate: string;
+  eventId: string;
+  isGlobal: boolean;
+  createdAt: string;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
 function formatVND(amount: number) {
   return amount.toLocaleString("vi-VN") + " VND";
 }
@@ -26,7 +39,6 @@ function formatEventDateTime(iso: string | null | undefined) {
   return `${date} - ${time}`;
 }
 
-/** Redirect to paymentUrl nếu có, ngược lại không làm gì */
 function redirectIfUrl(paymentUrl: string | null | undefined) {
   if (paymentUrl) {
     window.location.href = paymentUrl;
@@ -35,8 +47,35 @@ function redirectIfUrl(paymentUrl: string | null | undefined) {
   return false;
 }
 
-type PaymentMethod = "wallet" | "vnpay";
+/** Kiểm tra voucher có còn hiệu lực không */
+function isVoucherValid(v: Voucher): { valid: boolean; reason?: string } {
+  const now = new Date();
+  const start = new Date(v.startDate);
+  const end = new Date(v.endDate);
 
+  if (now < start) {
+    return { valid: false, reason: "Chưa đến ngày áp dụng" };
+  }
+  if (now > end) {
+    return { valid: false, reason: "Đã hết hạn" };
+  }
+  if (v.totalUse >= v.maxUse) {
+    return { valid: false, reason: "Đã hết lượt sử dụng" };
+  }
+  return { valid: true };
+}
+
+/** Tính discount amount từ voucher */
+function calcDiscount(voucher: Voucher | null, subTotal: number): number {
+  if (!voucher) return 0;
+  if (voucher.type === "Percentage") {
+    return Math.floor((subTotal * voucher.value) / 100);
+  }
+  // Fixed
+  return Math.min(voucher.value, subTotal);
+}
+
+type PaymentMethod = "wallet" | "vnpay";
 const PRESET_AMOUNTS = [50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000];
 
 // ── WalletModal ──────────────────────────────────────────────────────────────
@@ -57,7 +96,7 @@ const WalletModal: React.FC<{
       await onConfirm(finalAmount);
       onClose();
     } catch {
-      // lỗi đã xử lý ở tầng trên, không đóng modal
+      // lỗi đã xử lý ở tầng trên
     } finally {
       setLoading(false);
     }
@@ -70,7 +109,6 @@ const WalletModal: React.FC<{
         className="relative w-full max-w-md rounded-2xl p-6 border border-white/10 z-10"
         style={{ background: "#18122B", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <div
@@ -88,7 +126,6 @@ const WalletModal: React.FC<{
           </button>
         </div>
 
-        {/* Preset amounts */}
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">Chọn mệnh giá</p>
         <div className="grid grid-cols-3 gap-2 mb-5">
           {PRESET_AMOUNTS.map((amt) => (
@@ -107,8 +144,7 @@ const WalletModal: React.FC<{
           ))}
         </div>
 
-        {/* Custom input */}
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Hoặc nhập số tiền khác</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 ">Hoặc nhập số tiền khác</p>
         <div
           className="flex items-center gap-2 rounded-xl px-4 py-3 mb-6 border transition-all"
           style={{
@@ -127,11 +163,10 @@ const WalletModal: React.FC<{
               setCustom(raw);
               setSelected(null);
             }}
-            className="flex-1 bg-transparent text-white text-sm font-medium outline-none placeholder-slate-600"
+            className="flex-1 bg-transparent text-white text-sm font-medium outline-none placeholder-slate-600 appearance-none border-none focus:border-none focus:ring-0"
           />
         </div>
 
-        {/* Preview */}
         {finalAmount && finalAmount >= 10_000 && (
           <div
             className="flex items-center justify-between px-4 py-3 rounded-xl mb-5 border border-white/5"
@@ -142,7 +177,6 @@ const WalletModal: React.FC<{
           </div>
         )}
 
-        {/* Confirm button */}
         <button
           onClick={handleConfirm}
           disabled={!finalAmount || finalAmount < 10_000 || loading}
@@ -175,19 +209,348 @@ const WalletModal: React.FC<{
   );
 };
 
+// ── VoucherSection ────────────────────────────────────────────────────────────
+const VoucherSection: React.FC<{
+  vouchers: Voucher[];
+  appliedVoucher: Voucher | null;
+  onApply: (v: Voucher | null) => void;
+  subTotal: number;
+}> = ({ vouchers, appliedVoucher, onApply, subTotal }) => {
+  const [fixedCode, setFixedCode] = useState("");
+  const [fixedInputFocused, setFixedInputFocused] = useState(false);
+
+  const now = new Date();
+
+  // Tách Percentage và Fixed
+  const percentageVouchers = vouchers.filter((v) => v.type === "Percentage");
+  const fixedVouchers = vouchers.filter((v) => v.type === "Fixed");
+
+  // Handle chọn Percentage voucher
+  const handleSelectPercentage = (v: Voucher) => {
+    const { valid, reason } = isVoucherValid(v);
+    if (!valid) {
+      notify.error(`Voucher "${v.couponCode}": ${reason}`);
+      return;
+    }
+    if (appliedVoucher?.id === v.id) {
+      // Bỏ chọn nếu đang chọn cùng voucher
+      onApply(null);
+      notify.success("Đã bỏ áp dụng voucher");
+      return;
+    }
+    onApply(v);
+    notify.success(`Áp dụng voucher "${v.couponCode}" thành công! Giảm ${v.value}%`);
+  };
+
+  // Handle nhập Fixed code
+  const handleApplyFixed = () => {
+    const code = fixedCode.trim().toUpperCase();
+    if (!code) {
+      notify.error("Vui lòng nhập mã voucher");
+      return;
+    }
+
+    const matched = fixedVouchers.find((v) => v.couponCode.toUpperCase() === code);
+    if (!matched) {
+      notify.error(`Mã voucher "${code}" không tồn tại`);
+      return;
+    }
+
+    const { valid, reason } = isVoucherValid(matched);
+    if (!valid) {
+      notify.error(`Voucher "${code}": ${reason}`);
+      return;
+    }
+
+    onApply(matched);
+    notify.success(`Áp dụng voucher "${matched.couponCode}" thành công! Giảm ${formatVND(matched.value)}`);
+  };
+
+  const handleRemoveVoucher = () => {
+    onApply(null);
+    setFixedCode("");
+    notify.success("Đã bỏ áp dụng voucher");
+  };
+
+  // Format ngày hết hạn ngắn gọn
+  const formatShortDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  };
+
+  const getVoucherStatus = (v: Voucher): "active" | "not_started" | "expired" | "exhausted" => {
+    const start = new Date(v.startDate);
+    const end = new Date(v.endDate);
+    if (now < start) return "not_started";
+    if (now > end) return "expired";
+    if (v.totalUse >= v.maxUse) return "exhausted";
+    return "active";
+  };
+
+  const statusLabel: Record<string, string> = {
+    active: "",
+    not_started: "Chưa mở",
+    expired: "Hết hạn",
+    exhausted: "Hết lượt",
+  };
+
+  const statusColor: Record<string, string> = {
+    active: "",
+    not_started: "#f59e0b",
+    expired: "#ef4444",
+    exhausted: "#ef4444",
+  };
+
+  return (
+    <section className="bg-[#18122B] border border-white/5 rounded-2xl p-8 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: "rgba(121,59,237,0.15)" }}
+        >
+          <span className="material-symbols-outlined text-[18px]" style={{ color: "#793bed" }}>
+            local_offer
+          </span>
+        </div>
+        <h3 className="text-xl font-bold">Mã Giảm Giá</h3>
+        {appliedVoucher && (
+          <span
+            className="ml-auto text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full"
+            style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}
+          >
+            Đã áp dụng
+          </span>
+        )}
+      </div>
+
+      {/* Applied voucher banner */}
+      {appliedVoucher && (
+        <div
+          className="flex items-center justify-between px-5 py-4 rounded-xl border"
+          style={{ background: "rgba(34,197,94,0.08)", borderColor: "rgba(34,197,94,0.25)" }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-green-400">check_circle</span>
+            <div>
+              <p className="text-green-400 font-bold text-sm">{appliedVoucher.couponCode}</p>
+              <p className="text-green-400/70 text-xs mt-0.5">
+                Giảm {appliedVoucher.type === "Percentage"
+                  ? `${appliedVoucher.value}%`
+                  : formatVND(appliedVoucher.value)}
+                {" · "}
+                Tiết kiệm {formatVND(calcDiscount(appliedVoucher, subTotal))}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleRemoveVoucher}
+            className="text-slate-500 hover:text-red-400 transition-colors ml-4 shrink-0"
+            title="Bỏ áp dụng"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Percentage Vouchers ── */}
+      {percentageVouchers.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">
+            Giảm theo phần trăm — Chọn 1 voucher
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {percentageVouchers.map((v) => {
+              const status = getVoucherStatus(v);
+              const isActive = status === "active";
+              const isSelected = appliedVoucher?.id === v.id;
+              const remainUses = v.maxUse - v.totalUse;
+
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => isActive && handleSelectPercentage(v)}
+                  disabled={!isActive}
+                  className="text-left rounded-xl p-4 border transition-all relative overflow-hidden group"
+                  style={{
+                    background: isSelected
+                      ? "rgba(121,59,237,0.15)"
+                      : isActive
+                        ? "rgba(255,255,255,0.03)"
+                        : "rgba(255,255,255,0.02)",
+                    borderColor: isSelected
+                      ? "rgba(121,59,237,0.6)"
+                      : isActive
+                        ? "rgba(255,255,255,0.08)"
+                        : "rgba(255,255,255,0.04)",
+                    opacity: isActive ? 1 : 0.55,
+                    cursor: isActive ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {/* Glow effect khi selected */}
+                  {isSelected && (
+                    <div
+                      className="absolute inset-0 rounded-xl pointer-events-none"
+                      style={{ boxShadow: "inset 0 0 0 1.5px rgba(121,59,237,0.5)" }}
+                    />
+                  )}
+
+                  {/* Badge trạng thái */}
+                  {status !== "active" && (
+                    <span
+                      className="absolute top-2.5 right-2.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
+                      style={{ background: `${statusColor[status]}22`, color: statusColor[status], border: `1px solid ${statusColor[status]}44` }}
+                    >
+                      {statusLabel[status]}
+                    </span>
+                  )}
+
+                  {/* Checkmark khi selected */}
+                  {isSelected && (
+                    <div
+                      className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{ background: "#793bed" }}
+                    >
+                      <span className="material-symbols-outlined text-white text-[13px]">check</span>
+                    </div>
+                  )}
+
+                  {/* Main content */}
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                      style={{
+                        background: isSelected ? "rgba(121,59,237,0.3)" : "rgba(121,59,237,0.1)",
+                      }}
+                    >
+                      <span
+                        className="text-lg font-black leading-none"
+                        style={{ color: isSelected ? "#c4b5fd" : "#793bed" }}
+                      >
+                        %
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span
+                          className="font-black text-lg leading-none"
+                          style={{ color: isSelected ? "#c4b5fd" : isActive ? "#e2e8f0" : "#64748b" }}
+                        >
+                          -{v.value}%
+                        </span>
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-widest"
+                          style={{ color: isSelected ? "#a78bfa" : "#64748b" }}
+                        >
+                          {v.couponCode}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1.5">
+                        HSD: {formatShortDate(v.endDate)}
+                        {isActive && (
+                          <span className="ml-2 text-slate-600">
+                            · Còn {remainUses}/{v.maxUse} lượt
+                          </span>
+                        )}
+                      </p>
+                      {isActive && (
+                        <p className="text-[11px] mt-1" style={{ color: isSelected ? "#86efac" : "#4ade80" }}>
+                          Tiết kiệm {formatVND(calcDiscount(v, subTotal))}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Fixed Vouchers — nhập mã ── */}
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">
+          Mã giảm cố định — Nhập mã voucher
+        </p>
+
+        <div className="flex gap-2">
+          <div
+            className="flex-1 flex items-center gap-2 rounded-xl px-4 py-3 border transition-all"
+            style={{
+              background: "#110D1E",
+              borderColor: fixedInputFocused
+                ? "rgba(121,59,237,0.6)"
+                : fixedCode
+                  ? "rgba(121,59,237,0.3)"
+                  : "rgba(255,255,255,0.07)",
+              boxShadow: fixedInputFocused ? "0 0 0 3px rgba(121,59,237,0.1)" : "none",
+            }}
+          >
+            <span
+              className="material-symbols-outlined text-[18px] shrink-0 transition-colors"
+              style={{ color: fixedInputFocused ? "#793bed" : "#475569" }}
+            >
+              confirmation_number
+            </span>
+            <input
+              type="text"
+              placeholder="Nhập mã voucher (VD: AI-Promo)"
+              value={fixedCode}
+              onChange={(e) => setFixedCode(e.target.value.toUpperCase())}
+              onFocus={() => setFixedInputFocused(true)}
+              onBlur={() => setFixedInputFocused(false)}
+              onKeyDown={(e) => e.key === "Enter" && handleApplyFixed()}
+              className="flex-1 bg-transparent text-white text-sm font-medium outline-none placeholder-slate-600 uppercase tracking-wider border-none focus:border-none focus:ring-0"
+              maxLength={20}
+            />
+            {fixedCode && (
+              <button
+                onClick={() => setFixedCode("")}
+                className="text-slate-600 hover:text-slate-400 transition-colors shrink-0"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={handleApplyFixed}
+            disabled={!fixedCode.trim()}
+            className="px-5 rounded-xl text-sm font-bold transition-all shrink-0"
+            style={{
+              background: fixedCode.trim() ? "linear-gradient(135deg, #793bed, #a855f7)" : "rgba(121,59,237,0.15)",
+              color: fixedCode.trim() ? "white" : "#4b3b6b",
+              boxShadow: fixedCode.trim() ? "0 4px 16px rgba(121,59,237,0.35)" : "none",
+              cursor: fixedCode.trim() ? "pointer" : "not-allowed",
+            }}
+          >
+            Áp dụng
+          </button>
+        </div>
+
+        {/* Hint danh sách mã Fixed có thể nhập (có thể bỏ nếu không muốn lộ) */}
+        <p className="text-[11px] text-slate-600 mt-2 px-1">
+          Nhập mã và nhấn "Áp dụng" hoặc Enter để kiểm tra
+        </p>
+      </div>
+    </section>
+  );
+};
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export default function PaymentTicket() {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("wallet");
   const { orderDetail } = useSelector((state: RootState) => state.ORDER);
   const { currentWallet } = useSelector((state: RootState) => state.WALLET);
-  // const { vouchers } = useSelector((state: RootState) => state.VOUCHER);
+  const { vouchers } = useSelector((state: RootState) => state.VOUCHER);
+  const dataVoucher: Voucher[] = (vouchers?.items ?? []) as Voucher[];
 
   const dispatch = useDispatch<AppDispatch>();
-  // useEffect(() => {
-  //   dispatch(fetchGetVouchers())
-  // }, [dispatch])
+
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletNotFound, setWalletNotFound] = useState(false);
   const [walletLoadError, setWalletLoadError] = useState<string | null>(null);
+
   const { id } = useParams<{ id: string }>();
   const orderIdFromUrl = id?.replace("orderid=", "");
   const orderIdFromStorage = localStorage.getItem("currentOrderId");
@@ -210,26 +573,42 @@ export default function PaymentTicket() {
     return Array.from(map.values());
   }, [orderTickets]);
 
-  const discountAmount = orderDetail?.discountAmount ?? 0;
   const orderSubTotal =
     typeof orderDetail?.subTotal === "number"
       ? orderDetail.subTotal
       : groupedTickets.reduce((sum, t) => sum + t.quantity * t.unitPrice, 0);
 
-  const computedTotal = orderSubTotal - discountAmount;
-  const total = typeof orderDetail?.totalPrice === "number" ? orderDetail.totalPrice : computedTotal;
+  // ── Voucher state ──────────────────────────────────────────────────────────
+  const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
 
+  // Discount: ưu tiên voucher user chọn, fallback về orderDetail.discountAmount
+  const voucherDiscount = calcDiscount(appliedVoucher, orderSubTotal);
+  const baseDiscountAmount = orderDetail?.discountAmount ?? 0;
+  const discountAmount = appliedVoucher ? voucherDiscount : baseDiscountAmount;
+
+  const computedTotal = Math.max(0, orderSubTotal - discountAmount);
+  const total = appliedVoucher
+    ? computedTotal
+    : typeof orderDetail?.totalPrice === "number"
+      ? orderDetail.totalPrice
+      : computedTotal;
+
+  // ── Derived flags ──────────────────────────────────────────────────────────
   const isWalletInsufficient =
     selectedMethod === "wallet" && !walletLoading && !walletNotFound && walletBalance < total;
-
-  const isOrderReadyForPayment = Boolean(resolvedOrderId) && total > 0;
+  const isOrderReadyForPayment = Boolean(resolvedOrderId) && total >= 0;
 
   const [isPaying, setIsPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const autoRetryRef = useRef(false);
-
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [topUpError, setTopUpError] = useState<string | null>(null);
+
+  // ── Effects ────────────────────────────────────────────────────────────────
+ useEffect(() => {
+  if (!orderDetail?.eventId) return;
+  dispatch(fetchGetVouchers({ EventId: orderDetail.eventId }));
+}, [dispatch, orderDetail?.eventId]);
 
   useEffect(() => {
     if (orderIdFromStorage) {
@@ -248,13 +627,16 @@ export default function PaymentTicket() {
       if (fetchWalletUser.rejected.match(result)) {
         setWalletNotFound(true);
         setWalletLoadError(
-          (result.payload as any)?.message ?? (result.payload as any) ?? "Không thể tải thông tin ví. Vui lòng thử lại."
+          (result.payload as any)?.message ??
+          (result.payload as any) ??
+          "Không thể tải thông tin ví. Vui lòng thử lại."
         );
       }
       setWalletLoading(false);
     })();
     return () => { isMounted = false; };
   }, [dispatch]);
+
   useEffect(() => {
     if (autoRetryRef.current) return;
     const pending = localStorage.getItem("pendingPaymentAfterTopUp");
@@ -281,7 +663,6 @@ export default function PaymentTicket() {
           description: `Thanh toán đơn ${resolvedOrderId} (sau khi nạp tiền)`,
         })
       );
-
       if (fetchPaymentOrder.fulfilled.match(result)) {
         const payload = (result.payload as any)?.data as PaymentOrderPaymentResponse;
         redirectIfUrl(payload?.paymentUrl);
@@ -289,6 +670,7 @@ export default function PaymentTicket() {
     })();
   }, [dispatch, resolvedOrderId, walletBalance, total, isOrderReadyForPayment]);
 
+  // ── handleTopUp ────────────────────────────────────────────────────────────
   const handleTopUp = async (amount: number) => {
     setTopUpError(null);
     if (!resolvedOrderId) return;
@@ -306,13 +688,7 @@ export default function PaymentTicket() {
 
     if (fetchToUpWallet.fulfilled.match(result)) {
       const payload = (result.payload as any)?.data as ToUpWalletResponse;
-
-
-
-      if (redirectIfUrl(payload?.paymentUrl)) {
-        return;
-      }
-
+      if (redirectIfUrl(payload?.paymentUrl)) return;
       localStorage.removeItem("pendingPaymentAfterTopUp");
       localStorage.removeItem("pendingPaymentOrderId");
       localStorage.removeItem("pendingPaymentMethod");
@@ -320,19 +696,19 @@ export default function PaymentTicket() {
       return;
     }
 
-    // Thất bại → dọn pending flags để tránh auto-pay sai
     localStorage.removeItem("pendingPaymentAfterTopUp");
     localStorage.removeItem("pendingPaymentOrderId");
     localStorage.removeItem("pendingPaymentMethod");
 
     const errMsg =
-      (result.payload as any)?.message ?? (result.error?.message ?? "Nạp tiền thất bại, vui lòng thử lại.");
+      (result.payload as any)?.message ??
+      (result.error?.message ?? "Nạp tiền thất bại, vui lòng thử lại.");
     setTopUpError(errMsg);
     throw new Error(errMsg);
   };
 
   // ── handlePayment ──────────────────────────────────────────────────────────
-  const handlePayment = async () => {
+const handlePayment = async () => {
     setPayError(null);
     if (!resolvedOrderId) {
       setPayError("Không tìm thấy thông tin đơn hàng để thanh toán.");
@@ -362,12 +738,30 @@ export default function PaymentTicket() {
         }
       }
 
-      // Ví không đủ tiền → mở modal nạp tiền
       if (selectedMethod === "wallet" && effectiveWalletBalance < total) {
         setPayError("Số dư không đủ. Vui lòng nạp thêm tiền để tiếp tục.");
         setShowWalletModal(true);
         return;
       }
+
+      // ── Áp dụng voucher nếu người dùng đã chọn ──────────────────────────
+      if (appliedVoucher) {
+        const voucherResult = await dispatch(
+          fetchApplyVoucher({
+            orderId: resolvedOrderId,
+            couponCode: appliedVoucher.couponCode,
+          })
+        );
+
+        if (fetchApplyVoucher.rejected.match(voucherResult)) {
+          const errMsg =
+            (voucherResult.payload as any)?.message ??
+            "Áp dụng voucher thất bại, vui lòng thử lại.";
+          setPayError(errMsg);
+          return;
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
 
       const result = await dispatch(
         fetchPaymentOrder({
@@ -378,21 +772,14 @@ export default function PaymentTicket() {
       );
 
       if (fetchPaymentOrder.fulfilled.match(result)) {
-        // ── KEY FIX: dùng typed interface ──────────────────────────────────
         const payload = (result.payload as any)?.data as PaymentOrderPaymentResponse;
-
-        if (redirectIfUrl(payload?.paymentUrl)) {
-          // Đang chuyển sang cổng thanh toán
-          return;
-        }
-
-        // paymentUrl null → thanh toán thành công ngay (ví nội bộ không cần redirect)
-        // Có thể navigate tới trang thành công ở đây nếu cần
+        if (redirectIfUrl(payload?.paymentUrl)) return;
         return;
       }
 
       const errMsg =
-        (result.payload as any)?.message ?? (result.error?.message ?? "Thanh toán thất bại, vui lòng thử lại.");
+        (result.payload as any)?.message ??
+        (result.error?.message ?? "Thanh toán thất bại, vui lòng thử lại.");
       setPayError(errMsg);
     } finally {
       setIsPaying(false);
@@ -437,8 +824,10 @@ export default function PaymentTicket() {
       <main className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
 
-          {/* Left Column */}
+          {/* ── Left Column ── */}
           <div className="lg:col-span-7 space-y-8">
+
+            {/* Event card */}
             <section>
               <h1 className="text-4xl font-bold tracking-tight mb-8">Tóm Tắt Đơn Hàng</h1>
               <div className="bg-[#18122B] border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
@@ -486,27 +875,59 @@ export default function PaymentTicket() {
               </div>
             </section>
 
+            {/* Voucher Section */}
+            <VoucherSection
+              vouchers={dataVoucher}
+              appliedVoucher={appliedVoucher}
+              onApply={setAppliedVoucher}
+              subTotal={orderSubTotal}
+            />
+
             {/* Cost Breakdown */}
             <section className="bg-[#130D22] border border-white/5 rounded-2xl p-8 space-y-4">
-              {[
-                { label: "Tạm tính", value: orderSubTotal },
-                ...(discountAmount > 0 ? [{ label: "Giảm giá", value: discountAmount }] : []),
-              ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between text-sm text-slate-400">
-                  <span>{label}</span>
-                  <span>{formatVND(value)}</span>
+              <div className="flex justify-between text-sm text-slate-400">
+                <span>Tạm tính</span>
+                <span>{formatVND(orderSubTotal)}</span>
+              </div>
+
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-green-400 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px]">local_offer</span>
+                    Giảm giá
+                    {appliedVoucher && (
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ml-1"
+                        style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}
+                      >
+                        {appliedVoucher.couponCode}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-green-400 font-medium">-{formatVND(discountAmount)}</span>
                 </div>
-              ))}
+              )}
+
               <div className="pt-6 border-t border-white/10 flex justify-between items-center">
                 <span className="text-xl font-bold">Tổng Thanh Toán</span>
-                <span className="text-3xl font-extrabold text-[#793bed] drop-shadow-[0_0_8px_rgba(121,59,237,0.4)] tracking-tighter">
-                  {formatVND(total)}
-                </span>
+                <div className="text-right">
+                  {appliedVoucher && orderDetail?.totalPrice && total !== orderDetail.totalPrice && (
+                    <p className="text-sm text-slate-500 line-through mb-1">
+                      {formatVND(orderDetail.totalPrice)}
+                    </p>
+                  )}
+                  <span
+                    className="text-3xl font-extrabold tracking-tighter drop-shadow-[0_0_8px_rgba(121,59,237,0.4)]"
+                    style={{ color: appliedVoucher ? "#22c55e" : "#793bed" }}
+                  >
+                    {formatVND(total)}
+                  </span>
+                </div>
               </div>
             </section>
           </div>
 
-          {/* Right Column */}
+          {/* ── Right Column ── */}
           <div className="lg:col-span-5 lg:sticky lg:top-28 space-y-8">
             <section
               className="border border-[#793bed]/20 rounded-2xl p-8 shadow-2xl"
@@ -596,8 +1017,29 @@ export default function PaymentTicket() {
                 </label>
               </div>
 
+              {/* Order summary mini trong right panel */}
+              <div
+                className="mt-6 p-4 rounded-xl border border-white/5 space-y-2"
+                style={{ background: "rgba(255,255,255,0.02)" }}
+              >
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>Tạm tính</span>
+                  <span>{formatVND(orderSubTotal)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-xs text-green-500">
+                    <span>Giảm giá {appliedVoucher ? `(${appliedVoucher.couponCode})` : ""}</span>
+                    <span>-{formatVND(discountAmount)}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-white/5 flex justify-between text-sm font-bold">
+                  <span className="text-slate-300">Tổng</span>
+                  <span style={{ color: appliedVoucher ? "#22c55e" : "#a78bfa" }}>{formatVND(total)}</span>
+                </div>
+              </div>
+
               {/* CTA */}
-              <div className="mt-12">
+              <div className="mt-6">
                 <button
                   onClick={handlePayment}
                   disabled={isPaying || !isOrderReadyForPayment || (selectedMethod === "wallet" && walletLoading)}

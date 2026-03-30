@@ -21,6 +21,7 @@ import type {
 import { notify } from "../../../utils/notify";
 import ImagePreviewBox from "../shared/ImagePreviewBox";
 import UploadBox from "../shared/UploadBox";
+import { UnsavedBanner } from "../shared/UnsavedBanner";
 
 interface Step1EventInfoProps {
     onNext?: () => void;
@@ -523,6 +524,7 @@ export default function Step1EventInfo({
                 if (isChanged) {
                     await dispatch(fetchUpdateEvent({ id: eventId, data: payload })).unwrap();
                     await reloadEvent?.();
+                    setInitEventForm({ ...eventForm });
                     notify.success("Đã lưu thông tin sự kiện");
                 }
                 onNext?.();
@@ -558,7 +560,48 @@ export default function Step1EventInfo({
         }
     }, [mode, eventData]);
 
-    // ── Render ─────────────────────────────────────────────────────────────
+    const isDirty = isChanged && mode === "edit";
+
+    useEffect(() => {
+        if (!isDirty) return;
+        const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [isDirty]);
+
+    const [bannerSaving, setBannerSaving] = useState(false);
+
+    const handleBannerSave = async () => {
+        if (!validateAll()) return;
+        setBannerSaving(true);
+        try {
+            const { finalBannerUrl, updatedImages, updatedActorUrls } = await flushUploads();
+            const payload = {
+                title: eventForm.title,
+                bannerUrl: finalBannerUrl,
+                description: eventForm.description,
+                location: eventForm.location,
+                mapUrl: "",
+                hashtagIds: eventForm.selectedHashtags.map((t) => t.id),
+                categoryIds: eventForm.selectedCategories.map((c) => c.id),
+                actorImages: eventForm.actors.map((actor, i) => ({
+                    name: actor.name,
+                    major: actor.major,
+                    image: updatedActorUrls[i] || "",
+                })),
+                imageUrls: updatedImages.map((img) => img.url),
+            };
+            await dispatch(fetchUpdateEvent({ id: eventId!, data: payload })).unwrap();
+            await reloadEvent?.();
+            setInitEventForm({ ...eventForm });
+            notify.success("Đã lưu thông tin sự kiện");
+        } catch {
+            notify.error("Không thể lưu thông tin sự kiện");
+        } finally {
+            setBannerSaving(false);
+        }
+    };
+
     return (
         <>
             {showCreateHashtagModal && (
@@ -570,8 +613,9 @@ export default function Step1EventInfo({
             )}
 
             <div className="space-y-8">
-
-                {/* ===== Hình ảnh sự kiện ===== */}
+                {isDirty && isAllowUpdate && (
+                    <UnsavedBanner onSave={handleBannerSave} saving={bannerSaving} />
+                )}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                     <h3 className="font-semibold text-white mb-4">* Hình ảnh sự kiện</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
