@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import type { GetEventDetailResponse } from "../../../types/event/event";
 import type { AppDispatch } from "../../../store";
 import { fetchUpdateEventPolicy, fetchRequestPublishEvent } from "../../../store/eventSlice";
 import { notify } from "../../../utils/notify";
+import { UnsavedBanner } from "../shared/UnsavedBanner";
 
 interface PolicySection {
     title: string;
@@ -76,6 +77,32 @@ export default function Step4Policy({
     const [loading, setLoading] = useState(false);
     const [publishing, setPublishing] = useState(false);
 
+    const [isDirty, setIsDirty] = useState(false);
+    const [bannerSaving, setBannerSaving] = useState(false);
+
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        if (!mounted) { setMounted(true); return; }
+        setIsDirty(true);
+    }, [sections]);
+
+    useEffect(() => {
+        if (!isDirty) return;
+        const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [isDirty]);
+
+    const handleBannerSave = async () => {
+        setBannerSaving(true);
+        try {
+            await handleSave();
+            setIsDirty(false);
+        } finally {
+            setBannerSaving(false);
+        }
+    };
+
     const isDraft = eventData?.status === "Draft";
 
     // ── helpers ──────────────────────────────────────────────
@@ -128,6 +155,7 @@ export default function Step4Policy({
                 notify.warning("Tiêu đề điều khoản không được để trống");
                 return false;
             }
+
             for (const item of sec.items) {
                 if (!item.trim()) {
                     notify.warning("Nội dung điều khoản không được để trống");
@@ -149,6 +177,7 @@ export default function Step4Policy({
             await dispatch(fetchUpdateEventPolicy({ eventId: eventData.id, policy })).unwrap();
             await reloadEvent?.();
             notify.success("Lưu chính sách thành công!");
+            setIsDirty(false);
         } catch (err) {
             notify.error("Lưu chính sách thất bại");
             throw new Error("save_failed");
@@ -175,9 +204,11 @@ export default function Step4Policy({
         }
     };
 
-    // ── render ───────────────────────────────────────────────
     return (
         <div className="space-y-8">
+            {isDirty && isAllowUpdate && (
+                <UnsavedBanner onSave={handleBannerSave} saving={bannerSaving} />
+            )}
             <div>
                 <h2 className="text-xl font-semibold text-white">Chính sách sự kiện</h2>
                 <p className="text-sm text-slate-400 mt-1">

@@ -7,5 +7,5 @@ export function formatDateTime(dateStr: string | Date | null): string {
     const dd = String(d.getDate()).padStart(2, "0");
     const mo = String(d.getMonth() + 1).padStart(2, "0");
     const yyyy = d.getFullYear();
-    return `${hh}:${mm} - ${days[d.getDay()]}, ${dd}/${mo}/${yyyy}`;
+    return `${hh}:${mm} — ${days[d.getDay()]}, ${dd}/${mo}/${yyyy}`;
 }

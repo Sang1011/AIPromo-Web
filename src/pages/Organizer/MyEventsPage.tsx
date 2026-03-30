@@ -39,8 +39,18 @@ export default function MyEventsPage() {
 
     const formatDate = (date: string | null) => {
         if (!date) return "Chưa xác định";
-        return new Date(date).toLocaleString("vi-VN");
+
+        return new Date(date).toLocaleString("vi-VN", {
+            timeZone: "Asia/Ho_Chi_Minh",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        });
     };
+
     const formatRange = (start: string | null, end: string | null) => {
         if (!start && !end) return "Chưa có thời gian";
         if (!start) return `Đến ${formatDate(end)}`;

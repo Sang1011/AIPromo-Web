@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import LockSeatTab from "./LockSeatTab";
+import { FiChevronDown } from "react-icons/fi";
+import { useDispatch, useSelector } from "react-redux";
+import { useParams } from "react-router-dom";
 import TicketSummary from "../../components/Organizer/ticket/TicketSummary";
 import TicketTypeList from "../../components/Organizer/ticket/TicketTypeList";
-import { useParams } from "react-router-dom";
-import { fetchGetAllTicketTypes } from "../../store/ticketTypeSlice";
 import type { AppDispatch, RootState } from "../../store";
-import { useDispatch, useSelector } from "react-redux";
 import { fetchEventById } from "../../store/eventSlice";
+import { fetchGetAllTicketTypes } from "../../store/ticketTypeSlice";
 import type { EventSession } from "../../types/event/event";
-import { FiChevronDown } from "react-icons/fi";
+import LockSeatTab from "./LockSeatTab";
 
 type TabKey = "overview" | "lock-seat";
 
@@ -22,7 +22,6 @@ export default function EventTicketPage() {
     const [selectedSessionId, setSelectedSessionId] = useState<string>("");
     const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-    // Fetch event → sessions
     useEffect(() => {
         if (!eventId) return;
         dispatch(fetchEventById(eventId))
@@ -47,23 +46,12 @@ export default function EventTicketPage() {
         setQuantities(initial);
     }, [ticketTypes]);
 
-    const updateQuantity = (key: string, delta: number) => {
-        const ticket = ticketTypes.find(t => t.id === key);
-        if (!ticket) return;
-        setQuantities(prev => ({
-            ...prev,
-            [key]: Math.min(ticket.quantity, Math.max(0, (prev[key] ?? 0) + delta)),
-        }));
-    };
-
     const handleSessionChange = (sessionId: string) => {
         setSelectedSessionId(sessionId);
     };
 
     return (
         <div className="space-y-6">
-
-            {/* SESSION SELECTOR — dùng chung cho cả 2 tab */}
             <div className="flex items-center gap-3">
                 <span className="text-sm text-slate-400 shrink-0">Suất diễn:</span>
                 <div className="relative">
@@ -116,8 +104,6 @@ export default function EventTicketPage() {
                         ) : (
                             <TicketTypeList
                                 ticketTypes={ticketTypes}
-                                quantities={quantities}
-                                onChange={updateQuantity}
                             />
                         )}
                     </div>

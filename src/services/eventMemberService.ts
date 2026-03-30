@@ -8,7 +8,7 @@ import { interceptorAPI } from "../utils/attachInterceptors";
 
 const eventMemberService = {
     getMembers: (eventId: string): Promise<AxiosResponse<GetEventMembersResponse>> => {
-        return interceptorAPI().get(`/events/${eventId}/staff`);
+        return interceptorAPI().get(`/organizer/events/${eventId}/member`);
     },
     addMember: (eventId: string, data: AddEventMemberRequest): Promise<AxiosResponse<any>> => {
         return interceptorAPI().post(`/organizer/events/${eventId}/member`, data);
