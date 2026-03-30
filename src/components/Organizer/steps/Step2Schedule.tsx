@@ -25,7 +25,7 @@ import {
     type InvalidSessionsResult,
 } from "../../../utils/eventValidation";
 import ConfirmModal from "../shared/ConfirmModal";
-import { formatVN, isoToLocal } from "../../../utils/dateTimeVN";
+import { formatVN, isoToLocal, localToIso } from "../../../utils/dateTimeVN";
 
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
@@ -327,10 +327,13 @@ export default function Step2Schedule({
                     startTime: s.startTime,
                     endTime: s.endTime,
                 })) satisfies SessionWindow[],
-                { eventStartAt: form.eventStartAt, eventEndAt: form.eventEndAt }
+                {
+                    eventStartAt: localToIso(form.eventStartAt),
+                    eventEndAt: localToIso(form.eventEndAt),
+                }
             );
             setSessionConflicts(result);
-            if (result.hasConflicts) setConflictDismissed(false); // re-show banner
+            if (result.hasConflicts) setConflictDismissed(false);
         },
         []
     );

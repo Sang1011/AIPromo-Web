@@ -47,7 +47,7 @@ export default function EditSessionModal({
         title: session.title,
         description: session.description ?? "",
         startTime: isoToLocal(session.startTime),
-        endTime: isoToLocal(session.startTime),
+        endTime: isoToLocal(session.endTime),
     });
 
     const [form, setForm] = useState<SessionFormState>(initialForm);
@@ -148,9 +148,9 @@ export default function EditSessionModal({
                     <div className="mx-6 mt-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 text-xs text-slate-400">
                         <span className="text-primary/60">⏱</span>
                         Phải nằm trong:
-                        {eventStartAt && <span className="text-slate-300">{new Date(eventStartAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+                        {eventStartAt && <span className="text-slate-300">{new Date(eventStartAt + ":00Z").toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
                         {eventStartAt && eventEndAt && <span>–</span>}
-                        {eventEndAt && <span className="text-slate-300">{new Date(eventEndAt).toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+                        {eventEndAt && <span className="text-slate-300">{new Date(eventEndAt + ":00Z").toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
                     </div>
                 )}
 
