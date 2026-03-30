@@ -9,12 +9,14 @@ interface StaffEventState {
         spec: string
         specImage: string
     } | null
+    eventId: string | null
     loading: boolean
     error: string | null
 }
 
 const initialState: StaffEventState = {
     eventSpec: null,
+    eventId: null,
     loading: false,
     error: null
 }
@@ -40,14 +42,17 @@ const staffEventSlice = createSlice({
     reducers: {
         clearEventSpec: (state) => {
             state.eventSpec = null
+            state.eventId = null
             state.error = null
         }
     },
     extraReducers: (builder) => {
         builder
-            .addCase(fetchEventSpec.pending, (state) => {
+            .addCase(fetchEventSpec.pending, (state, action) => {
                 state.loading = true
                 state.error = null
+                // Store the eventId being fetched
+                state.eventId = action.meta.arg
             })
             .addCase(fetchEventSpec.fulfilled, (state, action: PayloadAction<GetEventSpecApiResponse>) => {
                 state.loading = false

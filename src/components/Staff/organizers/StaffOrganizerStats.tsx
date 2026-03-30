@@ -55,7 +55,7 @@ export default function StaffOrganizerStats() {
         },
         {
             label: "Loại hình phổ biến nhất",
-            value: businessTypeStats.type || "N/A",
+            value: businessTypeStats.type || "Chưa có dữ liệu",
             suffix: businessTypeStats.count > 0 ? `(${businessTypeStats.count} hồ sơ)` : undefined,
             valueColor: "text-emerald-500",
             blurColor: "bg-emerald-500/10",
