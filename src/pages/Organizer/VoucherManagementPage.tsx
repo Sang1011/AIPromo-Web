@@ -76,8 +76,8 @@ function validateVoucherForm(form: VoucherFormData, isCreate: boolean): FormErro
         errors.maxUse = "Số lượng phải >= 0 (0 = không giới hạn)";
     }
 
-    if (!form.startDate) errors.startDate = "Vui lòng chọn ngày bắt đầu";
-    if (!form.endDate) errors.endDate = "Vui lòng chọn ngày kết thúc";
+    if (!form.startDate) errors.startDate = "Vui lòng chọn thời gian bắt đầu";
+    if (!form.endDate) errors.endDate = "Vui lòng chọn thời gian kết thúc";
 
     if (form.startDate) {
         const now = new Date();
@@ -87,7 +87,7 @@ function validateVoucherForm(form: VoucherFormData, isCreate: boolean): FormErro
         start.setSeconds(0, 0);
 
         if (start < now) {
-            errors.startDate = "Ngày bắt đầu phải lớn hơn hoặc bằng hiện tại";
+            errors.startDate = "Thời gian bắt đầu phải lớn hơn hoặc bằng hiện tại";
         }
     }
 
@@ -331,7 +331,7 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <DateTimeInput
-                                label="Ngày bắt đầu"
+                                label="Thời gian bắt đầu"
                                 required
                                 value={form.startDate}
                                 onChange={(v: any) => update("startDate", v)}
@@ -343,7 +343,7 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                         </div>
                         <div>
                             <DateTimeInput
-                                label="Ngày kết thúc"
+                                label="Thời gian kết thúc"
                                 required
                                 value={form.endDate}
                                 onChange={(v: any) => update("endDate", v)}
