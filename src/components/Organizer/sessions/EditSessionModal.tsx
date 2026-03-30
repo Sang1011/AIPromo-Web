@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
-import { FiX } from "react-icons/fi";
+import { FiClock, FiX } from "react-icons/fi";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../store";
 import { fetchUpdateSession } from "../../../store/eventSlice";
 import type { EventSession } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
-
-// ── NEW: pure validation helper ───────────────────────────────────────────────
 import { isoToLocal, localToIso } from "../../../utils/dateTimeVN";
 import { errorsToFieldMap, validateSession } from "../../../utils/eventValidation";
 import DateTimeInput from "../shared/DateTimeInput";
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface SessionFormState {
     title: string;
@@ -34,6 +31,18 @@ interface EditSessionModalProps {
     eventEndAt?: string;
     onUpdated?: () => void;
     isAllowUpdate?: boolean;
+}
+
+function formatDateTime(dateStr: string | Date | null): string {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    const days = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${hh}:${mm} - ${days[d.getDay()]}, ${dd}/${mo}/${yyyy}`;
 }
 
 export default function EditSessionModal({
@@ -68,7 +77,6 @@ export default function EditSessionModal({
 
     if (!open) return null;
 
-    // ── CHANGED: hand-rolled validate() replaced with the pure helper ─────────
     const validate = (): boolean => {
         const result = validateSession(
             { id: session.id, title: form.title, startTime: form.startTime, endTime: form.endTime },
@@ -78,7 +86,6 @@ export default function EditSessionModal({
         setErrors(map);
         return result.valid;
     };
-    // ─────────────────────────────────────────────────────────────────────────
 
     const hasChanged = (): boolean => {
         const original = initialForm();
@@ -92,12 +99,10 @@ export default function EditSessionModal({
 
     const handleSave = async () => {
         if (!validate()) return;
-
         if (!hasChanged()) {
             notify.warning("Không có thay đổi nào để lưu");
             return;
         }
-
         setSaving(true);
         try {
             await dispatch(fetchUpdateSession({
@@ -110,7 +115,6 @@ export default function EditSessionModal({
                     endTime: localToIso(form.endTime),
                 },
             })).unwrap();
-
             notify.success("Đã cập nhật suất diễn");
             onUpdated?.();
             onClose();
@@ -123,17 +127,19 @@ export default function EditSessionModal({
 
     const set = (key: keyof SessionFormState) =>
         (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            setForm((p) => ({ ...p, [key]: e.target.value }));
+            setForm(p => ({ ...p, [key]: e.target.value }));
             if (errors[key as keyof SessionFormErrors])
-                setErrors((p) => ({ ...p, [key]: undefined }));
+                setErrors(p => ({ ...p, [key]: undefined }));
         };
+
+    const hasEventWindow = eventStartAt || eventEndAt;
 
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
-            <div className="w-full max-w-md rounded-2xl bg-gradient-to-b from-[#1e1638] to-[#100d1f] border border-white/10 shadow-2xl">
+            <div className="w-full max-w-[580px] rounded-2xl bg-gradient-to-b from-[#1e1638] to-[#100d1f] border border-white/10 shadow-2xl">
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
@@ -143,20 +149,34 @@ export default function EditSessionModal({
                     </button>
                 </div>
 
-                {/* NEW: event window hint */}
-                {(eventStartAt || eventEndAt) && (
-                    <div className="mx-6 mt-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/8 text-xs text-slate-400">
-                        <span className="text-primary/60">⏱</span>
-                        Phải nằm trong:
-                        {eventStartAt && <span className="text-slate-300">{new Date(eventStartAt + ":00Z").toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
-                        {eventStartAt && eventEndAt && <span>–</span>}
-                        {eventEndAt && <span className="text-slate-300">{new Date(eventEndAt + ":00Z").toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
+                {/* Event window hint — redesigned */}
+                {hasEventWindow && (
+                    <div className="mx-6 mt-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                        <div className="flex items-center gap-2 mb-2">
+                            <FiClock size={13} className="text-primary shrink-0" />
+                            <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                                Khung giờ cho phép
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {eventStartAt && (
+                                <div className="rounded-lg bg-white/5 px-3 py-2">
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Từ</p>
+                                    <p className="text-sm text-white font-medium">{formatDateTime(eventStartAt)}</p>
+                                </div>
+                            )}
+                            {eventEndAt && (
+                                <div className="rounded-lg bg-white/5 px-3 py-2">
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Đến</p>
+                                    <p className="text-sm text-white font-medium">{formatDateTime(eventEndAt)}</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
                 {/* Body */}
                 <div className="px-6 py-5 space-y-4">
-
                     {/* Title */}
                     <div>
                         <label className="text-sm text-slate-400 mb-1 block">Tiêu đề suất diễn</label>

@@ -1,14 +1,12 @@
 import { useState } from "react";
+import { FiClock } from "react-icons/fi";
 import { fetchCreateEventSessions } from "../../../store/eventSlice";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../store";
 import { notify } from "../../../utils/notify";
-
-// ── NEW: pure validation helper ───────────────────────────────────────────────
 import { validateSession, errorsToFieldMap } from "../../../utils/eventValidation";
 import DateTimeInput from "../shared/DateTimeInput";
 import { localToIso } from "../../../utils/dateTimeVN";
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface SessionFormErrors {
     title?: string;
@@ -26,6 +24,18 @@ interface Props {
     isAllowUpdate?: boolean;
 }
 
+function formatDateTime(dateStr: string | Date | null): string {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    const days = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${hh}:${mm} - ${days[d.getDay()]}, ${dd}/${mo}/${yyyy}`;
+}
+
 export default function CreateSessionModal({
     open, onClose, eventId, eventStartAt, eventEndAt, onCreated, isAllowUpdate = true,
 }: Props) {
@@ -40,7 +50,6 @@ export default function CreateSessionModal({
 
     if (!open) return null;
 
-    // ── CHANGED: hand-rolled validate() replaced with the pure helper ─────────
     const validate = (): boolean => {
         const result = validateSession(
             { id: "", title, startTime, endTime },
@@ -50,29 +59,24 @@ export default function CreateSessionModal({
         setErrors(map);
         return result.valid;
     };
-    // ─────────────────────────────────────────────────────────────────────────
 
     const handleSubmit = async () => {
         if (!validate()) return;
-
         setSaving(true);
         try {
             await dispatch(
                 fetchCreateEventSessions({
                     eventId,
                     data: {
-                        sessions: [
-                            {
-                                title: title.trim(),
-                                description: description.trim(),
-                                startTime: localToIso(startTime),
-                                endTime: localToIso(endTime),
-                            },
-                        ],
+                        sessions: [{
+                            title: title.trim(),
+                            description: description.trim(),
+                            startTime: localToIso(startTime),
+                            endTime: localToIso(endTime),
+                        }],
                     },
                 })
             ).unwrap();
-
             notify.success("Đã tạo suất diễn");
             onCreated?.();
             onClose();
@@ -83,21 +87,40 @@ export default function CreateSessionModal({
         }
     };
 
+    const hasEventWindow = eventStartAt || eventEndAt;
+
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-[#1C1633] border border-white/10 p-8 rounded-2xl w-full max-w-[540px] shadow-2xl transform transition-all">
+            <div className="bg-[#1C1633] border border-white/10 p-8 rounded-2xl w-full max-w-[580px] shadow-2xl">
 
                 <div className="mb-6">
                     <h3 className="text-2xl font-bold text-white tracking-tight">Tạo suất diễn</h3>
                     <p className="text-gray-400 text-sm mt-1">Điền thông tin chi tiết cho suất diễn mới của bạn.</p>
                 </div>
 
-                {/* NEW: show event window hint when it's set */}
-                {(eventStartAt || eventEndAt) && (
-                    <div className="mb-5 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-slate-400">
-                        Suất diễn phải nằm trong khung giờ sự kiện
-                        {eventStartAt && <> từ <span className="text-slate-300">{new Date(eventStartAt + ":00Z").toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></>}
-                        {eventEndAt && <> đến <span className="text-slate-300">{new Date(eventEndAt + ":00Z").toLocaleString("vi-VN", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></>}
+                {/* Event window hint — redesigned */}
+                {hasEventWindow && (
+                    <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                        <div className="flex items-center gap-2 mb-2">
+                            <FiClock size={13} className="text-primary shrink-0" />
+                            <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                                Khung giờ cho phép
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                            {eventStartAt && (
+                                <div className="rounded-lg bg-white/5 px-3 py-2">
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Từ</p>
+                                    <p className="text-sm text-white font-medium">{formatDateTime(eventStartAt)}</p>
+                                </div>
+                            )}
+                            {eventEndAt && (
+                                <div className="rounded-lg bg-white/5 px-3 py-2">
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Đến</p>
+                                    <p className="text-sm text-white font-medium">{formatDateTime(eventEndAt)}</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -118,7 +141,7 @@ export default function CreateSessionModal({
                             value={title}
                             onChange={(e) => {
                                 setTitle(e.target.value);
-                                if (errors.title) setErrors((p) => ({ ...p, title: undefined }));
+                                if (errors.title) setErrors(p => ({ ...p, title: undefined }));
                             }}
                         />
                         {errors.title && <p className="text-xs text-red-400 mt-1">{errors.title}</p>}
@@ -147,7 +170,7 @@ export default function CreateSessionModal({
                                 value={startTime}
                                 onChange={(v) => {
                                     setStartTime(v);
-                                    if (errors.startTime) setErrors((p) => ({ ...p, startTime: undefined }));
+                                    if (errors.startTime) setErrors(p => ({ ...p, startTime: undefined }));
                                 }}
                                 disabled={!isAllowUpdate}
                             />
@@ -159,7 +182,7 @@ export default function CreateSessionModal({
                                 value={endTime}
                                 onChange={(v) => {
                                     setEndTime(v);
-                                    if (errors.endTime) setErrors((p) => ({ ...p, endTime: undefined }));
+                                    if (errors.endTime) setErrors(p => ({ ...p, endTime: undefined }));
                                 }}
                                 disabled={!isAllowUpdate}
                             />
