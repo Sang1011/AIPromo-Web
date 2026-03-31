@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchWalletUser } from "../../../store/walletSlice";
 import type { WalletTransaction } from "../../../types/wallet/wallet";
+import type { WithdrawalRequest } from "../../../types/withdrawal/withdrawal";
+import { fetchCreateWithdrawal } from "../../../store/withdrawalSlice";
 
 // ── Helpers ────────────────────────────────────────────────────────
 const formatVND = (amount: number) =>
@@ -165,6 +167,353 @@ const EmptyState: React.FC = () => (
     </div>
 );
 
+// ── Withdrawal Modal ───────────────────────────────────────────────
+const BANK_LIST = [
+    "Vietcombank",
+    "BIDV",
+    "Agribank",
+    "Techcombank",
+    "MB Bank",
+    "VPBank",
+    "ACB",
+    "SHB",
+    "TPBank",
+    "VIB",
+    "SeABank",
+    "OCB",
+    "HDBank",
+    "LienVietPostBank",
+    "Sacombank",
+];
+
+interface WithdrawalModalProps {
+    walletBalance: number;
+    onClose: () => void;
+    onSubmit: (data: WithdrawalRequest) => Promise<void>;
+    isLoading: boolean;
+    isSuccess: boolean;
+}
+
+const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
+    walletBalance,
+    onClose,
+    onSubmit,
+    isLoading,
+    isSuccess,
+}) => {
+    const [form, setForm] = useState<WithdrawalRequest>({
+        bankAccountNumber: "",
+        bankName: "",
+        amount: 0,
+        notes: "",
+    });
+    const [amountStr, setAmountStr] = useState("");
+    const [errors, setErrors] = useState<Partial<Record<keyof WithdrawalRequest, string>>>({});
+
+    const validate = (): boolean => {
+        const errs: Partial<Record<keyof WithdrawalRequest, string>> = {};
+        if (!form.bankAccountNumber.trim()) errs.bankAccountNumber = "Vui lòng nhập số tài khoản";
+        if (!form.bankName) errs.bankName = "Vui lòng chọn ngân hàng";
+        if (!form.amount || form.amount <= 0) errs.amount = "Vui lòng nhập số tiền hợp lệ";
+        else if (form.amount > walletBalance) errs.amount = "Số tiền vượt quá số dư ví";
+        setErrors(errs);
+        return Object.keys(errs).length === 0;
+    };
+
+    const handleAmountChange = (raw: string) => {
+        const digits = raw.replace(/\D/g, "");
+        setAmountStr(digits ? Number(digits).toLocaleString("vi-VN") : "");
+        setForm((f) => ({ ...f, amount: Number(digits) || 0 }));
+    };
+
+    const handleSubmit = async () => {
+        if (!validate()) return;
+        await onSubmit(form);
+    };
+
+    const inputCls = (field: keyof WithdrawalRequest) => ({
+        background: "rgba(255,255,255,0.04)",
+        border: `1px solid ${errors[field] ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.1)"}`,
+        borderRadius: "12px",
+        color: "white",
+        outline: "none",
+        width: "100%",
+        padding: "10px 14px",
+        fontSize: "14px",
+        boxSizing: "border-box" as const,
+        transition: "border-color 0.2s",
+    });
+
+    // ── Success state ──
+    if (isSuccess) {
+        return (
+            <ModalOverlay onClose={onClose}>
+                <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                    <div
+                        className="w-20 h-20 rounded-full flex items-center justify-center mb-5"
+                        style={{ background: "rgba(74,222,128,0.15)", border: "2px solid rgba(74,222,128,0.3)" }}
+                    >
+                        <span className="material-symbols-outlined text-4xl" style={{ color: "#4ade80" }}>
+                            check_circle
+                        </span>
+                    </div>
+                    <h3 className="text-white text-xl font-bold mb-2">Yêu cầu đã được gửi!</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed mb-1">
+                        Yêu cầu rút tiền của bạn đã được gửi đến hệ thống.
+                    </p>
+                    <p className="text-slate-500 text-xs mb-6">
+                        Chúng tôi sẽ xử lý trong vòng <span className="text-slate-300 font-semibold">1–3 ngày làm việc</span>.
+                    </p>
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+                        style={{ background: "rgba(121,59,237,0.6)", border: "1px solid rgba(121,59,237,0.4)" }}
+                    >
+                        Đóng
+                    </button>
+                </div>
+            </ModalOverlay>
+        );
+    }
+
+    return (
+        <ModalOverlay onClose={onClose}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                    <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center"
+                        style={{ background: "rgba(96,165,250,0.15)" }}
+                    >
+                        <span className="material-symbols-outlined text-[20px]" style={{ color: "#60a5fa" }}>
+                            savings
+                        </span>
+                    </div>
+                    <div>
+                        <h2 className="text-white font-bold text-base leading-tight">Rút tiền</h2>
+                        <p className="text-slate-500 text-[11px]">Gửi yêu cầu rút tiền về tài khoản ngân hàng</p>
+                    </div>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5"
+                    style={{ color: "#64748b" }}
+                >
+                    <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+
+            {/* Balance chip */}
+            <div className="mx-6 mt-4 mb-1 flex items-center justify-between px-4 py-3 rounded-xl border border-white/5"
+                style={{ background: "rgba(255,255,255,0.02)" }}
+            >
+                <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]" style={{ color: "#793bed" }}>account_balance_wallet</span>
+                    <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Số dư ví</span>
+                </div>
+                <span className="text-white font-bold text-sm">{formatVND(walletBalance)}</span>
+            </div>
+
+            {/* Form */}
+            <div className="px-6 py-4 flex flex-col gap-4">
+                {/* Bank name */}
+                <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+                        Ngân hàng <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                        value={form.bankName}
+                        onChange={(e) => {
+                            setForm((f) => ({ ...f, bankName: e.target.value }));
+                            setErrors((er) => ({ ...er, bankName: undefined }));
+                        }}
+                        style={{ ...inputCls("bankName"), appearance: "none" as const }}
+                    >
+                        <option value="" style={{ background: "#18122B" }}>-- Chọn ngân hàng --</option>
+                        {BANK_LIST.map((b) => (
+                            <option key={b} value={b} style={{ background: "#18122B" }}>{b}</option>
+                        ))}
+                    </select>
+                    {errors.bankName && <FieldError msg={errors.bankName} />}
+                </div>
+
+                {/* Account number */}
+                <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+                        Số tài khoản <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Nhập số tài khoản ngân hàng"
+                        value={form.bankAccountNumber}
+                        onChange={(e) => {
+                            setForm((f) => ({ ...f, bankAccountNumber: e.target.value }));
+                            setErrors((er) => ({ ...er, bankAccountNumber: undefined }));
+                        }}
+                        style={inputCls("bankAccountNumber")}
+                    />
+                    {errors.bankAccountNumber && <FieldError msg={errors.bankAccountNumber} />}
+                </div>
+
+                {/* Amount */}
+                <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+                        Số tiền rút <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={amountStr}
+                            onChange={(e) => handleAmountChange(e.target.value)}
+                            style={{
+                                ...inputCls("amount"),
+                                paddingRight: "48px",
+                            }}
+                        />
+                        <span
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold"
+                            style={{ color: "#64748b" }}
+                        >
+                            VND
+                        </span>
+                    </div>
+                    {/* Quick pick buttons */}
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                        {[50000, 100000, 200000, 500000].map((preset) => (
+                            <button
+                                key={preset}
+                                disabled={preset > walletBalance}
+                                onClick={() => {
+                                    handleAmountChange(String(preset));
+                                    setErrors((er) => ({ ...er, amount: undefined }));
+                                }}
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                style={{
+                                    background: "rgba(121,59,237,0.12)",
+                                    border: "1px solid rgba(121,59,237,0.2)",
+                                    color: "#a78bfa",
+                                }}
+                            >
+                                {(preset / 1000).toLocaleString()}K
+                            </button>
+                        ))}
+                        <button
+                            disabled={walletBalance <= 0}
+                            onClick={() => {
+                                handleAmountChange(String(walletBalance));
+                                setErrors((er) => ({ ...er, amount: undefined }));
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            style={{
+                                background: "rgba(121,59,237,0.12)",
+                                border: "1px solid rgba(121,59,237,0.2)",
+                                color: "#a78bfa",
+                            }}
+                        >
+                            Tất cả
+                        </button>
+                    </div>
+                    {errors.amount && <FieldError msg={errors.amount} />}
+                    {/* Amount validation hint */}
+                    {form.amount > 0 && form.amount <= walletBalance && (
+                        <p className="text-[11px] mt-1.5" style={{ color: "#4ade80" }}>
+                            ✓ Số dư còn lại sau rút: {formatVND(walletBalance - form.amount)}
+                        </p>
+                    )}
+                </div>
+
+                {/* Notes */}
+                <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+                        Ghi chú <span className="text-slate-600 font-normal normal-case">(tuỳ chọn)</span>
+                    </label>
+                    <textarea
+                        rows={2}
+                        placeholder="Ghi chú thêm cho yêu cầu rút tiền..."
+                        value={form.notes}
+                        onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                        style={{
+                            ...inputCls("notes"),
+                            resize: "none",
+                            fontFamily: "inherit",
+                        }}
+                    />
+                </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-6 flex gap-3">
+                <button
+                    onClick={onClose}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+                    style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        color: "#64748b",
+                    }}
+                >
+                    Huỷ
+                </button>
+                <button
+                    onClick={handleSubmit}
+                    disabled={isLoading}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                        background: "linear-gradient(135deg, #793bed 0%, #5b21b6 100%)",
+                        border: "1px solid rgba(121,59,237,0.4)",
+                        boxShadow: "0 4px 20px rgba(121,59,237,0.25)",
+                    }}
+                >
+                    {isLoading ? (
+                        <>
+                            <span
+                                className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"
+                                style={{ display: "inline-block" }}
+                            />
+                            Đang gửi...
+                        </>
+                    ) : (
+                        <>
+                            <span className="material-symbols-outlined text-[16px]">send_money</span>
+                            Gửi yêu cầu rút tiền
+                        </>
+                    )}
+                </button>
+            </div>
+        </ModalOverlay>
+    );
+};
+
+// ── Modal Overlay ──────────────────────────────────────────────────
+const ModalOverlay: React.FC<{ onClose: () => void; children: React.ReactNode }> = ({ onClose, children }) => (
+    <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+        <div
+            className="w-full max-w-md rounded-2xl border border-white/5 overflow-hidden"
+            style={{
+                background: "#18122B",
+                boxShadow: "0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(121,59,237,0.1)",
+                maxHeight: "90vh",
+                overflowY: "auto",
+            }}
+        >
+            {children}
+        </div>
+    </div>
+);
+
+// ── Field Error ────────────────────────────────────────────────────
+const FieldError: React.FC<{ msg: string }> = ({ msg }) => (
+    <p className="text-[11px] mt-1.5 flex items-center gap-1" style={{ color: "#f87171" }}>
+        <span className="material-symbols-outlined text-[12px]">error</span>
+        {msg}
+    </p>
+);
 
 // ── Main Component ─────────────────────────────────────────────────
 const PaymentHistoryUser: React.FC = () => {
@@ -183,8 +532,13 @@ const PaymentHistoryUser: React.FC = () => {
     const [page, setPage] = useState(1);
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
+    // ── Withdrawal modal state ─────────────────────────────────────
+    const [showWithdrawal, setShowWithdrawal] = useState(false);
+    const [withdrawLoading, setWithdrawLoading] = useState(false);
+    const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+
     useEffect(() => {
-        dispatch(fetchWalletUser(200)); // lấy nhiều để paginate client-side
+        dispatch(fetchWalletUser(200));
     }, [dispatch]);
 
     // Reset page on filter change
@@ -224,6 +578,27 @@ const PaymentHistoryUser: React.FC = () => {
     const countIn = allTransactions.filter((t) => t.direction === "In").length;
     const countOut = allTransactions.filter((t) => t.direction === "Out").length;
 
+    // ── Withdrawal handler ─────────────────────────────────────────
+    const handleWithdraw = async (data: WithdrawalRequest) => {
+        setWithdrawLoading(true);
+        try {
+            const result = await dispatch(fetchCreateWithdrawal(data));
+            if (fetchCreateWithdrawal.fulfilled.match(result)) {
+                setWithdrawSuccess(true);
+                // Refresh wallet data after success
+                dispatch(fetchWalletUser(200));
+            }
+        } finally {
+            setWithdrawLoading(false);
+        }
+    };
+
+    const handleCloseWithdrawal = () => {
+        setShowWithdrawal(false);
+        setWithdrawSuccess(false);
+        setWithdrawLoading(false);
+    };
+
     return (
         <div className="px-6 pb-16 pt-6" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             <div className="max-w-5xl mx-auto">
@@ -259,18 +634,39 @@ const PaymentHistoryUser: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Wallet balance chip */}
-                        <div
-                            className="flex items-center gap-3 px-5 py-3 rounded-2xl border border-white/5 shrink-0"
-                            style={{ background: "rgba(255,255,255,0.03)" }}
-                        >
-                            <span className="material-symbols-outlined text-[20px]" style={{ color: "#793bed" }}>
-                                account_balance_wallet
-                            </span>
-                            <div>
-                                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Số dư ví</p>
-                                <p className="text-white font-bold text-lg leading-none">{formatVND(walletBalance)}</p>
+                        {/* Right side: balance chip + withdraw button */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                            {/* Wallet balance chip */}
+                            <div
+                                className="flex items-center gap-3 px-5 py-3 rounded-2xl border border-white/5 shrink-0"
+                                style={{ background: "rgba(255,255,255,0.03)" }}
+                            >
+                                <span className="material-symbols-outlined text-[20px]" style={{ color: "#793bed" }}>
+                                    account_balance_wallet
+                                </span>
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Số dư ví</p>
+                                    <p className="text-white font-bold text-lg leading-none">{formatVND(walletBalance)}</p>
+                                </div>
                             </div>
+
+                            {/* ── Withdraw Button ── */}
+                            <button
+                                onClick={() => setShowWithdrawal(true)}
+                                disabled={walletBalance <= 0}
+                                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold text-white transition-all shrink-0
+                                    disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+                                style={{
+                                    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                                    border: "1px solid rgba(96,165,250,0.35)",
+                                    boxShadow: walletBalance > 0
+                                        ? "0 4px 20px rgba(37,99,235,0.35)"
+                                        : "none",
+                                }}
+                            >
+                                <span className="material-symbols-outlined text-[18px]">savings</span>
+                                Rút tiền
+                            </button>
                         </div>
                     </div>
                 </section>
@@ -609,6 +1005,17 @@ const PaymentHistoryUser: React.FC = () => {
                 </div>
 
             </div>
+
+            {/* ── Withdrawal Modal ─────────────────────────────── */}
+            {showWithdrawal && (
+                <WithdrawalModal
+                    walletBalance={walletBalance}
+                    onClose={handleCloseWithdrawal}
+                    onSubmit={handleWithdraw}
+                    isLoading={withdrawLoading}
+                    isSuccess={withdrawSuccess}
+                />
+            )}
         </div>
     );
 };
