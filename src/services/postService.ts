@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, UpdatePostContentRequest } from "../types/post/post";
+import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest } from "../types/post/post";
 import type { ApiResponse, ApiResponseNoData } from "../types/api";
 
 const postService = {
@@ -45,6 +45,14 @@ const postService = {
         };
         return interceptorAPI().get(`/organizers/posts`, { params });
     },
+    generateImage: (data: GenerateImageRequestBody): Promise<AxiosResponse<GenerateImageResponse>> => {
+        return interceptorAPI().post("/bot/image-generation", data);
+    },
+    sendToChatBox: (userPrompt: string): Promise<AxiosResponse<SendToChatBoxReponse>> => {
+        return interceptorAPI().post("/bot/chat", {
+            userPrompt
+        });
+    }
 }
 
 export default postService;

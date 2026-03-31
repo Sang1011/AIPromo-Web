@@ -76,10 +76,16 @@ export default function Step4Policy({
     const [sections, setSections] = useState<PolicySection[]>(defaultSections);
     const [loading, setLoading] = useState(false);
     const [publishing, setPublishing] = useState(false);
-
     const [isDirty, setIsDirty] = useState(false);
     const [bannerSaving, setBannerSaving] = useState(false);
+    const [agreed, setAgreed] = useState(
+        localStorage.getItem("organizer_terms_agreed") === "true"
+    );
 
+    const handleAgree = (value: boolean) => {
+        setAgreed(value);
+        localStorage.setItem("organizer_terms_agreed", String(value));
+    };
     const [mounted, setMounted] = useState(false);
     useEffect(() => {
         if (!mounted) { setMounted(true); return; }
@@ -187,6 +193,10 @@ export default function Step4Policy({
     };
 
     const handleRequestPublish = async () => {
+        if (!agreed) {
+            notify.warning("Bạn cần đồng ý với điều khoản trước khi gửi duyệt");
+            return;
+        }
         if (!eventData?.id) return;
         if (!validate()) return;
 
@@ -292,6 +302,24 @@ export default function Step4Policy({
             >
                 + Thêm điều khoản
             </button>
+
+            <div className={`flex items-start gap-2 text-sm ${!agreed ? "text-red-400" : "text-slate-300"}`}>
+                <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => handleAgree(e.target.checked)}
+                />
+
+                <span>
+                    Tôi đồng ý với{" "}
+                    <span
+                        onClick={() => window.open("/organizer/legal", "_blank")}
+                        className="underline text-violet-400 hover:text-violet-300 cursor-pointer"
+                    >
+                        các điều khoản của nền tảng
+                    </span>
+                </span>
+            </div>
 
             {/* Footer */}
             <div className="flex items-center justify-between pt-6">

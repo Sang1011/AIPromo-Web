@@ -49,6 +49,7 @@ import EventUser from "./pages/User/EventUser";
 import OrderDetailUser from "./pages/User/EventUser/OrderDetailUser";
 import TicketingUser from "./pages/User/TickingUser";
 import PaymentHistoryUser from "./pages/User/HistoryPaymentUser";
+import PostPreviewPage from "./pages/Organizer/PostPreviewPage";
 
 
 
@@ -101,6 +102,7 @@ function App() {
           <Route path="overview" element={<SummaryPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="marketing" element={<MarketingPage />} />
+          <Route path="marketing/:marketingId/post-review" element={<PostPreviewPage />} />
           <Route path="marketing/:marketingId" element={<MarketingDetailPage />} />
           <Route path="orders" element={<OrderListPage />} />
           <Route path="check-in" element={<CheckInPage />} />
