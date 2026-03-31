@@ -109,3 +109,39 @@ export interface PostListItem {
 }
 
 export type GetOrganizerPostsResponse = ApiResponse<PaginatedResponse<PostListItem>>;
+
+export interface GenerateImageRequestBody {
+    prompt: string;
+    aspectRatio: string;
+    imageSize: string;
+}
+
+export type GenerateImageResponse = ApiResponse<{ imageUrl: string }>
+export type SendToChatBoxReponse = ApiResponse<string>
+
+export type BlockType =
+    | 'heading'
+    | 'paragraph'
+    | 'image'
+    | 'button'
+    | 'list'
+    | 'divider'
+    | 'highlight';
+
+export interface ContentBlock {
+    type: BlockType;
+    // heading
+    level?: 1 | 2 | 3;
+    text?: string;
+    // image — src chỉ được set từ AI-generated imageUrl, không nhận URL ngoài
+    src?: string;
+    alt?: string;
+    // button/CTA
+    label?: string;
+    href?: string;
+    // list
+    ordered?: boolean;
+    items?: string[];
+    // highlight/quote
+    content?: string;
+}
