@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../store";
 import {
@@ -19,8 +19,14 @@ export default function StaffEventApprovalQueue() {
   const dispatch = useDispatch<AppDispatch>();
 
   const events = useSelector((state: RootState) => state.EVENT.events);
+  const [localEvents, setLocalEvents] = useState<any[]>([]);
 
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  // Sync Redux state to local state for stable rendering
+  useEffect(() => {
+    setLocalEvents(events || []);
+  }, [events]);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -50,18 +56,14 @@ export default function StaffEventApprovalQueue() {
   const pageSize = 10;
 
   // Tính toán pagination dựa trên số sự kiện thực tế đang hiển thị (client-side)
-  const currentCount = events.length;
+  const currentCount = localEvents.length;
   const displayTotalPages = Math.max(1, Math.ceil(currentCount / pageSize));
   const endCount = Math.min(page * pageSize, currentCount);
 
   // Lấy dữ liệu cho trang hiện tại
-  const currentItems = events.slice((page - 1) * pageSize, page * pageSize);
+  const currentItems = localEvents.slice((page - 1) * pageSize, page * pageSize);
 
-  useEffect(() => {
-    fetchPendingList();
-  }, []);
-
-  const fetchPendingList = async () => {
+  const fetchPendingList = useCallback(async () => {
     setIsLoading(true);
     try {
       await dispatch(
@@ -76,7 +78,11 @@ export default function StaffEventApprovalQueue() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dispatch]);
+
+  useEffect(() => {
+    fetchPendingList();
+  }, [fetchPendingList]);
 
   const refresh = async () => {
     setIsLoading(true);
@@ -97,25 +103,25 @@ export default function StaffEventApprovalQueue() {
     PendingReview: {
       label: "Chờ duyệt",
       color: "text-amber-400",
-      bg: "bg-amber-500/20",
+      bg: "bg-amber-500/10",
       border: "border-amber-500/30",
     },
     PendingCancellation: {
       label: "Chờ huỷ",
       color: "text-red-400",
-      bg: "bg-red-500/20",
+      bg: "bg-red-500/10",
       border: "border-red-500/30",
     },
     Published: {
       label: "Đã đăng",
       color: "text-green-400",
-      bg: "bg-green-500/20",
+      bg: "bg-green-500/10",
       border: "border-green-500/30",
     },
     Cancelled: {
       label: "Đã huỷ",
       color: "text-gray-400",
-      bg: "bg-gray-500/20",
+      bg: "bg-gray-500/10",
       border: "border-gray-500/30",
     },
   };
@@ -281,18 +287,19 @@ export default function StaffEventApprovalQueue() {
             Đang tải...
           </div>
         ) : currentItems.length > 0 ? (
-          currentItems.map((evt: any) => {
+          currentItems.map((evt: any, index: number) => {
             const category =
               evt.categories?.[0]?.name?.toUpperCase() ?? "OTHER";
             const status = statusMap[evt.status] ?? {
               label: evt.status,
               color: "text-slate-400",
-              dot: "bg-slate-400",
+              bg: "bg-slate-500/10",
+              border: "border-slate-500/30",
             };
 
             return (
               <div
-                key={evt.id}
+                key={`${evt.id}-${index}`}
                 className={`grid grid-cols-12 items-center gap-4 p-5 ${glassCard} rounded-2xl`}
               >
                 <div className="col-span-5 flex items-center gap-5">
@@ -324,9 +331,10 @@ export default function StaffEventApprovalQueue() {
                     {category}
                   </span>
                 </div>
-                <div className="col-span-1 flex items-center gap-2">
-                  <span className={`size-2 rounded-full ${status.dot}`} />
-                  <span className={`text-xs font-semibold ${status.color}`}>
+                <div className="col-span-1">
+                  <span
+                    className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase border whitespace-nowrap ${status.bg} ${status.color} ${status.border}`}
+                  >
                     {status.label}
                   </span>
                 </div>
@@ -421,7 +429,7 @@ export default function StaffEventApprovalQueue() {
 
       {/* Cancel Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
           <div className="bg-slate-900 border border-white/10 p-6 rounded-xl w-[400px]">
             <h2 className="text-white font-bold mb-3">Lý do huỷ sự kiện</h2>
             <textarea

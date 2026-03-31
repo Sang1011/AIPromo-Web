@@ -27,6 +27,7 @@ import FinanceRevenuePage from "./pages/Admin/FinanceRevenuePage";
 import EventModerationPage from "./pages/Admin/EventModerationPage";
 import UserManagementPage from "./pages/Admin/UserManagementPage";
 import SystemLogsPage from "./pages/Admin/SystemLogsPage";
+import WithdrawalPage from "./pages/Admin/WithdrawalPage";
 import StaffLayout from "./components/Staff/layouts/StaffLayout";
 import StaffDashboardPage from "./pages/Staff/StaffDashboardPage";
 import EventApprovalPage from "./pages/Staff/EventApprovalPage";
@@ -120,6 +121,7 @@ function App() {
           <Route path="events" element={<EventModerationPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="logs" element={<SystemLogsPage />} />
+          <Route path="withdrawals" element={<WithdrawalPage />} />
         </Route>
 
         {/* Staff group */}

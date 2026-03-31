@@ -14,6 +14,7 @@ import {
     MdDownload,
     MdCategory,
     MdLocalOffer,
+    MdAccountBalanceWallet,
 } from "react-icons/md";
 
 const adminMenuItems = [
@@ -22,6 +23,7 @@ const adminMenuItems = [
     { icon: MdGavel, label: "Duyệt Sự kiện", path: "/admin/events" },
     { icon: MdCategory, label: "Quản lý Category", path: "/admin/categories" },
     { icon: MdLocalOffer, label: "Quản lý Hashtags", path: "/admin/hashtags" },
+    { icon: MdAccountBalanceWallet, label: "Yêu cầu rút tiền", path: "/admin/withdrawals" },
     { icon: MdPayments, label: "Tài chính & Doanh thu", path: "/admin/finance" },
     { icon: MdTerminal, label: "Nhật ký Hệ thống", path: "/admin/logs" },
 ];
