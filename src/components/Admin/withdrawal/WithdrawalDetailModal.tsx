@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { MdClose, MdAccountBalanceWallet, MdNotes, MdContentCopy, MdVerifiedUser, MdCancel, MdCheckCircle } from "react-icons/md";
+import { MdClose, MdAccountBalanceWallet, MdNotes, MdContentCopy, MdVerifiedUser, MdCancel, MdCheckCircle, MdPlayCircle } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchWithdrawalDetail, clearWithdrawalDetail } from "../../../store/withdrawalSlice";
+import { fetchWithdrawalDetail, clearWithdrawalDetail, approveWithdrawal, rejectWithdrawal, completeWithdrawal } from "../../../store/withdrawalSlice";
+import AdminNoteModal from "./AdminNoteModal";
 
 interface WithdrawalDetailModalProps {
     isOpen: boolean;
@@ -39,17 +40,17 @@ const getStatusConfig = (status: string) => {
                 color: "text-blue-400",
                 dotColor: "bg-blue-400"
             };
-        case "Success":
-            return {
-                label: "Thành công",
-                color: "text-emerald-400",
-                dotColor: "bg-emerald-400"
-            };
         case "Rejected":
             return {
                 label: "Từ chối",
                 color: "text-red-400",
                 dotColor: "bg-red-400"
+            };
+        case "Completed":
+            return {
+                label: "Hoàn thành",
+                color: "text-emerald-400",
+                dotColor: "bg-emerald-400"
             };
         default:
             return {
@@ -76,7 +77,11 @@ const getBankLogoUrl = (bankName: string) => {
 
 export default function WithdrawalDetailModal({ isOpen, onClose, withdrawalId }: WithdrawalDetailModalProps) {
     const dispatch = useDispatch<AppDispatch>();
-    const { withdrawalDetail, loading } = useSelector((state: RootState) => state.WITHDRAWAL);
+    const { withdrawalDetail, loading, actionLoading } = useSelector((state: RootState) => state.WITHDRAWAL);
+    
+    // Admin note modal state
+    const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<"approve" | "reject" | "complete" | null>(null);
 
     useEffect(() => {
         if (isOpen && withdrawalId) {
@@ -93,14 +98,30 @@ export default function WithdrawalDetailModal({ isOpen, onClose, withdrawalId }:
         }
     };
 
-    const handleApprove = () => {
-        console.log("Approve withdrawal:", withdrawalDetail?.id);
-        // TODO: Implement approve API call
+    // Open admin note modal for action
+    const openNoteModal = (action: "approve" | "reject" | "complete") => {
+        setPendingAction(action);
+        setIsNoteModalOpen(true);
     };
 
-    const handleReject = () => {
-        console.log("Reject withdrawal:", withdrawalDetail?.id);
-        // TODO: Implement reject API call
+    // Handle confirm action with admin note
+    const handleConfirmAction = (adminNote: string) => {
+        if (!withdrawalDetail?.id) return;
+        
+        if (pendingAction === "approve") {
+            dispatch(approveWithdrawal({ id: withdrawalDetail.id, adminNote }));
+        } else if (pendingAction === "reject") {
+            dispatch(rejectWithdrawal({ id: withdrawalDetail.id, adminNote }));
+        } else if (pendingAction === "complete") {
+            dispatch(completeWithdrawal({ id: withdrawalDetail.id, adminNote }));
+        }
+        setIsNoteModalOpen(false);
+        setPendingAction(null);
+    };
+
+    const handleCloseNoteModal = () => {
+        setIsNoteModalOpen(false);
+        setPendingAction(null);
     };
 
     if (!isOpen || !withdrawalDetail) return null;
@@ -227,23 +248,64 @@ export default function WithdrawalDetailModal({ isOpen, onClose, withdrawalId }:
                         <span className="text-[10px] font-medium uppercase tracking-wider">Đã kiểm tra bảo mật</span>
                     </div>
                     <div className="flex gap-3">
-                        <button 
-                            onClick={handleReject}
-                            className="px-6 py-2.5 rounded-lg border border-red-500/30 text-red-400 font-semibold text-sm transition-all hover:bg-red-500/10 flex items-center gap-2"
-                        >
-                            <MdCancel className="text-sm" />
-                            Từ chối
-                        </button>
-                        <button 
-                            onClick={handleApprove}
-                            className="px-6 py-2.5 rounded-lg bg-[#7c3bed] text-white font-semibold text-sm transition-all hover:bg-[#6d28d9] flex items-center gap-2 shadow-lg shadow-[#7c3bed]/20"
-                        >
-                            <MdCheckCircle className="text-sm" />
-                            Phê duyệt
-                        </button>
+                        {/* Show Approve/Reject buttons only for Pending status */}
+                        {withdrawalDetail.status === "Pending" && (
+                            <>
+                                <button
+                                    onClick={() => openNoteModal("reject")}
+                                    disabled={actionLoading}
+                                    className="px-6 py-2.5 rounded-lg border border-red-500/30 text-red-400 font-semibold text-sm transition-all hover:bg-red-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <MdCancel className="text-sm" />
+                                    Từ chối
+                                </button>
+                                <button
+                                    onClick={() => openNoteModal("approve")}
+                                    disabled={actionLoading}
+                                    className="px-6 py-2.5 rounded-lg bg-emerald-600 text-white font-semibold text-sm transition-all hover:bg-emerald-500 flex items-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {actionLoading && pendingAction === "approve" && (
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    )}
+                                    <MdCheckCircle className="text-sm" />
+                                    Phê duyệt
+                                </button>
+                            </>
+                        )}
+                        
+                        {/* Show Complete button only for Approved status */}
+                        {withdrawalDetail.status === "Approved" && (
+                            <button
+                                onClick={() => openNoteModal("complete")}
+                                disabled={actionLoading}
+                                className="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-semibold text-sm transition-all hover:bg-blue-500 flex items-center gap-2 shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {actionLoading && pendingAction === "complete" && (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                )}
+                                <MdPlayCircle className="text-sm" />
+                                Hoàn thành
+                            </button>
+                        )}
+                        
+                        {/* Show nothing for Completed or Rejected status */}
+                        {(withdrawalDetail.status === "Completed" || withdrawalDetail.status === "Rejected") && (
+                            <span className="text-xs text-[#a592c8] italic">
+                                {withdrawalDetail.status === "Completed" ? "Giao dịch đã hoàn tất" : "Yêu cầu đã bị từ chối"}
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
+            
+            {/* Admin Note Modal */}
+            <AdminNoteModal
+                isOpen={isNoteModalOpen}
+                onClose={handleCloseNoteModal}
+                onConfirm={handleConfirmAction}
+                actionType={pendingAction || "approve"}
+                loading={actionLoading}
+            />
         </div>,
         document.body
     );

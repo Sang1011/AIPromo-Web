@@ -9,6 +9,7 @@ interface WithdrawalState {
     withdrawalDetail: WithdrawalDetail | null;
     loading: boolean;
     error: string | null;
+    actionLoading: boolean;
 }
 
 const initialState: WithdrawalState = {
@@ -16,6 +17,7 @@ const initialState: WithdrawalState = {
     withdrawalDetail: null,
     loading: false,
     error: null,
+    actionLoading: false,
 };
 
 export const fetchWithdrawalRequests = createAsyncThunk<
@@ -42,6 +44,52 @@ export const fetchWithdrawalDetail = createAsyncThunk<
         try {
             const response = await withdrawalService.getWithdrawalDetail(id);
             return response.data.data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
+export const approveWithdrawal = createAsyncThunk<
+    void,
+    { id: string; adminNote: string }
+>(
+    `${name}/approveWithdrawal`,
+    async ({ id, adminNote }, thunkAPI) => {
+        try {
+            await withdrawalService.approveWithdrawal(id, { adminNote });
+            // Refetch the withdrawal detail to get updated status
+            thunkAPI.dispatch(fetchWithdrawalDetail(id));
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
+export const rejectWithdrawal = createAsyncThunk<
+    void,
+    { id: string; adminNote: string }
+>(
+    `${name}/rejectWithdrawal`,
+    async ({ id, adminNote }, thunkAPI) => {
+        try {
+            await withdrawalService.rejectWithdrawal(id, { adminNote });
+            thunkAPI.dispatch(fetchWithdrawalDetail(id));
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
+export const completeWithdrawal = createAsyncThunk<
+    void,
+    { id: string; adminNote: string }
+>(
+    `${name}/completeWithdrawal`,
+    async ({ id, adminNote }, thunkAPI) => {
+        try {
+            await withdrawalService.completeWithdrawal(id, { adminNote });
+            thunkAPI.dispatch(fetchWithdrawalDetail(id));
         } catch (error: any) {
             return thunkAPI.rejectWithValue(error.response?.data || error.message);
         }
@@ -80,6 +128,36 @@ const withdrawalSlice = createSlice({
         builder.addCase(fetchWithdrawalDetail.rejected, (state, action: PayloadAction<any>) => {
             state.loading = false;
             state.error = action.payload?.message || "Failed to fetch withdrawal detail";
+        });
+        builder.addCase(approveWithdrawal.pending, (state) => {
+            state.actionLoading = true;
+        });
+        builder.addCase(approveWithdrawal.fulfilled, (state) => {
+            state.actionLoading = false;
+        });
+        builder.addCase(approveWithdrawal.rejected, (state, action: PayloadAction<any>) => {
+            state.actionLoading = false;
+            state.error = action.payload?.message || "Failed to approve withdrawal";
+        });
+        builder.addCase(rejectWithdrawal.pending, (state) => {
+            state.actionLoading = true;
+        });
+        builder.addCase(rejectWithdrawal.fulfilled, (state) => {
+            state.actionLoading = false;
+        });
+        builder.addCase(rejectWithdrawal.rejected, (state, action: PayloadAction<any>) => {
+            state.actionLoading = false;
+            state.error = action.payload?.message || "Failed to reject withdrawal";
+        });
+        builder.addCase(completeWithdrawal.pending, (state) => {
+            state.actionLoading = true;
+        });
+        builder.addCase(completeWithdrawal.fulfilled, (state) => {
+            state.actionLoading = false;
+        });
+        builder.addCase(completeWithdrawal.rejected, (state, action: PayloadAction<any>) => {
+            state.actionLoading = false;
+            state.error = action.payload?.message || "Failed to complete withdrawal";
         });
     },
 });

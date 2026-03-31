@@ -28,6 +28,10 @@ export interface WithdrawalDetail {
     processedAt: string | null;
 }
 
+export interface WithdrawalActionRequest {
+    adminNote: string;
+}
+
 export interface WithdrawalListResponse {
     items: WithdrawalRequest[];
     pageNumber: number;
@@ -51,6 +55,13 @@ export interface WithdrawalApiResponse {
 export interface WithdrawalDetailApiResponse {
     isSuccess: boolean;
     data: WithdrawalDetail;
+    message: string;
+    timestamp: string;
+}
+
+export interface WithdrawalActionApiResponse {
+    isSuccess: boolean;
+    data: null;
     message: string;
     timestamp: string;
 }

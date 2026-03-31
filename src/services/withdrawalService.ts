@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { WithdrawalApiResponse, WithdrawalQueryParams, WithdrawalDetailApiResponse } from "../types/withdrawal/withdrawal";
+import type { WithdrawalApiResponse, WithdrawalQueryParams, WithdrawalDetailApiResponse, WithdrawalActionRequest, WithdrawalActionApiResponse } from "../types/withdrawal/withdrawal";
 
 const withdrawalService = {
     getAllWithdrawalRequests: (params: WithdrawalQueryParams): Promise<AxiosResponse<WithdrawalApiResponse>> => {
@@ -8,6 +8,15 @@ const withdrawalService = {
     },
     getWithdrawalDetail: (id: string): Promise<AxiosResponse<WithdrawalDetailApiResponse>> => {
         return interceptorAPI().get(`/admin/withdrawal-requests/${id}`);
+    },
+    approveWithdrawal: (id: string, data: WithdrawalActionRequest): Promise<AxiosResponse<WithdrawalActionApiResponse>> => {
+        return interceptorAPI().put(`/admin/withdrawal-requests/${id}/approve`, data);
+    },
+    rejectWithdrawal: (id: string, data: WithdrawalActionRequest): Promise<AxiosResponse<WithdrawalActionApiResponse>> => {
+        return interceptorAPI().put(`/admin/withdrawal-requests/${id}/reject`, data);
+    },
+    completeWithdrawal: (id: string, data: WithdrawalActionRequest): Promise<AxiosResponse<WithdrawalActionApiResponse>> => {
+        return interceptorAPI().put(`/admin/withdrawal-requests/${id}/complete`, data);
     }
 };
 
