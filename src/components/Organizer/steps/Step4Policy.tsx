@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import type { GetEventDetailResponse } from "../../../types/event/event";
 import type { AppDispatch } from "../../../store";
-import { fetchUpdateEventPolicy, fetchRequestPublishEvent } from "../../../store/eventSlice";
+import { fetchRequestPublishEvent, fetchUpdateEventPolicy } from "../../../store/eventSlice";
+import type { GetEventDetailResponse } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
 import { UnsavedBanner } from "../shared/UnsavedBanner";
 
