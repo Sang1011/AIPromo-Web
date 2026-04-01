@@ -1,17 +1,18 @@
 import type { GetEventDetailResponse } from "../types/event/event";
 
 const toneMap: Record<string, string> = {
-    professional: "Use a formal, clear, and informative tone suitable for official announcements. Write the post in Vietnamese.",
-    genz: "Use a casual, trendy Gen Z style with emojis, short sentences, and engaging hooks. Write the post in Vietnamese.",
-    viral: "Use highly engaging, attention-grabbing style with strong hooks, curiosity gaps, and FOMO. Write the post in Vietnamese.",
-    luxury: "Use elegant, premium wording with a sophisticated and high-end feeling. Write the post in Vietnamese.",
-    minimal: "Keep it concise, clean, and straight to the point. Write the post in Vietnamese.",
-    aggressive: "Use bold, provocative wording that challenges the reader and creates urgency. Write the post in Vietnamese.",
+    professional: "formal, clear, and informative tone suitable for official announcements",
+    genz: "casual, trendy Gen Z style with emojis, short sentences, and engaging hooks",
+    viral: "highly engaging, attention-grabbing style with strong hooks, curiosity gaps, and FOMO",
+    luxury: "elegant, premium wording with a sophisticated and high-end feeling",
+    minimal: "concise, clean, and straight to the point",
+    aggressive: "bold, provocative wording that challenges the reader and creates urgency",
 };
 
 export function buildContextPrompt(
     event: GetEventDetailResponse,
-    tone?: string
+    tone?: string,
+    imageUrl?: string,
 ): string {
     const hashtags = event.hashtags?.map((h) => h.name).join(", ") || "";
     const categories = event.categories?.map((c) => c.name).join(", ") || "";
@@ -19,33 +20,50 @@ export function buildContextPrompt(
     const sessions = event.sessions
         ?.map((s) => `${s.title} (${s.startTime} - ${s.endTime})`)
         .join("; ") || "";
-    const hasImage = event.images.length > 0;
 
-    let context = `Generate a marketing post draft in Vietnamese for Event: ${event.title}`;
-    if (event.description) context += `, Description: ${event.description}`;
-    if (event.location) context += `, Location: ${event.location}`;
-    if (hashtags) context += `, Hashtags: ${hashtags}`;
-    if (categories) context += `, Categories: ${categories}`;
-    if (actors) context += `, Actors: ${actors}`;
-    if (sessions) context += `, Sessions: ${sessions}`;
-    context += hasImage
-        ? ``
-        : `. Exclude ImageUrl.`;
-    context += event.bannerUrl
-        ? ``
-        : `. Exclude BannerUrl.`;
+    const eventContext = [
+        `Event: ${event.title}`,
+        event.description && `Description: ${event.description}`,
+        event.location && `Location: ${event.location}`,
+        hashtags && `Hashtags: ${hashtags}`,
+        categories && `Categories: ${categories}`,
+        actors && `Actors: ${actors}`,
+        sessions && `Sessions: ${sessions}`,
+    ].filter(Boolean).join(". ");
 
-    if (event.urlPath) {
-        context += ` The call-to-action must link directly to: ${event.urlPath}. Do not use placeholder text like "[Link]", "[Your Registration Link Here]" or any bracket placeholder.`;
-    } else {
-        context += ` If there is no registration link available, do not include any placeholder text like "[Link]" or "[Your Registration Link Here]". Simply end with the call-to-action text only.`;
-    }
+    const eventDetailUrl = `${window.location.origin}/event-detail/${event.id}`;
 
-    context += ` The entire post content must be written in Vietnamese.`;
+    const ctaInstruction = event.id
+        ? `The call-to-action button must link directly to: ${eventDetailUrl}. Do not use placeholder text.`
+        : `Do not include any placeholder link like "[Link]". End with call-to-action text only, no href.`;
 
-    if (tone && toneMap[tone]) {
-        context += ` Writing style instruction: ${toneMap[tone]}`;
-    }
+    const toneInstruction = tone && toneMap[tone]
+        ? `Writing style: ${toneMap[tone]}.`
+        : "";
 
-    return context;
+    const imageInstruction = imageUrl
+        ? `Include exactly one image block using this URL: ${imageUrl} — do not use any other image URL.`
+        : `Do not include any image block.`;
+
+    const schemaDescription = `
+Return ONLY a valid JSON array of content blocks. No explanation, no markdown, no code fences.
+Each block must follow this schema:
+- { "type": "heading", "level": 1|2|3, "text": "..." }
+- { "type": "paragraph", "text": "..." }
+- { "type": "image", "src": "<url>", "alt": "..." }   ← only if image provided
+- { "type": "button", "label": "...", "href": "..." }
+- { "type": "list", "ordered": false, "items": ["...", "..."] }
+- { "type": "divider" }
+- { "type": "highlight", "content": "..." }
+
+Rules:
+- All text content must be in Vietnamese.
+- image block src must be exactly the URL provided, never fabricate image URLs.
+- button href must be the real CTA link, never a placeholder.
+- Produce a complete, well-structured marketing post (heading → content → CTA).
+`.trim();
+
+    return [schemaDescription, eventContext, ctaInstruction, toneInstruction, imageInstruction]
+        .filter(Boolean)
+        .join("\n");
 }
