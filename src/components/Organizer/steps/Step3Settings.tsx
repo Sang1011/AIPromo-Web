@@ -253,20 +253,6 @@ export default function Step3Settings({
             {isDirty && isAllowUpdate && (
                 <UnsavedBanner onSave={handleBannerSave} saving={bannerSaving} />
             )}
-            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-                        <FiEye />
-                    </div>
-                    <h2 className="text-lg font-semibold text-white">Cài đặt tùy chỉnh</h2>
-                </div>
-                <Toggle
-                    title="Tự động gửi email nhắc nhở"
-                    desc="Gửi thông báo cho người tham dự 24h trước khi sự kiện diễn ra."
-                    checked={settingsForm.isEmailReminderEnabled}
-                    onChange={(v) => updateForm("isEmailReminderEnabled", v)}
-                />
-            </section>
 
             {/* ===== Sơ đồ chỗ ngồi ===== */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
@@ -409,13 +395,27 @@ export default function Step3Settings({
                     </div>
                 )}
 
-                {/* Hidden file input */}
                 <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     className="hidden"
                     onChange={handleFileChange}
+                />
+            </section>
+
+            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                        <FiEye />
+                    </div>
+                    <h2 className="text-lg font-semibold text-white">Cài đặt tùy chỉnh</h2>
+                </div>
+                <Toggle
+                    title="Tự động gửi email nhắc nhở"
+                    desc="Gửi thông báo cho người tham dự 24h trước khi sự kiện diễn ra."
+                    checked={settingsForm.isEmailReminderEnabled}
+                    onChange={(v) => updateForm("isEmailReminderEnabled", v)}
                 />
             </section>
 
