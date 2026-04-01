@@ -4,6 +4,7 @@ import {
     MdOutlinePerson, MdOutlineSmartToy, MdOutlineTag,
     MdOutlineTextFields,
 } from "react-icons/md";
+import { GrFormNextLink } from "react-icons/gr";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
@@ -25,8 +26,15 @@ function ReadOnlyField({ label, value }: { label: string; value?: string | null 
             <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
                 {label}
             </label>
-            <p className="w-full bg-background-dark/30 border border-slate-800 rounded-xl
-                          text-slate-300 px-4 py-3 text-sm leading-relaxed">
+            <p
+                className="
+        w-full bg-background-dark/30 border border-slate-800 rounded-xl
+        text-slate-300 px-4 py-3 text-sm leading-relaxed
+        
+        whitespace-pre-wrap
+        break-words
+    "
+            >
                 {value}
             </p>
         </div>
@@ -89,8 +97,10 @@ function SessionList({ sessions }: { sessions: any[] }) {
                                                 rounded-xl px-4 py-2 flex flex-col gap-0.5">
                         <p className="text-slate-200 text-sm font-medium">{s.title}</p>
                         {s.description && <p className="text-slate-500 text-xs">{s.description}</p>}
-                        <p className="text-slate-500 text-xs">
-                            {formatDateTime(s.startTime)} — {formatDateTime(s.endTime)}
+                        <p className="text-slate-500 text-xs flex items-center gap-1">
+                            <span>{formatDateTime(s.startTime)}</span>
+                            <GrFormNextLink className="text-base shrink-0" />
+                            <span>{formatDateTime(s.endTime)}</span>
                         </p>
                     </div>
                 ))}
