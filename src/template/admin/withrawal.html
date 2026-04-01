@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#7c3bed", // Neon Purple from reference
+                        secondary: "#6366f1",
+                        background: "#0a0516", // Darker background from reference
+                        surface: "#1a1625", // Sidebar/Card color
+                        accent: "#7c3bed"
+                    },
+                    fontFamily: {
+                        "headline": ["Public Sans"],
+                        "body": ["Public Sans"],
+                        "label": ["Public Sans"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-effect {
+            background: rgba(26, 22, 37, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .sidebar-active {
+            background: linear-gradient(90deg, rgba(124, 59, 237, 0.15) 0%, rgba(124, 59, 237, 0) 100%);
+            border-right: 3px solid #7c3bed;
+            color: #7c3bed !important;
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(124, 59, 237, 0.3);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #0a0516;
+        }
+    </style>
+</head>
+<body class="text-slate-300 font-body antialiased min-h-screen">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col py-6 bg-[#0a0516] w-64 border-r border-white/5 transition-all duration-200 ease-in-out z-50">
+<div class="px-6 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-[#7c3bed] flex items-center justify-center neon-glow">
+<span class="material-symbols-outlined text-white text-2xl">rocket_launch</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-white tracking-tight leading-tight">FinanceOps</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Giám sát hệ thống</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-4 px-6 py-3.5 text-slate-400 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="text-sm font-semibold">Tổng quan</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3.5 sidebar-active" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-sm font-semibold">Yêu cầu rút tiền</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3.5 text-slate-400 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-semibold">Quản lý Người dùng</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3.5 text-slate-400 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-sm font-semibold">Lịch sử giao dịch</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3.5 text-slate-400 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-semibold">Tài chính &amp; Doanh thu</span>
+</a>
+<a class="flex items-center gap-4 px-6 py-3.5 text-slate-400 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-semibold">Nhật ký Hệ thống</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full py-3 bg-[#7c3bed] hover:bg-[#6d28d9] text-white rounded-xl flex items-center justify-center gap-2 transition-all neon-glow font-bold text-sm">
+<span class="material-symbols-outlined text-lg">download</span>
+            Tải báo cáo
+        </button>
+<div class="mt-6 p-4 rounded-xl border border-white/5 bg-white/5 flex items-center gap-3">
+<img alt="Admin" class="w-10 h-10 rounded-full border border-[#7c3bed]/50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUuO4Wf_o-ciVnwrY_f9NaExsYs-cs6YbLYc0o6RGrFoYhE-EZP8Qa-eCWdr73vFDoEnrlIbRPqWio63xU5BtXuQNH1tGAt2NcmKV5BZhd71khrd10DYWP9uKgRXNuoPQYBb7hX9zwOq4iEdwhJHywL4FQHGjEp374_gnSDPUcjd9LfkWgqmPRf9NbG4wcOMDbmkOmZuxRuEnKlANiT8za7LPs2VgsDZ6vY92Zk3SCKP-rIQtGJ7HB2RbyW-xsfBLVbq5ofFFZI-F3"/>
+<div class="overflow-hidden">
+<p class="text-xs font-bold text-white truncate">Alex Rivera</p>
+<p class="text-[10px] text-slate-500 uppercase font-bold">Super Admin</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-40 flex justify-between items-center px-8 h-20 w-full border-b border-white/5 bg-[#0a0516]/80 backdrop-blur-md">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-lg">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">search</span>
+<input class="w-full bg-[#1a1625] border-none rounded-xl py-3 pl-12 pr-4 text-sm text-slate-200 focus:ring-1 focus:ring-[#7c3bed] placeholder-slate-500" placeholder="Tìm kiếm yêu cầu, người dùng hoặc mã giao dịch..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 ml-8">
+<button class="w-10 h-10 flex items-center justify-center bg-[#1a1625] text-slate-400 hover:text-white rounded-xl border border-white/5 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center bg-[#1a1625] text-slate-400 hover:text-white rounded-xl border border-white/5">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-px bg-white/10 mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-sm font-bold text-white leading-none">Alex Rivera</p>
+<p class="text-[10px] text-slate-500 font-bold uppercase mt-1">Super Admin</p>
+</div>
+<img alt="User" class="w-10 h-10 rounded-full border-2 border-white/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUuO4Wf_o-ciVnwrY_f9NaExsYs-cs6YbLYc0o6RGrFoYhE-EZP8Qa-eCWdr73vFDoEnrlIbRPqWio63xU5BtXuQNH1tGAt2NcmKV5BZhd71khrd10DYWP9uKgRXNuoPQYBb7hX9zwOq4iEdwhJHywL4FQHGjEp374_gnSDPUcjd9LfkWgqmPRf9NbG4wcOMDbmkOmZuxRuEnKlANiT8za7LPs2VgsDZ6vY92Zk3SCKP-rIQtGJ7HB2RbyW-xsfBLVbq5ofFFZI-F3"/>
+</div>
+</div>
+</header>
+<!-- Page Canvas -->
+<div class="p-8 space-y-8 flex-1">
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="glass-effect p-6 rounded-2xl relative overflow-hidden">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold text-slate-500 uppercase tracking-widest">TỔNG SỐ YÊU CẦU</p>
+<p class="text-3xl font-black text-white mt-2">1,284</p>
+<div class="mt-4 flex items-center gap-2 text-emerald-400 text-xs font-bold">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+                            +12.5% <span class="text-slate-500 font-normal ml-1">so với tháng trước</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-emerald-400/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-emerald-400">query_stats</span>
+</div>
+</div>
+</div>
+<div class="glass-effect p-6 rounded-2xl relative overflow-hidden">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold text-slate-500 uppercase tracking-widest">CHỜ PHÊ DUYỆT</p>
+<p class="text-3xl font-black text-white mt-2">42</p>
+<div class="mt-4 flex items-center gap-2 text-[#7c3bed] text-xs font-bold">
+<div class="w-24 bg-white/5 h-1 rounded-full overflow-hidden">
+<div class="bg-[#7c3bed] h-full" style="width: 35%"></div>
+</div>
+<span class="text-slate-500 font-normal">Cần xử lý gấp</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-[#7c3bed]/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#7c3bed]">pending_actions</span>
+</div>
+</div>
+</div>
+<div class="glass-effect p-6 rounded-2xl relative overflow-hidden">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold text-slate-500 uppercase tracking-widest">TỔNG TIỀN RÚT</p>
+<p class="text-3xl font-black text-white mt-2">2.45B ₫</p>
+<div class="mt-4 flex items-center gap-2 text-slate-500 text-xs">
+                            Hôm nay: <span class="text-white font-bold">125.000.000 ₫</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-400">payments</span>
+</div>
+</div>
+</div>
+<div class="glass-effect p-6 rounded-2xl relative overflow-hidden">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold text-slate-500 uppercase tracking-widest">TỶ LỆ TỪ CHỐI</p>
+<p class="text-3xl font-black text-white mt-2">3.2%</p>
+<div class="mt-4 flex items-center gap-2 text-red-400 text-xs font-bold">
+<span class="material-symbols-outlined text-xs">warning</span>
+                            Giảm 0.5% <span class="text-slate-500 font-normal ml-1">trong tuần qua</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-red-400">report</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Table Section -->
+<div class="col-span-12">
+<div class="glass-effect rounded-2xl overflow-hidden">
+<div class="px-8 py-6 border-b border-white/5 flex justify-between items-center">
+<div>
+<h2 class="text-xl font-bold text-white">Yêu cầu rút tiền</h2>
+<p class="text-xs text-slate-500 mt-1">Danh sách các yêu cầu đang chờ và đã xử lý trong hệ thống</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-[#1a1625] hover:bg-white/5 border border-white/10 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                                Bộ lọc
+                            </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-white/5">
+<th class="px-8 py-4">Người dùng</th>
+<th class="px-8 py-4">Số tiền</th>
+<th class="px-8 py-4">Ngân hàng</th>
+<th class="px-8 py-4">Số tài khoản</th>
+<th class="px-8 py-4">Trạng thái</th>
+<th class="px-8 py-4">Ngày tạo</th>
+<th class="px-8 py-4 text-right">Thao tác</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<!-- Row 1 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-4">
+<div class="flex items-center gap-3">
+<img alt="User" class="w-9 h-9 rounded-full border border-white/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCWgTKIqXvH48NI8b9lUyIC6zZU3EejGG4DfET3oaYXD7H1ZY6NAS01Mg25JmcDwFO2aq-hKI6uIVSLvE9mcEWSYWoeQrISp-jPZZ1CFLx8Hmu1p706kA77nahzVXfMf3grvMMvKf-LGr0C4d6hlIHXNOkuzedzFb9AqN8-PHoNOReHRcqTtzvBxxoB5caYBCI0WCYQNVFpRik00hDw6ukaw-fmkahSFLA8KcQ7WYhWT_3Uy6OoagXhyZN3cIwN-XMut3yxRbjHlFk3"/>
+<div>
+<p class="font-bold text-white text-sm">Nguyễn Văn An</p>
+<p class="text-[10px] text-slate-500 font-bold">AN.NGUYEN@EXAMPLE.COM</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-4 font-mono font-bold text-[#7c3bed] text-sm">15.000.000 ₫</td>
+<td class="px-8 py-4 text-sm text-slate-300">Vietcombank</td>
+<td class="px-8 py-4 font-mono text-sm text-slate-400">1023445566</td>
+<td class="px-8 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-tighter">
+                                            Đã duyệt
+                                        </span>
+</td>
+<td class="px-8 py-4 text-[11px] text-slate-500 font-bold">22/10/2023 14:30</td>
+<td class="px-8 py-4 text-right"><div class="flex justify-end"><button class="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 transition-colors text-[10px] font-bold uppercase"><span class="material-symbols-outlined text-sm">visibility</span>Xem chi tiết</button></div></td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-4">
+<div class="flex items-center gap-3">
+<img alt="User" class="w-9 h-9 rounded-full border border-white/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCclxCEFsbZGJmizeM9bTp9_WNBonbY7H6Wn_DTCyPzOr_0kPkkTEU7wIe0uZ6CxsJRM272_qlpGTC90x-nd5Hmv1exwxEN0H-7QNJYy-5ttiGyLdwrm25ujTX4w-ia4s2PrsagoXHU9M8li4uYhqoSOoxWQLtR8-uJbLOta_UubpYv3QMi1IV7U0L5W7C-b7YFH96TUn1fZo9KKRjic59ZpyQN2zWgQz4tU2ljAUNYZnw-A9RWxYVbDdG7KK_BHd4fgF8RIeTkwBHp"/>
+<div>
+<p class="font-bold text-white text-sm">Trần Thị Bình</p>
+<p class="text-[10px] text-slate-500 font-bold">BINH.TRAN@EMAIL.VN</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-4 font-mono font-bold text-[#7c3bed] text-sm">5.500.000 ₫</td>
+<td class="px-8 py-4 text-sm text-slate-300">Techcombank</td>
+<td class="px-8 py-4 font-mono text-sm text-slate-400">19034455667788</td>
+<td class="px-8 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-tighter">
+                                            Đang chờ
+                                        </span>
+</td>
+<td class="px-8 py-4 text-[11px] text-slate-500 font-bold">22/10/2023 15:12</td>
+<td class="px-8 py-4 text-right"><div class="flex justify-end"><button class="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 transition-colors text-[10px] font-bold uppercase"><span class="material-symbols-outlined text-sm">visibility</span>Xem chi tiết</button></div></td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-4">
+<div class="flex items-center gap-3">
+<img alt="User" class="w-9 h-9 rounded-full border border-white/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsN3Zr_sbtVJbIsKHFNBVz2TWjVxtnkt_uOcbgdpJEcnNac4IuWRJH4MTWl7Qf9hoU-IipU4svM0lRAgFCbgcivRbO7tIH-MjrfcnwyUwDomv8DMr8o8B7f3wgbIlq1JbmU6X12NO9x9eGZTWR5I3lJe0jr07uvj_CjOVxHBIrMK09h1c9qR3CekMRbIG4kNLpwAn7AvUB6FtzN8tm--CsX4ZMaSzU-WHe8QlH-O0_lSArql0nChnx2Wca7b6_YNNuZwIG2lvh6MGv"/>
+<div>
+<p class="font-bold text-white text-sm">Lê Hoàng Cường</p>
+<p class="text-[10px] text-slate-500 font-bold">CUONG.LE@CORP.VN</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-4 font-mono font-bold text-[#7c3bed] text-sm">2.750.000 ₫</td>
+<td class="px-8 py-4 text-sm text-slate-300">MB Bank</td>
+<td class="px-8 py-4 font-mono text-sm text-slate-400">0808123456789</td>
+<td class="px-8 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-tighter">
+                                            Thành công
+                                        </span>
+</td>
+<td class="px-8 py-4 text-[11px] text-slate-500 font-bold">21/10/2023 09:45</td>
+<td class="px-8 py-4 text-right"><div class="flex justify-end"><button class="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 transition-colors text-[10px] font-bold uppercase"><span class="material-symbols-outlined text-sm">visibility</span>Xem chi tiết</button></div></td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-4">
+<div class="flex items-center gap-3">
+<img alt="User" class="w-9 h-9 rounded-full border border-white/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBt8jjOcPDG9Xp7GeoR2wlyiQrGy_6kcFP8O7_44lCAdVNaLqcAVWkl3pEAHh2NM8qCIZDKfAcsAKT0g_CAt24E9bDxOnnPVeB2vi6BmwRp5dw9jbhrLeRm4K_OTVYo8f8VIsjOLy23Tp9EFq6wPVoMMz4Q-7fDhrzgT0SOYExoiP75U4lTA2mCd1y-rWEP4m-26g5Lc13FrLdKS0mWsEbQgFpH9LbbgEPYlocGtcCWXKpYPKesuESPpZptteE93Dpm_9f50s7gsoc9"/>
+<div>
+<p class="font-bold text-white text-sm">Phạm Diệu Linh</p>
+<p class="text-[10px] text-slate-500 font-bold">LINH.PHAM@WORK.COM</p>
+</div>
+</div>
+</td>
+<td class="px-8 py-4 font-mono font-bold text-[#7c3bed] text-sm">25.000.000 ₫</td>
+<td class="px-8 py-4 text-sm text-slate-300">BIDV</td>
+<td class="px-8 py-4 font-mono text-sm text-slate-400">122100045678</td>
+<td class="px-8 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-tighter">
+                                            Từ chối
+                                        </span>
+</td>
+<td class="px-8 py-4 text-[11px] text-slate-500 font-bold">21/10/2023 11:20</td>
+<td class="px-8 py-4 text-right"><div class="flex justify-end"><button class="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 transition-colors text-[10px] font-bold uppercase"><span class="material-symbols-outlined text-sm">visibility</span>Xem chi tiết</button></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-8 py-4 border-t border-white/5 flex items-center justify-between">
+<p class="text-xs text-slate-500">Hiển thị <span class="text-white font-bold">1-4</span> trong số <span class="text-white font-bold">42</span> yêu cầu</p>
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5 text-slate-500 hover:bg-white/5 disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-[#7c3bed] text-white font-bold text-[10px]">1</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5 text-slate-400 hover:bg-white/5 text-[10px] font-bold">2</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5 text-slate-400 hover:bg-white/5 text-[10px] font-bold">3</button>
+<span class="text-slate-500 px-1">...</span>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5 text-slate-400 hover:bg-white/5 text-[10px] font-bold">11</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5 text-slate-400 hover:bg-white/5">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Cards -->
+<div class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="glass-effect p-6 rounded-2xl border-l-4 border-l-[#7c3bed]">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-[#7c3bed]/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#7c3bed]">verified_user</span>
+</div>
+<h4 class="font-bold text-white text-sm">Kiểm tra bảo mật</h4>
+</div>
+<p class="text-xs text-slate-500 leading-relaxed">Phát hiện 3 tài khoản có dấu hiệu rút tiền bất thường từ cùng một địa chỉ IP trong 24h qua.</p>
+<a class="text-[10px] font-black text-[#7c3bed] uppercase tracking-wider mt-4 inline-block hover:underline" href="#">Kiểm tra ngay</a>
+</div>
+<div class="glass-effect p-6 rounded-2xl border-l-4 border-l-blue-500">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-blue-500">account_balance</span>
+</div>
+<h4 class="font-bold text-white text-sm">Số dư hệ thống</h4>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+<span>Khả dụng</span>
+<span class="text-white">75%</span>
+</div>
+<div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+<div class="bg-blue-500 h-full rounded-full" style="width: 75%"></div>
+</div>
+</div>
+</div>
+<div class="glass-effect p-6 rounded-2xl border-l-4 border-l-amber-500">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-amber-500">history</span>
+</div>
+<h4 class="font-bold text-white text-sm">Nhật ký phiên</h4>
+</div>
+<p class="text-xs text-slate-500 leading-relaxed">Phiên làm việc sẽ hết hạn sau 15 phút. Hãy lưu các thay đổi trước khi hệ thống đăng xuất.</p>
+<button class="mt-4 px-3 py-1.5 bg-amber-500/10 text-amber-500 rounded text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all">Làm mới phiên</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
