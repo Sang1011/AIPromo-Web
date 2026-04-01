@@ -16,6 +16,7 @@ import userReducer from "./userSlice";
 import adminEventReducer from "./adminEventSlice";
 import postReducer from "./postSlice";
 import staffEventReducer from "./staffEventSlice";
+import withdrawalReducer from "./withdrawalSlice";
 
 const store = configureStore({
     reducer: {
@@ -35,7 +36,8 @@ const store = configureStore({
         USER: userReducer,
         ADMIN_EVENT: adminEventReducer,
         POST: postReducer,
-        STAFF_EVENT: staffEventReducer
+        STAFF_EVENT: staffEventReducer,
+        WITHDRAWAL: withdrawalReducer
     }
 })
 
