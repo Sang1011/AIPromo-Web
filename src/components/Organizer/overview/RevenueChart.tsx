@@ -7,94 +7,144 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts";
+import type { SalesTrendData, SalesTrendPeriod } from "../../../types/ticketing/ticketing";
 
-const data = [
-    { day: "05", revenue: 5, tickets: 3 },
-    { day: "06", revenue: 10, tickets: 6 },
-    { day: "07", revenue: 25, tickets: 15 },
-    { day: "08", revenue: 50, tickets: 35 },
-    { day: "09", revenue: 110, tickets: 85 },
-    { day: "10", revenue: 85, tickets: 65 },
-    { day: "11", revenue: 65, tickets: 50 },
-    { day: "12", revenue: 80, tickets: 60 },
+interface RevenueChartProps {
+    trendData: SalesTrendData | null;
+    period: SalesTrendPeriod;
+    loading: boolean;
+    onPeriodChange: (period: SalesTrendPeriod) => void;
+}
+
+function formatRevenue(value: number): string {
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}tr`;
+    if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
+    return `${value}`;
+}
+
+const PERIODS: { label: string; value: SalesTrendPeriod }[] = [
+    { label: "Theo ngày", value: "Day" },
+    { label: "Theo tuần", value: "Week" },
 ];
 
-export default function RevenueChart() {
+export default function RevenueChart({ trendData, period, loading, onPeriodChange }: RevenueChartProps) {
+    const chartData = trendData?.trend ?? [];
+
     return (
         <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-6 text-sm">
-                    <span className="flex items-center gap-2 text-primary font-bold">
-                        ● Doanh thu (VND)
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div className="flex items-center gap-5 text-sm">
+                    <span className="flex items-center gap-2 text-primary font-semibold uppercase">
+                        <span className="w-3 h-0.5 bg-primary inline-block rounded" />
+                        Doanh thu
                     </span>
-                    <span className="flex items-center gap-2 text-slate-400 font-bold">
-                        ● Số vé bán
+                    <span className="flex items-center gap-2 text-slate-400 font-semibold uppercase">
+                        <span className="w-3 h-0.5 bg-slate-400 inline-block rounded opacity-60" style={{ borderTop: "2px dashed" }} />
+                        Số vé bán
                     </span>
                 </div>
 
                 <div className="flex gap-2">
-                    <button className="px-3 py-1 text-xs rounded-lg bg-white/5 text-slate-400 font-semibold">
-                        24 giờ
-                    </button>
-                    <button className="px-3 py-1 text-xs rounded-lg bg-primary text-white font-semibold">
-                        30 ngày
-                    </button>
+                    {PERIODS.map((p) => (
+                        <button
+                            key={p.value}
+                            onClick={() => onPeriodChange(p.value)}
+                            className={`px-3 py-1.5 text-xs rounded-lg font-semibold transition-colors ${period === p.value
+                                ? "bg-primary text-white"
+                                : "bg-white/5 text-slate-400 hover:bg-white/10"
+                                }`}
+                        >
+                            {p.label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
             {/* Chart */}
-            <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data}>
-                        <CartesianGrid
-                            stroke="rgba(255,255,255,0.05)"
-                            vertical={false}
-                        />
+            <div className="h-[280px] relative">
+                {loading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#0b0816]/60 rounded-xl z-10">
+                        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                )}
 
-                        <XAxis
-                            dataKey="day"
-                            stroke="#6B7280"
-                            tickLine={false}
-                            axisLine={false}
-                        />
+                {chartData.length === 0 && !loading ? (
+                    <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+                        Không có dữ liệu cho khoảng thời gian này.
+                    </div>
+                ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
 
-                        <YAxis
-                            stroke="#6B7280"
-                            tickLine={false}
-                            axisLine={false}
-                            tickFormatter={(v) => `${v}M`}
-                        />
+                            <XAxis
+                                dataKey="timeLabel"
+                                stroke="#6B7280"
+                                tickLine={false}
+                                axisLine={false}
+                                tick={{ fontSize: 12 }}
+                            />
 
-                        <Tooltip
-                            contentStyle={{
-                                background: "#0b0816",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                                borderRadius: "12px",
-                            }}
-                            labelStyle={{ color: "#c4b5fd" }}
-                        />
+                            <YAxis
+                                yAxisId="revenue"
+                                orientation="left"
+                                stroke="#6B7280"
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={formatRevenue}
+                                tick={{ fontSize: 11 }}
+                                width={48}
+                            />
 
-                        <Line
-                            type="monotone"
-                            dataKey="revenue"
-                            stroke="#8B5CF6"
-                            strokeWidth={3}
-                            dot={{ r: 5, fill: "#8B5CF6" }}
-                            activeDot={{ r: 7 }}
-                        />
+                            <YAxis
+                                yAxisId="tickets"
+                                orientation="right"
+                                stroke="#6B7280"
+                                tickLine={false}
+                                axisLine={false}
+                                tick={{ fontSize: 11 }}
+                                width={36}
+                            />
 
-                        <Line
-                            type="monotone"
-                            dataKey="tickets"
-                            stroke="#8B5CF6"
-                            strokeWidth={2}
-                            strokeDasharray="6 6"
-                            dot={false}
-                            opacity={0.5}
-                        />
-                    </LineChart>
-                </ResponsiveContainer>
+                            <Tooltip
+                                contentStyle={{
+                                    background: "#18122B",
+                                    border: "1px solid rgba(124,59,237,0.2)",
+                                    borderRadius: "12px",
+                                    fontSize: "13px",
+                                }}
+                                labelStyle={{ color: "#c4b5fd", marginBottom: "4px" }}
+                                formatter={(value: number | undefined, name: string | undefined): [string, string] => {
+                                    const v = value ?? 0;
+                                    if (name === "revenue") return [v.toLocaleString("vi-VN") + "VND", "DOANH THU"];
+                                    return [v.toLocaleString("vi-VN"), "VÉ BÁN"];
+                                }}
+                            />
+
+                            <Line
+                                yAxisId="revenue"
+                                type="monotone"
+                                dataKey="revenue"
+                                stroke="#7c3bed"
+                                strokeWidth={2.5}
+                                dot={{ r: 4, fill: "#7c3bed", strokeWidth: 0 }}
+                                activeDot={{ r: 6, strokeWidth: 0 }}
+                            />
+
+                            <Line
+                                yAxisId="tickets"
+                                type="monotone"
+                                dataKey="ticketsSold"
+                                stroke="#94a3b8"
+                                strokeWidth={2}
+                                strokeDasharray="6 4"
+                                dot={false}
+                                opacity={0.7}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
+                )}
             </div>
         </div>
     );
