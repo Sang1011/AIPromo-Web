@@ -103,7 +103,6 @@ function App() {
           <Route path="overview" element={<SummaryPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="marketing" element={<MarketingPage />} />
-          <Route path="marketing/:marketingId/post-review" element={<PostPreviewPage />} />
           <Route path="marketing/:marketingId" element={<MarketingDetailPage />} />
           <Route path="orders" element={<OrderListPage />} />
           <Route path="check-in" element={<CheckInPage />} />
@@ -112,6 +111,10 @@ function App() {
           <Route path="seat-map" element={<EventTicketPage />} />
           <Route path="vouchers" element={<VoucherManagementPage />} />
         </Route >
+        <Route
+          path="/organizer/my-events/:eventId/marketing/:marketingId/post-review"
+          element={<PostPreviewPage />}
+        />
         <Route path="/organizer/my-events/:eventId/seat-map/edit" element={<SeatMapEditorPage />} />
 
         {/* Admin group */}

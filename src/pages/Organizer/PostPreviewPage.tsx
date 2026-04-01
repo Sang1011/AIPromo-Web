@@ -49,7 +49,7 @@ export default function PostPreviewPage() {
                 </div>
             </div>
 
-            <div className="max-w-2xl mx-auto px-6 py-10">
+            <div className="max-w-3xl mx-auto px-6 py-10">
                 <div className="mb-6 flex items-center gap-2 text-xs text-slate-600">
                     <span className="w-2 h-2 rounded-full bg-primary inline-block" />
                     Được tạo bởi AI · {state.title}

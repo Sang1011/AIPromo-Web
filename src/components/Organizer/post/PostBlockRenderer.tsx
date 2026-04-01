@@ -20,8 +20,8 @@ function BlockItem({ block }: { block: ContentBlock }) {
     switch (block.type) {
         case "heading": {
             const base = "font-bold text-white leading-snug";
-            if (block.level === 1) return <h1 className={`text-3xl ${base}`}>{block.text}</h1>;
-            if (block.level === 2) return <h2 className={`text-2xl ${base}`}>{block.text}</h2>;
+            if (block.level === 1) return <h1 className={`text-4xl ${base}`}>{block.text}</h1>;
+            if (block.level === 2) return <h2 className={`text-3xl ${base}`}>{block.text}</h2>;
             return <h3 className={`text-xl ${base}`}>{block.text}</h3>;
         }
 

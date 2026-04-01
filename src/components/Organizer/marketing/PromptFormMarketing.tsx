@@ -17,6 +17,7 @@ import { buildContextPrompt } from "../../../utils/buildContextPrompt";
 import { formatDateTime } from "../../../utils/formatDateTime";
 import type { ContentBlock, CreatePostDraftRequest } from "../../../types/post/post";
 import { serializeBlocksToBody } from "../../../utils/renderPostContent";
+import type { GetEventDetailResponse } from "../../../types/event/event";
 
 
 function ReadOnlyField({ label, value }: { label: string; value?: string | null }) {
@@ -456,7 +457,7 @@ export default function PromptFormMarketing() {
     const handleGenerate = (tone: string, userPrompt: string) => {
         if (!eventId || !currentEvent) return;
         const context = buildContextPrompt(
-            currentEvent as any,
+            currentEvent as GetEventDetailResponse,
             tone || undefined,
             selectedImageUrl ?? undefined,
         );
