@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchWalletUser } from "../../../store/walletSlice";
 import type { WalletTransaction } from "../../../types/wallet/wallet";
-import type { WithdrawalRequest } from "../../../types/withdrawal/withdrawal";
+import type { CreateWithdrawal } from "../../../types/withdrawal/withdrawal";
 import { fetchCreateWithdrawal } from "../../../store/withdrawalSlice";
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ const BANK_LIST = [
 interface WithdrawalModalProps {
     walletBalance: number;
     onClose: () => void;
-    onSubmit: (data: WithdrawalRequest) => Promise<void>;
+    onSubmit: (data: CreateWithdrawal) => Promise<void>;
     isLoading: boolean;
     isSuccess: boolean;
 }
@@ -201,17 +201,17 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     isLoading,
     isSuccess,
 }) => {
-    const [form, setForm] = useState<WithdrawalRequest>({
+    const [form, setForm] = useState<CreateWithdrawal>({
         bankAccountNumber: "",
         bankName: "",
         amount: 0,
         notes: "",
     });
     const [amountStr, setAmountStr] = useState("");
-    const [errors, setErrors] = useState<Partial<Record<keyof WithdrawalRequest, string>>>({});
+    const [errors, setErrors] = useState<Partial<Record<keyof CreateWithdrawal, string>>>({});
 
     const validate = (): boolean => {
-        const errs: Partial<Record<keyof WithdrawalRequest, string>> = {};
+        const errs: Partial<Record<keyof CreateWithdrawal, string>> = {};
         if (!form.bankAccountNumber.trim()) errs.bankAccountNumber = "Vui lòng nhập số tài khoản";
         if (!form.bankName) errs.bankName = "Vui lòng chọn ngân hàng";
         if (!form.amount || form.amount <= 0) errs.amount = "Vui lòng nhập số tiền hợp lệ";
@@ -231,7 +231,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
         await onSubmit(form);
     };
 
-    const inputCls = (field: keyof WithdrawalRequest) => ({
+    const inputCls = (field: keyof CreateWithdrawal) => ({
         background: "rgba(255,255,255,0.04)",
         border: `1px solid ${errors[field] ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.1)"}`,
         borderRadius: "12px",
@@ -579,7 +579,7 @@ const PaymentHistoryUser: React.FC = () => {
     const countOut = allTransactions.filter((t) => t.direction === "Out").length;
 
     // ── Withdrawal handler ─────────────────────────────────────────
-    const handleWithdraw = async (data: WithdrawalRequest) => {
+    const handleWithdraw = async (data: CreateWithdrawal) => {
         setWithdrawLoading(true);
         try {
             const result = await dispatch(fetchCreateWithdrawal(data));

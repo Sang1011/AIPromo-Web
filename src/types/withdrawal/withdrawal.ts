@@ -13,6 +13,13 @@ export interface WithdrawalRequest {
     avatar?: string;
 }
 
+export interface CreateWithdrawal{
+    bankAccountNumber: string;
+    bankName: string;
+    amount: number;
+    notes?: string;
+}
+
 export interface WithdrawalDetail {
     id: string;
     userId: string;
