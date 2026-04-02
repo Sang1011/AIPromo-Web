@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchGetDetailOrder } from "../../store/orderSlice";
 import { fetchPaymentOrder } from "../../store/paymentSlice";
@@ -9,6 +9,8 @@ import type { PaymentOrderPaymentResponse } from "../../types/payment/payment";
 import type { ToUpWalletResponse } from "../../types/wallet/wallet";
 import { fetchApplyVoucher, fetchGetVouchers } from "../../store/voucherSlice";
 import { notify } from "../../utils/notify";
+import { clearOldOrderFromFirebase } from "../../utils/orderFirebase";
+import { useOrderTimer } from "../../hooks/useOrderTimer";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Voucher {
@@ -233,7 +235,6 @@ const VoucherSection: React.FC<{
       return;
     }
     if (appliedVoucher?.id === v.id) {
-      // Bỏ chọn nếu đang chọn cùng voucher
       onApply(null);
       notify.success("Đã bỏ áp dụng voucher");
       return;
@@ -272,7 +273,6 @@ const VoucherSection: React.FC<{
     notify.success("Đã bỏ áp dụng voucher");
   };
 
-  // Format ngày hết hạn ngắn gọn
   const formatShortDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "2-digit" });
@@ -387,7 +387,6 @@ const VoucherSection: React.FC<{
                     cursor: isActive ? "pointer" : "not-allowed",
                   }}
                 >
-                  {/* Glow effect khi selected */}
                   {isSelected && (
                     <div
                       className="absolute inset-0 rounded-xl pointer-events-none"
@@ -395,7 +394,6 @@ const VoucherSection: React.FC<{
                     />
                   )}
 
-                  {/* Badge trạng thái */}
                   {status !== "active" && (
                     <span
                       className="absolute top-2.5 right-2.5 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
@@ -405,7 +403,6 @@ const VoucherSection: React.FC<{
                     </span>
                   )}
 
-                  {/* Checkmark khi selected */}
                   {isSelected && (
                     <div
                       className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center"
@@ -415,7 +412,6 @@ const VoucherSection: React.FC<{
                     </div>
                   )}
 
-                  {/* Main content */}
                   <div className="flex items-start gap-3">
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
@@ -528,7 +524,6 @@ const VoucherSection: React.FC<{
           </button>
         </div>
 
-        {/* Hint danh sách mã Fixed có thể nhập (có thể bỏ nếu không muốn lộ) */}
         <p className="text-[11px] text-slate-600 mt-2 px-1">
           Nhập mã và nhấn "Áp dụng" hoặc Enter để kiểm tra
         </p>
@@ -546,6 +541,7 @@ export default function PaymentTicket() {
   const dataVoucher: Voucher[] = (vouchers?.items ?? []) as Voucher[];
 
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
 
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletNotFound, setWalletNotFound] = useState(false);
@@ -581,7 +577,6 @@ export default function PaymentTicket() {
   // ── Voucher state ──────────────────────────────────────────────────────────
   const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
 
-  // Discount: ưu tiên voucher user chọn, fallback về orderDetail.discountAmount
   const voucherDiscount = calcDiscount(appliedVoucher, orderSubTotal);
   const baseDiscountAmount = orderDetail?.discountAmount ?? 0;
   const discountAmount = appliedVoucher ? voucherDiscount : baseDiscountAmount;
@@ -604,11 +599,30 @@ export default function PaymentTicket() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [topUpError, setTopUpError] = useState<string | null>(null);
 
+  // ── useOrderTimer ──────────────────────────────────────────────────────────
+  const handleOrderExpired = useCallback(() => {
+    notify.error("Đơn hàng đã hết thời gian giữ chỗ. Vui lòng đặt vé lại.");
+    navigate("/");
+  }, [navigate]);
+
+  const { secondsLeft } = useOrderTimer(
+    resolvedOrderId ?? null,
+    handleOrderExpired
+  );
+
+  const timerDisplay = useMemo(() => {
+    const m = Math.floor(secondsLeft / 60).toString().padStart(2, "0");
+    const s = (secondsLeft % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }, [secondsLeft]);
+
+  const isTimerWarning = secondsLeft <= 60;
+
   // ── Effects ────────────────────────────────────────────────────────────────
- useEffect(() => {
-  if (!orderDetail?.eventId) return;
-  dispatch(fetchGetVouchers({ EventId: orderDetail.eventId }));
-}, [dispatch, orderDetail?.eventId]);
+  useEffect(() => {
+    if (!orderDetail?.eventId) return;
+    dispatch(fetchGetVouchers({ EventId: orderDetail.eventId }));
+  }, [dispatch, orderDetail?.eventId]);
 
   useEffect(() => {
     if (orderIdFromStorage) {
@@ -665,6 +679,8 @@ export default function PaymentTicket() {
       );
       if (fetchPaymentOrder.fulfilled.match(result)) {
         const payload = (result.payload as any)?.data as PaymentOrderPaymentResponse;
+        // Dọn Firebase + localStorage trước khi redirect
+        await clearOldOrderFromFirebase();
         redirectIfUrl(payload?.paymentUrl);
       }
     })();
@@ -708,7 +724,7 @@ export default function PaymentTicket() {
   };
 
   // ── handlePayment ──────────────────────────────────────────────────────────
-const handlePayment = async () => {
+  const handlePayment = async () => {
     setPayError(null);
     if (!resolvedOrderId) {
       setPayError("Không tìm thấy thông tin đơn hàng để thanh toán.");
@@ -773,6 +789,16 @@ const handlePayment = async () => {
 
       if (fetchPaymentOrder.fulfilled.match(result)) {
         const payload = (result.payload as any)?.data as PaymentOrderPaymentResponse;
+
+        // Dọn Firebase + localStorage trước khi redirect
+        // Lưu ý: nếu thanh toán qua VNPay (redirect sang trang ngoài),
+        // nên gọi clearOldOrderFromFirebase() ở trang callback VNPay thay vì ở đây
+        // vì window.location.href sẽ unmount component trước khi await hoàn tất.
+        // Với wallet pay (không redirect), gọi tại đây là an toàn.
+        if (selectedMethod === "wallet") {
+          await clearOldOrderFromFirebase();
+        }
+
         if (redirectIfUrl(payload?.paymentUrl)) return;
         return;
       }
@@ -819,6 +845,29 @@ const handlePayment = async () => {
           </Link>
         </div>
       </header>
+
+      {/* ── Timer Bar — sticky ngay dưới header ── */}
+      <div
+        className="sticky top-[69px] z-40 flex items-center justify-center gap-2 py-2.5 text-sm font-bold transition-colors duration-500"
+        style={{
+          background: isTimerWarning
+            ? "rgba(239,68,68,0.15)"
+            : "rgba(121,59,237,0.12)",
+          borderBottom: `1px solid ${isTimerWarning ? "rgba(239,68,68,0.3)" : "rgba(121,59,237,0.2)"}`,
+          color: isTimerWarning ? "#f87171" : "#a78bfa",
+        }}
+      >
+        <span className="material-symbols-outlined text-[16px]">
+          {isTimerWarning ? "alarm" : "timer"}
+        </span>
+        Thời gian giữ chỗ còn lại:&nbsp;
+        <span
+          className="font-mono text-base tabular-nums"
+          style={{ color: isTimerWarning ? "#ef4444" : "#c4b5fd" }}
+        >
+          {timerDisplay}
+        </span>
+      </div>
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
