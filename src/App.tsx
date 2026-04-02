@@ -52,8 +52,6 @@ import TicketingUser from "./pages/User/TickingUser";
 import PaymentHistoryUser from "./pages/User/HistoryPaymentUser";
 import PostPreviewPage from "./pages/Organizer/PostPreviewPage";
 
-
-
 function App() {
   const dispatch = useDispatch<AppDispatch>();
   const refreshToken = localStorage.getItem("REFRESH_TOKEN");

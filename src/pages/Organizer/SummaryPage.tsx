@@ -2,17 +2,30 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
-import { fetchOverviewOrganizerStats, fetchSalesTrend } from "../../store/ticketingSlice";
+import {
+    fetchOverviewOrganizerStats,
+    fetchSalesTrend,
+} from "../../store/ticketingSlice";
+import {
+    fetchRefundRate,
+    fetchTransactionSummary,
+} from "../../store/reportSlice";
 import type {
     OverviewStatistic,
     SalesTrendData,
     SalesTrendPeriod,
 } from "../../types/ticketing/ticketing";
+import type {
+    RefundRateReportItem,
+    TransactionSummaryReportItem,
+} from "../../types/report/report";
 
 import RevenueCards from "../../components/Organizer/overview/RevenueCards";
 import RevenueChart from "../../components/Organizer/overview/RevenueChart";
 import TicketTypeBreakdownTable from "../../components/Organizer/overview/TicketTypeBreakdownTable";
-import TicketTypeBarChart from "../../components/Organizer/overview/ticketTypeBarChart";
+import TicketTypeBarChart from "../../components/Organizer/overview/ticketTypeBarChart"
+import RefundRateCard from "../../components/Organizer/overview/RefundRateCard";
+import TransactionSummaryCard from "../../components/Organizer/overview/TransactionSummaryCard";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -82,12 +95,49 @@ const mockSalesTrendWeek: SalesTrendData = {
     ],
 };
 
+const mockRefundRate: RefundRateReportItem = {
+    eventId: "mock-event-id",
+    grossRevenue: 167_000_000,
+    totalRefunds: 8_500_000,
+    refundRatePercent: 5.09,
+};
+
+const mockTransactionSummary: TransactionSummaryReportItem = {
+    eventId: "mock-event-id",
+    totalTransactions: 342,
+    completedCount: 312,
+    failedCount: 18,
+    refundedCount: 12,
+    walletPayAmount: 98_000_000,
+    directPayAmount: 56_500_000,
+};
+
+// ─── Empty-state fallbacks (shown when API returns no data yet) ───────────────
+
+const emptyRefundRate = (eventId: string): RefundRateReportItem => ({
+    eventId,
+    grossRevenue: 0,
+    totalRefunds: 0,
+    refundRatePercent: 0,
+});
+
+const emptyTransactionSummary = (eventId: string): TransactionSummaryReportItem => ({
+    eventId,
+    totalTransactions: 0,
+    completedCount: 0,
+    failedCount: 0,
+    refundedCount: 0,
+    walletPayAmount: 0,
+    directPayAmount: 0,
+});
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SummaryPage() {
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
 
+    // ── Ticketing slice ──────────────────────────────────────────────────────
     const {
         overviewStats: reduxOverview,
         loading: reduxLoading,
@@ -95,21 +145,39 @@ export default function SummaryPage() {
         salesTrendLoading: reduxTrendLoading,
     } = useSelector((state: RootState) => state.TICKETING);
 
+    // ── Report slice ─────────────────────────────────────────────────────────
+    const {
+        refundRate: reduxRefundRate,
+        transactionSummary: reduxTransactionSummary,
+        loading: reportLoading,
+    } = useSelector((state: RootState) => state.REPORT);
+
     const [period, setPeriod] = useState<SalesTrendPeriod>("Day");
 
-    // Mock state
+    // ── Mock state ───────────────────────────────────────────────────────────
     const [mockOverview, setMockOverview] = useState<OverviewStatistic | null>(null);
     const [mockTrend, setMockTrend] = useState<SalesTrendData | null>(null);
     const [mockLoading, setMockLoading] = useState(false);
     const [mockTrendLoading, setMockTrendLoading] = useState(false);
 
-    // Active data source
+    // ── Active data source ───────────────────────────────────────────────────
     const overviewStats = USE_MOCK ? mockOverview : reduxOverview;
     const salesTrend = USE_MOCK ? mockTrend : reduxTrend;
     const loading = USE_MOCK ? mockLoading : reduxLoading;
     const salesTrendLoading = USE_MOCK ? mockTrendLoading : reduxTrendLoading;
 
-    // Fetch overview once on mount
+    const refundRateLoading = USE_MOCK ? false : !!reportLoading.refundRate;
+    const transactionLoading = USE_MOCK ? false : !!reportLoading.transaction;
+
+    // Always render both cards — fallback to zero/empty state when no data
+    const refundRate = USE_MOCK
+        ? mockRefundRate
+        : (reduxRefundRate ?? emptyRefundRate(eventId ?? ""));
+    const transactionSummary = USE_MOCK
+        ? mockTransactionSummary
+        : (reduxTransactionSummary ?? emptyTransactionSummary(eventId ?? ""));
+
+    // ── Fetch overview once on mount ─────────────────────────────────────────
     useEffect(() => {
         if (!eventId) return;
 
@@ -121,10 +189,12 @@ export default function SummaryPage() {
             }, 600);
         } else {
             dispatch(fetchOverviewOrganizerStats({ eventId }));
+            dispatch(fetchRefundRate(eventId));
+            dispatch(fetchTransactionSummary(eventId));
         }
     }, [eventId, dispatch]);
 
-    // Fetch trend — re-runs when period changes
+    // ── Fetch trend when period changes ─────────────────────────────────────
     useEffect(() => {
         if (!eventId) return;
 
@@ -149,10 +219,12 @@ export default function SummaryPage() {
 
     return (
         <div className="space-y-8">
+            {/* ── Revenue summary cards ──────────────────────────────────── */}
             {overviewStats?.summary && (
                 <RevenueCards summary={overviewStats.summary} />
             )}
 
+            {/* ── Sales trend chart ──────────────────────────────────────── */}
             <RevenueChart
                 trendData={salesTrend}
                 period={period}
@@ -160,13 +232,19 @@ export default function SummaryPage() {
                 onPeriodChange={setPeriod}
             />
 
+            {/* ── Refund & Transaction analytics (side by side) ─────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <RefundRateCard data={refundRate} loading={refundRateLoading} />
+                <TransactionSummaryCard data={transactionSummary} loading={transactionLoading} />
+            </div>
+
+            {/* ── Ticket type breakdown ──────────────────────────────────── */}
             {overviewStats?.ticketTypeBreakdown && (
                 <>
                     <TicketTypeBarChart breakdown={overviewStats.ticketTypeBreakdown} />
                     <TicketTypeBreakdownTable breakdown={overviewStats.ticketTypeBreakdown} />
                 </>
             )}
-
         </div>
     );
 }

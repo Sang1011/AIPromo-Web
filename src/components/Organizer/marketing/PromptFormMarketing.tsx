@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { GrFormNextLink } from "react-icons/gr";
 import {
     MdOutlineBolt, MdOutlineCategory, MdOutlineImage,
     MdOutlinePerson, MdOutlineSmartToy, MdOutlineTag,
     MdOutlineTextFields,
 } from "react-icons/md";
-import { GrFormNextLink } from "react-icons/gr";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
@@ -13,11 +13,12 @@ import {
     clearCreatedPostId, clearGeneratedDraft, clearGeneratedImageUrl,
     createPostDraft, generateContentPostUsingAI, generateImage,
 } from "../../../store/postSlice";
+import type { GetEventDetailResponse } from "../../../types/event/event";
+import type { ContentBlock, CreatePostDraftRequest } from "../../../types/post/post";
 import { buildContextPrompt } from "../../../utils/buildContextPrompt";
 import { formatDateTime } from "../../../utils/formatDateTime";
-import type { ContentBlock, CreatePostDraftRequest } from "../../../types/post/post";
 import { serializeBlocksToBody } from "../../../utils/renderPostContent";
-import type { GetEventDetailResponse } from "../../../types/event/event";
+import PostBlockRenderer from "../post/PostBlockRenderer";
 
 
 function ReadOnlyField({ label, value }: { label: string; value?: string | null }) {
@@ -202,7 +203,7 @@ function ContentTab({
 
             {error.generateAI && (
                 <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                    {error.generateAI}
+                    Không thể tạo nội dung AI
                 </p>
             )}
 
@@ -353,7 +354,7 @@ function ImageTab({
 
             {error.generateImage && (
                 <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                    {error.generateImage}
+                    Không thể tạo ảnh AI
                 </p>
             )}
 
@@ -436,7 +437,6 @@ export default function PromptFormMarketing() {
         useSelector((s: RootState) => s.POST);
 
     const [activeTab, setActiveTab] = useState<ActiveTab>("content");
-    // selectedImageUrl là source of truth — chỉ set khi user bấm "Dùng ảnh này"
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
@@ -486,10 +486,16 @@ export default function PromptFormMarketing() {
         dispatch(createPostDraft(payload));
     };
 
+    const [previewBlocks, setPreviewBlocks] = useState<ContentBlock[] | null>(null);
+
     const handlePreview = (blocks: ContentBlock[]) => {
-        navigate("preview", {
-            state: { blocks, title: generatedDraft?.title ?? "Preview" },
-        });
+        setPreviewBlocks(blocks);
+        setTimeout(() => {
+            const previewSection = document.getElementById("preview");
+            if (previewSection) {
+                previewSection.scrollIntoView({ behavior: "smooth" });
+            }
+        }, 100);
     };
 
     const event = currentEvent as any;
@@ -500,87 +506,121 @@ export default function PromptFormMarketing() {
     ];
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-5">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Thông tin sự kiện
-                </span>
-                {loading.fetchDetail ? (
-                    <p className="text-slate-500 text-sm animate-pulse">Đang tải...</p>
-                ) : event ? (
-                    <>
-                        <ReadOnlyField label="Tên sự kiện" value={event.title} />
-                        <ReadOnlyField label="Mô tả" value={event.description} />
-                        <ReadOnlyField label="Địa điểm" value={event.location} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <ReadOnlyTags label="Danh mục" icon={MdOutlineCategory} items={event.categories ?? []} />
-                            <ReadOnlyTags label="Hashtags" icon={MdOutlineTag} items={event.hashtags ?? []} />
-                        </div>
-                        <ActorList actors={event.actorImages ?? []} />
-                        <SessionList sessions={event.sessions ?? []} />
-                    </>
-                ) : (
-                    <p className="text-slate-600 text-sm">Không tìm thấy thông tin sự kiện.</p>
-                )}
-            </div>
+        <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-5">
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        Thông tin sự kiện
+                    </span>
+                    {loading.fetchDetail ? (
+                        <p className="text-slate-500 text-sm animate-pulse">Đang tải...</p>
+                    ) : event ? (
+                        <>
+                            <ReadOnlyField label="Tên sự kiện" value={event.title} />
+                            <ReadOnlyField label="Mô tả" value={event.description} />
+                            <ReadOnlyField label="Địa điểm" value={event.location} />
+                            <div className="grid grid-cols-2 gap-4">
+                                <ReadOnlyTags label="Danh mục" icon={MdOutlineCategory} items={event.categories ?? []} />
+                                <ReadOnlyTags label="Hashtags" icon={MdOutlineTag} items={event.hashtags ?? []} />
+                            </div>
+                            <ActorList actors={event.actorImages ?? []} />
+                            <SessionList sessions={event.sessions ?? []} />
+                        </>
+                    ) : (
+                        <p className="text-slate-600 text-sm">Không tìm thấy thông tin sự kiện.</p>
+                    )}
+                </div>
 
-            <div className="bg-primary/5 rounded-3xl border border-primary/10 overflow-hidden">
-                <div className="flex border-b border-primary/10">
-                    {TABS.map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
-                        return (
-                            <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold
+                <div className="bg-primary/5 rounded-3xl border border-primary/10 overflow-hidden">
+                    <div className="flex border-b border-primary/10">
+                        {TABS.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold
                                             transition-all border-b-2
                                             ${isActive
-                                        ? "border-primary text-primary bg-primary/5"
-                                        : "border-transparent text-slate-500 hover:text-slate-300"
-                                    }`}>
-                                <Icon className="text-base" />
-                                {tab.label}
-                                {tab.id === "image" && selectedImageUrl && (
-                                    <span className="w-2 h-2 rounded-full bg-green-400 ml-0.5" />
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                <div className="p-6">
-                    <div className="flex items-center gap-2 mb-5">
-                        <MdOutlineSmartToy className="text-primary text-sm" />
-                        <span className="text-xs font-bold text-primary uppercase tracking-widest">
-                            AI Assistant
-                        </span>
+                                            ? "border-primary text-primary bg-primary/5"
+                                            : "border-transparent text-slate-500 hover:text-slate-300"
+                                        }`}>
+                                    <Icon className="text-base" />
+                                    {tab.label}
+                                    {tab.id === "image" && selectedImageUrl && (
+                                        <span className="w-2 h-2 rounded-full bg-green-400 ml-0.5" />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
 
-                    {activeTab === "content" && (
-                        <ContentTab
-                            event={event}
-                            generatedDraft={generatedDraft}
-                            loading={loading}
-                            error={error}
-                            selectedImageUrl={selectedImageUrl}
-                            onGenerate={handleGenerate}
-                            onSaveDraft={handleSaveDraft}
-                            onPreview={handlePreview}
-                        />
-                    )}
+                    <div className="p-6">
+                        <div className="flex items-center gap-2 mb-5">
+                            <MdOutlineSmartToy className="text-primary text-sm" />
+                            <span className="text-xs font-bold text-primary uppercase tracking-widest">
+                                AI Assistant
+                            </span>
+                        </div>
 
-                    {activeTab === "image" && (
-                        <ImageTab
-                            generatedImageUrl={generatedImageUrl}
-                            selectedImageUrl={selectedImageUrl}
-                            loading={loading}
-                            error={error}
-                            onGenerate={handleGenerateImage}
-                            onSelectImage={(url) => setSelectedImageUrl(url)}
-                            onClearImage={() => setSelectedImageUrl(null)}
-                        />
-                    )}
+                        {activeTab === "content" && (
+                            <ContentTab
+                                event={event}
+                                generatedDraft={generatedDraft}
+                                loading={loading}
+                                error={error}
+                                selectedImageUrl={selectedImageUrl}
+                                onGenerate={handleGenerate}
+                                onSaveDraft={handleSaveDraft}
+                                onPreview={handlePreview}
+                            />
+                        )}
+
+                        {activeTab === "image" && (
+                            <ImageTab
+                                generatedImageUrl={generatedImageUrl}
+                                selectedImageUrl={selectedImageUrl}
+                                loading={loading}
+                                error={error}
+                                onGenerate={handleGenerateImage}
+                                onSelectImage={(url) => setSelectedImageUrl(url)}
+                                onClearImage={() => setSelectedImageUrl(null)}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+            {previewBlocks && previewBlocks.length > 0 && (
+                <>
+                    <div id="preview" className="mt-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <MdOutlineSmartToy className="text-primary" />
+                                <span className="text-xs font-bold text-primary uppercase tracking-widest">
+                                    Preview bài đăng
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setPreviewBlocks(null)}
+                                className="text-xs text-slate-500 hover:text-slate-300 transition">
+                                Đóng preview
+                            </button>
+                        </div>
+                        <div className="bg-card-dark border border-slate-800 rounded-3xl p-8">
+                            <PostBlockRenderer blocks={previewBlocks} />
+                        </div>
+                    </div>
+                    <div className="flex justify-end">
+                        <button type="button" onClick={() => handleSaveDraft(previewBlocks)}
+                            disabled={loading.createDraft}
+                            className="mt-4 px-10 border text-white bg-primary hover:bg-primary/70 hover:text-white
+                                       disabled:opacity-50 disabled:cursor-not-allowed
+                                       py-3 rounded-2xl font-bold text-sm
+                                       flex items-center justify-center gap-2 transition-all">
+                            {loading.createDraft ? <><Spinner /><span>Đang lưu...</span></> : "Lưu bản nháp"}
+                        </button>
+                    </div>
+                </>
+            )}
+        </>
     );
 }
