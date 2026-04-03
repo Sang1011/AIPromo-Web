@@ -8,15 +8,48 @@ import {
     Legend,
     CartesianGrid,
 } from "recharts";
-import type { TicketTypeBreakdown } from "../../../types/ticketing/ticketing";
+import type { TicketTypeBreakdown, TicketStat } from "../../../types/ticketing/ticketing";
+
+// ─── Normalize ────────────────────────────────────────────────────────────────
+
+interface NormalizedTicket {
+    name: string;
+    totalQuantity: number;
+    quantitySold: number;
+    quantityCheckedIn: number;
+}
+
+function normalize(items: TicketTypeBreakdown[] | TicketStat[]): NormalizedTicket[] {
+    return items.map((item) => {
+        if ("totalQuantity" in item) {
+            // TicketTypeBreakdown
+            return {
+                name: item.ticketTypeName,
+                totalQuantity: item.totalQuantity,
+                quantitySold: item.quantitySold,
+                quantityCheckedIn: item.quantityCheckedIn,
+            };
+        }
+        // TicketStat
+        return {
+            name: item.ticketTypeName,
+            totalQuantity: item.quantity,
+            quantitySold: item.sold,
+            quantityCheckedIn: item.checkedIn,
+        };
+    });
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface TicketTypeBarChartProps {
-    breakdown: TicketTypeBreakdown[];
+    breakdown: TicketTypeBreakdown[] | TicketStat[];
 }
+
+// ─── Custom tooltip / legend ──────────────────────────────────────────────────
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
-
     return (
         <div className="bg-[#18122B] border border-primary/20 rounded-xl p-3 shadow-xl text-sm">
             <p className="text-white font-semibold mb-2">{label}</p>
@@ -41,6 +74,8 @@ const CustomLegend = ({ payload }: any) => (
     </div>
 );
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function TicketTypeBarChart({ breakdown }: TicketTypeBarChartProps) {
     if (!Array.isArray(breakdown) || breakdown.length === 0) {
         return (
@@ -50,14 +85,13 @@ export default function TicketTypeBarChart({ breakdown }: TicketTypeBarChartProp
         );
     }
 
-    const chartData = breakdown.map((t) => ({
-        name: t.ticketTypeName,
+    const chartData = normalize(breakdown).map((t) => ({
+        name: t.name,
         "Tổng vé": t.totalQuantity,
         "Đã bán": t.quantitySold,
         "Đã check-in": t.quantityCheckedIn,
     }));
 
-    // > 4 loại vé: nghiêng label + tăng chiều cao để tránh chồng chéo
     const manyTypes = breakdown.length > 4;
     const chartHeight = manyTypes ? 380 : 320;
 

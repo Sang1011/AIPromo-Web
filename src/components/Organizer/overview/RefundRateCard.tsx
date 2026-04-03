@@ -73,6 +73,9 @@ export default function RefundRateCard({ data, loading }: Props) {
                                     color: "#fff",
                                     fontSize: 12,
                                 }}
+                                itemStyle={{
+                                    color: "whitesmoke"
+                                }}
                             />
                         </PieChart>
                     </ResponsiveContainer>
