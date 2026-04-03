@@ -61,17 +61,17 @@ function Login() {
             localStorage.removeItem(REMEMBER_ME_KEY);
             localStorage.removeItem(SAVED_EMAIL_KEY);
           }
-         const roles = res.payload.data.user.roles;
+          const roles = res.payload.data.user.roles;
           if (roles.includes('Organizer')) {
-              navigate("/organizer/my-events");
+            navigate("/organizer/overall");
           } else if (roles.includes('Staff')) {
-              navigate("/staff/event-approval");
-          } else if(roles.includes('Admin')) {
-              navigate("/admin");
-          }else{
+            navigate("/staff/event-approval");
+          } else if (roles.includes('Admin')) {
+            navigate("/admin");
+          } else {
             navigate("/");
           }
-          
+
         } else {
           setError("Email hoặc mật khẩu không đúng. Vui lòng thử lại.");
         }
@@ -103,7 +103,7 @@ function Login() {
         if (res.payload?.isSuccess) {
           navigate("/");
         } else {
-          setError( "Đăng nhập Google thất bại. Vui lòng thử lại.");
+          setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
         }
       });
     } catch {
@@ -162,7 +162,7 @@ function Login() {
         <div className="flex items-center gap-4">
           <span className="hidden sm:inline text-sm text-slate-300">Chưa có tài khoản?</span>
           <button className="bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2 px-6 rounded-lg transition-all shadow-lg shadow-primary/20">
-           <Link to="/register">Đăng ký</Link> 
+            <Link to="/register">Đăng ký</Link>
           </button>
         </div>
       </header>
@@ -257,7 +257,7 @@ function Login() {
                 <label className="block text-sm font-medium text-slate-200" htmlFor="password">
                   Mật khẩu
                 </label>
-               <Link to="/forgot-password"> <a className="text-xs text-primary hover:text-primary/80 transition-colors font-medium" href="#">
+                <Link to="/forgot-password"> <a className="text-xs text-primary hover:text-primary/80 transition-colors font-medium" href="#">
                   Quên mật khẩu?
                 </a>
                 </Link>
