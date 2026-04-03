@@ -52,6 +52,7 @@ import TicketingUser from "./pages/User/TickingUser";
 import PaymentHistoryUser from "./pages/User/HistoryPaymentUser";
 import PostPreviewPage from "./pages/Organizer/PostPreviewPage";
 import OrganizerOverviewAllPage from "./pages/Organizer/OgranizerOverviewAllPage";
+import SubscriptionPage from "./pages/Organizer/SubscriptionPage";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -97,6 +98,7 @@ function App() {
           <Route path="create-event" element={<CreateEventPage />} />
           <Route path="accounts" element={<OrganizerAccountPage />} />
         </Route>
+        <Route path="/organizer/subscription" element={<SubscriptionPage />} />
 
         {/* Organizer - Event group */}
         <Route path="/organizer/my-events/:eventId" element={<ManagementLayout />}>

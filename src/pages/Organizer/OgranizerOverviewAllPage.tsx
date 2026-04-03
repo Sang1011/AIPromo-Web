@@ -1,6 +1,11 @@
-import { CalendarDays, DollarSign, RotateCcw, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import {
+    RiMoneyDollarCircleLine,
+    RiRefund2Line,
+    RiCalendarEventLine,
+    RiLineChartLine,
+} from "react-icons/ri";
 import {
     Bar,
     BarChart,
@@ -73,19 +78,19 @@ const statusBadge = (status: string) => {
     switch (status) {
         case "active":
             return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-950 text-emerald-400 border border-emerald-900">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-emerald-950 text-emerald-400 border border-emerald-900">
                     Đang mở
                 </span>
             );
         case "upcoming":
             return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-950 text-amber-400 border border-amber-900">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-amber-950 text-amber-400 border border-amber-900">
                     Sắp diễn ra
                 </span>
             );
         default:
             return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-slate-800 text-slate-400 border border-slate-700">
                     Đã kết thúc
                 </span>
             );
@@ -98,7 +103,7 @@ const refundColor = (rate: number) => {
     return "#f87171";
 };
 
-// ─── Custom tooltip styles (dark, readable) ───────────────────────────────────
+// ─── Custom tooltip styles ────────────────────────────────────────────────────
 
 const TooltipStyle = {
     contentStyle: {
@@ -106,7 +111,7 @@ const TooltipStyle = {
         border: "1px solid #334155",
         borderRadius: "10px",
         color: "#f1f5f9",
-        fontSize: "12px",
+        fontSize: "13px",
         padding: "10px 14px",
     },
     itemStyle: { color: "#cbd5e1" },
@@ -129,15 +134,15 @@ function MetricCard({ icon, iconBg, label, value, sub, subColor }: MetricCardPro
     return (
         <div className="bg-card-dark rounded-xl border border-border-dark p-5 flex flex-col gap-3">
             <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center"
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
                 style={{ background: iconBg }}
             >
                 {icon}
             </div>
             <div>
-                <p className="text-xs text-text-muted uppercase tracking-widest mb-1">{label}</p>
-                <p className="text-2xl font-medium text-white">{value}</p>
-                <p className="text-xs mt-1" style={{ color: subColor ?? "#64748b" }}>
+                <p className="text-sm text-white uppercase font-bold tracking-widest mb-1">{label}</p>
+                <p className="text-2xl font-semibold text-gray-100">{value}</p>
+                <p className="text-sm mt-1" style={{ color: subColor ?? "#64748b" }}>
                     {sub}
                 </p>
             </div>
@@ -155,8 +160,8 @@ interface SectionCardProps {
 function SectionCard({ title, sub, children, className = "" }: SectionCardProps) {
     return (
         <div className={`bg-card-dark rounded-xl border border-border-dark p-5 ${className}`}>
-            <p className="text-sm font-medium text-white">{title}</p>
-            <p className="text-xs text-text-muted mt-0.5 mb-4">{sub}</p>
+            <p className="text-base font-semibold text-white">{title}</p>
+            <p className="text-sm text-text-muted mt-0.5 mb-4">{sub}</p>
             {children}
         </div>
     );
@@ -181,7 +186,6 @@ export default function OrganizerOverviewAllPage() {
         dispatch(fetchRevenueBreakdownOrganizer({ organizerId: MOCK_ORGANIZER_ID, byNet }));
     }, [dispatch, byNet]);
 
-    // Use redux data if available, otherwise fall back to mock
     const summary = revenueSummaryOrganizer ?? {
         organizerId: MOCK_ORGANIZER_ID,
         grossRevenue: 842_500_000,
@@ -193,14 +197,12 @@ export default function OrganizerOverviewAllPage() {
     const grossBreakdown = mockBreakdown;
     const netBreakdown = mockBreakdownNet;
 
-    // Merge gross + net for grouped bar chart
     const barData = grossBreakdown.map((g, i) => ({
         name: g.eventId.replace(" 2025", "").replace(" 2024", ""),
         gross: Math.round(g.revenue / 1_000_000),
         net: Math.round((netBreakdown[i]?.revenue ?? 0) / 1_000_000),
     }));
 
-    // Donut data
     const totalGross = grossBreakdown.reduce((s, x) => s + x.revenue, 0);
     const donutData = grossBreakdown.map((x) => ({
         name: x.eventId.replace(" 2025", "").replace(" 2024", ""),
@@ -219,42 +221,40 @@ export default function OrganizerOverviewAllPage() {
                     {[...Array(4)].map((_, i) => (
                         <div
                             key={i}
-                            className="bg-card-dark rounded-xl border border-border-dark p-5 h-32 animate-pulse"
+                            className="bg-card-dark rounded-xl border border-border-dark p-5 h-36 animate-pulse"
                         />
                     ))}
                 </div>
             ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <MetricCard
-                        iconBg="#1a0f33"
-                        icon={<TrendingUp size={16} color="#9d6ef5" />}
+                        iconBg="#7c3bed"
+                        icon={<RiLineChartLine size={20} color="#FFFFFF" />}
                         label="Tổng doanh thu gộp"
                         value={fmtVND(summary.grossRevenue) + " VND"}
                         sub="Tất cả sự kiện"
                     />
                     <MetricCard
-                        iconBg="#0a2a1a"
-                        icon={<DollarSign size={16} color="#4ade80" />}
+                        iconBg="#7c3bed"
+                        icon={<RiMoneyDollarCircleLine size={20} color="#FFFFFF" />}
                         label="Doanh thu ròng"
                         value={fmtVND(summary.netRevenue) + " VND"}
                         sub="Sau hoàn vé & khuyến mãi"
                     />
                     <MetricCard
-                        iconBg="#2a1206"
-                        icon={<CalendarDays size={16} color="#fbbf24" />}
+                        iconBg="#7c3bed"
+                        icon={<RiCalendarEventLine size={20} color="#FFFFFF" />}
                         label="Số sự kiện"
                         value={String(summary.eventCount)}
                         sub="8 đã hoàn thành · 4 đang mở"
                     />
                     <MetricCard
-                        iconBg="#2a0a0f"
-                        icon={<RotateCcw size={16} color="#f87171" />}
+                        iconBg="#7c3bed"
+                        icon={<RiRefund2Line size={20} color="#FFFFFF" />}
                         label="Tổng hoàn vé"
                         value={fmtVND(summary.totalRefunds) + " VND"}
                         sub={
-                            (
-                                ((summary.totalRefunds / summary.grossRevenue) * 100).toFixed(2)
-                            ) + "% tỉ lệ hoàn"
+                            ((summary.totalRefunds / summary.grossRevenue) * 100).toFixed(2) + "% tỉ lệ hoàn"
                         }
                         subColor="#f87171"
                     />
@@ -268,11 +268,10 @@ export default function OrganizerOverviewAllPage() {
                     title="Doanh thu theo sự kiện"
                     sub="Doanh thu gộp và ròng từng sự kiện (triệu VND)"
                 >
-                    {/* Toggle */}
                     <div className="flex items-center gap-2 mb-4">
                         <button
                             onClick={() => setByNet(false)}
-                            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${!byNet
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${!byNet
                                 ? "bg-primary text-white"
                                 : "bg-surface-dark text-text-muted hover:text-white"
                                 }`}
@@ -281,7 +280,7 @@ export default function OrganizerOverviewAllPage() {
                         </button>
                         <button
                             onClick={() => setByNet(true)}
-                            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${byNet
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${byNet
                                 ? "bg-primary text-white"
                                 : "bg-surface-dark text-text-muted hover:text-white"
                                 }`}
@@ -299,16 +298,16 @@ export default function OrganizerOverviewAllPage() {
                                     <CartesianGrid vertical={false} stroke="#1e293b" />
                                     <XAxis
                                         dataKey="name"
-                                        tick={{ fill: "#475569", fontSize: 11 }}
+                                        tick={{ fill: "#475569", fontSize: 12 }}
                                         axisLine={false}
                                         tickLine={false}
                                     />
                                     <YAxis
-                                        tick={{ fill: "#475569", fontSize: 11 }}
+                                        tick={{ fill: "#475569", fontSize: 12 }}
                                         axisLine={false}
                                         tickLine={false}
                                         tickFormatter={(v) => v + "M"}
-                                        width={42}
+                                        width={44}
                                     />
                                     <Tooltip
                                         {...TooltipStyle}
@@ -316,30 +315,19 @@ export default function OrganizerOverviewAllPage() {
                                             (val ?? 0) + "M VND",
                                         ]}
                                     />
-                                    <Bar
-                                        dataKey="gross"
-                                        name="Doanh thu gộp"
-                                        fill="#7c3bed"
-                                        radius={[4, 4, 0, 0]}
-                                    />
-                                    <Bar
-                                        dataKey="net"
-                                        name="Doanh thu ròng"
-                                        fill="#2dd4bf"
-                                        radius={[4, 4, 0, 0]}
-                                    />
+                                    <Bar dataKey="gross" name="Doanh thu gộp" fill="#7c3bed" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="net" name="Doanh thu ròng" fill="#2dd4bf" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
 
-                            {/* Legend */}
                             <div className="flex items-center gap-5 mt-3">
                                 <div className="flex items-center gap-2">
                                     <span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />
-                                    <span className="text-xs text-slate-400">Doanh thu gộp</span>
+                                    <span className="text-sm text-slate-400">Doanh thu gộp</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "#2dd4bf" }} />
-                                    <span className="text-xs text-slate-400">Doanh thu ròng</span>
+                                    <span className="text-sm text-slate-400">Doanh thu ròng</span>
                                 </div>
                             </div>
                         </>
@@ -369,9 +357,7 @@ export default function OrganizerOverviewAllPage() {
                             <Tooltip
                                 contentStyle={TooltipStyle.contentStyle}
                                 itemStyle={TooltipStyle.itemStyle}
-                                formatter={(val: number | string | undefined) => [
-                                    (val ?? 0) + "%",
-                                ]}
+                                formatter={(val: number | string | undefined) => [(val ?? 0) + "%"]}
                             />
                         </PieChart>
                     </ResponsiveContainer>
@@ -384,9 +370,9 @@ export default function OrganizerOverviewAllPage() {
                                         className="w-2.5 h-2.5 rounded-sm inline-block"
                                         style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }}
                                     />
-                                    <span className="text-xs text-slate-400 truncate max-w-[130px]">{d.name}</span>
+                                    <span className="text-sm text-slate-400 truncate max-w-[130px]">{d.name}</span>
                                 </div>
-                                <span className="text-xs font-medium text-white">{d.value}%</span>
+                                <span className="text-sm font-medium text-white">{d.value}%</span>
                             </div>
                         ))}
                     </div>
@@ -395,25 +381,22 @@ export default function OrganizerOverviewAllPage() {
 
             {/* ── Trend + Refund rates ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <SectionCard
-                    title="Xu hướng doanh thu ròng"
-                    sub="Theo tháng (triệu VND)"
-                >
+                <SectionCard title="Xu hướng doanh thu ròng" sub="Theo tháng (triệu VND)">
                     <ResponsiveContainer width="100%" height={190}>
                         <LineChart data={mockTrend}>
                             <CartesianGrid vertical={false} stroke="#1e293b" />
                             <XAxis
                                 dataKey="month"
-                                tick={{ fill: "#475569", fontSize: 11 }}
+                                tick={{ fill: "#475569", fontSize: 12 }}
                                 axisLine={false}
                                 tickLine={false}
                             />
                             <YAxis
-                                tick={{ fill: "#475569", fontSize: 11 }}
+                                tick={{ fill: "#475569", fontSize: 12 }}
                                 axisLine={false}
                                 tickLine={false}
                                 tickFormatter={(v) => v + "M"}
-                                width={42}
+                                width={44}
                             />
                             <Tooltip
                                 {...TooltipStyle}
@@ -434,19 +417,16 @@ export default function OrganizerOverviewAllPage() {
                     </ResponsiveContainer>
                 </SectionCard>
 
-                <SectionCard
-                    title="Tỉ lệ hoàn vé theo sự kiện"
-                    sub="% hoàn trên tổng doanh thu gộp"
-                >
+                <SectionCard title="Tỉ lệ hoàn vé theo sự kiện" sub="% hoàn trên tổng doanh thu gộp">
                     <div className="flex flex-col gap-4 mt-1">
                         {mockRefundRates.map((r) => (
                             <div key={r.eventId}>
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <span className="text-xs text-slate-400 truncate max-w-[170px]">
+                                    <span className="text-sm text-slate-400 truncate max-w-[170px]">
                                         {r.eventId}
                                     </span>
                                     <span
-                                        className="text-xs font-medium tabular-nums"
+                                        className="text-sm font-medium tabular-nums"
                                         style={{ color: refundColor(r.rate) }}
                                     >
                                         {r.rate}%
@@ -470,8 +450,8 @@ export default function OrganizerOverviewAllPage() {
             {/* ── Event table ── */}
             <div className="bg-card-dark rounded-xl border border-border-dark overflow-hidden">
                 <div className="px-5 py-4 border-b border-border-dark">
-                    <p className="text-sm font-medium text-white">Tổng quan tất cả sự kiện</p>
-                    <p className="text-xs text-text-muted mt-0.5">
+                    <p className="text-base font-semibold text-white">Tổng quan tất cả sự kiện</p>
+                    <p className="text-sm text-text-muted mt-0.5">
                         Doanh thu gộp · ròng · hoàn vé · trạng thái
                     </p>
                 </div>
@@ -480,24 +460,11 @@ export default function OrganizerOverviewAllPage() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-surface-dark">
-                                <th className="text-left px-5 py-3 text-xs font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
-                                    Sự kiện
-                                </th>
-                                <th className="text-left px-5 py-3 text-xs font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
-                                    Doanh thu gộp
-                                </th>
-                                <th className="text-left px-5 py-3 text-xs font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
-                                    Hoàn vé
-                                </th>
-                                <th className="text-left px-5 py-3 text-xs font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
-                                    Doanh thu ròng
-                                </th>
-                                <th className="text-left px-5 py-3 text-xs font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
-                                    Tỉ lệ hoàn
-                                </th>
-                                <th className="text-left px-5 py-3 text-xs font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
-                                    Trạng thái
-                                </th>
+                                {["Sự kiện", "Doanh thu gộp", "Hoàn vé", "Doanh thu ròng", "Tỉ lệ hoàn", "Trạng thái"].map((h) => (
+                                    <th key={h} className="text-left px-5 py-3 text-sm font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
+                                        {h}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-dark">
@@ -506,10 +473,7 @@ export default function OrganizerOverviewAllPage() {
                                 const refund = row.revenue - netRev;
                                 const rate = mockRefundRates[i];
                                 return (
-                                    <tr
-                                        key={row.eventId}
-                                        className="hover:bg-surface-dark/50 transition-colors"
-                                    >
+                                    <tr key={row.eventId} className="hover:bg-surface-dark/50 transition-colors">
                                         <td className="px-5 py-3.5 font-medium text-white whitespace-nowrap">
                                             {row.eventId}
                                         </td>
@@ -534,7 +498,7 @@ export default function OrganizerOverviewAllPage() {
                                                     />
                                                 </div>
                                                 <span
-                                                    className="text-xs font-medium tabular-nums"
+                                                    className="text-sm font-medium tabular-nums"
                                                     style={{ color: refundColor(rate.rate) }}
                                                 >
                                                     {rate.rate}%

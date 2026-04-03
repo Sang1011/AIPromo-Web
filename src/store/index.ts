@@ -18,6 +18,7 @@ import postReducer from "./postSlice";
 import staffEventReducer from "./staffEventSlice";
 import withdrawalReducer from "./withdrawalSlice";
 import reportReducer from "./reportSlice";
+import packageReducer from "./aiPackageSlice";
 
 const store = configureStore({
     reducer: {
@@ -39,7 +40,8 @@ const store = configureStore({
         POST: postReducer,
         STAFF_EVENT: staffEventReducer,
         WITHDRAWAL: withdrawalReducer,
-        REPORT: reportReducer
+        REPORT: reportReducer,
+        PACKAGE: packageReducer
     }
 })
 
