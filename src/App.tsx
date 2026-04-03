@@ -51,6 +51,7 @@ import OrderDetailUser from "./pages/User/EventUser/OrderDetailUser";
 import TicketingUser from "./pages/User/TickingUser";
 import PaymentHistoryUser from "./pages/User/HistoryPaymentUser";
 import PostPreviewPage from "./pages/Organizer/PostPreviewPage";
+import OrganizerOverviewAllPage from "./pages/Organizer/OgranizerOverviewAllPage";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -89,6 +90,7 @@ function App() {
         {/* Organizer */}
         {/* Organizer - Dashboard group */}
         <Route path="/organizer" element={<DashboardLayout />}>
+          <Route path="overall" element={<OrganizerOverviewAllPage />} />
           <Route path="my-events" element={<MyEventsPage />} />
           <Route path="reports" element={<ReportManagementPage />} />
           <Route path="legals" element={<LegalPage />} />
