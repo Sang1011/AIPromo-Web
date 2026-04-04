@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
-import { MdDashboard, MdDescription, MdHistory, MdManageAccounts } from "react-icons/md";
+import { MdDashboard, MdDescription, MdEventNote, MdHistory, MdManageAccounts } from "react-icons/md";
 import type { DashboardLayoutConfig } from "../../../types/config/dashboard.config";
 import Header from "../navigations/Header";
 import PromoSidebar from "../navigations/PromoSidebar";
@@ -12,6 +12,11 @@ const menuGroups = [
         headerGroup: [
             {
                 icon: <MdDashboard />,
+                label: "Tổng quan",
+                path: "/organizer/overall",
+            },
+            {
+                icon: <MdEventNote />,
                 label: "Sự kiện của tôi",
                 path: "/organizer/my-events",
             },

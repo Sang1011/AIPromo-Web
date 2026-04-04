@@ -302,12 +302,22 @@ export default function OrganizerAccountPage() {
     };
 
     const handleSaveProfile = () => {
+        const status = profileDetail?.status;
+        if (status === OrganizerStatus.Pending) {
+            notify.error("Hồ sơ của bạn đang trong quá trình kiểm duyệt. Sau khi chỉnh sửa và lưu, hồ sơ sẽ được đặt lại về trạng thái 'Đang kiểm duyệt' và bạn sẽ nhận được thông báo khi có kết quả kiểm duyệt mới.");
+            return;
+        }
         if (!validateProfile()) return;
         setPendingSaveType("profile");
         setConfirmOpen(true);
     };
 
     const handleSaveBank = () => {
+        const status = profileDetail?.status;
+        if (status === OrganizerStatus.Pending) {
+            notify.error("Hồ sơ của bạn đang trong quá trình kiểm duyệt. Sau khi chỉnh sửa và lưu, hồ sơ sẽ được đặt lại về trạng thái 'Đang kiểm duyệt' và bạn sẽ nhận được thông báo khi có kết quả kiểm duyệt mới.");
+            return;
+        }
         if (!validateBank()) return;
         setPendingSaveType("bank");
         setConfirmOpen(true);

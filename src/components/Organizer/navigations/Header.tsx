@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-    FiArrowLeft,
-    FiPlus,
-    FiUser,
-    FiAlertTriangle
-} from "react-icons/fi";
+import { FiArrowLeft, FiPlus, FiUser, FiAlertTriangle } from "react-icons/fi";
+import { Crown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
@@ -54,7 +50,10 @@ export default function Header({
         }
     };
 
-    function getMissingFields(profile: OrganizerProfileDetail | null): { fields: string[]; tab: "profileDetail" | "bank" } {
+    function getMissingFields(profile: OrganizerProfileDetail | null): {
+        fields: string[];
+        tab: "profileDetail" | "bank";
+    } {
         if (!profile) return { fields: ["displayName"], tab: "profileDetail" };
 
         const missing: string[] = [];
@@ -143,6 +142,7 @@ export default function Header({
         <>
             <header className="sticky top-0 z-40 h-20 bg-gradient-to-b from-black/40 to-black/20 backdrop-blur-xl border-b border-white/10">
                 <div className="h-full flex items-center justify-between px-10">
+                    {/* Left */}
                     <div className="flex items-center gap-4">
                         {canGoBack && (
                             <button
@@ -162,30 +162,43 @@ export default function Header({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    {/* Right */}
+                    <div className="flex items-center gap-3">
+                        {/* Cancel event button (event pages only) */}
                         {isEventHeader &&
                             currentEvent &&
                             (currentEvent.status === "Published" ||
                                 currentEvent.status === "Suspended") && (
                                 <button
                                     onClick={() => setShowCancelModal(true)}
-                                    className="px-5 py-2.5 rounded-full font-semibold border border-red-400/30 text-red-400 hover:bg-red-500/10 transition"
+                                    className="px-5 py-2.5 rounded-full font-semibold border border-red-400/30 text-red-400 hover:bg-red-500/10 transition text-sm"
                                 >
                                     Huỷ sự kiện
                                 </button>
                             )}
 
+                        {/* Create event */}
                         <button
                             onClick={handleCreateEvent}
-                            className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30"
+                            className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/30 text-sm transition"
                         >
                             <FiPlus />
                             Tạo sự kiện mới
                         </button>
 
+                        {/* ── Subscription button ── */}
+                        <button
+                            onClick={() => navigate("/organizer/subscription")}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm border border-amber-400/30 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition"
+                        >
+                            <Crown size={15} strokeWidth={2} />
+                            Subscription
+                        </button>
+
+                        {/* Logout */}
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-2 px-6 py-2.5 rounded-full border font-semibold border-white/10 text-amethyst-smoke hover:text-red-400 hover:border-red-400/40 hover:bg-white/5 transition"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-full border font-semibold border-white/10 text-amethyst-smoke hover:text-red-400 hover:border-red-400/40 hover:bg-white/5 transition text-sm"
                         >
                             <FiUser className="text-lg" />
                             <span>Đăng xuất</span>
@@ -198,19 +211,23 @@ export default function Header({
             {showCancelModal && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-                    onClick={(e) => { if (e.target === e.currentTarget) handleCloseModal(); }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) handleCloseModal();
+                    }}
                 >
                     <div className="bg-[#18122B] border border-white/10 rounded-2xl p-8 w-full max-w-md shadow-2xl">
-
                         {/* Header */}
                         <div className="flex items-start gap-4 mb-6">
                             <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/25 flex items-center justify-center shrink-0">
                                 <FiAlertTriangle className="text-red-400 text-lg" />
                             </div>
                             <div>
-                                <h2 className="text-base font-semibold text-white mb-1">Huỷ sự kiện</h2>
+                                <h2 className="text-base font-semibold text-white mb-1">
+                                    Huỷ sự kiện
+                                </h2>
                                 <p className="text-sm text-slate-400 leading-relaxed">
-                                    Hành động này sẽ gửi yêu cầu huỷ đến staff. Vui lòng cung cấp lý do rõ ràng.
+                                    Hành động này sẽ gửi yêu cầu huỷ đến staff. Vui lòng cung cấp
+                                    lý do rõ ràng.
                                 </p>
                             </div>
                         </div>
@@ -222,13 +239,20 @@ export default function Header({
                             </label>
                             <textarea
                                 value={cancelReason}
-                                onChange={(e) => setCancelReason(e.target.value.slice(0, MAX_REASON))}
+                                onChange={(e) =>
+                                    setCancelReason(e.target.value.slice(0, MAX_REASON))
+                                }
                                 placeholder="Ví dụ: Ban tổ chức không thể chuẩn bị kịp do điều kiện khách quan..."
                                 rows={4}
                                 className="w-full resize-none text-sm bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 outline-none focus:border-red-500/50 transition"
                             />
                             <div className="flex justify-between mt-1.5">
-                                <span className={`text-xs transition ${cancelReason.trim().length === 0 ? "text-red-400" : "text-transparent"}`}>
+                                <span
+                                    className={`text-xs transition ${cancelReason.trim().length === 0
+                                            ? "text-red-400"
+                                            : "text-transparent"
+                                        }`}
+                                >
                                     Vui lòng nhập lý do huỷ
                                 </span>
                                 <span className="text-xs text-slate-500">
@@ -239,15 +263,26 @@ export default function Header({
 
                         {/* Warning note */}
                         <div className="flex items-start gap-2 bg-red-500/[0.06] border border-red-500/20 rounded-xl px-4 py-3 mb-6">
-                            <svg className="mt-0.5 shrink-0 text-red-400" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <svg
+                                className="mt-0.5 shrink-0 text-red-400"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 14 14"
+                                fill="none"
+                            >
                                 <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3" />
-                                <path d="M7 4.5v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                                <path
+                                    d="M7 4.5v3"
+                                    stroke="currentColor"
+                                    strokeWidth="1.3"
+                                    strokeLinecap="round"
+                                />
                                 <circle cx="7" cy="9.5" r="0.6" fill="currentColor" />
                             </svg>
                             <p className="text-xs text-red-300/75 leading-relaxed">
                                 Sau khi gửi, sự kiện sẽ chuyển sang trạng thái{" "}
-                                <span className="font-semibold text-red-400">Chờ huỷ</span>{" "}
-                                và không thể chỉnh sửa cho đến khi staff xử lý.
+                                <span className="font-semibold text-red-400">Chờ huỷ</span> và
+                                không thể chỉnh sửa cho đến khi staff xử lý.
                             </p>
                         </div>
 

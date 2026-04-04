@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { WithdrawalRequest } from "../types/withdrawal/withdrawal";
+import type { CreateWithdrawal } from "../types/withdrawal/withdrawal";
 import type { WithdrawalApiResponse, WithdrawalQueryParams, WithdrawalDetailApiResponse, WithdrawalActionRequest, WithdrawalActionApiResponse } from "../types/withdrawal/withdrawal";
 
 const withdrawalService = {
@@ -19,7 +19,7 @@ const withdrawalService = {
     completeWithdrawal: (id: string, data: WithdrawalActionRequest): Promise<AxiosResponse<WithdrawalActionApiResponse>> => {
         return interceptorAPI().put(`/admin/withdrawal-requests/${id}/complete`, data);
     },
-    createWithdrawal: (data: WithdrawalRequest  ): Promise<AxiosResponse<any>> => {
+    createWithdrawal: (data: CreateWithdrawal  ): Promise<AxiosResponse<any>> => {
         return interceptorAPI().post(`withdrawal-requests`,data);
     },
 };

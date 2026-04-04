@@ -23,7 +23,7 @@ interface DateTimeInputProps {
 const MONTHS = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
     "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
 const DAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-const POPUP_HEIGHT = 480;
+const POPUP_HEIGHT = 400;
 
 export default function DateTimeInput({
     label,
@@ -192,7 +192,7 @@ export default function DateTimeInput({
                         absolute left-0 z-50
                         bg-[#1a1d2e] border border-white/10
                         rounded-2xl shadow-2xl shadow-black/60
-                        p-4 w-[320px] flex flex-col gap-4
+                        p-4 w-[320px] flex flex-col gap-3
                         ${above ? "bottom-full mb-2" : "top-full mt-2"}
                     `}
                     style={{ backdropFilter: "blur(20px)" }}
@@ -213,7 +213,7 @@ export default function DateTimeInput({
                     {/* Calendar grid */}
                     <div className="grid grid-cols-7 gap-0.5">
                         {DAY_LABELS.map(d => (
-                            <div key={d} className="text-center text-[11px] text-slate-500 font-medium py-1">{d}</div>
+                            <div key={d} className="text-center text-[11px] text-slate-500 font-medium">{d}</div>
                         ))}
                         {cells.map((day, i) => {
                             if (!day) return <div key={`e-${i}`} />;
@@ -225,7 +225,7 @@ export default function DateTimeInput({
                                     key={day}
                                     onClick={() => !dis && selectDay(day)}
                                     className={`
-                                        aspect-square flex items-center justify-center
+                                        flex items-center justify-center
                                         rounded-lg text-sm transition-all duration-150
                                         ${dis ? "text-slate-700 cursor-not-allowed"
                                             : sel ? "bg-indigo-500 text-white font-semibold shadow-lg shadow-indigo-500/30"
@@ -246,7 +246,7 @@ export default function DateTimeInput({
                         <FiClock size={14} className="text-slate-400 shrink-0" />
                         <span className="text-xs text-slate-400 mr-auto">Giờ</span>
 
-                        <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-1.5">
+                        <div className="flex items-center gap-2 bg-white/5 rounded-xl px-2.5 py-1">
                             <button onClick={() => handleHour(hour - 1)} className="text-slate-400 hover:text-white transition">
                                 <FiChevronLeft size={14} />
                             </button>
@@ -260,7 +260,7 @@ export default function DateTimeInput({
 
                         <span className="text-slate-400 font-mono font-bold">:</span>
 
-                        <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-1.5">
+                        <div className="flex items-center gap-2 bg-white/5 rounded-xl px-2.5 py-1">
                             <button onClick={() => handleMinute(minute - 5)} className="text-slate-400 hover:text-white transition">
                                 <FiChevronLeft size={14} />
                             </button>
@@ -280,7 +280,7 @@ export default function DateTimeInput({
                                 key={m}
                                 onClick={() => handleMinute(m)}
                                 className={`
-                                    text-xs px-2.5 py-1 rounded-lg transition border
+                                    text-xs px-2 py-0.5 rounded-lg transition border
                                     ${minute === m
                                         ? "bg-indigo-500/30 text-indigo-300 border-indigo-500/40"
                                         : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white border-transparent"}
@@ -296,7 +296,7 @@ export default function DateTimeInput({
                         onClick={() => setOpen(false)}
                         disabled={!selDate}
                         className={`
-                            w-full py-2 rounded-xl text-sm font-medium transition-all duration-200
+                            w-full py-1.5 rounded-xl text-sm font-medium transition-all duration-200
                             ${selDate
                                 ? "bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/20"
                                 : "bg-white/5 text-slate-600 cursor-not-allowed"}

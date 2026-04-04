@@ -12,8 +12,7 @@ import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
 import type { Area, Seat, SeatMapData, TextEntity, TicketType } from '../../types/config/seatmap';
 import type { CreatePendingOrderRequest, TicketRequest } from '../../types/ticketing/ticketing';
 import { notify } from '../../utils/notify';
-import { clearOldOrderFromFirebase, loadSelectionFromLocal, saveSelectionToLocal, type SavedSelection } from '../../utils/orderFirebase';
-import ConfirmModal from '../../components/Organizer/shared/ConfirmModal';
+import { clearOldOrderFromFirebase } from '../../utils/orderFirebase';
 
 type ViewerMode = 'zone' | 'seat';
 
@@ -746,33 +745,6 @@ const SeatMapViewerPage: React.FC = () => {
     const { ticketTypes: ticketTypeItems } = useSelector((state: RootState) => state.TICKET_TYPE);
     const { currentEvent } = useSelector((state: RootState) => state.EVENT);
 
-    // ── State cho modal đơn cũ ──
-    const [resumeModalOpen, setResumeModalOpen] = useState(false);
-    const [savedSelection, setSavedSelection] = useState<SavedSelection | null>(null);
-
-    // Kiểm tra đơn cũ khi mount
-    useEffect(() => {
-        const oldOrderId = localStorage.getItem('currentOrderId');
-        if (oldOrderId) {
-            const sel = loadSelectionFromLocal();
-            setSavedSelection(sel);
-            setResumeModalOpen(true);
-        }
-    }, []);
-
-    // Tiếp tục đơn cũ → navigate thẳng, không cần tạo order mới
-    const handleResume = () => {
-        setResumeModalOpen(false);
-        navigate('/payment-ticket');
-    };
-
-    // Huỷ đơn cũ → xóa rồi cho chọn lại
-    const handleDiscard = async () => {
-        await clearOldOrderFromFirebase();
-        setSavedSelection(null);
-        setResumeModalOpen(false);
-    };
-
     useEffect(() => {
         if (!eventId) return;
         dispatch(fetchEventById(eventId)).finally(() => setEventLoading(false));
@@ -846,74 +818,12 @@ const SeatMapViewerPage: React.FC = () => {
             const orderId = result.payload.data;
             await clearOldOrderFromFirebase();
             localStorage.setItem('currentOrderId', orderId);
-            const selection: SavedSelection = {
-                mode: payload.mode,
-                totalPrice: payload.totalPrice,
-                savedAt: new Date().toISOString(),
-                ...(payload.mode === 'zone' && payload.zones?.[0]
-                    ? {
-                        zone: (() => {
-                            const z = payload.zones![0];
-                            const tt = ticketTypes.find(t => t.id === z.ticketTypeId);
-                            return {
-                                ...z,
-                                ticketTypeName: tt?.name ?? z.ticketTypeId,
-                                ticketTypeColor: tt?.color ?? '#6b7280',
-                            };
-                        })(),
-                    }
-                    : {}),
-                ...(payload.mode === 'seat' && payload.seats
-                    ? { seats: payload.seats }
-                    : {}),
-            };
-            saveSelectionToLocal(selection);
-
             navigate('/payment-ticket');
             notify.success('Tạo order thành công');
         } else {
             notify.error('Tạo order thất bại, vé đã không còn');
         }
     };
-
-    // ── Description cho modal ──
-    const resumeModalDescription = useMemo(() => {
-        if (!savedSelection) return 'Bạn có một đơn hàng chưa thanh toán. Bạn muốn tiếp tục thanh toán đơn đó không?';
-        const { mode: selMode, zone, seats, totalPrice, savedAt } = savedSelection;
-        const timeStr = new Date(savedAt).toLocaleString('vi-VN');
-        return (
-            <div className="space-y-3">
-                <p>Bạn có một đơn hàng chưa thanh toán từ lúc <strong className="text-white">{timeStr}</strong>.</p>
-                {selMode === 'zone' && zone && (
-                    <div className="bg-slate-800/60 rounded-xl p-3 space-y-1 text-xs">
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded" style={{ background: zone.ticketTypeColor }} />
-                            <span className="font-semibold text-white">{zone.areaName}</span>
-                        </div>
-                        <div className="text-slate-400">{zone.ticketTypeName} · {zone.quantity} vé · {fmtVND(totalPrice)}</div>
-                    </div>
-                )}
-                {selMode === 'seat' && seats && seats.length > 0 && (
-                    <div className="bg-slate-800/60 rounded-xl p-3 space-y-1.5 text-xs max-h-40 overflow-y-auto">
-                        {seats.map(s => (
-                            <div key={s.id} className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.ticketTypeColor }} />
-                                    <span className="text-slate-200">{s.sectionName} · Hàng {s.row} – Ghế {s.number}</span>
-                                </div>
-                                <span className="text-purple-400 font-semibold whitespace-nowrap">{fmtVND(s.price)}</span>
-                            </div>
-                        ))}
-                        <div className="pt-1 border-t border-slate-700 flex justify-between">
-                            <span className="text-slate-400">Tổng cộng</span>
-                            <span className="text-green-400 font-bold">{fmtVND(totalPrice)}</span>
-                        </div>
-                    </div>
-                )}
-                <p className="text-slate-400">Bạn muốn tiếp tục thanh toán hay đặt lại?</p>
-            </div>
-        );
-    }, [savedSelection]);
 
     if (!eventSessionId) return null;
     if (eventLoading || !currentEvent) return (
@@ -929,16 +839,6 @@ const SeatMapViewerPage: React.FC = () => {
 
     return (
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#0B0B12' }}>
-            <ConfirmModal
-                open={resumeModalOpen}
-                title="Tiếp tục đơn hàng cũ?"
-                description={resumeModalDescription}
-                confirmText="Tiếp tục thanh toán"
-                cancelText="Đặt lại"
-                onConfirm={handleResume}
-                onCancel={handleDiscard}
-            />
-
             <div style={{ height: 48, background: '#18122B', borderBottom: '1px solid #2a2a3e', display: 'flex', alignItems: 'center', padding: '0 16px', flexShrink: 0, gap: 12 }}>
                 <button
                     onClick={() => navigate(`/event-detail/${eventId}`)}

@@ -7,6 +7,8 @@ export default function MarketingPage() {
     return (
         <div className="bg-background-dark text-slate-100 min-h-screen overflow-y-auto custom-scrollbar">
             <div className="p-8 space-y-10 max-w-7xl mx-auto w-full">
+                <MarketingPerformanceBarChart />
+
                 <section>
                     <div className="glass neon-glow-purple p-8 rounded-[32px] border border-primary/10">
                         <div className="flex items-center space-x-3 mb-8">
@@ -21,7 +23,6 @@ export default function MarketingPage() {
                         <PromptFormMarketing />
                     </div>
                 </section>
-                <MarketingPerformanceBarChart />
                 <MarketingTable />
             </div>
         </div>

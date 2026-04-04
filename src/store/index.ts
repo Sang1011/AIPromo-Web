@@ -20,6 +20,8 @@ import withdrawalReducer from "./withdrawalSlice";
 import adminReportsReducer from "./adminReportsSlice";
 import revenueReducer from "./revenueSlice";
 import cancelledEventReducer from "./cancelledEventSlice";
+import reportReducer from "./reportSlice";
+import packageReducer from "./aiPackageSlice";
 
 const store = configureStore({
     reducer: {
@@ -44,6 +46,8 @@ const store = configureStore({
         ADMIN_REPORTS: adminReportsReducer,
         REVENUE: revenueReducer,
         CANCELLED_EVENT: cancelledEventReducer,
+        REPORT: reportReducer,
+        PACKAGE: packageReducer
     }
 })
 

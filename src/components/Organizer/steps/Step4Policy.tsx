@@ -307,10 +307,11 @@ export default function Step4Policy({
                 <input
                     type="checkbox"
                     checked={agreed}
+                    disabled={!isAllowUpdate}
                     onChange={(e) => handleAgree(e.target.checked)}
                 />
 
-                <span>
+                <span className="text-white">
                     Tôi đồng ý với{" "}
                     <span
                         onClick={() => window.open("/organizer/legal", "_blank")}

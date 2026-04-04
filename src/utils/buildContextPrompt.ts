@@ -45,25 +45,7 @@ export function buildContextPrompt(
         ? `Include exactly one image block using this URL: ${imageUrl} — do not use any other image URL.`
         : `Do not include any image block.`;
 
-    const schemaDescription = `
-Return ONLY a valid JSON array of content blocks. No explanation, no markdown, no code fences.
-Each block must follow this schema:
-- { "type": "heading", "level": 1|2|3, "text": "..." }
-- { "type": "paragraph", "text": "..." }
-- { "type": "image", "src": "<url>", "alt": "..." }   ← only if image provided
-- { "type": "button", "label": "...", "href": "..." }
-- { "type": "list", "ordered": false, "items": ["...", "..."] }
-- { "type": "divider" }
-- { "type": "highlight", "content": "..." }
-
-Rules:
-- All text content must be in Vietnamese.
-- image block src must be exactly the URL provided, never fabricate image URLs.
-- button href must be the real CTA link, never a placeholder.
-- Produce a complete, well-structured marketing post (heading → content → CTA).
-`.trim();
-
-    return [schemaDescription, eventContext, ctaInstruction, toneInstruction, imageInstruction]
+    return [eventContext, ctaInstruction, toneInstruction, imageInstruction]
         .filter(Boolean)
         .join("\n");
 }

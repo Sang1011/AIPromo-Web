@@ -1,27 +1,36 @@
+import { useEffect, useRef, useState } from "react";
 import {
-    MdAutoAwesome, MdOutlineArchive, MdOutlineCheckCircle,
-    MdOutlineEdit, MdOutlineOpenInNew, MdOutlineSend,
-    MdOutlineBolt, MdOutlineImage, MdOutlineSmartToy,
-    MdOutlineTextFields, MdOutlineClose,
+    MdAutoAwesome, MdOutlineArchive,
+    MdOutlineBolt,
+    MdOutlineCheckCircle,
+    MdOutlineClose,
+    MdOutlineEdit,
+    MdOutlineImage,
+    MdOutlineOpenInNew,
+    MdOutlineRefresh,
+    MdOutlineSend,
+    MdOutlineSmartToy,
+    MdOutlineTextFields,
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import {
-    archivePost, publishApprovedPost, requestToSubmitPost,
-    updatePostContent, generateContentPostUsingAI, generateImage,
+    archivePost,
     clearGeneratedDraft, clearGeneratedImageUrl,
+    generateContentPostUsingAI, generateImage,
+    publishApprovedPost, requestToSubmitPost,
+    updatePostContent
 } from "../../../store/postSlice";
 import type { ContentBlock, PostDetail, UpdatePostContentRequest } from "../../../types/post/post";
-import Block from "./Block";
-import { notify } from "../../../utils/notify";
-import { MARKETING_STATUS_VI } from "./MarketingTable";
+import { buildContextPrompt } from "../../../utils/buildContextPrompt";
 import { formatDateTime } from "../../../utils/formatDateTime";
-import { useState } from "react";
-import ConfirmModal from "../shared/ConfirmModal";
+import { notify } from "../../../utils/notify";
 import { parseBodyToBlocks, serializeBlocksToBody } from "../../../utils/renderPostContent";
 import PostBlockRenderer from "../post/PostBlockRenderer";
-import { useNavigate } from "react-router-dom";
-import { buildContextPrompt } from "../../../utils/buildContextPrompt";
+import ConfirmModal from "../shared/ConfirmModal";
+import Block from "./Block";
+import { MARKETING_STATUS_VI } from "./MarketingTable";
 
 // ─── Spinner ──────────────────────────────────────────────────────────────────
 
@@ -45,19 +54,17 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
     );
 }
 
-// ─── EditDraftModal ───────────────────────────────────────────────────────────
+// ─── EditTitleModal — chỉ cho phép sửa tiêu đề ───────────────────────────────
 
-function EditDraftModal({ post, onClose }: { post: PostDetail; onClose: () => void }) {
+function EditTitleModal({ post, onClose }: { post: PostDetail; onClose: () => void }) {
     const dispatch = useDispatch<AppDispatch>();
     const { loading } = useSelector((s: RootState) => s.POST);
     const [title, setTitle] = useState(post.title);
-    const [body, setBody] = useState(post.body);
-    const blocks = parseBodyToBlocks(post?.body);
-    const isBlockContent = blocks.length > 0;
 
     const handleSave = async () => {
         const data: UpdatePostContentRequest = {
-            title, body,
+            title,
+            body: post.body,
             promptUsed: post.promptUsed,
             aiModel: post.aiModel,
             aiTokensUsed: post.aiTokensUsed,
@@ -65,7 +72,7 @@ function EditDraftModal({ post, onClose }: { post: PostDetail; onClose: () => vo
         };
         try {
             await dispatch(updatePostContent({ postId: post.postId, data })).unwrap();
-            notify.success("Cập nhật bản nháp thành công!");
+            notify.success("Cập nhật tiêu đề thành công!");
             onClose();
         } catch (err: any) {
             notify.error(err?.message || "Cập nhật thất bại");
@@ -74,14 +81,15 @@ function EditDraftModal({ post, onClose }: { post: PostDetail; onClose: () => vo
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-            <div className="bg-[#0B0B12] border border-slate-800 rounded-[32px] p-8 w-full max-w-2xl space-y-6 shadow-2xl">
+            <div className="bg-[#0B0B12] border border-slate-800 rounded-[32px] p-8 w-full max-w-lg space-y-6 shadow-2xl">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                         <MdOutlineEdit className="text-primary" />
-                        Chỉnh sửa bản nháp
+                        Chỉnh sửa tiêu đề
                     </h3>
                     <button onClick={onClose} className="text-slate-500 hover:text-slate-300 text-2xl leading-none">×</button>
                 </div>
+
                 <div className="space-y-4">
                     <div>
                         <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Tiêu đề</label>
@@ -91,21 +99,16 @@ function EditDraftModal({ post, onClose }: { post: PostDetail; onClose: () => vo
                             className="w-full bg-slate-900/60 border border-slate-700 rounded-xl text-slate-100 px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Nội dung</label>
-                        {isBlockContent && (
-                            <p className="text-xs text-yellow-500/70 mb-2">
-                                ⚠ Nội dung dạng JSON blocks — chỉnh sửa trực tiếp có thể làm hỏng format.
-                            </p>
-                        )}
-                        <textarea
-                            rows={10}
-                            value={body}
-                            onChange={(e) => setBody(e.target.value)}
-                            className="w-full bg-slate-900/60 border border-slate-700 rounded-xl text-slate-100 px-4 py-3 text-sm resize-none font-mono focus:outline-none focus:border-primary transition-colors"
-                        />
+
+                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-3">
+                        <p className="text-amber-400/80 text-xs leading-relaxed">
+                            <span className="font-bold">⚠ Nội dung bài viết</span> được lưu dưới dạng JSON blocks.
+                            Để thay đổi nội dung, hãy sử dụng chức năng{" "}
+                            <span className="text-primary uppercase font-semibold">Generate lại bài post</span> bên dưới.
+                        </p>
                     </div>
                 </div>
+
                 <div className="flex justify-end gap-3 pt-2">
                     <button
                         onClick={onClose}
@@ -118,7 +121,7 @@ function EditDraftModal({ post, onClose }: { post: PostDetail; onClose: () => vo
                         disabled={loading.updateContent}
                         className="px-5 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/30 transition-all"
                     >
-                        {loading.updateContent ? "Đang lưu..." : "Lưu thay đổi"}
+                        {loading.updateContent ? "Đang lưu..." : "Lưu tiêu đề"}
                     </button>
                 </div>
             </div>
@@ -126,7 +129,7 @@ function EditDraftModal({ post, onClose }: { post: PostDetail; onClose: () => vo
     );
 }
 
-// ─── GeneratePreviewModal — xác nhận trước khi update ────────────────────────
+// ─── GeneratePreviewModal ─────────────────────────────────────────────────────
 
 function GeneratePreviewModal({
     blocks,
@@ -155,10 +158,10 @@ function GeneratePreviewModal({
                 </div>
 
                 <p className="text-xs text-slate-500 shrink-0">
-                    Xem lại nội dung AI vừa tạo. Nhấn <span className="text-primary font-semibold">Áp dụng</span> để cập nhật bài đăng hiện tại.
+                    Xem lại nội dung AI vừa tạo. Nhấn{" "}
+                    <span className="text-primary font-semibold">Áp dụng</span> để cập nhật bài đăng hiện tại.
                 </p>
 
-                {/* Preview content */}
                 <div className="overflow-y-auto flex-1 space-y-4 pr-1">
                     <div>
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tiêu đề</p>
@@ -198,7 +201,7 @@ function GeneratePreviewModal({
     );
 }
 
-// ─── Tab: Tạo nội dung ────────────────────────────────────────────────────────
+// ─── Tone options & helpers ───────────────────────────────────────────────────
 
 const TONE_OPTIONS = [
     { value: "", label: "Mặc định" },
@@ -210,8 +213,121 @@ const TONE_OPTIONS = [
     { value: "aggressive", label: "Mạnh mẽ / Urgent" },
 ];
 
-function ContentGenerateTab({
-    event,
+const ASPECT_OPTIONS = ["1:1", "16:9", "9:16", "4:3"];
+const SIZE_OPTIONS = ["512x512", "768x768", "1024x1024", "1024x576"];
+
+// ─── InlineImageTab ───────────────────────────────────────────────────────────
+
+function InlineImageTab({
+    generatedImageUrl,
+    selectedImageUrl,
+    loading,
+    error,
+    onGenerate,
+    onSelectImage,
+    onClearImage,
+}: {
+    generatedImageUrl: string | null;
+    selectedImageUrl: string | null;
+    loading: any;
+    error: any;
+    onGenerate: (prompt: string, aspectRatio: string, imageSize: string) => void;
+    onSelectImage: (url: string) => void;
+    onClearImage: () => void;
+}) {
+    const [prompt, setPrompt] = useState("");
+    const [aspectRatio, setAspectRatio] = useState("16:9");
+    const [imageSize, setImageSize] = useState("1024x576");
+    const isSelected = selectedImageUrl === generatedImageUrl && !!generatedImageUrl;
+
+    return (
+        <div className="space-y-5">
+            <div>
+                <label className="block text-sm font-semibold text-slate-400 mb-2">
+                    Mô tả ảnh <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                    rows={3}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Ví dụ: A vibrant music festival at night with colorful stage lights..."
+                    className="w-full bg-background-dark border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 px-4 py-3 text-sm resize-none focus:ring-primary focus:border-primary transition-colors"
+                />
+                <p className="text-slate-600 text-xs mt-1">Mô tả bằng tiếng Anh để kết quả tốt hơn.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Tỉ lệ khung hình</label>
+                    <div className="flex flex-wrap gap-2">
+                        {ASPECT_OPTIONS.map((opt) => (
+                            <button key={opt} type="button" onClick={() => setAspectRatio(opt)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${aspectRatio === opt ? "bg-primary text-white border-primary" : "bg-background-dark border-slate-700 text-slate-400 hover:border-primary/50"}`}>
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Kích thước</label>
+                    <div className="flex flex-wrap gap-2">
+                        {SIZE_OPTIONS.map((opt) => (
+                            <button key={opt} type="button" onClick={() => setImageSize(opt)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${imageSize === opt ? "bg-primary text-white border-primary" : "bg-background-dark border-slate-700 text-slate-400 hover:border-primary/50"}`}>
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {error?.generateImage && (
+                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error.generateImage}</p>
+            )}
+
+            <button
+                type="button"
+                onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
+                disabled={loading?.generateImage || !prompt.trim()}
+                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all neon-button-glow"
+            >
+                {loading?.generateImage ? <><Spinner /><span>Đang tạo ảnh...</span></> : <><MdOutlineImage /><span>Tạo ảnh với AI</span></>}
+            </button>
+
+            {generatedImageUrl && (
+                <div className="space-y-3 animate-fadeIn">
+                    <div className="rounded-2xl overflow-hidden border border-slate-800">
+                        <img src={generatedImageUrl} alt="AI generated" className="w-full object-cover" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        {isSelected ? (
+                            <button type="button" onClick={onClearImage}
+                                className="col-span-2 border border-red-500/40 text-red-400 hover:bg-red-500/10 py-3 rounded-2xl font-semibold text-sm transition-all">
+                                Bỏ chọn ảnh này
+                            </button>
+                        ) : (
+                            <>
+                                <button type="button" onClick={() => onSelectImage(generatedImageUrl)}
+                                    className="bg-green-600 hover:bg-green-500 text-white py-3 rounded-2xl font-bold text-sm transition-all">
+                                    Dùng ảnh này
+                                </button>
+                                <button type="button" onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
+                                    disabled={loading?.generateImage || !prompt.trim()}
+                                    className="border border-slate-700 text-slate-300 hover:border-primary/50 hover:text-white disabled:opacity-50 py-3 rounded-2xl font-semibold text-sm transition-all">
+                                    Tạo lại
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── InlineContentTab ─────────────────────────────────────────────────────────
+
+function InlineContentTab({
     generatedDraft,
     loading,
     error,
@@ -219,7 +335,6 @@ function ContentGenerateTab({
     onGenerate,
     onPreview,
 }: {
-    event: any;
     generatedDraft: any;
     loading: any;
     error: any;
@@ -258,11 +373,7 @@ function ContentGenerateTab({
                 <div className="flex flex-wrap gap-2">
                     {TONE_OPTIONS.map((opt) => (
                         <button key={opt.value} type="button" onClick={() => setTone(opt.value)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all
-                                ${tone === opt.value
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-background-dark border-slate-700 text-slate-400 hover:border-primary/50 hover:text-slate-200"
-                                }`}>
+                            className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${tone === opt.value ? "bg-primary text-white border-primary" : "bg-background-dark border-slate-700 text-slate-400 hover:border-primary/50 hover:text-slate-200"}`}>
                             {opt.label}
                         </button>
                     ))}
@@ -273,24 +384,26 @@ function ContentGenerateTab({
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Yêu cầu thêm <span className="text-slate-500 font-normal text-xs">(tùy chọn)</span>
                 </label>
-                <textarea rows={3} value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
+                <textarea
+                    rows={3}
+                    value={userPrompt}
+                    onChange={(e) => setUserPrompt(e.target.value)}
                     placeholder="Ví dụ: Nhấn mạnh vào giá vé ưu đãi, thêm emoji..."
-                    className="w-full bg-background-dark border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 px-4 py-3 text-sm resize-none focus:ring-primary focus:border-primary transition-colors" />
+                    className="w-full bg-background-dark border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 px-4 py-3 text-sm resize-none focus:ring-primary focus:border-primary transition-colors"
+                />
             </div>
 
             {error?.generateAI && (
-                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                    {error.generateAI}
-                </p>
+                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error.generateAI}</p>
             )}
 
-            <button type="button" onClick={() => onGenerate(tone, userPrompt)}
-                disabled={loading?.generateAI || !event}
-                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all neon-button-glow">
-                {loading?.generateAI
-                    ? <><Spinner /><span>Đang tạo...</span></>
-                    : <><MdOutlineBolt /><span>Tạo nội dung với AI</span></>
-                }
+            <button
+                type="button"
+                onClick={() => onGenerate(tone, userPrompt)}
+                disabled={loading?.generateAI}
+                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all neon-button-glow"
+            >
+                {loading?.generateAI ? <><Spinner /><span>Đang tạo...</span></> : <><MdOutlineBolt /><span>Tạo nội dung với AI</span></>}
             </button>
 
             {blocks.length > 0 && (
@@ -335,128 +448,16 @@ function ContentGenerateTab({
     );
 }
 
-// ─── Tab: Tạo ảnh ─────────────────────────────────────────────────────────────
-
-const ASPECT_OPTIONS = ["1:1", "16:9", "9:16", "4:3"];
-const SIZE_OPTIONS = ["512x512", "768x768", "1024x1024", "1024x576"];
-
-function ImageGenerateTab({
-    generatedImageUrl,
-    selectedImageUrl,
-    loading,
-    error,
-    onGenerate,
-    onSelectImage,
-    onClearImage,
-}: {
-    generatedImageUrl: string | null;
-    selectedImageUrl: string | null;
-    loading: any;
-    error: any;
-    onGenerate: (prompt: string, aspectRatio: string, imageSize: string) => void;
-    onSelectImage: (url: string) => void;
-    onClearImage: () => void;
-}) {
-    const [prompt, setPrompt] = useState("");
-    const [aspectRatio, setAspectRatio] = useState("16:9");
-    const [imageSize, setImageSize] = useState("1024x576");
-    const isSelected = selectedImageUrl === generatedImageUrl && !!generatedImageUrl;
-
-    return (
-        <div className="space-y-5">
-            <div>
-                <label className="block text-sm font-semibold text-slate-400 mb-2">
-                    Mô tả ảnh <span className="text-red-400">*</span>
-                </label>
-                <textarea rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Ví dụ: A vibrant music festival at night with colorful stage lights..."
-                    className="w-full bg-background-dark border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 px-4 py-3 text-sm resize-none focus:ring-primary focus:border-primary transition-colors" />
-                <p className="text-slate-600 text-xs mt-1">Mô tả bằng tiếng Anh để kết quả tốt hơn.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Tỉ lệ khung hình</label>
-                    <div className="flex flex-wrap gap-2">
-                        {ASPECT_OPTIONS.map((opt) => (
-                            <button key={opt} type="button" onClick={() => setAspectRatio(opt)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all
-                                    ${aspectRatio === opt ? "bg-primary text-white border-primary" : "bg-background-dark border-slate-700 text-slate-400 hover:border-primary/50"}`}>
-                                {opt}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Kích thước</label>
-                    <div className="flex flex-wrap gap-2">
-                        {SIZE_OPTIONS.map((opt) => (
-                            <button key={opt} type="button" onClick={() => setImageSize(opt)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all
-                                    ${imageSize === opt ? "bg-primary text-white border-primary" : "bg-background-dark border-slate-700 text-slate-400 hover:border-primary/50"}`}>
-                                {opt}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {error?.generateImage && (
-                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                    {error.generateImage}
-                </p>
-            )}
-
-            <button type="button" onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
-                disabled={loading?.generateImage || !prompt.trim()}
-                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all neon-button-glow">
-                {loading?.generateImage
-                    ? <><Spinner /><span>Đang tạo ảnh...</span></>
-                    : <><MdOutlineImage /><span>Tạo ảnh với AI</span></>
-                }
-            </button>
-
-            {generatedImageUrl && (
-                <div className="space-y-3 animate-fadeIn">
-                    <div className="rounded-2xl overflow-hidden border border-slate-800">
-                        <img src={generatedImageUrl} alt="AI generated" className="w-full object-cover" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        {isSelected ? (
-                            <button type="button" onClick={onClearImage}
-                                className="col-span-2 border border-red-500/40 text-red-400 hover:bg-red-500/10 py-3 rounded-2xl font-semibold text-sm transition-all">
-                                Bỏ chọn ảnh này
-                            </button>
-                        ) : (
-                            <>
-                                <button type="button" onClick={() => onSelectImage(generatedImageUrl)}
-                                    className="bg-green-600 hover:bg-green-500 text-white py-3 rounded-2xl font-bold text-sm transition-all">
-                                    Dùng ảnh này
-                                </button>
-                                <button type="button" onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
-                                    disabled={loading?.generateImage || !prompt.trim()}
-                                    className="border border-slate-700 text-slate-300 hover:border-primary/50 hover:text-white disabled:opacity-50 py-3 rounded-2xl font-semibold text-sm transition-all">
-                                    Tạo lại
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ─── RegenerateModal ──────────────────────────────────────────────────────────
+// ─── InlineGenerateSection ────────────────────────────────────────────────────
 
 type ActiveTab = "content" | "image";
 
-function RegenerateModal({
+function InlineGenerateSection({
     post,
-    onClose,
+    onApplied,
 }: {
     post: PostDetail;
-    onClose: () => void;
+    onApplied: () => void;
 }) {
     const dispatch = useDispatch<AppDispatch>();
     const { generatedDraft, generatedImageUrl, loading, error } = useSelector((s: RootState) => s.POST);
@@ -464,21 +465,19 @@ function RegenerateModal({
 
     const [activeTab, setActiveTab] = useState<ActiveTab>("content");
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
-
-    // Preview state — blocks + title chờ user xác nhận
     const [previewData, setPreviewData] = useState<{ blocks: ContentBlock[]; title: string } | null>(null);
 
-    // Cleanup khi đóng modal
-    const handleClose = () => {
-        dispatch(clearGeneratedDraft());
-        dispatch(clearGeneratedImageUrl());
-        onClose();
-    };
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            dispatch(clearGeneratedDraft());
+            dispatch(clearGeneratedImageUrl());
+        };
+    }, []);
 
     const handleGenerate = (tone: string, userPrompt: string) => {
-        // Dùng post.eventId để lấy context từ event hiện tại
         const context = buildContextPrompt(
-            { title: post.title } as any, // fallback — bạn có thể truyền event đầy đủ nếu có
+            { title: post.title } as any,
             tone || undefined,
             selectedImageUrl ?? undefined,
         );
@@ -492,12 +491,10 @@ function RegenerateModal({
         dispatch(generateImage({ prompt, aspectRatio, imageSize }));
     };
 
-    // Khi user bấm "Xem preview & Áp dụng" trong ContentGenerateTab
     const handleOpenPreview = (blocks: ContentBlock[], title: string) => {
         setPreviewData({ blocks, title });
     };
 
-    // Khi user xác nhận trong GeneratePreviewModal → updatePostContent
     const handleConfirmApply = async () => {
         if (!previewData) return;
         const newBody = serializeBlocksToBody(previewData.blocks);
@@ -513,7 +510,9 @@ function RegenerateModal({
             await dispatch(updatePostContent({ postId: post.postId, data })).unwrap();
             notify.success("Đã cập nhật nội dung bài đăng!");
             setPreviewData(null);
-            handleClose();
+            dispatch(clearGeneratedDraft());
+            dispatch(clearGeneratedImageUrl());
+            onApplied();
         } catch (err: any) {
             notify.error(err?.message || "Cập nhật thất bại");
         }
@@ -526,73 +525,67 @@ function RegenerateModal({
 
     return (
         <>
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-                <div className="bg-[#0B0B12] border border-slate-800 rounded-[32px] w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-8 pt-7 pb-4 shrink-0">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                            <MdOutlineSmartToy className="text-primary" />
-                            Generate lại bằng AI
-                        </h3>
-                        <button onClick={handleClose} className="text-slate-500 hover:text-slate-300 transition-colors">
-                            <MdOutlineClose className="text-2xl" />
-                        </button>
+            <div className="bg-[#0B0B12] border border-primary/20 rounded-[32px] overflow-hidden shadow-xl shadow-primary/5">
+                {/* Header */}
+                <div className="px-8 pt-7 pb-4 border-b border-slate-800/60">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
+                            <MdOutlineSmartToy className="text-primary text-lg" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold text-white">Generate lại bằng AI</h3>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                                Nội dung mới sẽ thay thế nội dung hiện tại sau khi bạn xác nhận.
+                            </p>
+                        </div>
                     </div>
+                </div>
 
-                    {/* Info banner */}
-                    <div className="mx-8 mb-4 bg-primary/5 border border-primary/20 rounded-2xl px-4 py-3 shrink-0">
-                        <p className="text-xs text-slate-400">
-                            Đang chỉnh sửa bài đăng: <span className="text-slate-200 font-semibold">{post.title}</span>
-                        </p>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            Nội dung mới sẽ thay thế nội dung hiện tại sau khi bạn xác nhận.
-                        </p>
-                    </div>
+                {/* Tabs */}
+                <div className="flex border-b border-slate-800 px-8">
+                    {TABS.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2 ${isActive ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-300"}`}
+                            >
+                                <Icon className="text-base" />
+                                {tab.label}
+                                {tab.id === "image" && selectedImageUrl && (
+                                    <span className="w-2 h-2 rounded-full bg-green-400 ml-0.5" />
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
 
-                    {/* Tabs */}
-                    <div className="flex border-b border-slate-800 mx-8 shrink-0">
-                        {TABS.map((tab) => {
-                            const Icon = tab.icon;
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2
-                                        ${isActive ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-300"}`}>
-                                    <Icon className="text-base" />
-                                    {tab.label}
-                                    {tab.id === "image" && selectedImageUrl && (
-                                        <span className="w-2 h-2 rounded-full bg-green-400 ml-0.5" />
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Tab content */}
-                    <div className="overflow-y-auto flex-1 px-8 py-6">
-                        {activeTab === "content" && (
-                            <ContentGenerateTab
-                                event={{ eventId: post.eventId, title: post.title }}
-                                generatedDraft={generatedDraft}
-                                loading={loading}
-                                error={error}
-                                selectedImageUrl={selectedImageUrl}
-                                onGenerate={handleGenerate}
-                                onPreview={handleOpenPreview}
-                            />
-                        )}
-                        {activeTab === "image" && (
-                            <ImageGenerateTab
-                                generatedImageUrl={generatedImageUrl}
-                                selectedImageUrl={selectedImageUrl}
-                                loading={loading}
-                                error={error}
-                                onGenerate={handleGenerateImage}
-                                onSelectImage={(url) => setSelectedImageUrl(url)}
-                                onClearImage={() => setSelectedImageUrl(null)}
-                            />
-                        )}
-                    </div>
+                {/* Tab content */}
+                <div className="px-8 py-6">
+                    {activeTab === "content" && (
+                        <InlineContentTab
+                            generatedDraft={generatedDraft}
+                            loading={loading}
+                            error={error}
+                            selectedImageUrl={selectedImageUrl}
+                            onGenerate={handleGenerate}
+                            onPreview={handleOpenPreview}
+                        />
+                    )}
+                    {activeTab === "image" && (
+                        <InlineImageTab
+                            generatedImageUrl={generatedImageUrl}
+                            selectedImageUrl={selectedImageUrl}
+                            loading={loading}
+                            error={error}
+                            onGenerate={handleGenerateImage}
+                            onSelectImage={(url) => setSelectedImageUrl(url)}
+                            onClearImage={() => setSelectedImageUrl(null)}
+                        />
+                    )}
                 </div>
             </div>
 
@@ -609,7 +602,49 @@ function RegenerateModal({
     );
 }
 
-// ─── ContentDetail (main) ─────────────────────────────────────────────────────
+function PromptUsedDisplay({ promptUsed }: { promptUsed: string }) {
+    const additionalMatch = promptUsed.match(/Additional requirement:\s*([\s\S]+)$/i);
+    const additionalRequirement = additionalMatch ? additionalMatch[1].trim() : null;
+
+    const toneLabels: Record<string, string> = {
+        "formal, clear, and informative": "Chuyên nghiệp",
+        "casual, trendy Gen Z": "Gen Z",
+        "highly engaging, attention-grabbing": "Viral / FOMO",
+        "elegant, premium wording": "Sang trọng",
+        "concise, clean, and straight": "Tối giản",
+        "bold, provocative wording": "Mạnh mẽ / Urgent",
+    };
+    const detectedTone = Object.entries(toneLabels).find(([key]) =>
+        promptUsed.toLowerCase().includes(key.toLowerCase())
+    )?.[1] ?? null;
+
+    if (!additionalRequirement && !detectedTone) {
+        return (
+            <p className="text-slate-500 text-xs italic">Không có yêu cầu đặc biệt.</p>
+        );
+    }
+
+    return (
+        <div className="space-y-2">
+            {detectedTone && (
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Giọng điệu:</span>
+                    <span className="bg-primary/15 text-primary border border-primary/30 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                        {detectedTone}
+                    </span>
+                </div>
+            )}
+            {additionalRequirement && (
+                <div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Yêu cầu thêm:</span>
+                    <p className="text-slate-300 text-xs leading-relaxed bg-slate-900/40 border border-slate-800 rounded-xl px-3 py-2.5 font-mono whitespace-pre-wrap">
+                        {additionalRequirement}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function ContentDetail({
     post,
@@ -623,8 +658,9 @@ export default function ContentDetail({
     const dispatch = useDispatch<AppDispatch>();
     const { loading: postLoading } = useSelector((s: RootState) => s.POST);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [showRegenerateModal, setShowRegenerateModal] = useState(false);
+    const [showGenerateSection, setShowGenerateSection] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const generateSectionRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
     const statusInfo = post ? (MARKETING_STATUS_VI[post.status] ?? { label: post.status, className: "" }) : null;
@@ -636,14 +672,23 @@ export default function ContentDetail({
     const blocks = parseBodyToBlocks(post?.body ?? "");
     const isBlockContent = blocks.length > 0;
 
+    const handleOpenGenerate = () => {
+        setShowGenerateSection(true);
+        // Scroll after state update + render
+        setTimeout(() => {
+            generateSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+    };
+
+    const handleGenerateApplied = () => {
+        setShowGenerateSection(false);
+    };
+
     return (
         <section className="space-y-6 pb-16">
-            {/* Modals */}
+            {/* Edit title modal */}
             {showEditModal && post && (
-                <EditDraftModal post={post} onClose={() => setShowEditModal(false)} />
-            )}
-            {showRegenerateModal && post && (
-                <RegenerateModal post={post} onClose={() => setShowRegenerateModal(false)} />
+                <EditTitleModal post={post} onClose={() => setShowEditModal(false)} />
             )}
 
             {/* Header */}
@@ -652,36 +697,19 @@ export default function ContentDetail({
                     <span className="w-1.5 h-6 bg-primary rounded-full mr-3" />
                     Nội dung Quảng cáo
                 </h2>
-                <div className="flex items-center gap-2">
-                    {/* Nút Generate lại — hiện ở mọi trạng thái cho phép edit */}
-                    {post && canEdit && (
-                        <button
-                            onClick={() => setShowRegenerateModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold
-                                       bg-primary/10 text-primary border border-primary/20
-                                       hover:bg-primary/20 transition-all"
-                        >
-                            <MdOutlineSmartToy className="text-base" />
-                            Generate lại
-                        </button>
-                    )}
-                    {post && (
-                        <span className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary
-                                         text-[11px] font-bold rounded-xl border border-primary/20">
-                            <MdAutoAwesome className="text-base" />
-                            Được tạo bởi AI
-                        </span>
-                    )}
-                </div>
+                {post && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-[11px] font-bold rounded-xl border border-primary/20">
+                        <MdAutoAwesome className="text-base" />
+                        Được tạo bởi AI
+                    </span>
+                )}
             </div>
 
             {loading && (
                 <p className="text-slate-500 text-sm animate-pulse px-2">Đang tải nội dung...</p>
             )}
             {error && (
-                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                    {error}
-                </p>
+                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
             )}
 
             {post && (
@@ -723,7 +751,7 @@ export default function ContentDetail({
                                                 `/organizer/my-events/${post.eventId}/marketing/${post.postId}/post-review`,
                                                 { state: { blocks, title: post.title } }
                                             )}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all"
+                                            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-primary/40 bg-primary text-white hover:bg-primary/80 transition-all"
                                         >
                                             <MdOutlineOpenInNew className="text-sm" />
                                             Xem preview đầy đủ
@@ -749,12 +777,44 @@ export default function ContentDetail({
                         )}
                         {post.promptUsed && (
                             <Block label="Prompt đã dùng">
-                                <p className="text-slate-500 text-xs leading-relaxed whitespace-pre-wrap font-mono">{post.promptUsed}</p>
+                                <PromptUsedDisplay promptUsed={post.promptUsed} />
                             </Block>
                         )}
                     </div>
 
-                    {/* Action buttons */}
+                    {/* ── Generate lại button (full-width, primary) ── */}
+                    {canEdit && !showGenerateSection && (
+                        <button
+                            onClick={handleOpenGenerate}
+                            className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base bg-primary text-white hover:bg-primary/90 active:scale-[0.99] shadow-lg shadow-primary/30 transition-all neon-button-glow"
+                        >
+                            <MdOutlineRefresh className="text-xl" />
+                            Generate lại bài post khác
+                        </button>
+                    )}
+
+                    {/* ── Inline generate section ── */}
+                    {canEdit && showGenerateSection && (
+                        <div ref={generateSectionRef} className="space-y-4 scroll-mt-8">
+                            {/* Collapse button */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                    <MdOutlineSmartToy className="text-primary" />
+                                    Generate nội dung mới
+                                </span>
+                                <button
+                                    onClick={() => setShowGenerateSection(false)}
+                                    className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                                >
+                                    <MdOutlineClose className="text-sm" />
+                                    Thu gọn
+                                </button>
+                            </div>
+                            <InlineGenerateSection post={post} onApplied={handleGenerateApplied} />
+                        </div>
+                    )}
+
+                    {/* ── Action buttons ── */}
                     {(canEdit || canSubmit || canPublish || canArchive) && (
                         <div className="flex justify-end gap-3 flex-wrap">
                             {canEdit && (
@@ -763,7 +823,7 @@ export default function ContentDetail({
                                     className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white transition-all"
                                 >
                                     <MdOutlineEdit className="text-base" />
-                                    Chỉnh sửa
+                                    Chỉnh sửa tiêu đề
                                 </button>
                             )}
                             {canSubmit && (

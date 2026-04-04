@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { WithdrawalApiResponse, WithdrawalQueryParams, WithdrawalDetail } from "../types/withdrawal/withdrawal";
-import type { WithdrawalRequest } from "../types/withdrawal/withdrawal";
+import type { WithdrawalApiResponse, WithdrawalQueryParams, WithdrawalDetail, CreateWithdrawal } from "../types/withdrawal/withdrawal";
 import withdrawalService from "../services/withdrawalService";
 
 const name = "withdrawal";
@@ -97,7 +96,7 @@ export const completeWithdrawal = createAsyncThunk<
     }
 );
 
-export const fetchCreateWithdrawal = createAsyncThunk<string, WithdrawalRequest >(
+export const fetchCreateWithdrawal = createAsyncThunk<string, CreateWithdrawal >(
     `${name}/fetchCreateWithdrawal`,
     async(data, thunkAPI) => {
         try {

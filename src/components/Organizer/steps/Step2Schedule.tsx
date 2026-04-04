@@ -72,12 +72,13 @@ function SectionHeader({
 }
 
 function SessionCard({
-    session, onEdit, onDelete, hasConflict,
+    session, onEdit, onDelete, hasConflict, isAllowUpdate
 }: {
     session: EventSession & { id: string };
     onEdit: () => void;
     onDelete: () => void;
     hasConflict?: boolean;
+    isAllowUpdate: boolean;
 }) {
     const [deleting, setDeleting] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -117,21 +118,24 @@ function SessionCard({
                     </span>
                 </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                <button
-                    onClick={onEdit}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium text-xs transition-all border border-white/5"
-                >
-                    <FiEdit2 size={12} /> Sửa
-                </button>
-                <button
-                    onClick={() => setShowConfirm(true)}
-                    disabled={deleting}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/8 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 font-medium text-xs transition-all border border-red-500/10 disabled:opacity-50"
-                >
-                    <FiTrash2 size={12} /> {deleting ? "..." : "Xoá"}
-                </button>
-            </div>
+            {isAllowUpdate && (
+                <div className="flex items-center gap-1.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button
+                        onClick={onEdit}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-medium text-xs transition-all border border-white/5"
+                    >
+                        <FiEdit2 size={12} /> Sửa
+                    </button>
+
+                    <button
+                        onClick={() => setShowConfirm(true)}
+                        disabled={deleting}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/8 hover:bg-red-500/20 text-red-400/70 hover:text-red-400 font-medium text-xs transition-all border border-red-500/10 disabled:opacity-50"
+                    >
+                        <FiTrash2 size={12} /> {deleting ? "..." : "Xoá"}
+                    </button>
+                </div>
+            )}
             <ConfirmModal
                 open={showConfirm}
                 title="Xóa xuất diễn"
@@ -482,6 +486,7 @@ export default function Step2Schedule({
                 <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col">
                         <DateTimeInput
+                            disabled={!isAllowUpdate}
                             label="Bắt đầu bán vé"
                             value={timeForm.ticketSaleStartAt}
                             onChange={(v) => setTimeForm(p => ({ ...p, ticketSaleStartAt: v }))}
@@ -492,6 +497,7 @@ export default function Step2Schedule({
                     </div>
                     <div className="flex flex-col">
                         <DateTimeInput
+                            disabled={!isAllowUpdate}
                             label="Kết thúc bán vé"
                             value={timeForm.ticketSaleEndAt}
                             onChange={(v) => setTimeForm(p => ({ ...p, ticketSaleEndAt: v }))}
@@ -512,6 +518,7 @@ export default function Step2Schedule({
                 <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col">
                         <DateTimeInput
+                            disabled={!isAllowUpdate}
                             label="Bắt đầu sự kiện"
                             value={timeForm.eventStartAt}
                             onChange={(v) => setTimeForm(p => ({ ...p, eventStartAt: v }))}
@@ -522,6 +529,7 @@ export default function Step2Schedule({
                     </div>
                     <div className="flex flex-col">
                         <DateTimeInput
+                            disabled={!isAllowUpdate}
                             label="Kết thúc sự kiện"
                             value={timeForm.eventEndAt}
                             onChange={(v) => setTimeForm(p => ({ ...p, eventEndAt: v }))}
@@ -543,8 +551,16 @@ export default function Step2Schedule({
                     count={sessions.length}
                     action={
                         <button
+                            disabled={!isAllowUpdate}
                             onClick={() => setOpenCreateModal(true)}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white font-semibold text-xs hover:bg-primary/90 transition-colors"
+                            className={`
+                                flex items-center gap-1.5 px-4 py-2 rounded-xl
+                                font-semibold text-xs transition-colors
+                                
+                                bg-primary text-white hover:bg-primary/90
+                                
+                                disabled:opacity-50 disabled:cursor-not-allowed
+                            `}
                         >
                             <FiPlus size={13} /> Tạo suất diễn
                         </button>
@@ -573,6 +589,7 @@ export default function Step2Schedule({
                                 hasConflict={conflictIds.has(s.id)}
                                 onEdit={() => setEditingSession(s)}
                                 onDelete={() => handleDelete(s.id)}
+                                isAllowUpdate={isAllowUpdate}
                             />
                         ))}
                     </div>

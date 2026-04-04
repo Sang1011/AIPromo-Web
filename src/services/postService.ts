@@ -20,9 +20,7 @@ const postService = {
         return interceptorAPI().post(`/posts/${postId}/publish`)
     },
     generateContentPostUsingAI: (eventId: string, userPromptRequirement?: string): Promise<AxiosResponse<GenerateContentPostDraftUsingAIResponse>> => {
-        let url = `/posts/generate/${eventId}`;
-        if (userPromptRequirement) url = url + `?UserPromptRequirement=${userPromptRequirement}`
-        return interceptorAPI().post(url);
+        return interceptorAPI().post(`/posts/generate/${eventId}`, { userPromptRequirement });
     },
     createPostDraft: (data: CreatePostDraftRequest): Promise<AxiosResponse<ApiResponse<string>>> => {
         return interceptorAPI().post(`/posts`, data)

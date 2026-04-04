@@ -7,6 +7,7 @@ import { fetchAllEvents } from "../../store/eventSlice";
 interface UserInfo {
   userId?: string;
   name?: string;
+   roles?: string[]; 
 }
 
 const Header: React.FC = () => {
@@ -16,6 +17,7 @@ const Header: React.FC = () => {
   const { currentInfor } = useSelector((state: RootState) => state.AUTH);
   const events = useSelector((state: RootState) => state.EVENT.events);
   const user = currentInfor as UserInfo;
+  console.log("user", user);
 
   const isLoggedIn = Boolean(user?.userId);
 
@@ -84,6 +86,16 @@ const Header: React.FC = () => {
       year: "numeric",
     });
   };
+
+  const handleCreateEvent = () => {
+  setSearchFocused(false);
+  const isOrganizer = user?.roles?.includes("Organizer");
+  if (isOrganizer) {
+    navigate("/organizer/overall");
+  } else {
+    navigate("/verify-organizer");
+  }
+};
 
   return (
     <>
@@ -295,9 +307,8 @@ const Header: React.FC = () => {
             </button>
 
             {/* Tạo sự kiện */}
-            <Link
-              to="/verify-organizer"
-              onClick={() => setSearchFocused(false)}
+            <button
+              onClick={handleCreateEvent}
               className="flex items-center gap-2 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-all"
               style={{
                 background: "linear-gradient(135deg, #7C3AED, #A855F7)",
@@ -306,7 +317,7 @@ const Header: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
               <span className="hidden sm:inline"> Tạo sự kiện</span>
-            </Link>
+            </button>
 
             {isLoggedIn ? (
               <div className="relative" ref={dropdownRef}>
