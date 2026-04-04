@@ -66,3 +66,5 @@ export interface MeInfo {
   osVersion: string;
   userAgent: string;
 }
+
+export type UserRole = "Admin" | "Staff" | "Organizer" | "Attendee";
