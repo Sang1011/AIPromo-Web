@@ -797,6 +797,8 @@ export default function PaymentTicket() {
         // Với wallet pay (không redirect), gọi tại đây là an toàn.
         if (selectedMethod === "wallet") {
           await clearOldOrderFromFirebase();
+          navigate("/order/success");
+          return;
         }
 
         if (redirectIfUrl(payload?.paymentUrl)) return;
