@@ -51,7 +51,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
             {/* Top row: 3 revenue cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Gross revenue */}
-                <div className="rounded-2xl bg-gradient-to-br from-[#1a1230] to-[#0d0a1c] border border-white/5 p-5">
+                <div className="rounded-2xl bg-card-dark border border-border-dark p-5">
                     <div className="flex items-center justify-between mb-3">
                         <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                             <FiTrendingUp size={16} />
@@ -62,7 +62,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                 </div>
 
                 {/* Discount */}
-                <div className="rounded-2xl bg-gradient-to-br from-[#1a1230] to-[#0d0a1c] border border-white/5 p-5">
+                <div className="rounded-2xl bg-card-dark border border-border-dark p-5">
                     <div className="flex items-center justify-between mb-3">
                         <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                             <FiPercent size={16} />
@@ -74,7 +74,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                 </div>
 
                 {/* Net revenue */}
-                <div className="rounded-2xl bg-gradient-to-br from-[#1a1230] to-[#0d0a1c] border border-primary/20 p-5 ring-1 ring-primary/10">
+                <div className="rounded-2xl  bg-card-dark border border-primary/40 p-5 ring-1 ring-primary/10">
                     <div className="flex items-center justify-between mb-3">
                         <div className="w-9 h-9 rounded-xl bg-primary/30 flex items-center justify-center text-primary">
                             <FiDollarSign size={16} />
@@ -89,7 +89,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
             {/* Bottom row: 4 stat cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {/* Total orders */}
-                <div className="rounded-2xl bg-gradient-to-br from-[#1a1230] to-[#0d0a1c] border border-white/5 p-5 flex items-center gap-4">
+                <div className="rounded-2xl  bg-card-dark border border-border-dark p-5 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
                         <FiShoppingBag size={16} />
                     </div>
@@ -100,7 +100,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                 </div>
 
                 {/* Tickets sold */}
-                <div className="rounded-2xl bg-gradient-to-br from-[#1a1230] to-[#0d0a1c] border border-white/5 p-5 flex items-center gap-4">
+                <div className="rounded-2xl  bg-card-dark border border-border-dark p-5 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
                         <FiTag size={16} />
                     </div>
@@ -111,7 +111,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                 </div>
 
                 {/* Checked in */}
-                <div className="rounded-2xl bg-gradient-to-br from-[#1a1230] to-[#0d0a1c] border border-white/5 p-5 flex items-center gap-4">
+                <div className="rounded-2xl  bg-card-dark border border-border-dark p-5 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
                         <FiUserCheck size={16} />
                     </div>
@@ -122,7 +122,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                 </div>
 
                 {/* Check-in rate */}
-                <div className="rounded-2xl bg-gradient-to-br from-[#1a1230] to-[#0d0a1c] border border-white/5 p-5 flex items-center gap-4">
+                <div className="rounded-2xl  bg-card-dark border border-border-dark p-5 flex items-center gap-4">
                     <RadialProgress percent={checkInRate} />
                     <div>
                         <p className="text-xs text-slate-400">Tỉ lệ check-in</p>

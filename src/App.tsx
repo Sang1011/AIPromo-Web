@@ -96,9 +96,9 @@ function App() {
         {/* Organizer */}
         <Route element={<RequireRole allowedRoles={["Organizer", "Attendee"]} />}>
           <Route path="/organizer" element={<DashboardLayout />}>
-            <Route path="overall" element={<OrganizerOverviewAllPage />} />
             <Route path="my-events" element={<MyEventsPage />} />
             <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
+              <Route path="overall" element={<OrganizerOverviewAllPage />} />
               <Route path="reports" element={<ReportManagementPage />} />
               <Route path="legals" element={<LegalPage />} />
               <Route path="create-event" element={<CreateEventPage />} />

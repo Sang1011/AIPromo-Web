@@ -2,7 +2,7 @@ import { get, ref, remove, set } from 'firebase/database';
 import { useEffect, useRef, useState } from 'react';
 import { db } from '../config/firebase';
 
-const ORDER_TIMEOUT_MS = 10 * 60 * 1000;
+const ORDER_TIMEOUT_MS = 15 * 60 * 1000;
 
 export const useOrderTimer = (
     orderId: string | null,

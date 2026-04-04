@@ -1,4 +1,5 @@
 import type { ApiResponse } from "../api";
+import type { EventStatus } from "../event/event";
 
 export interface GrossRevenueReportItem {
     eventId: string;
@@ -34,6 +35,9 @@ export interface RevenueSummaryOrganizerReportItem {
     totalRefunds: number;
     netRevenue: number;
     eventCount: number;
+    completedEventCount: number;
+    activeEventCount: number;
+    upcomingEventCount: number;
 }
 
 export interface RevenueBreakdownOrganizerReportItem {
@@ -43,9 +47,25 @@ export interface RevenueBreakdownOrganizerReportItem {
 
 export type BreakdownItem = {
     eventId: string;
+    eventName: string;
+    grossRevenue: number;
+    netRevenue: number;
+    refundAmount: number;
+    refundRate: number;
+    status: EventStatus;
+}
+export interface GrossRevenueByEventItem {
+    eventId: string;
     revenue: number;
 }
 
+export interface NetRevenueByEventItem {
+    eventId: string;
+    revenue: number;
+}
+
+export type GrossRevenueByEventResponse = ApiResponse<GrossRevenueByEventItem[]>;
+export type NetRevenueByEventResponse = ApiResponse<NetRevenueByEventItem[]>;
 export type GrossRevenueReportReponse = ApiResponse<GrossRevenueReportItem>;
 export type NetRevenueReportResponse = ApiResponse<NetRevenueReportItem>;
 export type RefundAmountReportResponse = ApiResponse<RefundAmountReportItem>;

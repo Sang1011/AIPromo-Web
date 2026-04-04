@@ -140,7 +140,7 @@ export default function RevenueChart({ trendData, period, loading, onPeriodChang
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <CartesianGrid stroke="#1e293b" vertical={false} />
 
                             <XAxis
                                 dataKey="_tickLabel"
@@ -175,8 +175,8 @@ export default function RevenueChart({ trendData, period, loading, onPeriodChang
 
                             <Tooltip
                                 contentStyle={{
-                                    background: "#18122B",
-                                    border: "1px solid rgba(124,59,237,0.2)",
+                                    background: "#0f0c1a",
+                                    border: "1px solid #334155",
                                     borderRadius: "12px",
                                     fontSize: "13px",
                                 }}

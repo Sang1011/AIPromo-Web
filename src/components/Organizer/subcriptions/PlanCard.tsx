@@ -51,11 +51,6 @@ export default function PlanCard({
 }: PlanCardProps) {
     const accent = accentMap[accentColor];
 
-    // const formatPrice = (price: number) => {
-    //     if (price === 0) return "Miễn phí";
-    //     return price.toLocaleString("vi-VN") + " ₫";
-    // };
-
     return (
         <div
             className={`relative flex flex-col rounded-2xl border bg-[#18122B] p-6 transition-all duration-200
