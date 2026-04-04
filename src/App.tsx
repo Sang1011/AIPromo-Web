@@ -26,7 +26,6 @@ import AdminHashtagPage from "./pages/Admin/AdminHashtagPage";
 import FinanceRevenuePage from "./pages/Admin/FinanceRevenuePage";
 import EventModerationPage from "./pages/Admin/EventModerationPage";
 import UserManagementPage from "./pages/Admin/UserManagementPage";
-import SystemLogsPage from "./pages/Admin/SystemLogsPage";
 import WithdrawalPage from "./pages/Admin/WithdrawalPage";
 import RefundManagementPage from "./pages/Admin/RefundManagementPage";
 import StaffLayout from "./components/Staff/layouts/StaffLayout";

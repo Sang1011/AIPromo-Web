@@ -1,5 +1,5 @@
 import AdminStatsCard from "../shared/AdminStatsCard";
-import { MdReceiptLong, MdPendingActions, MdPayments, MdTaskAlt, MdTrendingUp, MdVerified } from "react-icons/md";
+import { MdReceiptLong, MdPendingActions, MdPayments, MdTaskAlt } from "react-icons/md";
 
 export default function RefundStats() {
     return (
