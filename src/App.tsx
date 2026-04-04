@@ -53,6 +53,7 @@ import PaymentHistoryUser from "./pages/User/HistoryPaymentUser";
 import PostPreviewPage from "./pages/Organizer/PostPreviewPage";
 import OrganizerOverviewAllPage from "./pages/Organizer/OgranizerOverviewAllPage";
 import SubscriptionPage from "./pages/Organizer/SubscriptionPage";
+import RequireRole from "./components/Guards/RequireRole";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -89,35 +90,45 @@ function App() {
         </Route>
 
         {/* Organizer */}
-        {/* Organizer - Dashboard group */}
-        <Route path="/organizer" element={<DashboardLayout />}>
-          <Route path="overall" element={<OrganizerOverviewAllPage />} />
-          <Route path="my-events" element={<MyEventsPage />} />
-          <Route path="reports" element={<ReportManagementPage />} />
-          <Route path="legals" element={<LegalPage />} />
-          <Route path="create-event" element={<CreateEventPage />} />
-          <Route path="accounts" element={<OrganizerAccountPage />} />
-        </Route>
-        <Route path="/organizer/subscription" element={<SubscriptionPage />} />
+        <Route element={<RequireRole allowedRoles={["Organizer", "Attendee"]} />}>
+          <Route path="/organizer" element={<DashboardLayout />}>
+            <Route path="overall" element={<OrganizerOverviewAllPage />} />
+            <Route path="my-events" element={<MyEventsPage />} />
+            <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
+              <Route path="reports" element={<ReportManagementPage />} />
+              <Route path="legals" element={<LegalPage />} />
+              <Route path="create-event" element={<CreateEventPage />} />
+              <Route path="accounts" element={<OrganizerAccountPage />} />
+            </Route>
+          </Route>
 
-        {/* Organizer - Event group */}
-        <Route path="/organizer/my-events/:eventId" element={<ManagementLayout />}>
-          <Route path="overview" element={<SummaryPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="marketing" element={<MarketingPage />} />
-          <Route path="marketing/:marketingId" element={<MarketingDetailPage />} />
-          <Route path="orders" element={<OrderListPage />} />
-          <Route path="check-in" element={<CheckInPage />} />
-          <Route path="members" element={<MemberManagementPage />} />
-          <Route path="edit" element={<EditEventWizardPage />} />
-          <Route path="seat-map" element={<EventTicketPage />} />
-          <Route path="vouchers" element={<VoucherManagementPage />} />
-        </Route >
-        <Route
-          path="/organizer/my-events/:eventId/marketing/:marketingId/post-review"
-          element={<PostPreviewPage />}
-        />
-        <Route path="/organizer/my-events/:eventId/seat-map/edit" element={<SeatMapEditorPage />} />
+          <Route path="/organizer/my-events/:eventId" element={<ManagementLayout />}>
+            <Route path="overview" element={<SummaryPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
+              <Route path="marketing" element={<MarketingPage />} />
+              <Route path="marketing/:marketingId" element={<MarketingDetailPage />} />
+              <Route path="orders" element={<OrderListPage />} />
+              <Route path="check-in" element={<CheckInPage />} />
+              <Route path="members" element={<MemberManagementPage />} />
+              <Route path="edit" element={<EditEventWizardPage />} />
+              <Route path="seat-map" element={<EventTicketPage />} />
+              <Route path="vouchers" element={<VoucherManagementPage />} />
+            </Route>
+          </Route>
+
+          <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
+            <Route path="/organizer/subscription" element={<SubscriptionPage />} />
+            <Route
+              path="/organizer/my-events/:eventId/marketing/:marketingId/post-review"
+              element={<PostPreviewPage />}
+            />
+            <Route
+              path="/organizer/my-events/:eventId/seat-map/edit"
+              element={<SeatMapEditorPage />}
+            />
+          </Route>
+        </Route>
 
         {/* Admin group */}
         <Route path="/admin" element={<AdminLayout />}>
