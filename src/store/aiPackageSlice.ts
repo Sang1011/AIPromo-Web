@@ -1,13 +1,17 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { AIPackage } from "../types/aiPackage";
+import type { AIPackage, AIPurchasedPackage, AIQuota } from "../types/aiPackage";
 import aiPackageService from "../services/aiPackageService";
 
 interface AIPackageState {
     list: AIPackage[];
     detail: AIPackage | null;
+    quota: AIQuota | null;
+    purchasedPackages: AIPurchasedPackage[];
     loading: {
         list: boolean;
         detail: boolean;
+        quota: boolean;
+        purchased: boolean;
     };
     error: string | null;
 }
@@ -15,9 +19,13 @@ interface AIPackageState {
 const initialState: AIPackageState = {
     list: [],
     detail: null,
+    quota: null,
+    purchasedPackages: [],
     loading: {
         list: false,
         detail: false,
+        quota: false,
+        purchased: false,
     },
     error: null,
 };
@@ -27,6 +35,30 @@ export const fetchAIPackages = createAsyncThunk(
     async (_, { rejectWithValue }) => {
         try {
             const res = await aiPackageService.getAllAIPackages();
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+export const fetchMyQuota = createAsyncThunk(
+    "aiQuota/fetchMyQuota",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await aiPackageService.getMyQuota();
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+export const fetchPurchasedPackages = createAsyncThunk(
+    "aiQuota/fetchPurchasedPackages",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await aiPackageService.getPurchasedPackages();
             return res.data.data;
         } catch (err: any) {
             return rejectWithValue(err.response?.data?.message || "Error");
@@ -78,6 +110,32 @@ const aiPackageSlice = createSlice({
             })
             .addCase(fetchAIPackageById.rejected, (state, action) => {
                 state.loading.detail = false;
+                state.error = action.payload as string;
+            })
+            .addCase(fetchMyQuota.pending, (state) => {
+                state.loading.quota = true;
+                state.error = null;
+            })
+            .addCase(fetchMyQuota.fulfilled, (state, action) => {
+                state.loading.quota = false;
+                state.quota = action.payload;
+            })
+            .addCase(fetchMyQuota.rejected, (state, action) => {
+                state.loading.quota = false;
+                state.error = action.payload as string;
+            })
+
+            // ===== PURCHASED =====
+            .addCase(fetchPurchasedPackages.pending, (state) => {
+                state.loading.purchased = true;
+                state.error = null;
+            })
+            .addCase(fetchPurchasedPackages.fulfilled, (state, action) => {
+                state.loading.purchased = false;
+                state.purchasedPackages = action.payload;
+            })
+            .addCase(fetchPurchasedPackages.rejected, (state, action) => {
+                state.loading.purchased = false;
                 state.error = action.payload as string;
             });
     },

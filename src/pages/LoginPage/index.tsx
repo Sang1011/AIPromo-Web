@@ -64,6 +64,8 @@ function Login() {
           const roles = res.payload.data.user.roles;
           if (roles.includes('Staff')) {
             navigate("/staff/event-approval");
+          } else if (roles.includes('Organizer')) {
+            navigate("/organizer/overall");
           } else if (roles.includes('Admin')) {
             navigate("/admin");
           } else {

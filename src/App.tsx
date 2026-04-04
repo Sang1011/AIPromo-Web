@@ -55,6 +55,8 @@ import PostPreviewPage from "./pages/Organizer/PostPreviewPage";
 import OrganizerOverviewAllPage from "./pages/Organizer/OgranizerOverviewAllPage";
 import SubscriptionPage from "./pages/Organizer/SubscriptionPage";
 import RequireRole from "./components/Guards/RequireRole";
+import OrderSuccess from "./pages/OrderSuccess";
+import VnpayReturn from "./pages/VNPayReturn";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -82,6 +84,8 @@ function App() {
         <Route path="/payment-ticket" element={<PaymentTicket />} />
         <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
         <Route path="/verify-organizer" element={<VerifyOrganizer />} />
+        <Route path="/payment/vnpay-return" element={<VnpayReturn />} />
+        <Route path="/order/success" element={<OrderSuccess />} />
         <Route path="/profile" element={<ProfileLayout />}>
           <Route path="account" element={<ProfileUser />} />
           <Route path="events" element={<EventUser />} />
@@ -93,9 +97,9 @@ function App() {
         {/* Organizer */}
         <Route element={<RequireRole allowedRoles={["Organizer", "Attendee"]} />}>
           <Route path="/organizer" element={<DashboardLayout />}>
-            <Route path="overall" element={<OrganizerOverviewAllPage />} />
             <Route path="my-events" element={<MyEventsPage />} />
             <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
+              <Route path="overall" element={<OrganizerOverviewAllPage />} />
               <Route path="reports" element={<ReportManagementPage />} />
               <Route path="legals" element={<LegalPage />} />
               <Route path="create-event" element={<CreateEventPage />} />

@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useOutletContext } from "react-router-dom";
 import { fetchMe, fetchRefreshToken } from "../../store/authSlice";
 import type { AppDispatch, RootState } from "../../store";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,6 +10,7 @@ interface RequireRoleProps {
 }
 
 const RequireRole = ({ allowedRoles }: RequireRoleProps) => {
+    const parentContext = useOutletContext();
     const refreshToken = localStorage.getItem("REFRESH_TOKEN");
     const dispatch = useDispatch<AppDispatch>();
     const { currentInfor } = useSelector((state: RootState) => state.AUTH);
@@ -29,7 +30,14 @@ const RequireRole = ({ allowedRoles }: RequireRoleProps) => {
     }, []);
 
     if (isChecking) {
-        return <div>Loading...</div>;
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <div className="flex flex-col items-center gap-3 text-slate-500">
+                    <span className="w-8 h-8 border-2 border-white/10 border-t-primary rounded-full animate-spin" />
+                    <p className="text-sm">Đang tải thông tin...</p>
+                </div>
+            </div>
+        );
     }
 
     if (!currentInfor) {
@@ -50,7 +58,11 @@ const RequireRole = ({ allowedRoles }: RequireRoleProps) => {
         return <Navigate to="/login" replace />;
     }
 
-    return <Outlet />;
+    if (parentContext) {
+        return <Outlet context={parentContext} />;
+    } else {
+        return <Outlet />;
+    }
 };
 
 export default RequireRole;
