@@ -118,7 +118,18 @@ export const fetchUserDetail = createAsyncThunk<
 const authSlice = createSlice({
    name,
    initialState,
-   reducers: {},
+   reducers: {
+      clearAuth: (state) => {
+         state.token = null;
+         state.refreshToken = null;
+         state.deviceId = null;
+         state.currentInfor = {};
+         state.userDetail = {};
+         localStorage.removeItem("ACCESS_TOKEN");
+         localStorage.removeItem("REFRESH_TOKEN");
+         localStorage.removeItem("DEVICE_ID");
+      },
+   },
    extraReducers: (builder) => {
       builder.addCase(fetchLogin.fulfilled, (state, action: PayloadAction<any>) => {
          const responseData = action.payload;
@@ -188,4 +199,5 @@ const authSlice = createSlice({
    },
 });
 
+export const { clearAuth } = authSlice.actions;
 export default authSlice.reducer;

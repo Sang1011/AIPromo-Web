@@ -17,6 +17,9 @@ import adminEventReducer from "./adminEventSlice";
 import postReducer from "./postSlice";
 import staffEventReducer from "./staffEventSlice";
 import withdrawalReducer from "./withdrawalSlice";
+import adminReportsReducer from "./adminReportsSlice";
+import revenueReducer from "./revenueSlice";
+import cancelledEventReducer from "./cancelledEventSlice";
 import reportReducer from "./reportSlice";
 import packageReducer from "./aiPackageSlice";
 
@@ -40,6 +43,9 @@ const store = configureStore({
         POST: postReducer,
         STAFF_EVENT: staffEventReducer,
         WITHDRAWAL: withdrawalReducer,
+        ADMIN_REPORTS: adminReportsReducer,
+        REVENUE: revenueReducer,
+        CANCELLED_EVENT: cancelledEventReducer,
         REPORT: reportReducer,
         PACKAGE: packageReducer
     }
