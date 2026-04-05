@@ -22,6 +22,7 @@ import revenueReducer from "./revenueSlice";
 import cancelledEventReducer from "./cancelledEventSlice";
 import reportReducer from "./reportSlice";
 import packageReducer from "./aiPackageSlice";
+import policyReducer from "./policySlice";
 
 const store = configureStore({
     reducer: {
@@ -47,7 +48,8 @@ const store = configureStore({
         REVENUE: revenueReducer,
         CANCELLED_EVENT: cancelledEventReducer,
         REPORT: reportReducer,
-        PACKAGE: packageReducer
+        PACKAGE: packageReducer,
+        POLICY: policyReducer,
     }
 })
 
