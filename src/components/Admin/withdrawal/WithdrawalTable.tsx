@@ -374,8 +374,7 @@ export default function WithdrawalTable() {
                             <span>Không có dữ liệu</span>
                         ) : (
                             <>
-                                Hiển thị <span className="text-white font-bold">1-{items.length}</span> trong số{" "}
-                                <span className="text-white font-bold">{totalCount}</span> yêu cầu
+                                Hiển thị <span className="text-white font-bold">{items.length}</span> trong tổng <span className="text-white font-bold">{totalCount}</span> yêu cầu
                             </>
                         )}
                     </p>

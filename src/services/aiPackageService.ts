@@ -18,6 +18,16 @@ const aiPackageService = {
     createPaymentPackage: (body: PaymentPackageRequest): Promise<AxiosResponse<CreatePaymentPackageResponse>> => {
         return interceptorAPI().post("/payments/packages", body);
     }
+    ,
+    createAIPackage: (payload: any): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().post("/ai/packages", payload);
+    },
+    updateAIPackage: (id: string, payload: any): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().put(`/ai/packages/${id}`, payload);
+    },
+    deleteAIPackage: (id: string): Promise<AxiosResponse<void>> => {
+        return interceptorAPI().delete(`/ai/packages/${id}`);
+    }
 }
 
 export default aiPackageService;
