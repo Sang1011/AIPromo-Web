@@ -16,6 +16,16 @@ const aiPackageService = {
     getPurchasedPackages: (): Promise<AxiosResponse<GetPurchasedPackagesResponse>> => {
         return interceptorAPI().get("/ai/packages/me/purchased");
     }
+    ,
+    createAIPackage: (payload: any): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().post("/ai/packages", payload);
+    },
+    updateAIPackage: (id: string, payload: any): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().put(`/ai/packages/${id}`, payload);
+    },
+    deleteAIPackage: (id: string): Promise<AxiosResponse<void>> => {
+        return interceptorAPI().delete(`/ai/packages/${id}`);
+    }
 }
 
 export default aiPackageService;

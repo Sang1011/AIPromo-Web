@@ -10,6 +10,9 @@ interface AIPackageState {
     loading: {
         list: boolean;
         detail: boolean;
+        create: boolean;
+        update: boolean;
+        delete: boolean;
         quota: boolean;
         purchased: boolean;
     };
@@ -24,6 +27,9 @@ const initialState: AIPackageState = {
     loading: {
         list: false,
         detail: false,
+        create: false,
+        update: false,
+        delete: false,
         quota: false,
         purchased: false,
     },
@@ -78,6 +84,42 @@ export const fetchAIPackageById = createAsyncThunk(
     }
 );
 
+export const createAIPackage = createAsyncThunk(
+    "aiPackage/create",
+    async (payload: any, { rejectWithValue }) => {
+        try {
+            const res = await aiPackageService.createAIPackage(payload);
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+export const updateAIPackage = createAsyncThunk(
+    "aiPackage/update",
+    async ({ id, payload }: { id: string; payload: any }, { rejectWithValue }) => {
+        try {
+            const res = await aiPackageService.updateAIPackage(id, payload);
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+export const deleteAIPackage = createAsyncThunk(
+    "aiPackage/delete",
+    async (id: string, { rejectWithValue }) => {
+        try {
+            await aiPackageService.deleteAIPackage(id);
+            return id;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
 const aiPackageSlice = createSlice({
     name: "aiPackage",
     initialState,
@@ -110,6 +152,50 @@ const aiPackageSlice = createSlice({
             })
             .addCase(fetchAIPackageById.rejected, (state, action) => {
                 state.loading.detail = false;
+                state.error = action.payload as string;
+            })
+            // ===== CREATE =====
+            .addCase(createAIPackage.pending, (state) => {
+                state.loading.create = true;
+                state.error = null;
+            })
+            .addCase(createAIPackage.fulfilled, (state, action) => {
+                state.loading.create = false;
+                // prepend new package to list
+                state.list = [action.payload, ...state.list];
+            })
+            .addCase(createAIPackage.rejected, (state, action) => {
+                state.loading.create = false;
+                state.error = action.payload as string;
+            })
+            // ===== UPDATE =====
+            .addCase(updateAIPackage.pending, (state) => {
+                state.loading.update = true;
+                state.error = null;
+            })
+            .addCase(updateAIPackage.fulfilled, (state, action) => {
+                state.loading.update = false;
+                // update the package in list
+                const idx = state.list.findIndex((p) => p.id === action.payload.id);
+                if (idx !== -1) {
+                    state.list[idx] = action.payload;
+                }
+            })
+            .addCase(updateAIPackage.rejected, (state, action) => {
+                state.loading.update = false;
+                state.error = action.payload as string;
+            })
+            // ===== DELETE =====
+            .addCase(deleteAIPackage.pending, (state) => {
+                state.loading.delete = true;
+                state.error = null;
+            })
+            .addCase(deleteAIPackage.fulfilled, (state, action) => {
+                state.loading.delete = false;
+                state.list = state.list.filter((p) => p.id !== action.payload);
+            })
+            .addCase(deleteAIPackage.rejected, (state, action) => {
+                state.loading.delete = false;
                 state.error = action.payload as string;
             })
             .addCase(fetchMyQuota.pending, (state) => {

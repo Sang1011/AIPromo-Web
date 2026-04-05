@@ -27,6 +27,7 @@ import FinanceRevenuePage from "./pages/Admin/FinanceRevenuePage";
 import EventModerationPage from "./pages/Admin/EventModerationPage";
 import UserManagementPage from "./pages/Admin/UserManagementPage";
 import WithdrawalPage from "./pages/Admin/WithdrawalPage";
+import AIPackagesPage from "./pages/Admin/AIPackagesPage";
 import RefundManagementPage from "./pages/Admin/RefundManagementPage";
 import StaffLayout from "./components/Staff/layouts/StaffLayout";
 import StaffDashboardPage from "./pages/Staff/StaffDashboardPage";
@@ -144,6 +145,7 @@ function App() {
           <Route path="users" element={<UserManagementPage />} />
           <Route path="refunds" element={<RefundManagementPage />} />
           <Route path="withdrawals" element={<WithdrawalPage />} />
+          <Route path="ai-packages" element={<AIPackagesPage />} />
         </Route>
 
         {/* Staff group */}
