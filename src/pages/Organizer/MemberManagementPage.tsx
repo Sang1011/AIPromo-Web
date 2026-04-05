@@ -99,6 +99,7 @@ export default function MemberManagementPage() {
             setNewEmail("");
             setNewPermissions([]);
             setPage(1);
+            loadMembers();
         } else if (fetchAddEventMember.rejected.match(result)) {
             const status = result.payload?.status;
             if (status === 404) {
@@ -141,10 +142,6 @@ export default function MemberManagementPage() {
     useEffect(() => {
         loadMembers();
     }, [eventId]);
-
-    useEffect(() => {
-        loadMembers();
-    }, [addingMember]);
 
     useEffect(() => {
         if (page > totalPages && page > 1) {
