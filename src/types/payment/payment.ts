@@ -9,7 +9,7 @@ export interface PaymentOrderPaymentResponse {
   paymentTransactionId: string;
   paymentUrl: string | null;
   totalAmount: number;
-  completedAt: string; 
+  completedAt: string;
 }
 
 export interface PaymentMyOrderResponse {
