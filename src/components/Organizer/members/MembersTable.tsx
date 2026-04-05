@@ -128,24 +128,24 @@ export default function MembersTable({ eventId, members, filteredMembers }: Memb
                         <>
                             {members.map((m) => (
                                 <div
-                                    key={m.id}
+                                    key={m.email}
                                     className="grid grid-cols-[2.5fr_1.2fr_2fr_80px] px-6 py-4 items-center hover:bg-white/5 transition relative"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold">
-                                            {(m.fullName || m.email).charAt(0).toUpperCase()}
+                                            {(m.fullName || m.email || "?").charAt(0).toUpperCase()}
                                         </div>
                                         <div>
-                                            <p className="text-white text-sm font-medium">{m.fullName || m.email}</p>
-                                            {m.fullName && (
+                                            <p className="text-white text-sm font-medium">{m.fullName || m.email || "—"}</p>
+                                            {m.fullName && m.email && (
                                                 <p className="text-slate-500 text-xs">{m.email}</p>
                                             )}
                                         </div>
                                     </div>
 
                                     <div>
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${statusConfig[m.status].className}`}>
-                                            {statusConfig[m.status].label}
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${statusConfig[m.status]?.className ?? "text-slate-400 bg-slate-400/10 border-slate-400/20"}`}>
+                                            {statusConfig[m.status]?.label || "Không xác định"}
                                         </span>
                                     </div>
 

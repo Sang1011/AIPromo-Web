@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { AIPackage, AIPurchasedPackage, AIQuota } from "../types/aiPackage";
+import type { AIPackage, AIPurchasedPackage, AIQuota, PaymentPackageRequest } from "../types/aiPackage/aiPackage";
 import aiPackageService from "../services/aiPackageService";
 
 interface AIPackageState {
@@ -15,6 +15,7 @@ interface AIPackageState {
         delete: boolean;
         quota: boolean;
         purchased: boolean;
+        payment: boolean;
     };
     error: string | null;
 }
@@ -32,6 +33,7 @@ const initialState: AIPackageState = {
         delete: false,
         quota: false,
         purchased: false,
+        payment: false
     },
     error: null,
 };
@@ -89,6 +91,18 @@ export const createAIPackage = createAsyncThunk(
     async (payload: any, { rejectWithValue }) => {
         try {
             const res = await aiPackageService.createAIPackage(payload);
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+export const createPaymentPackageThunk = createAsyncThunk(
+    "aiPackage/createPayment",
+    async (body: PaymentPackageRequest, { rejectWithValue }) => {
+        try {
+            const res = await aiPackageService.createPaymentPackage(body);
             return res.data.data;
         } catch (err: any) {
             return rejectWithValue(err.response?.data?.message || "Error");
@@ -210,8 +224,6 @@ const aiPackageSlice = createSlice({
                 state.loading.quota = false;
                 state.error = action.payload as string;
             })
-
-            // ===== PURCHASED =====
             .addCase(fetchPurchasedPackages.pending, (state) => {
                 state.loading.purchased = true;
                 state.error = null;
@@ -222,6 +234,18 @@ const aiPackageSlice = createSlice({
             })
             .addCase(fetchPurchasedPackages.rejected, (state, action) => {
                 state.loading.purchased = false;
+                state.error = action.payload as string;
+            })
+            .addCase(createPaymentPackageThunk.pending, (state) => {
+                state.loading.payment = true;
+                state.error = null;
+            })
+            .addCase(createPaymentPackageThunk.fulfilled, (state) => {
+                state.loading.payment = false;
+
+            })
+            .addCase(createPaymentPackageThunk.rejected, (state, action) => {
+                state.loading.payment = false;
                 state.error = action.payload as string;
             });
     },

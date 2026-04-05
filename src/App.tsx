@@ -57,6 +57,10 @@ import SubscriptionPage from "./pages/Organizer/SubscriptionPage";
 import RequireRole from "./components/Guards/RequireRole";
 import OrderSuccess from "./pages/OrderSuccess";
 import VnpayReturn from "./pages/VNPayReturn";
+import PackageOrderFailed from "./pages/Organizer/PackageOrderFailed";
+import PackageVnpayReturn from "./pages/Organizer/PackageVNPayReturn";
+import PackageOrderSuccess from "./pages/Organizer/PackageOrderSuccess";
+import LegalDetailPage from "./pages/Organizer/LegalDetailPage";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -102,6 +106,7 @@ function App() {
               <Route path="overall" element={<OrganizerOverviewAllPage />} />
               <Route path="reports" element={<ReportManagementPage />} />
               <Route path="legals" element={<LegalPage />} />
+              <Route path="legals/:id" element={<LegalDetailPage />} />
               <Route path="create-event" element={<CreateEventPage />} />
               <Route path="accounts" element={<OrganizerAccountPage />} />
             </Route>
@@ -123,6 +128,9 @@ function App() {
           </Route>
 
           <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
+            <Route path="/payment/packages/vnpay-return" element={<PackageVnpayReturn />} />
+            <Route path="/payment/packages/success" element={<PackageOrderSuccess />} />
+            <Route path="/payment/packages/failed" element={<PackageOrderFailed />} />
             <Route path="/organizer/subscription" element={<SubscriptionPage />} />
             <Route
               path="/organizer/my-events/:eventId/marketing/:marketingId/post-review"
