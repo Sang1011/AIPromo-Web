@@ -1,4 +1,3 @@
-import React from "react";
 import { createPortal } from "react-dom";
 import { MdDeleteOutline, MdWarning } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
