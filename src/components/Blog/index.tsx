@@ -1,4 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../store";
+import { fetchAdminPosts } from "../../store/postSlice";
+import type { AdminPostItem } from "../../types/post/post";
 
 /* ================= TYPES ================= */
 
@@ -11,59 +15,6 @@ export interface BlogItem {
   tag?: string;
 }
 
-/* ================= SAMPLE DATA ================= */
-
-const SAMPLE_BLOGS: BlogItem[] = [
-  {
-    id: "fb218a98-b946-4959-8f72-438ddb93ec44",
-    title: "Trận Địa Đa Vị 2025",
-    body: "Sự kiện mở màn bằng một cú chạm trực diện vào giác quan thông qua công nghệ 3D Mapping và hệ thống âm thanh vòm đỉnh cao. Trong bóng tối bao trùm, những nhịp trống điện tử dồn dập bắt đầu trỗi dậy, kết hợp cùng ánh sáng laser quét qua toàn bộ không gian, tái hiện một \"trận địa\" giả tưởng nơi các luồng năng lượng âm nhạc chuẩn bị giao thoa. Khoảnh khắc Key Moment bùng nổ khi dàn nhạc giao hưởng bất ngờ xuất hiện trên sân khấu tầng cao.",
-    imageUrl: null,
-    createdAt: "2026-03-26T16:05:19Z",
-    tag: "Âm nhạc",
-  },
-  {
-    id: "2",
-    title: "Triển Lãm Ánh Sáng Nghệ Thuật Đương Đại Hà Nội 2026 — Cuộc Hội Ngộ Của Ánh Sáng Và Ký Ức",
-    body: "Triển lãm quy tụ hơn 40 nghệ sĩ trong và ngoài nước, mang đến những tác phẩm sắp đặt ánh sáng độc đáo được bố trí xuyên suốt các tầng của Trung tâm Nghệ thuật Quốc gia. Mỗi không gian là một cuộc đối thoại giữa vật liệu công nghiệp và cảm xúc con người — nơi ánh đèn LED uốn lượn tái hiện dòng chảy của ký ức tập thể, và bóng tối được dùng như một ngôn ngữ thị giác chủ động.",
-    imageUrl: "https://images.unsplash.com/photo-1614854262318-831574f15f1f?w=600&q=75",
-    createdAt: "2026-04-01T09:30:00Z",
-    tag: "Nghệ thuật",
-  },
-  {
-    id: "3",
-    title: "TechFest 2026: Tương Lai Bắt Đầu Từ Đây",
-    body: "TechFest 2026 tập hợp hơn 200 startup công nghệ, 50 nhà đầu tư hàng đầu và hàng nghìn nhà phát triển từ khắp Đông Nam Á. Chủ đề năm nay xoay quanh AI tạo sinh, điện toán lượng tử và hạ tầng Web3 — những lĩnh vực đang định hình lại cách con người làm việc, học tập và sáng tạo.",
-    imageUrl: "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=600&q=75",
-    createdAt: "2026-03-18T12:00:00Z",
-    tag: "Công nghệ",
-  },
-  {
-    id: "4",
-    title: "Hội Chợ Ẩm Thực Đường Phố Sài Gòn — Vị Giác Không Biên Giới",
-    body: "Hơn 120 gian hàng ẩm thực từ 18 quốc gia hội tụ tại công viên Tao Đàn trong suốt bốn ngày cuối tuần. Từ bánh mì kẹp thịt kiểu Thổ Nhĩ Kỳ, ramen Nhật Bản authentic, đến các món ăn đường phố đặc sản của từng vùng miền Việt Nam — tất cả được chế biến trực tiếp bởi những đầu bếp mang theo công thức gia truyền.",
-    imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&q=75",
-    createdAt: "2026-04-03T08:00:00Z",
-    tag: "Ẩm thực",
-  },
-  {
-    id: "5",
-    title: "Marathon Quốc Tế TP.HCM 2026 — Mỗi Bước Chạy, Một Câu Chuyện",
-    body: "Giải chạy marathon quốc tế quy mô nhất Đông Nam Á trở lại với cự ly 42km xuyên qua các địa danh biểu tượng của thành phố. Hơn 15.000 vận động viên từ 60 quốc gia cùng hội tụ, tạo nên một dòng chảy năng lượng khổng lồ lúc rạng đông.",
-    imageUrl: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=600&q=75",
-    createdAt: "2026-03-10T06:00:00Z",
-    tag: "Thể thao",
-  },
-  {
-    id: "6",
-    title: "Lễ Hội Phim Độc Lập Đà Lạt — Ngọn Lửa Điện Ảnh Trong Sương Mù",
-    body: "Được tổ chức lần đầu tiên tại xứ sở sương mù, Lễ hội Phim Độc Lập Đà Lạt quy tụ 63 tác phẩm từ 22 quốc gia, trong đó có 14 phim Việt Nam lần đầu ra mắt công chúng. Các buổi chiếu diễn ra tại những địa điểm không ngờ tới — biệt thự cổ Pháp, nhà kính thực vật, và rạp ngoài trời dưới những tán thông xanh.",
-    imageUrl: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&q=75",
-    createdAt: "2026-03-28T14:00:00Z",
-    tag: "Điện ảnh",
-  },
-];
-
 /* ================= HELPERS ================= */
 
 const formatDate = (iso: string) =>
@@ -72,9 +23,6 @@ const formatDate = (iso: string) =>
     month: "2-digit",
     year: "numeric",
   });
-
-const clamp = (text: string, maxLen: number) =>
-  text.length > maxLen ? text.slice(0, maxLen).trimEnd() + "…" : text;
 
 /* ================= ICONS ================= */
 
@@ -440,25 +388,52 @@ const BlogModal: React.FC<{ item: BlogItem | null; onClose: () => void }> = ({
 
 /* ================= MAIN ================= */
 
-interface BlogListSectionProps {
-  blogs?: BlogItem[];
-}
+const BlogListSection: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const adminPosts = useSelector((s: RootState) => s.POST?.adminPosts) ?? [];
+  const isLoadingPosts = useSelector(
+    (s: RootState) => s.POST?.loading?.fetchAdminList
+  ) ?? false;
 
-const BlogListSection: React.FC<BlogListSectionProps> = ({
-  blogs = SAMPLE_BLOGS,
-}) => {
   const [searchInput, setSearchInput] = useState("");
   const [selectedBlog, setSelectedBlog] = useState<BlogItem | null>(null);
 
+  useEffect(() => {
+    dispatch(
+      fetchAdminPosts({
+        PageNumber: 1,
+        PageSize: 20,
+        SortColumn: "CreatedAt",
+        SortOrder: "desc",
+        Status: "Published",
+      })
+    );
+  }, [dispatch]);
+
+  const mappedBlogsFromApi = useMemo<BlogItem[]>(
+    () =>
+      adminPosts.map((item: AdminPostItem) => ({
+        id: item.id,
+        title: item.title,
+        body: item.body,
+        imageUrl: item.imageUrl,
+        createdAt: item.createdAt,
+        tag: "Bài viết",
+      })),
+    [adminPosts]
+  );
+
+  const blogData = mappedBlogsFromApi;
+
   const filtered = useMemo(() => {
     const kw = searchInput.trim().toLowerCase();
-    return blogs.filter((b) =>
+    return blogData.filter((b) =>
       kw
         ? b.title.toLowerCase().includes(kw) ||
           b.body.toLowerCase().includes(kw)
         : true
     );
-  }, [blogs, searchInput]);
+  }, [blogData, searchInput]);
 
   return (
     <section
@@ -590,7 +565,14 @@ const BlogListSection: React.FC<BlogListSectionProps> = ({
 
         {/* Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.length > 0 ? (
+          {isLoadingPosts ? (
+            <div
+              className="col-span-3 flex flex-col items-center justify-center py-20 gap-4"
+              style={{ color: "rgba(148,163,184,0.5)" }}
+            >
+              <p className="text-lg font-medium">Đang tải bài viết...</p>
+            </div>
+          ) : filtered.length > 0 ? (
             filtered.map((item) => (
               <BlogCard
                 key={item.id}
