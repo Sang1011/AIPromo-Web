@@ -145,3 +145,73 @@ export interface ContentBlock {
     // highlight/quote
     content?: string;
 }
+
+// ===============================
+// ===== ADMIN POST TYPES =====
+// ===============================
+
+export interface PostDistribution {
+    id: string;
+    platform: string;
+    status: string;
+    externalUrl: string | null;
+    externalPostId: string | null;
+    platformMetadata: string | null;
+    errorMessage: string | null;
+    sentAt: string | null;
+}
+
+export interface AdminPostItem {
+    id: string;
+    eventId: string;
+    organizerId: string;
+    title: string;
+    body: string;
+    imageUrl: string | null;
+    status: PostStatus;
+    rejectionReason: string | null;
+    publishedAt: string | null;
+    trackingToken: string | null;
+    version: number;
+    createdAt: string;
+    modifiedAt: string | null;
+    distributions: PostDistribution[];
+}
+
+export interface AdminPaginatedResult<T> {
+    items: T[];
+    pageNumber: number;
+    pageSize: number;
+    totalCount: number;
+    currentPageSize: number;
+    currentStartIndex: number;
+    currentEndIndex: number;
+    totalPages: number;
+    hasPrevious: boolean;
+    hasNext: boolean;
+}
+
+export interface GetAdminPostsQueryParams {
+    PageNumber: number;
+    PageSize: number;
+    SortColumn: string;
+    SortOrder: "asc" | "desc";
+    EventId?: string;
+    OrganizerId?: string;
+    Search?: string;
+    AiModel?: string;
+    MinAiTokensUsed?: number;
+    MaxAiTokensUsed?: number;
+    MinAiCost?: number;
+    MaxAiCost?: number;
+    Status?: PostStatus;
+    ReviewedBy?: string;
+    IsRejected?: boolean;
+    ReviewedFrom?: string;
+    ReviewedTo?: string;
+    SubmittedFrom?: string;
+    SubmittedTo?: string;
+    PublishedFrom?: string;
+    PublishedTo?: string;
+    HasExternalPostUrl?: boolean;
+}
