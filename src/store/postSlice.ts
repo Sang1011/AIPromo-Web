@@ -12,6 +12,7 @@ import type {
     AdminPostItem,
     AdminPaginatedResult,
     GetAdminPostsQueryParams,
+    DistributionMetricsFacebook,
 } from "../types/post/post";
 import type { PaginatedResponse } from "../types/api";
 
@@ -29,6 +30,7 @@ interface PostState {
     adminPosts: AdminPostItem[];
     adminPostDetail: AdminPostItem | null;
     adminPagination: Omit<AdminPaginatedResult<AdminPostItem>, "items"> | null;
+    distributionMetrics: DistributionMetricsFacebook | null;
 
     loading: {
         fetchDetail: boolean;
@@ -43,6 +45,8 @@ interface PostState {
         sendToChatBox: boolean;
         fetchAdminList: boolean;
         fetchAdminDetail: boolean;
+        fetchDistributionMetrics: boolean;
+        pushPost: boolean;
     };
 
     error: {
@@ -58,6 +62,8 @@ interface PostState {
         sendToChatBox: string | null;
         fetchAdminList: string | null;
         fetchAdminDetail: string | null;
+        fetchDistributionMetrics: string | null;
+        pushPost: string | null;
     };
 }
 
@@ -79,7 +85,7 @@ const initialState: PostState = {
     adminPosts: [],
     adminPostDetail: null,
     adminPagination: null,
-
+    distributionMetrics: null,
     loading: {
         fetchDetail: false,
         updateContent: false,
@@ -93,6 +99,8 @@ const initialState: PostState = {
         sendToChatBox: false,
         fetchAdminList: false,
         fetchAdminDetail: false,
+        fetchDistributionMetrics: false,
+        pushPost: false,
     },
     error: {
         fetchDetail: null,
@@ -107,6 +115,8 @@ const initialState: PostState = {
         sendToChatBox: null,
         fetchAdminList: null,
         fetchAdminDetail: null,
+        fetchDistributionMetrics: null,
+        pushPost: null,
     },
 };
 
@@ -263,6 +273,31 @@ export const fetchAdminPostById = createAsyncThunk(
     }
 );
 
+export const fetchDistributionMetricsFacebook = createAsyncThunk(
+    "post/fetchDistributionMetricsFacebook",
+    async ({ postId, distributionId }: { postId: string; distributionId: string }, { rejectWithValue }) => {
+        try {
+            const res = await postService.getDistributionMetricsFacebook(postId, distributionId);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to fetch distribution metrics");
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch distribution metrics");
+        }
+    }
+);
+
+export const pushPostToOtherPlatform = createAsyncThunk(
+    "post/pushPostToOtherPlatform",
+    async ({ postId, platform, isRetry }: { postId: string; platform: string; isRetry: boolean }, { rejectWithValue }) => {
+        try {
+            const res = await postService.pushPostToOtherPlatform(postId, platform, isRetry);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to push post");
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Failed to push post");
+        }
+    }
+);
+
 // ─── Slice ────────────────────────────────────────────────────────────────────
 
 const postSlice = createSlice({
@@ -280,6 +315,7 @@ const postSlice = createSlice({
         clearErrors(state) { state.error = initialState.error; },
         clearGeneratedImageUrl(state) { state.generatedImageUrl = null; },
         clearChatBoxReply(state) { state.chatBoxReply = null; },
+        clearDistributionMetrics(state) { state.distributionMetrics = null; },
     },
     extraReducers: (builder) => {
         // ── fetchPostDetail ──────────────────────────────────────────────────
@@ -376,6 +412,35 @@ const postSlice = createSlice({
                 state.adminPostDetail = action.payload as AdminPostItem;
             })
             .addCase(fetchAdminPostById.rejected, (state, action) => { state.loading.fetchAdminDetail = false; state.error.fetchAdminDetail = action.payload as string; });
+
+        // ── fetchDistributionMetricsFacebook ─────────────────────────────────────
+        builder
+            .addCase(fetchDistributionMetricsFacebook.pending, (state) => {
+                state.loading.fetchDistributionMetrics = true;
+                state.error.fetchDistributionMetrics = null;
+            })
+            .addCase(fetchDistributionMetricsFacebook.fulfilled, (state, action: PayloadAction<DistributionMetricsFacebook>) => {
+                state.loading.fetchDistributionMetrics = false;
+                state.distributionMetrics = action.payload;
+            })
+            .addCase(fetchDistributionMetricsFacebook.rejected, (state, action) => {
+                state.loading.fetchDistributionMetrics = false;
+                state.error.fetchDistributionMetrics = action.payload as string;
+            });
+
+        // ── pushPostToOtherPlatform ───────────────────────────────────────────────
+        builder
+            .addCase(pushPostToOtherPlatform.pending, (state) => {
+                state.loading.pushPost = true;
+                state.error.pushPost = null;
+            })
+            .addCase(pushPostToOtherPlatform.fulfilled, (state) => {
+                state.loading.pushPost = false;
+            })
+            .addCase(pushPostToOtherPlatform.rejected, (state, action) => {
+                state.loading.pushPost = false;
+                state.error.pushPost = action.payload as string;
+            });
     },
 });
 

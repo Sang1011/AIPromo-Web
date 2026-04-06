@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams } from "../types/post/post";
+import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams, GetDistributionMetricsResponse } from "../types/post/post";
 import type { ApiResponse, ApiResponseNoData } from "../types/api";
 
 const postService = {
@@ -58,6 +58,12 @@ const postService = {
     getAdminPostById: (id: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().get(`/admin/posts/${id}`);
     },
+    getDistributionMetricsFacebook: (postId: string, distributionId: string): Promise<AxiosResponse<GetDistributionMetricsResponse>> => {
+        return interceptorAPI().get(`/posts/${postId}/distributions/${distributionId}/metrics/facebook`);
+    },
+    pushPostToOtherPlatform: (postId: string, platform: string, isRetry: boolean): Promise<AxiosResponse<ApiResponseNoData>> => {
+        return interceptorAPI().post(`/posts/${postId}/distribute`, { platform, isRetry });
+    }
 }
 
 export default postService;

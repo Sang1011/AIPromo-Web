@@ -106,6 +106,7 @@ export interface PostListItem {
     version: number;
     createdAt: string;
     modifiedAt: string | null;
+    distributions: PostDistribution[];
 }
 
 export type GetOrganizerPostsResponse = ApiResponse<PaginatedResponse<PostListItem>>;
@@ -116,6 +117,19 @@ export interface GenerateImageRequestBody {
     imageSize: string;
 }
 
+export interface DistributionMetricsFacebook {
+    externalPostId: string;
+    externalUrl: string;
+    likes: number;
+    comments: number;
+    shares: number;
+    impressions: number;
+    reach: number;
+    clicks: number;
+    fetchedAt: Date;
+}
+
+export type GetDistributionMetricsResponse = ApiResponse<DistributionMetricsFacebook>
 export type GenerateImageResponse = ApiResponse<{ imageUrl: string }>
 export type SendToChatBoxReponse = ApiResponse<string>
 
