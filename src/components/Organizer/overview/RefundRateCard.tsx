@@ -1,13 +1,11 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import type { RefundRateReportItem } from "../../../types/report/report";
+import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 
 interface Props {
     data: RefundRateReportItem;
     loading?: boolean;
 }
-
-const formatVND = (value: number) =>
-    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 
 export default function RefundRateCard({ data, loading }: Props) {
     if (loading) {
@@ -65,7 +63,7 @@ export default function RefundRateCard({ data, loading }: Props) {
                                 ))}
                             </Pie>
                             <Tooltip
-                                formatter={(value: number | undefined) => formatVND(value ?? 0)}
+                                formatter={(value: number | undefined) => fmtMoneyVND(value ?? 0)}
                                 contentStyle={{
                                     background: "#18122B",
                                     border: "1px solid rgba(255,255,255,0.1)",
@@ -92,20 +90,20 @@ export default function RefundRateCard({ data, loading }: Props) {
                 <div className="flex flex-col gap-3 flex-1 min-w-0">
                     <StatRow
                         label="Doanh thu gộp"
-                        value={formatVND(data.grossRevenue)}
+                        value={fmtMoneyVND(data.grossRevenue)}
                         color="text-white"
                         dot="#7c3bed"
                     />
                     <StatRow
                         label="Đã hoàn tiền"
-                        value={formatVND(data.totalRefunds)}
+                        value={fmtMoneyVND(data.totalRefunds)}
                         color="text-red-400"
                         dot="#ef4444"
                     />
                     <div className="border-t border-white/5 pt-3">
                         <StatRow
                             label="Còn lại"
-                            value={formatVND(retained)}
+                            value={fmtMoneyVND(retained)}
                             color="text-green-400"
                             dot="#22c55e"
                         />

@@ -14,6 +14,7 @@ import type { ApiResponse } from "../../../types/api";
 import type { MeInfo } from "../../../types/auth/auth";
 import { useEventTitle } from "../../../hooks/useEventTitle";
 import { getCurrentDateTime } from "../../../utils/getCurrentDateTime";
+import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 
 // ── Icons (inline svg) ────────────────────────────────────────────────────────
 const IconBox = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4m-8-4V7m16 0L12 11M4 7l8 4" /></svg>;
@@ -21,10 +22,6 @@ const IconMoney = () => <svg className="w-4 h-4" fill="none" stroke="currentColo
 const IconTag = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>;
 const IconBan = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" d="M5.636 5.636l12.728 12.728" /></svg>;
 const IconSearch = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" /></svg>;
-
-// ── Format helpers ────────────────────────────────────────────────────────────
-const fmt = (n: number) =>
-    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(n);
 
 // ── Summary card ──────────────────────────────────────────────────────────────
 function SummaryCard({
@@ -169,13 +166,13 @@ export default function OrderList({ eventId }: OrderListProps) {
                 <SummaryCard
                     icon={<IconMoney />}
                     label="Doanh thu (hoàn thành)"
-                    value={fmt(summary.totalRevenue)}
+                    value={fmtMoneyVND(summary.totalRevenue)}
                     accent="border-emerald-500/10"
                 />
                 <SummaryCard
                     icon={<IconTag />}
                     label="Tổng giảm giá"
-                    value={fmt(summary.totalDiscount)}
+                    value={fmtMoneyVND(summary.totalDiscount)}
                     accent="border-violet-500/10"
                 />
                 <SummaryCard

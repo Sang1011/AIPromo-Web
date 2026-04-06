@@ -9,33 +9,12 @@ import {
     LabelList,
 } from "recharts";
 import type { TransactionSummaryReportItem } from "../../../types/report/report";
+import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 
 interface Props {
     data: TransactionSummaryReportItem;
     loading?: boolean;
 }
-
-const truncate = (num: number, decimals: number) => {
-    const factor = Math.pow(10, decimals);
-    return Math.floor(num * factor) / factor;
-};
-
-const formatShort = (value: number) => {
-    if (value >= 1_000_000_000) {
-        const val = truncate(value / 1_000_000_000, 2);
-        return `${Number.isInteger(val) ? val : val}B`;
-    }
-    if (value >= 1_000_000) {
-        const val = truncate(value / 1_000_000, 2);
-        return `${Number.isInteger(val) ? val : val}tr`;
-    }
-    if (value >= 1_000) {
-        const val = truncate(value / 1_000, 1);
-        return `${Number.isInteger(val) ? val : val}K`;
-    }
-    return String(value);
-};
-
 export default function TransactionSummaryCard({ data, loading }: Props) {
     if (loading) {
         return (
@@ -198,7 +177,7 @@ export default function TransactionSummaryCard({ data, loading }: Props) {
                                 <div className="flex items-center gap-2">
                                     <span className="text-white/40">{p.pct}%</span>
                                     <span className="text-white font-semibold">
-                                        {formatShort(p.value)}
+                                        {fmtMoneyVND(p.value)}
                                     </span>
                                 </div>
                             </div>
@@ -220,13 +199,13 @@ export default function TransactionSummaryCard({ data, loading }: Props) {
                     <div className="text-center">
                         <div className="text-white/40 text-sm mb-0.5">Ví điện tử</div>
                         <div className="text-primary text-sm font-bold">
-                            {formatShort(walletPayAmount)}
+                            {fmtMoneyVND(walletPayAmount)}
                         </div>
                     </div>
                     <div className="text-center">
                         <div className="text-white/40 text-sm mb-0.5">Trực tiếp</div>
                         <div className="text-cyan-400 text-sm font-bold">
-                            {formatShort(directPayAmount)}
+                            {fmtMoneyVND(directPayAmount)}
                         </div>
                     </div>
                 </div>
