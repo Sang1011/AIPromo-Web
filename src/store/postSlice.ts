@@ -9,6 +9,9 @@ import type {
     PostListItem,
     GetPostsParams,
     GenerateImageRequestBody,
+    AdminPostItem,
+    AdminPaginatedResult,
+    GetAdminPostsQueryParams,
 } from "../types/post/post";
 import type { PaginatedResponse } from "../types/api";
 
@@ -23,6 +26,10 @@ interface PostState {
     pagination: Omit<PaginatedResponse<PostListItem>, "items"> | null;
     filters: Partial<GetPostsParams>;
 
+    adminPosts: AdminPostItem[];
+    adminPostDetail: AdminPostItem | null;
+    adminPagination: Omit<AdminPaginatedResult<AdminPostItem>, "items"> | null;
+
     loading: {
         fetchDetail: boolean;
         updateContent: boolean;
@@ -34,6 +41,8 @@ interface PostState {
         fetchList: boolean;
         generateImage: boolean;
         sendToChatBox: boolean;
+        fetchAdminList: boolean;
+        fetchAdminDetail: boolean;
     };
 
     error: {
@@ -47,6 +56,8 @@ interface PostState {
         fetchList: string | null;
         generateImage: string | null;
         sendToChatBox: string | null;
+        fetchAdminList: string | null;
+        fetchAdminDetail: string | null;
     };
 }
 
@@ -64,6 +75,11 @@ const initialState: PostState = {
         sortColumn: "CreatedAt",
         sortOrder: "desc",
     },
+
+    adminPosts: [],
+    adminPostDetail: null,
+    adminPagination: null,
+
     loading: {
         fetchDetail: false,
         updateContent: false,
@@ -75,6 +91,8 @@ const initialState: PostState = {
         fetchList: false,
         generateImage: false,
         sendToChatBox: false,
+        fetchAdminList: false,
+        fetchAdminDetail: false,
     },
     error: {
         fetchDetail: null,
@@ -87,6 +105,8 @@ const initialState: PostState = {
         fetchList: null,
         generateImage: null,
         sendToChatBox: null,
+        fetchAdminList: null,
+        fetchAdminDetail: null,
     },
 };
 
@@ -219,6 +239,30 @@ export const sendToChatBox = createAsyncThunk(
     }
 );
 
+export const fetchAdminPosts = createAsyncThunk(
+    "post/fetchAdminPosts",
+    async (params: GetAdminPostsQueryParams, { rejectWithValue }) => {
+        try {
+            const res = await postService.getAdminPosts(params);
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch admin posts");
+        }
+    }
+);
+
+export const fetchAdminPostById = createAsyncThunk(
+    "post/fetchAdminPostById",
+    async (id: string, { rejectWithValue }) => {
+        try {
+            const res = await postService.getAdminPostById(id);
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch admin post detail");
+        }
+    }
+);
+
 // ─── Slice ────────────────────────────────────────────────────────────────────
 
 const postSlice = createSlice({
@@ -311,6 +355,27 @@ const postSlice = createSlice({
             .addCase(sendToChatBox.pending, (state) => { state.loading.sendToChatBox = true; state.error.sendToChatBox = null; state.chatBoxReply = null; })
             .addCase(sendToChatBox.fulfilled, (state, action: PayloadAction<string>) => { state.loading.sendToChatBox = false; state.chatBoxReply = action.payload; })
             .addCase(sendToChatBox.rejected, (state, action) => { state.loading.sendToChatBox = false; state.error.sendToChatBox = action.payload as string; });
+
+        // ── fetchAdminPosts ──────────────────────────────────────────────────
+        builder
+            .addCase(fetchAdminPosts.pending, (state) => { state.loading.fetchAdminList = true; state.error.fetchAdminList = null; })
+            .addCase(fetchAdminPosts.fulfilled, (state, action) => {
+                state.loading.fetchAdminList = false;
+                const data = action.payload as AdminPaginatedResult<AdminPostItem>;
+                state.adminPosts = data.items;
+                const { items: _items, ...pagination } = data;
+                state.adminPagination = pagination;
+            })
+            .addCase(fetchAdminPosts.rejected, (state, action) => { state.loading.fetchAdminList = false; state.error.fetchAdminList = action.payload as string; });
+
+        // ── fetchAdminPostById ───────────────────────────────────────────────
+        builder
+            .addCase(fetchAdminPostById.pending, (state) => { state.loading.fetchAdminDetail = true; state.error.fetchAdminDetail = null; })
+            .addCase(fetchAdminPostById.fulfilled, (state, action) => {
+                state.loading.fetchAdminDetail = false;
+                state.adminPostDetail = action.payload as AdminPostItem;
+            })
+            .addCase(fetchAdminPostById.rejected, (state, action) => { state.loading.fetchAdminDetail = false; state.error.fetchAdminDetail = action.payload as string; });
     },
 });
 

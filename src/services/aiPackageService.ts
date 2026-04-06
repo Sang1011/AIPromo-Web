@@ -27,6 +27,9 @@ const aiPackageService = {
     },
     deleteAIPackage: (id: string): Promise<AxiosResponse<void>> => {
         return interceptorAPI().delete(`/ai/packages/${id}`);
+    },
+    togglePackageStatus: (id: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().patch(`/ai/packages/${id}/toggle-status`);
     }
 }
 
