@@ -1,6 +1,5 @@
-import React from "react";
 import { createPortal } from "react-dom";
-import { MdToggleOn, MdWarning } from "react-icons/md";
+import { MdToggleOn } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { togglePackageStatus } from "../../../store/aiPackageSlice";
