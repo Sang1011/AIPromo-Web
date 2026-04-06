@@ -1,6 +1,7 @@
 import type { AxiosResponse } from "axios";
 import type {
     AddEventMemberRequest,
+    GetEventListByMemberAssignedResponse,
     GetEventMembersResponse,
     UpdateEventMemberPermissionsRequest
 } from "../types/eventMember/eventMember";
@@ -30,6 +31,9 @@ const eventMemberService = {
                 responseType: "blob",
             }
         );
+    },
+    getEventListByMemberAssigned: (): Promise<AxiosResponse<GetEventListByMemberAssignedResponse>> => {
+        return interceptorAPI().get(`/events/assigned`);
     }
 };
 
