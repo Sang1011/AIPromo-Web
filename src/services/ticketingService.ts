@@ -1,15 +1,16 @@
 import type { AxiosResponse } from "axios";
-import { interceptorAPI } from "../utils/attachInterceptors";
+import type { ApiResponse } from "../types/api";
 import type {
+    AllEventSalesTrendResponse,
     CreatePendingOrderRequest,
     GetOrdersRequest,
     GetSalesTrendRequest,
     PaginatedOrders,
     StatisticCheckInResponse,
     StatisticOverviewResponse,
-    StatisticSalesTrendResponse,
+    StatisticSalesTrendResponse
 } from "../types/ticketing/ticketing";
-import type { ApiResponse } from "../types/api";
+import { interceptorAPI } from "../utils/attachInterceptors";
 
 const ticketingService = {
     createPendingOrder: (
@@ -49,6 +50,15 @@ const ticketingService = {
             { params: { period: params.period } }
         );
     },
+    getAllEventSalesTrend: (
+        startDate: string,
+        endDate: string,
+    ): Promise<AxiosResponse<AllEventSalesTrendResponse>> => {
+        return interceptorAPI().get(
+            `/ticketing/report/events/organizer/sales-trend`,
+            { params: { startDate, endDate } }
+        );
+    }
 };
 
 export default ticketingService;

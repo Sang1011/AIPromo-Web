@@ -108,9 +108,31 @@ export interface SalesTrendData {
     trend: SalesTrendItem[];
 }
 
-export type StatisticSalesTrendResponse = ApiResponse<SalesTrendData>
-
 export interface GetSalesTrendRequest {
     eventId: string;
     period: SalesTrendPeriod;
 }
+
+export interface AllEventSalesTrendResponseItem {
+    organizerId: string;
+    startDate: Date;
+    endDate: Date;
+    events: AllEventSalesTrendItem[];
+}
+
+export interface AllEventSalesTrendItem {
+    eventId: string;
+    title: string;
+    salesTrend: SalesTrendAllEventItem[];
+}
+
+
+export interface SalesTrendAllEventItem {
+    time: Date;
+    ticketsSold: number;
+    netRevenue: number;
+    grossRevenue: number;
+}
+
+export type StatisticSalesTrendResponse = ApiResponse<SalesTrendData>
+export type AllEventSalesTrendResponse = ApiResponse<AllEventSalesTrendResponseItem>

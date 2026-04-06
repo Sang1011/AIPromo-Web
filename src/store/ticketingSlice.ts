@@ -2,6 +2,8 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import ticketingService from "../services/ticketingService";
 import type { ApiResponse } from "../types/api";
 import type {
+    AllEventSalesTrendResponse,
+    AllEventSalesTrendResponseItem,
     CheckInStatistic,
     CreatePendingOrderRequest,
     GetOrdersRequest,
@@ -24,6 +26,8 @@ interface TicketingState {
     salesTrend: SalesTrendData | null;
     salesTrendLoading: boolean;
     orders: OrderItemOrganizer[];
+    allEventSalesTrend: AllEventSalesTrendResponseItem | null;
+    allEventSalesTrendLoading: boolean;
     pagination: {
         pageNumber: number;
         totalPages: number;
@@ -39,6 +43,8 @@ const initialState: TicketingState = {
     overviewStats: null,
     salesTrend: null,
     salesTrendLoading: false,
+    allEventSalesTrend: null,
+    allEventSalesTrendLoading: false,
     orders: [],
     pagination: {
         pageNumber: 1,
@@ -116,6 +122,21 @@ export const fetchSalesTrend = createAsyncThunk<
     } catch (err: any) {
         return rejectWithValue(
             err?.response?.data?.message ?? "Không thể lấy dữ liệu xu hướng bán vé"
+        );
+    }
+});
+
+export const fetchAllEventSalesTrend = createAsyncThunk<
+    AllEventSalesTrendResponse,
+    { startDate: string; endDate: string },
+    { rejectValue: string }
+>("TICKETING/fetchAllEventSalesTrend", async ({ startDate, endDate }, { rejectWithValue }) => {
+    try {
+        const res = await ticketingService.getAllEventSalesTrend(startDate, endDate);
+        return res.data;
+    } catch (err: any) {
+        return rejectWithValue(
+            err?.response?.data?.message ?? "Không thể lấy xu hướng bán vé"
         );
     }
 });
@@ -205,6 +226,19 @@ const ticketingSlice = createSlice({
             })
             .addCase(fetchSalesTrend.rejected, (state, action) => {
                 state.salesTrendLoading = false;
+                state.error = action.payload ?? "Có lỗi xảy ra";
+            })
+
+            .addCase(fetchAllEventSalesTrend.pending, (state) => {
+                state.allEventSalesTrendLoading = true;
+                state.error = null;
+            })
+            .addCase(fetchAllEventSalesTrend.fulfilled, (state, action) => {
+                state.allEventSalesTrendLoading = false;
+                state.allEventSalesTrend = action.payload.data;
+            })
+            .addCase(fetchAllEventSalesTrend.rejected, (state, action) => {
+                state.allEventSalesTrendLoading = false;
                 state.error = action.payload ?? "Có lỗi xảy ra";
             });
     },
