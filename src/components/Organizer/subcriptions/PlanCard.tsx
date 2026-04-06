@@ -1,5 +1,5 @@
-import { Check, X, Zap } from "lucide-react";
-import type { AIPackage } from "../../../types/aiPackage";
+import { Check, X, Zap, Loader2 } from "lucide-react";
+import type { AIPackage } from "../../../types/aiPackage/aiPackage";
 
 export interface PlanFeature {
     label: string;
@@ -13,10 +13,17 @@ interface PlanCardProps {
     isFeatured?: boolean;
     featuredLabel?: string;
     onSelect: (plan: AIPackage) => void;
-    accentColor?: "amber" | "purple" | "slate";
+    accentColor?: "amber" | "purple" | "slate" | "emerald";
+    isPaymentLoading?: boolean;
 }
 
-const accentMap = {
+const accentMap: Record<string, {
+    name: string;
+    badge: string;
+    btn: string;
+    card: string;
+    featuredBadge: string;
+}> = {
     amber: {
         name: "text-amber-400",
         badge: "bg-amber-500/15 text-amber-400 border border-amber-400/30",
@@ -30,6 +37,13 @@ const accentMap = {
         btn: "border-purple-400/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20",
         card: "border-purple-400/30",
         featuredBadge: "bg-primary text-white",
+    },
+    emerald: {
+        name: "text-emerald-400",
+        badge: "bg-emerald-500/15 text-emerald-400 border border-emerald-400/30",
+        btn: "border-emerald-400/30 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20",
+        card: "border-emerald-400/20",
+        featuredBadge: "bg-emerald-500 text-white",
     },
     slate: {
         name: "text-slate-400",
@@ -48,13 +62,9 @@ export default function PlanCard({
     featuredLabel = "Phổ biến nhất",
     onSelect,
     accentColor = "slate",
+    isPaymentLoading = false,
 }: PlanCardProps) {
-    const accent = accentMap[accentColor];
-
-    // const formatPrice = (price: number) => {
-    //     if (price === 0) return "Miễn phí";
-    //     return price.toLocaleString("vi-VN") + " ₫";
-    // };
+    const accent = accentMap[accentColor] ?? accentMap["slate"];
 
     return (
         <div
@@ -63,46 +73,38 @@ export default function PlanCard({
                 ${isCurrentPlan ? "ring-1 ring-primary/40" : ""}
             `}
         >
-            {/* Featured badge */}
             {isFeatured && (
-                <div
-                    className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${accent.featuredBadge}`}
-                >
+                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap ${accent.featuredBadge}`}>
                     {featuredLabel}
                 </div>
             )}
 
-            {/* Plan name */}
             <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${accent.name}`}>
                 {plan.name}
             </p>
 
-            {/* Price */}
             <div className="mb-1">
                 <span className="text-3xl font-bold text-white">
                     {plan.price === 0 ? "0" : plan.price.toLocaleString("vi-VN")}
                 </span>
-                {plan.price > 0 && (
+                {plan.price > 0 ? (
                     <span className="text-sm text-slate-500 ml-1">₫ / tháng</span>
-                )}
-                {plan.price === 0 && (
+                ) : (
                     <span className="text-sm text-slate-500 ml-1">VND</span>
                 )}
             </div>
 
             <p className="text-xs text-slate-500 mb-1">{plan.description}</p>
 
-            {/* Token quota */}
             <div className="flex items-center gap-1.5 mb-5">
                 <Zap size={12} className="text-amber-400" />
                 <span className="text-xs text-slate-400">
-                    {plan.tokenQuota.toLocaleString("vi-VN")} tokens / tháng
+                    {plan.tokenQuota.toLocaleString("vi-VN")} tokens / lần
                 </span>
             </div>
 
             <hr className="border-white/8 mb-5" />
 
-            {/* Features */}
             <ul className="flex flex-col gap-2.5 mb-6 flex-1">
                 {features.map((f, i) => (
                     <li key={i} className="flex items-start gap-2.5">
@@ -118,7 +120,6 @@ export default function PlanCard({
                 ))}
             </ul>
 
-            {/* CTA */}
             {isCurrentPlan ? (
                 <button
                     disabled
@@ -129,9 +130,19 @@ export default function PlanCard({
             ) : (
                 <button
                     onClick={() => onSelect(plan)}
-                    className={`w-full py-2.5 rounded-xl text-sm font-semibold border transition ${accent.btn}`}
+                    disabled={isPaymentLoading}
+                    className={`w-full py-2.5 rounded-xl text-sm font-semibold border transition flex items-center justify-center gap-2
+                        ${accent.btn}
+                        disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                    {plan.price === 0 ? "Hạ xuống Free" : `Chuyển sang ${plan.name}`}
+                    {isPaymentLoading ? (
+                        <>
+                            <Loader2 size={13} className="animate-spin" />
+                            Đang xử lý...
+                        </>
+                    ) : (
+                        `Mua ${plan.name}`
+                    )}
                 </button>
             )}
         </div>

@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { GrossRevenueReportReponse, NetRevenueReportResponse, RefundAmountReportResponse, RefundRateReportResponse, RevenueBreakdownOrganizerReportResponse, RevenueSummaryOrganizerReportResponse, TransactionSummaryReportResponse } from "../types/report/report";
+import type { GrossRevenueByEventResponse, GrossRevenueReportReponse, NetRevenueByEventResponse, NetRevenueReportResponse, RefundAmountReportResponse, RefundRateReportResponse, RevenueBreakdownOrganizerReportResponse, RevenueSummaryOrganizerReportResponse, TransactionSummaryReportResponse } from "../types/report/report";
 
 const reportService = {
     getGrossRevenueReport: (eventId: string): Promise<AxiosResponse<GrossRevenueReportReponse>> => {
@@ -23,6 +23,12 @@ const reportService = {
     },
     getRevenueBreakdownOrganizerReport: (organizerId: string, byNet: boolean): Promise<AxiosResponse<RevenueBreakdownOrganizerReportResponse>> => {
         return interceptorAPI().get(`/reports/revenue/organizer/${organizerId}/events?byNet=${byNet}`);
+    },
+    getGrossRevenueByEventReport: (): Promise<AxiosResponse<GrossRevenueByEventResponse>> => {
+        return interceptorAPI().post(`/reports/revenue/events`, {});
+    },
+    getNetRevenueByEventReport: (): Promise<AxiosResponse<NetRevenueByEventResponse>> => {
+        return interceptorAPI().post(`/reports/revenue/net/events`, {});
     }
 };
 

@@ -26,8 +26,9 @@ import AdminHashtagPage from "./pages/Admin/AdminHashtagPage";
 import FinanceRevenuePage from "./pages/Admin/FinanceRevenuePage";
 import EventModerationPage from "./pages/Admin/EventModerationPage";
 import UserManagementPage from "./pages/Admin/UserManagementPage";
-import SystemLogsPage from "./pages/Admin/SystemLogsPage";
 import WithdrawalPage from "./pages/Admin/WithdrawalPage";
+import AIPackagesPage from "./pages/Admin/AIPackagesPage";
+import RefundManagementPage from "./pages/Admin/RefundManagementPage";
 import StaffLayout from "./components/Staff/layouts/StaffLayout";
 import StaffDashboardPage from "./pages/Staff/StaffDashboardPage";
 import EventApprovalPage from "./pages/Staff/EventApprovalPage";
@@ -56,6 +57,10 @@ import SubscriptionPage from "./pages/Organizer/SubscriptionPage";
 import RequireRole from "./components/Guards/RequireRole";
 import OrderSuccess from "./pages/OrderSuccess";
 import VnpayReturn from "./pages/VNPayReturn";
+import PackageOrderFailed from "./pages/Organizer/PackageOrderFailed";
+import PackageVnpayReturn from "./pages/Organizer/PackageVNPayReturn";
+import PackageOrderSuccess from "./pages/Organizer/PackageOrderSuccess";
+import LegalDetailPage from "./pages/Organizer/LegalDetailPage";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -96,11 +101,12 @@ function App() {
         {/* Organizer */}
         <Route element={<RequireRole allowedRoles={["Organizer", "Attendee"]} />}>
           <Route path="/organizer" element={<DashboardLayout />}>
-            <Route path="overall" element={<OrganizerOverviewAllPage />} />
             <Route path="my-events" element={<MyEventsPage />} />
             <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
+              <Route path="overall" element={<OrganizerOverviewAllPage />} />
               <Route path="reports" element={<ReportManagementPage />} />
               <Route path="legals" element={<LegalPage />} />
+              <Route path="legals/:id" element={<LegalDetailPage />} />
               <Route path="create-event" element={<CreateEventPage />} />
               <Route path="accounts" element={<OrganizerAccountPage />} />
             </Route>
@@ -122,6 +128,9 @@ function App() {
           </Route>
 
           <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
+            <Route path="/payment/packages/vnpay-return" element={<PackageVnpayReturn />} />
+            <Route path="/payment/packages/success" element={<PackageOrderSuccess />} />
+            <Route path="/payment/packages/failed" element={<PackageOrderFailed />} />
             <Route path="/organizer/subscription" element={<SubscriptionPage />} />
             <Route
               path="/organizer/my-events/:eventId/marketing/:marketingId/post-review"
@@ -142,8 +151,9 @@ function App() {
           <Route path="finance" element={<FinanceRevenuePage />} />
           <Route path="events" element={<EventModerationPage />} />
           <Route path="users" element={<UserManagementPage />} />
-          <Route path="logs" element={<SystemLogsPage />} />
+          <Route path="refunds" element={<RefundManagementPage />} />
           <Route path="withdrawals" element={<WithdrawalPage />} />
+          <Route path="ai-packages" element={<AIPackagesPage />} />
         </Route>
 
         {/* Staff group */}

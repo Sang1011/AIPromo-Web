@@ -6,8 +6,8 @@ export default function VnpayReturn() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Gửi toàn bộ query params VNPay trả về lên backend verify
-    const callbackUrl = `https://localhost:7000/api/payments/vnpay/return?${searchParams.toString()}`;
+    const BE_URL = import.meta.env.VITE_API_BASE_URL || "https://localhost:7000/api";
+    const callbackUrl = `${BE_URL}/payments/vnpay/return?${searchParams.toString()}`;
 
     fetch(callbackUrl)
       .then((res) => res.json())

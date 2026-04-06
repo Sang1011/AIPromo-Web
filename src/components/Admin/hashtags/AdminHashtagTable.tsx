@@ -1,4 +1,4 @@
-import { MdFilterList, MdAdd, MdRefresh } from "react-icons/md";
+import { MdAdd, MdRefresh } from "react-icons/md";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
@@ -59,9 +59,6 @@ export default function AdminHashtagTable() {
                     <p className="text-[#a592c8] text-sm">Tạo, sửa, xóa và theo dõi hashtag sự kiện</p>
                 </div>
                 <div className="flex gap-3">
-                    <button onClick={() => {}} className="bg-[#302447] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-white/10 transition-colors">
-                        <MdFilterList className="text-base" /> Lọc
-                    </button>
                     <button onClick={() => setOpenCreate(true)} className="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(124,59,237,0.4)]">
                         <MdAdd className="text-base" /> Thêm Hashtag
                     </button>

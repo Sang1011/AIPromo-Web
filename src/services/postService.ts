@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest } from "../types/post/post";
+import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams } from "../types/post/post";
 import type { ApiResponse, ApiResponseNoData } from "../types/api";
 
 const postService = {
@@ -50,7 +50,14 @@ const postService = {
         return interceptorAPI().post("/bot/chat", {
             userPrompt
         });
-    }
+    },
+
+    getAdminPosts: (params: GetAdminPostsQueryParams): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().get("/admin/posts", { params });
+    },
+    getAdminPostById: (id: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().get(`/admin/posts/${id}`);
+    },
 }
 
 export default postService;

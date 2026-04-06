@@ -7,11 +7,16 @@ import type {
     RefundRateReportItem,
     TransactionSummaryReportItem,
     RevenueSummaryOrganizerReportItem,
-    BreakdownItem
+    BreakdownItem,
+    NetRevenueByEventItem,
+    GrossRevenueByEventItem
 } from "../types/report/report";
 
 interface ReportState {
     grossRevenue?: GrossRevenueReportItem;
+    grossRevenueByEvent?: GrossRevenueByEventItem[];
+    netRevenueByEvent?: NetRevenueByEventItem[];
+
     netRevenue?: NetRevenueReportItem;
     refundAmount?: RefundAmountReportItem;
     refundRate?: RefundRateReportItem;
@@ -112,6 +117,30 @@ export const fetchRevenueBreakdownOrganizer = createAsyncThunk(
     }
 );
 
+export const fetchGrossRevenueByEvent = createAsyncThunk(
+    "report/fetchGrossRevenueByEvent",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await reportService.getGrossRevenueByEventReport();
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err?.response?.data?.message || "Error");
+        }
+    }
+);
+
+export const fetchNetRevenueByEvent = createAsyncThunk(
+    "report/fetchNetRevenueByEvent",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await reportService.getNetRevenueByEventReport();
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err?.response?.data?.message || "Error");
+        }
+    }
+);
+
 const reportSlice = createSlice({
     name: "report",
     initialState,
@@ -205,6 +234,32 @@ const reportSlice = createSlice({
             })
             .addCase(fetchRevenueBreakdownOrganizer.rejected, (state, action) => {
                 state.loading.organizerBreakdown = false;
+                state.error = action.payload as string;
+            });
+
+        builder
+            .addCase(fetchGrossRevenueByEvent.pending, (state) => {
+                state.loading.grossRevenueByEvent = true;
+            })
+            .addCase(fetchGrossRevenueByEvent.fulfilled, (state, action) => {
+                state.loading.grossRevenueByEvent = false;
+                state.grossRevenueByEvent = action.payload;
+            })
+            .addCase(fetchGrossRevenueByEvent.rejected, (state, action) => {
+                state.loading.grossRevenueByEvent = false;
+                state.error = action.payload as string;
+            });
+
+        builder
+            .addCase(fetchNetRevenueByEvent.pending, (state) => {
+                state.loading.netRevenueByEvent = true;
+            })
+            .addCase(fetchNetRevenueByEvent.fulfilled, (state, action) => {
+                state.loading.netRevenueByEvent = false;
+                state.netRevenueByEvent = action.payload;
+            })
+            .addCase(fetchNetRevenueByEvent.rejected, (state, action) => {
+                state.loading.netRevenueByEvent = false;
                 state.error = action.payload as string;
             });
     }

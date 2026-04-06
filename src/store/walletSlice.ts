@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { ToUpWalletResponse, ToUpWalletResquest, WalletUserResponse } from "../types/wallet/wallet";
 import walletService from "../services/walletService";
+import type { ApiResponse } from "../types/api";
 
 const name = "wallet";
 
@@ -28,7 +29,7 @@ export const fetchWalletUser = createAsyncThunk<WalletUserResponse, number>(
 
 
 export const fetchToUpWallet = createAsyncThunk<
-    ToUpWalletResponse,
+    ApiResponse<ToUpWalletResponse>,
     ToUpWalletResquest
 >(
     `${name}/fetchToUpWallet`,
@@ -52,7 +53,7 @@ const walletSlice = createSlice({
             const response = action.payload
             state.currentWallet = response.data
         })
-         builder.addCase(fetchToUpWallet.fulfilled, (state, action: PayloadAction<any>) => {
+        builder.addCase(fetchToUpWallet.fulfilled, (state, action: PayloadAction<any>) => {
             const response = action.payload
             state.toUpWallet = response.data
         })

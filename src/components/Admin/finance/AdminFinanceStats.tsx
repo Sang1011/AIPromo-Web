@@ -1,3 +1,7 @@
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../../store";
+import { fetchGlobalRevenue } from "../../../store/revenueSlice";
 import {
     MdTrendingUp,
     MdAccountBalanceWallet,
@@ -7,13 +11,33 @@ import {
 import AdminStatsCard from "../shared/AdminStatsCard";
 
 export default function AdminFinanceStats() {
+    const dispatch = useDispatch<AppDispatch>();
+    const { globalRevenue, loading, error } = useSelector(
+        (state: RootState) => state.REVENUE
+    );
+
+    useEffect(() => {
+        dispatch(fetchGlobalRevenue());
+    }, [dispatch]);
+
+    const formatCurrency = (value: number): string => {
+        return new Intl.NumberFormat("vi-VN", {
+            style: "currency",
+            currency: "VND",
+        }).format(value);
+    };
+
+    const grossRevenue = globalRevenue?.data?.grossRevenue ?? 0;
+    const netRevenue = globalRevenue?.data?.netRevenue ?? 0;
+    const eventCount = globalRevenue?.data?.eventCount ?? 0;
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <AdminStatsCard
                 label="Tổng Doanh Thu"
-                value="$128,450.00"
-                change="+14.2%"
-                subtext="from last month"
+                value={loading ? "Đang tải..." : formatCurrency(grossRevenue)}
+                change={error ? "Lỗi" : `${eventCount} sự kiện`}
+                subtext={error ? error : "tháng trước"}
                 icon={<MdTrendingUp className="text-sm" />}
                 iconBg="bg-emerald-500/10"
                 iconColor="text-emerald-400"
@@ -28,9 +52,9 @@ export default function AdminFinanceStats() {
             />
             <AdminStatsCard
                 label="Tổng Thanh toán"
-                value="$102,182.50"
-                change="84"
-                subtext="pending approvals"
+                value={loading ? "Đang tải..." : formatCurrency(netRevenue)}
+                change={error ? "Lỗi" : `${eventCount} sự kiện`}
+                subtext={error ? error : "đang chờ duyệt"}
                 icon={<MdOutbound className="text-sm" />}
                 iconBg="bg-blue-500/10"
                 iconColor="text-blue-400"
@@ -39,7 +63,7 @@ export default function AdminFinanceStats() {
                 label="Giao dịch"
                 value="4,812"
                 change="+210"
-                subtext="in last 24h"
+                subtext="trong 24 giờ qua"
                 icon={<MdReceiptLong className="text-sm" />}
                 iconBg="bg-purple-500/10"
                 iconColor="text-purple-400"

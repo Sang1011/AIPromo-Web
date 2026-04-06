@@ -13,6 +13,8 @@ import type {
     GetPendingEventsResponse,
     GetPendingEventsRequest
 } from "../types/event/event"
+import type { CancelledEventsResponse, GetCancelledEventsRequest } from "../types/event/cancelledEvent"
+import type { MassRefundApiResponse } from "../types/refund/massRefund"
 import type { AxiosResponse } from "axios"
 import { interceptorAPI } from "../utils/attachInterceptors";
 import API from "./api";
@@ -45,6 +47,16 @@ const eventService = {
         return interceptorAPI().get("/organizer/events/me", {
             params: request
         });
+    },
+
+    getCancelledEvents: (request: GetCancelledEventsRequest): Promise<AxiosResponse<CancelledEventsResponse>> => {
+        return interceptorAPI().get("/admin/events", {
+            params: request
+        });
+    },
+
+    massRefund: (eventId: string): Promise<AxiosResponse<MassRefundApiResponse>> => {
+        return interceptorAPI().post(`/admin/refunds/events/${eventId}/mass-refund`);
     },
 
     upload: (folder: string, file: File): Promise<AxiosResponse<{ url: string }>> => {
