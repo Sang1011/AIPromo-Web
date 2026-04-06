@@ -30,6 +30,12 @@ const TAB_FILTERS: { label: string; status?: PostStatus }[] = [
     { label: "Đã lưu trữ", status: "Archived" },
 ];
 
+const DIST_STATUS: Record<string, { label: string; className: string }> = {
+    Sent: { label: "Đã gửi", className: "bg-green-500/10 text-green-400 border-green-500/30" },
+    Pending: { label: "Đang xử lý", className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" },
+    Failed: { label: "Lỗi", className: "bg-red-500/10 text-red-400 border-red-500/30" },
+};
+
 export default function MarketingTable() {
     const { eventId } = useParams<{ eventId: string }>();
     const navigate = useNavigate();
@@ -87,6 +93,7 @@ export default function MarketingTable() {
                             <th className="px-8 py-5">Tiêu đề nội dung</th>
                             <th className="px-8 py-5">Trạng thái</th>
                             <th className="px-8 py-5">Phiên bản</th>
+                            <th className="px-8 py-5">Phân phối</th>
                             <th className="px-8 py-5">Ngày tạo</th>
                             <th className="px-8 py-5 text-right">Thao tác</th>
                         </tr>
@@ -122,6 +129,50 @@ export default function MarketingTable() {
                                     </td>
                                     <td className="px-8 py-6 text-slate-400 text-sm">
                                         v{post.version}
+                                    </td>
+                                    <td className="px-8 py-6">
+                                        {post.distributions.length === 0 ? (
+                                            <span className="text-slate-600 text-xs">Chưa phân phối</span>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {Object.values(
+                                                    // Group theo platform, giữ lại record mới nhất (sentAt lớn nhất)
+                                                    post.distributions.reduce<Record<string, typeof post.distributions[0]>>(
+                                                        (acc, d) => {
+                                                            const existing = acc[d.platform];
+                                                            if (
+                                                                !existing ||
+                                                                new Date(d.sentAt ?? 0) > new Date(existing.sentAt ?? 0)
+                                                            ) {
+                                                                acc[d.platform] = d;
+                                                            }
+                                                            return acc;
+                                                        },
+                                                        {}
+                                                    )
+                                                ).map((d) => {
+                                                    const s = DIST_STATUS[d.status] ?? {
+                                                        label: d.status,
+                                                        className: "bg-slate-800 text-slate-400 border-slate-700",
+                                                    };
+                                                    return (
+                                                        <span
+                                                            key={d.platform}
+                                                            title={d.errorMessage ?? d.platform}
+                                                            className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase border flex items-center gap-1 ${s.className}`}
+                                                        >
+                                                            {d.platform === "Facebook" && (
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                                                                </svg>
+                                                            )}
+                                                            {s.label}
+                                                            {d.errorMessage && " ⚠"}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-8 py-6 text-slate-400 text-sm">
                                         {formatDate(post.createdAt)}
