@@ -28,10 +28,10 @@ const formatVND = (amount: number) =>
   amount === 0
     ? "Miễn phí"
     : new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-        maximumFractionDigits: 0,
-      }).format(amount);
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    }).format(amount);
 
 /* ================= CATEGORY BADGE ================= */
 
@@ -57,7 +57,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/event-detail/${item.id}`);
+    navigate(`/event-detail/${item.urlPath}`);
   };
 
   const isFree = item.minPrice === 0;
@@ -141,11 +141,10 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
                   ? "rgba(20,184,166,0.2)"
                   : "rgba(245,158,11,0.2)",
               color: item.status === "Published" ? "#2dd4bf" : "#fbbf24",
-              border: `1px solid ${
-                item.status === "Published"
+              border: `1px solid ${item.status === "Published"
                   ? "rgba(20,184,166,0.4)"
                   : "rgba(245,158,11,0.4)"
-              }`,
+                }`,
             }}
           >
             {item.status === "Published" ? "● Đang mở" : item.status}
@@ -160,17 +159,17 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
               style={
                 isFree
                   ? {
-                      background: "rgba(20,184,166,0.25)",
-                      color: "#2dd4bf",
-                      border: "1px solid rgba(20,184,166,0.55)",
-                      boxShadow: "0 0 12px rgba(20,184,166,0.25)",
-                    }
+                    background: "rgba(20,184,166,0.25)",
+                    color: "#2dd4bf",
+                    border: "1px solid rgba(20,184,166,0.55)",
+                    boxShadow: "0 0 12px rgba(20,184,166,0.25)",
+                  }
                   : {
-                      background: "linear-gradient(135deg, rgba(124,59,237,0.55), rgba(168,85,247,0.55))",
-                      color: "#f1f0ff",
-                      border: "1px solid rgba(168,85,247,0.6)",
-                      boxShadow: "0 0 16px rgba(124,59,237,0.35)",
-                    }
+                    background: "linear-gradient(135deg, rgba(124,59,237,0.55), rgba(168,85,247,0.55))",
+                    color: "#f1f0ff",
+                    border: "1px solid rgba(168,85,247,0.6)",
+                    boxShadow: "0 0 16px rgba(124,59,237,0.35)",
+                  }
               }
             >
               {/* Ticket icon */}
@@ -337,11 +336,11 @@ const Pagination = ({
               ...btnBase,
               ...(p === current
                 ? {
-                    background: "linear-gradient(135deg,#7c3bed,#a855f7)",
-                    border: "1px solid transparent",
-                    color: "#fff",
-                    boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
-                  }
+                  background: "linear-gradient(135deg,#7c3bed,#a855f7)",
+                  border: "1px solid transparent",
+                  color: "#fff",
+                  boxShadow: "0 4px 14px rgba(124,59,237,0.4)",
+                }
                 : {}),
             }}
           >
@@ -383,7 +382,7 @@ const EventListSection: React.FC = () => {
     setLoading(true);
     dispatch(fetchAllEvents({ PageNumber: pageNumber, PageSize: PAGE_SIZE }))
       .unwrap()
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
