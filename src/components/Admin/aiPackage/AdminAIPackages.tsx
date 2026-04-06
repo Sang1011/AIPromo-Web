@@ -4,6 +4,7 @@ import AdminCreateAIPackageModal from "./AdminCreateAIPackageModal";
 import AdminEditAIPackageModal from "./AdminEditAIPackageModal";
 import AdminViewAIPackageModal from "./AdminViewAIPackageModal";
 import AdminDeletePackageConfirmModal from "./AdminDeletePackageConfirmModal";
+import AdminToggleStatusConfirmModal from "./AdminToggleStatusConfirmModal";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
@@ -21,6 +22,7 @@ export default function AdminAIPackages() {
     const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
     const [viewingPackageId, setViewingPackageId] = useState<string | null>(null);
     const [deletingPackage, setDeletingPackage] = useState<{ id: string; name: string } | null>(null);
+    const [togglingPackage, setTogglingPackage] = useState<{ id: string; name: string; isActive: boolean } | null>(null);
 
     if (loading?.list) {
         return (
@@ -81,8 +83,8 @@ export default function AdminAIPackages() {
                             {/* Top accent bar */}
                             <div className="h-1 bg-gradient-to-r from-violet-600 to-violet-400"></div>
                             
-                            {/* Header: Name + Type badge */}
-                            <div className="px-6 pt-5 pb-4 flex items-start justify-between">
+                            {/* Header: Name + Type badge + Toggle */}
+                            <div className="px-6 pt-5 pb-4 flex items-start justify-between gap-3">
                                 <div className="flex-1 min-w-0">
                                     <h3 className="text-lg font-bold text-white truncate">{pkg.name}</h3>
                                     <div className="flex items-baseline gap-1.5 mt-2">
@@ -92,13 +94,30 @@ export default function AdminAIPackages() {
                                         <span className="text-sm text-slate-500">VND/tháng</span>
                                     </div>
                                 </div>
-                                <span className={`shrink-0 ml-3 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
-                                    pkg.type === 'Subscription' 
-                                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
-                                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                }`}>
-                                    {pkg.type === 'Subscription' ? 'Subscription' : 'TopUp'}
-                                </span>
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                                        pkg.type === 'Subscription'
+                                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    }`}>
+                                        {pkg.type === 'Subscription' ? 'Subscription' : 'TopUp'}
+                                    </span>
+                                    {/* Toggle Status Switch */}
+                                    <button
+                                        onClick={() => setTogglingPackage({ id: pkg.id, name: pkg.name, isActive: pkg.isActive })}
+                                        className={`relative w-11 h-6 rounded-full transition-all duration-300 shrink-0 ${
+                                            pkg.isActive
+                                                ? 'bg-violet-600 shadow-[0_0_12px_rgba(139,92,246,0.4)]'
+                                                : 'bg-slate-700'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`absolute top-[2px] left-[2px] w-[20px] h-[20px] bg-white rounded-full transition-transform duration-300 shadow-md ${
+                                                pkg.isActive ? 'translate-x-5' : 'translate-x-0'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Description */}
@@ -170,6 +189,14 @@ export default function AdminAIPackages() {
                 packageName={deletingPackage?.name ?? ""}
                 onClose={() => setDeletingPackage(null)}
                 onConfirm={() => setDeletingPackage(null)}
+            />
+            <AdminToggleStatusConfirmModal
+                isOpen={!!togglingPackage}
+                packageId={togglingPackage?.id ?? null}
+                packageName={togglingPackage?.name ?? ""}
+                currentStatus={togglingPackage?.isActive ?? false}
+                onClose={() => setTogglingPackage(null)}
+                onConfirm={() => setTogglingPackage(null)}
             />
             <AdminEditAIPackageModal
                 isOpen={!!editingPackageId}

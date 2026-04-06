@@ -13,6 +13,7 @@ interface AIPackageState {
         create: boolean;
         update: boolean;
         delete: boolean;
+        toggleStatus: boolean;
         quota: boolean;
         purchased: boolean;
         payment: boolean;
@@ -31,6 +32,7 @@ const initialState: AIPackageState = {
         create: false,
         update: false,
         delete: false,
+        toggleStatus: false,
         quota: false,
         purchased: false,
         payment: false
@@ -134,6 +136,18 @@ export const deleteAIPackage = createAsyncThunk(
     }
 );
 
+export const togglePackageStatus = createAsyncThunk(
+    "aiPackage/toggleStatus",
+    async (id: string, { rejectWithValue }) => {
+        try {
+            const res = await aiPackageService.togglePackageStatus(id);
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
 const aiPackageSlice = createSlice({
     name: "aiPackage",
     initialState,
@@ -210,6 +224,22 @@ const aiPackageSlice = createSlice({
             })
             .addCase(deleteAIPackage.rejected, (state, action) => {
                 state.loading.delete = false;
+                state.error = action.payload as string;
+            })
+            // ===== TOGGLE STATUS =====
+            .addCase(togglePackageStatus.pending, (state) => {
+                state.loading.toggleStatus = true;
+                state.error = null;
+            })
+            .addCase(togglePackageStatus.fulfilled, (state, action) => {
+                state.loading.toggleStatus = false;
+                const idx = state.list.findIndex((p) => p.id === action.payload.id);
+                if (idx !== -1) {
+                    state.list[idx] = action.payload;
+                }
+            })
+            .addCase(togglePackageStatus.rejected, (state, action) => {
+                state.loading.toggleStatus = false;
                 state.error = action.payload as string;
             })
             .addCase(fetchMyQuota.pending, (state) => {
