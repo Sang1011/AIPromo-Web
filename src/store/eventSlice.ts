@@ -106,6 +106,20 @@ export const fetchEventById = createAsyncThunk<
     }
 );
 
+export const fetchEventByUrlPath = createAsyncThunk<
+    any,
+    string
+>(
+    `${name}/fetchEventByUrlPath`,
+    async (urlPath, thunkAPI) => {
+        try {
+            return (await eventService.getEventByUrlPath(urlPath)).data;
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 export const fetchCreateEvent = createAsyncThunk<any, CreateEventRequest>(
     `${name}/fetchCreateEvent`,
     async (data, thunkAPI) => {
@@ -391,6 +405,14 @@ const eventSlice = createSlice({
 
         builder.addCase(
             fetchEventById.fulfilled,
+            (state, action) => {
+                if (action.payload.isSuccess)
+                    state.currentEvent = action.payload.data;
+            }
+        );
+
+        builder.addCase(
+            fetchEventByUrlPath.fulfilled,
             (state, action) => {
                 if (action.payload.isSuccess)
                     state.currentEvent = action.payload.data;

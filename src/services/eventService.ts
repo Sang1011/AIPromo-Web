@@ -164,7 +164,9 @@ const eventService = {
     updateEventPolicy: (eventId: string, policy: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch(`/organizer/events/${eventId}/policy`, { policy });
     },
-
+    getEventByUrlPath: (urlPath: string): Promise<AxiosResponse<GetEventDetailResponse>> => {
+        return API.call().get(`/events/url/${urlPath}`);
+    }
 }
 
 export default eventService
