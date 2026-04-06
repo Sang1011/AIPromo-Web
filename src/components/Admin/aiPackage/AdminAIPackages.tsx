@@ -8,14 +8,15 @@ import AdminToggleStatusConfirmModal from "./AdminToggleStatusConfirmModal";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchAIPackages } from "../../../store/aiPackageSlice";
+import { fetchAIPackages, fetchAIPackageOverview } from "../../../store/aiPackageSlice";
 
 export default function AdminAIPackages() {
     const dispatch = useDispatch<AppDispatch>();
-    const { list: packages = [], loading } = useSelector((state: RootState) => state.PACKAGE);
+    const { list: packages = [], loading, overview } = useSelector((state: RootState) => state.PACKAGE);
 
     useEffect(() => {
         dispatch(fetchAIPackages());
+        dispatch(fetchAIPackageOverview());
     }, [dispatch]);
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -213,18 +214,49 @@ export default function AdminAIPackages() {
                         </div>
                         <div>
                             <h4 className="text-slate-400 text-sm uppercase tracking-wider font-bold">Tổng doanh thu gói AI</h4>
-                            <p className="text-2xl font-black text-white">452.800.000 VND</p>
+                            <p className="text-2xl font-black text-white">
+                                {loading.overview ? (
+                                    <span className="inline-block w-32 h-8 bg-slate-700/50 rounded animate-pulse" />
+                                ) : overview ? (
+                                    `${new Intl.NumberFormat('vi-VN').format(overview.totalRevenue.value)} VND`
+                                ) : (
+                                    '0 VND'
+                                )}
+                            </p>
                         </div>
                     </div>
                     <div className="text-right">
                         <p className="text-xs text-slate-500">Tăng trưởng tháng này</p>
-                        <p className="text-emerald-400 font-bold">+12.5%</p>
+                        <p className={`font-bold ${
+                            overview?.totalRevenue.isPositiveGrowth ? 'text-emerald-400' : 'text-red-400'
+                        }`}>
+                            {loading.overview ? (
+                                <span className="inline-block w-12 h-6 bg-slate-700/50 rounded animate-pulse" />
+                            ) : overview ? (
+                                `${overview.totalRevenue.isPositiveGrowth ? '+' : ''}${overview.totalRevenue.monthlyGrowthRate}%`
+                            ) : (
+                                '+0%'
+                            )}
+                        </p>
                     </div>
                 </div>
                 <div className="glass-card rounded-2xl p-6 flex flex-col justify-center text-center">
                     <h4 className="text-slate-400 text-xs uppercase tracking-wider font-bold mb-1">Gói hoạt động nhất</h4>
-                    <p className="text-xl font-bold text-violet-400">Chuyên Nghiệp</p>
-                    <p className="text-xs text-slate-500 mt-2">142 tổ chức đang dùng</p>
+                    {loading.overview ? (
+                        <>
+                            <span className="inline-block w-32 h-7 bg-slate-700/50 rounded animate-pulse mx-auto mt-1" />
+                            <span className="inline-block w-24 h-4 bg-slate-700/50 rounded animate-pulse mx-auto mt-2" />
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-xl font-bold text-violet-400">
+                                {overview?.mostActivePackage.packageName || 'N/A'}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-2">
+                                {overview?.mostActivePackage.organizationsUsing || 0} tổ chức đang dùng
+                            </p>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
