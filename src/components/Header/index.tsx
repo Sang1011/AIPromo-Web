@@ -7,7 +7,7 @@ import { fetchAllEvents } from "../../store/eventSlice";
 interface UserInfo {
   userId?: string;
   name?: string;
-   roles?: string[]; 
+  roles?: string[];
 }
 
 const Header: React.FC = () => {
@@ -87,15 +87,16 @@ const Header: React.FC = () => {
     });
   };
 
-  const handleCreateEvent = () => {
-  setSearchFocused(false);
   const isOrganizer = user?.roles?.includes("Organizer");
-  if (isOrganizer) {
-    navigate("/organizer/overall");
-  } else {
-    navigate("/verify-organizer");
-  }
-};
+
+  const handleCreateEvent = () => {
+    setSearchFocused(false);
+    if (isOrganizer) {
+      navigate("/organizer/overall");
+    } else {
+      navigate("/verify-organizer");
+    }
+  };
 
   return (
     <>
@@ -316,7 +317,7 @@ const Header: React.FC = () => {
               }}
             >
               <span className="material-symbols-outlined text-[18px]">add</span>
-              <span className="hidden sm:inline"> Tạo sự kiện</span>
+              <span className="hidden sm:inline">{isOrganizer ? "Quản lý sự kiện" : "Tạo sự kiện"}</span>
             </button>
 
             {isLoggedIn ? (

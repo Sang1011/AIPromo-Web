@@ -33,7 +33,6 @@ export default function CheckInPage() {
         }
     }, [reduxData.checkInStats]);
 
-    // Kết nối SignalR theo eventId, cập nhật stats realtime
     useCheckInRealtime({
         eventId,
         onUpdate: (stats) => {
