@@ -17,7 +17,7 @@ const menuGroups = [
             },
             {
                 icon: <MdEventNote />,
-                label: "Sự kiện của tôi",
+                label: "Danh sách sự kiện",
                 path: "/organizer/my-events",
             },
             {
