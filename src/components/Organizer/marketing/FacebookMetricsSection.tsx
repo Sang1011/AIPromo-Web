@@ -16,7 +16,7 @@ import {
     RadialBarChart, RadialBar, Cell,
 } from "recharts";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchDistributionMetricsFacebook } from "../../../store/postSlice";
+import { clearDistributionMetrics, fetchDistributionMetricsFacebook } from "../../../store/postSlice";
 import type { PostDetail } from "../../../types/post/post";
 import { formatDateTime } from "../../../utils/formatDateTime";
 
@@ -205,6 +205,10 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
     const fbDistribution = post.distributions?.find(d => d.platform === "Facebook") ?? null;
 
     useEffect(() => {
+        dispatch(clearDistributionMetrics());
+    }, []);
+
+    useEffect(() => {
         if (fbDistribution?.id) {
             dispatch(fetchDistributionMetricsFacebook({
                 postId: post.postId,
@@ -212,7 +216,6 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
             }));
         }
     }, [fbDistribution?.id, post.postId]);
-
     // No facebook distribution at all — show nothing
     if (!fbDistribution) return null;
 

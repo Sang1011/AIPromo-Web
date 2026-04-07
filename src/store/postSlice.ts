@@ -46,8 +46,9 @@ interface PostState {
         sendToChatBox: boolean;
         fetchAdminList: boolean;
         fetchAdminDetail: boolean;
-        fetchDistributionMetrics: boolean;
         pushPost: boolean;
+        fetchDistributionMetrics: boolean,
+        fetchAllDistributionMetrics: boolean,
     };
 
     error: {
@@ -65,6 +66,7 @@ interface PostState {
         fetchAdminDetail: string | null;
         fetchDistributionMetrics: string | null;
         pushPost: string | null;
+        fetchAllDistributionMetrics: string | null,
     };
 }
 
@@ -102,6 +104,7 @@ const initialState: PostState = {
         fetchAdminList: false,
         fetchAdminDetail: false,
         fetchDistributionMetrics: false,
+        fetchAllDistributionMetrics: false,
         pushPost: false,
     },
     error: {
@@ -117,8 +120,9 @@ const initialState: PostState = {
         sendToChatBox: null,
         fetchAdminList: null,
         fetchAdminDetail: null,
-        fetchDistributionMetrics: null,
         pushPost: null,
+        fetchDistributionMetrics: null,
+        fetchAllDistributionMetrics: null,
     },
 };
 
@@ -278,10 +282,10 @@ export const fetchDistributionMetricsFacebook = createAsyncThunk(
     async ({ postId, distributionId }: { postId: string; distributionId: string }, { rejectWithValue }) => {
         try {
             const res = await postService.getDistributionMetricsFacebook(postId, distributionId);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to fetch distribution metrics");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi fetch thông tin distribution");
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch distribution metrics");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi fetch thông tin distribution");
         }
     }
 );
@@ -319,7 +323,7 @@ export const fetchAllDistributionMetrics = createAsyncThunk(
             });
             return map;
         } catch (error: any) {
-            return rejectWithValue("Failed to fetch distribution metrics");
+            return rejectWithValue("Lỗi khi fetch thông tin distribution");
         }
     }
 );
@@ -340,6 +344,7 @@ const postSlice = createSlice({
         clearGeneratedImageUrl(state) { state.generatedImageUrl = null; },
         clearChatBoxReply(state) { state.chatBoxReply = null; },
         clearDistributionMetrics(state) { state.distributionMetrics = null; },
+        clearDistributionMetricsMap(state) { state.distributionMetricsMap = {}; },
     },
     extraReducers: (builder) => {
         builder
@@ -454,16 +459,16 @@ const postSlice = createSlice({
 
         builder
             .addCase(fetchAllDistributionMetrics.pending, (state) => {
-                state.loading.fetchDistributionMetrics = true;
-                state.error.fetchDistributionMetrics = null;
+                state.loading.fetchAllDistributionMetrics = true;
+                state.error.fetchAllDistributionMetrics = null;
             })
             .addCase(fetchAllDistributionMetrics.fulfilled, (state, action) => {
-                state.loading.fetchDistributionMetrics = false;
+                state.loading.fetchAllDistributionMetrics = false;
                 state.distributionMetricsMap = { ...state.distributionMetricsMap, ...action.payload };
             })
             .addCase(fetchAllDistributionMetrics.rejected, (state, action) => {
-                state.loading.fetchDistributionMetrics = false;
-                state.error.fetchDistributionMetrics = action.payload as string;
+                state.loading.fetchAllDistributionMetrics = false;
+                state.error.fetchAllDistributionMetrics = action.payload as string;
             });
     },
 });
@@ -478,5 +483,7 @@ export const {
     clearErrors,
     clearGeneratedImageUrl,
     clearChatBoxReply,
+    clearDistributionMetrics,
+    clearDistributionMetricsMap,
 } = postSlice.actions;
 export default postSlice.reducer;

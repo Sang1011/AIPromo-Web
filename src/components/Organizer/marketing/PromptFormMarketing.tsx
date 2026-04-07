@@ -318,8 +318,8 @@ function ImageTab({
     onClearImage: () => void;
 }) {
     const [prompt, setPrompt] = useState("");
-    const [aspectRatio, setAspectRatio] = useState("16:9");
-    const [imageSize, setImageSize] = useState("1024x576");
+    const [aspectRatio, setAspectRatio] = useState("1:1");
+    const [imageSize, setImageSize] = useState("512x512");
 
     const isSelected = selectedImageUrl === generatedImageUrl && !!generatedImageUrl;
 

@@ -1,12 +1,18 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MdFacebook, MdOutlineBarChart, MdOutlineRefresh, MdOutlineTouchApp, MdOutlineVisibility } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+    Bar,
+    BarChart,
     CartesianGrid,
+    Cell,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis, YAxis,
 } from "recharts";
-import { MdFacebook, MdOutlineBarChart, MdOutlineVisibility, MdOutlineTouchApp, MdOutlineRefresh } from "react-icons/md";
+import postService from "../../../services/postService";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchAllDistributionMetrics, fetchOrganizerPosts } from "../../../store/postSlice";
+import { clearDistributionMetricsMap, fetchAllDistributionMetrics, fetchOrganizerPosts } from "../../../store/postSlice";
 import type { DistributionMetricsFacebook, PostListItem } from "../../../types/post/post";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -250,21 +256,36 @@ function SummaryCards({ metricsMap }: { metricsMap: Record<string, DistributionM
 
 export default function MarketingPerformanceBarChart() {
     const dispatch = useDispatch<AppDispatch>();
-    const { posts, loading, distributionMetricsMap } = useSelector((s: RootState) => s.POST);
+    const { loading, distributionMetricsMap } = useSelector((s: RootState) => s.POST);
+
+    const [localPosts, setLocalPosts] = useState<PostListItem[]>([]);
 
     useEffect(() => {
-        if (!posts.length) return;
+        dispatch(clearDistributionMetricsMap());
+        postService.getOrganizerPosts({
+            pageNumber: 1,
+            pageSize: 20,
+            sortColumn: "PublishedAt",
+            sortOrder: "desc",
+            status: "Published",
+            hasExternalPostUrl: true,
+        }).then(res => {
+            if (res.data.isSuccess) setLocalPosts(res.data.data.items);
+        });
+    }, []);
 
-        const targets = posts.flatMap(post =>
+    useEffect(() => {
+        if (!localPosts.length) return;
+        const targets = localPosts.flatMap(post =>
             (post.distributions ?? [])
                 .filter(d => d.platform === "Facebook" && d.status === "Sent")
                 .map(d => ({ postId: post.id, distributionId: d.id }))
         );
-
         if (targets.length) dispatch(fetchAllDistributionMetrics(targets));
-    }, [posts]);
+    }, [localPosts]);
 
-    const isLoading = loading.fetchList || loading.fetchDistributionMetrics;
+
+    const isLoading = loading.fetchList || loading.fetchAllDistributionMetrics;
 
     const FETCH_PARAMS = {
         pageNumber: 1,
@@ -284,7 +305,7 @@ export default function MarketingPerformanceBarChart() {
     }, []);
 
     const chartData = useMemo(() => {
-        const postsWithFb = posts
+        const postsWithFb = localPosts
             .map(post => ({ post, metrics: parseFbMetrics(post, distributionMetricsMap) }))
             .filter((x): x is { post: PostListItem; metrics: ParsedFbMetrics } => x.metrics !== null);
 
@@ -300,7 +321,7 @@ export default function MarketingPerformanceBarChart() {
                 hasRealData: metrics.impressions > 0 || metrics.reach > 0,
             })),
         }));
-    }, [posts, distributionMetricsMap]);
+    }, [localPosts, distributionMetricsMap]);
 
     const hasData = chartData && chartData.length > 0 && chartData[0].data.length > 0;
 
