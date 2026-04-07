@@ -283,10 +283,6 @@ function EventDetail() {
   const saleStart = formatDate(eventDetail.ticketSaleStartAt)
   const saleEnd = formatDate(eventDetail.ticketSaleEndAt)
 
-  const serviceFee = firstTicket ? Math.round(firstTicket.price * 0.02) : 0
-  const vat = firstTicket ? Math.round(firstTicket.price * 0.1) : 0
-  const total = firstTicket ? firstTicket.price + serviceFee + vat : 0
-
   // ── Lightbox helpers ──
   const images = eventDetail.images ?? []
   const openLightbox = (index: number) => { setLightboxIndex(index); setLightboxOpen(true) }
@@ -534,38 +530,7 @@ function EventDetail() {
                 </section>
               )}
 
-              {/* Location */}
-              <section>
-                <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                  <span className="w-1.5 h-8 bg-primary rounded-full" />
-                  Địa điểm tổ chức
-                </h2>
-                <div className="glass overflow-hidden rounded-2xl">
-                  <div className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <h3 className="text-xl font-bold">{eventDetail.location}</h3>
-                    </div>
-                    {eventDetail.mapUrl && (
-                      <a
-                        href={eventDetail.mapUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
-                      >
-                        <span className="material-symbols-outlined">directions</span>
-                        Chỉ đường
-                      </a>
-                    )}
-                  </div>
-                  <div className="h-80 w-full grayscale opacity-70 contrast-125 border-t border-white/10 bg-[#121218] flex items-center justify-center relative">
-                    <div className="absolute inset-0 bg-gradient-to-t from-background-dark/80 to-transparent pointer-events-none" />
-                    <div className="text-primary flex flex-col items-center">
-                      <span className="material-symbols-outlined text-5xl animate-bounce">location_on</span>
-                      <span className="font-bold text-lg mt-2 tracking-widest uppercase">Xem bản đồ</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
+             
 
             </div>
 
@@ -615,7 +580,6 @@ function EventDetail() {
                               >
                                 <div>
                                   <p className="text-sm font-bold">{ticket.name}</p>
-                                  {/* <p className="text-xs text-gray-400">{ticket.areaName}</p> */}
                                 </div>
                                 <span className="text-primary font-bold text-sm">
                                   {formatPrice(ticket.price)} VNĐ
@@ -645,17 +609,9 @@ function EventDetail() {
                       )}
 
                       <div className="space-y-4">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-400">Phí dịch vụ (2%)</span>
-                          <span className="text-white">{formatPrice(serviceFee)} VNĐ</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-400">VAT (10%)</span>
-                          <span className="text-white">{formatPrice(vat)} VNĐ</span>
-                        </div>
                         <div className="pt-4 border-t border-white/10 flex justify-between items-center">
                           <span className="text-lg font-bold">Tổng cộng</span>
-                          <span className="text-2xl font-bold text-primary">{formatPrice(total)} VNĐ</span>
+                          <span className="text-2xl font-bold text-primary">{formatPrice(firstTicket.price)} VNĐ</span>
                         </div>
                       </div>
                     </>
