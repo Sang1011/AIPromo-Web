@@ -11,6 +11,12 @@ import {
     MdOutlineSend,
     MdOutlineSmartToy,
     MdOutlineTextFields,
+    MdFacebook,
+    MdOutlineLink,
+    MdOutlineError,
+    MdOutlineSchedule,
+    MdOutlineCloudUpload,
+    MdOutlineDownload,
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -20,9 +26,10 @@ import {
     clearGeneratedDraft, clearGeneratedImageUrl,
     generateContentPostUsingAI, generateImage,
     publishApprovedPost, requestToSubmitPost,
-    updatePostContent
+    updatePostContent,
+    pushPostToOtherPlatform,
 } from "../../../store/postSlice";
-import type { ContentBlock, PostDetail, UpdatePostContentRequest } from "../../../types/post/post";
+import type { ContentBlock, PostDetail, PostDistribution, UpdatePostContentRequest } from "../../../types/post/post";
 import { buildContextPrompt } from "../../../utils/buildContextPrompt";
 import { formatDateTime } from "../../../utils/formatDateTime";
 import { notify } from "../../../utils/notify";
@@ -31,6 +38,7 @@ import PostBlockRenderer from "../post/PostBlockRenderer";
 import ConfirmModal from "../shared/ConfirmModal";
 import Block from "./Block";
 import { MARKETING_STATUS_VI } from "./MarketingTable";
+import UploadImageSection from "./UploadImageSection";
 
 // ─── Spinner ──────────────────────────────────────────────────────────────────
 
@@ -54,7 +62,75 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
     );
 }
 
-// ─── EditTitleModal — chỉ cho phép sửa tiêu đề ───────────────────────────────
+// ─── DistributionStatusBadge ──────────────────────────────────────────────────
+
+function DistributionStatusBadge({ status }: { status: string }) {
+    const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+        Sent: { label: "Đã đăng", className: "bg-green-500/10 text-green-400 border-green-500/30", icon: <MdOutlineCheckCircle /> },
+        Pending: { label: "Đang chờ", className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30", icon: <MdOutlineSchedule /> },
+        Failed: { label: "Thất bại", className: "bg-red-500/10 text-red-400 border-red-500/30", icon: <MdOutlineError /> },
+        Processing: { label: "Đang xử lý", className: "bg-blue-500/10 text-blue-400 border-blue-500/30", icon: <Spinner /> },
+    };
+    const info = map[status] ?? { label: status, className: "bg-slate-500/10 text-slate-400 border-slate-500/30", icon: null };
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${info.className}`}>
+            {info.icon}
+            {info.label}
+        </span>
+    );
+}
+
+// ─── LatestDistributionCard ───────────────────────────────────────────────────
+
+function LatestDistributionCard({ distribution }: { distribution: PostDistribution }) {
+    const platformIcon: Record<string, React.ReactNode> = {
+        Facebook: <MdFacebook className="text-blue-400 text-xl" />,
+    };
+    const icon = platformIcon[distribution.platform] ?? <MdOutlineCloudUpload className="text-slate-400 text-xl" />;
+
+    return (
+        <div className="bg-slate-900/40 border border-slate-800 rounded-2xl px-5 py-4 space-y-3">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                    {icon}
+                    <span className="text-sm font-bold text-white">{distribution.platform}</span>
+                </div>
+                <DistributionStatusBadge status={distribution.status} />
+            </div>
+
+            {/* Details */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+                {distribution.sentAt && (
+                    <div className="col-span-2 flex items-center gap-1.5 text-slate-500">
+                        <MdOutlineSchedule className="text-slate-600" />
+                        <span>Đăng lúc: <span className="text-slate-400">{formatDateTime(distribution.sentAt)}</span></span>
+                    </div>
+                )}
+                {distribution.externalUrl && (
+                    <div className="col-span-2 flex items-center gap-1.5">
+                        <MdOutlineLink className="text-slate-600 shrink-0" />
+                        <a
+                            href={distribution.externalUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline truncate"
+                        >
+                            {distribution.externalUrl}
+                        </a>
+                    </div>
+                )}
+                {distribution.errorMessage && (
+                    <div className="col-span-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                        <p className="text-red-400 text-xs">{distribution.errorMessage}</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── EditTitleModal ───────────────────────────────────────────────────────────
 
 function EditTitleModal({ post, onClose }: { post: PostDetail; onClose: () => void }) {
     const dispatch = useDispatch<AppDispatch>();
@@ -201,7 +277,7 @@ function GeneratePreviewModal({
     );
 }
 
-// ─── Tone options & helpers ───────────────────────────────────────────────────
+// ─── Tone options ─────────────────────────────────────────────────────────────
 
 const TONE_OPTIONS = [
     { value: "", label: "Mặc định" },
@@ -219,13 +295,8 @@ const SIZE_OPTIONS = ["512x512", "768x768", "1024x1024", "1024x576"];
 // ─── InlineImageTab ───────────────────────────────────────────────────────────
 
 function InlineImageTab({
-    generatedImageUrl,
-    selectedImageUrl,
-    loading,
-    error,
-    onGenerate,
-    onSelectImage,
-    onClearImage,
+    generatedImageUrl, selectedImageUrl, loading, error,
+    onGenerate, onSelectImage, onClearImage,
 }: {
     generatedImageUrl: string | null;
     selectedImageUrl: string | null;
@@ -236,8 +307,8 @@ function InlineImageTab({
     onClearImage: () => void;
 }) {
     const [prompt, setPrompt] = useState("");
-    const [aspectRatio, setAspectRatio] = useState("16:9");
-    const [imageSize, setImageSize] = useState("1024x576");
+    const [aspectRatio, setAspectRatio] = useState("1:1");
+    const [imageSize, setImageSize] = useState("512x512");
     const isSelected = selectedImageUrl === generatedImageUrl && !!generatedImageUrl;
 
     return (
@@ -246,16 +317,12 @@ function InlineImageTab({
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Mô tả ảnh <span className="text-red-400">*</span>
                 </label>
-                <textarea
-                    rows={3}
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
+                <textarea rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)}
                     placeholder="Ví dụ: A vibrant music festival at night with colorful stage lights..."
                     className="w-full bg-background-dark border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 px-4 py-3 text-sm resize-none focus:ring-primary focus:border-primary transition-colors"
                 />
-                <p className="text-slate-600 text-xs mt-1">Mô tả bằng tiếng Anh để kết quả tốt hơn.</p>
+                <p className="text-slate-600 text-xs mt-1">Nếu muốn bạn có thể mô tả bằng tiếng Anh để kết quả tốt hơn.</p>
             </div>
-
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Tỉ lệ khung hình</label>
@@ -280,25 +347,31 @@ function InlineImageTab({
                     </div>
                 </div>
             </div>
-
             {error?.generateImage && (
                 <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error.generateImage}</p>
             )}
-
-            <button
-                type="button"
-                onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
+            <button type="button" onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
                 disabled={loading?.generateImage || !prompt.trim()}
-                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all neon-button-glow"
-            >
+                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all neon-button-glow">
                 {loading?.generateImage ? <><Spinner /><span>Đang tạo ảnh...</span></> : <><MdOutlineImage /><span>Tạo ảnh với AI</span></>}
             </button>
-
             {generatedImageUrl && (
                 <div className="space-y-3 animate-fadeIn">
                     <div className="rounded-2xl overflow-hidden border border-slate-800">
                         <img src={generatedImageUrl} alt="AI generated" className="w-full object-cover" />
                     </div>
+                    <a
+                        href={generatedImageUrl}
+                        download="ai-generated-image.png"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full flex items-center justify-center gap-2 border border-slate-700
+               text-slate-300 hover:border-primary/50 hover:text-white
+               py-2.5 rounded-2xl font-semibold text-sm transition-all"
+                    >
+                        <MdOutlineDownload className="text-base" />
+                        Tải ảnh xuống
+                    </a>
                     <div className="grid grid-cols-2 gap-3">
                         {isSelected ? (
                             <button type="button" onClick={onClearImage}
@@ -309,7 +382,7 @@ function InlineImageTab({
                             <>
                                 <button type="button" onClick={() => onSelectImage(generatedImageUrl)}
                                     className="bg-green-600 hover:bg-green-500 text-white py-3 rounded-2xl font-bold text-sm transition-all">
-                                    Dùng ảnh này
+                                    Dùng ảnh này cho bài Post sắp được tạo
                                 </button>
                                 <button type="button" onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
                                     disabled={loading?.generateImage || !prompt.trim()}
@@ -328,12 +401,8 @@ function InlineImageTab({
 // ─── InlineContentTab ─────────────────────────────────────────────────────────
 
 function InlineContentTab({
-    generatedDraft,
-    loading,
-    error,
-    selectedImageUrl,
-    onGenerate,
-    onPreview,
+    generatedDraft, loading, error, selectedImageUrl, onGenerate, onPreview,
+    onSelectImage, onClearImage,
 }: {
     generatedDraft: any;
     loading: any;
@@ -341,21 +410,32 @@ function InlineContentTab({
     selectedImageUrl: string | null;
     onGenerate: (tone: string, userPrompt: string) => void;
     onPreview: (blocks: ContentBlock[], title: string) => void;
+    onSelectImage: (url: string) => void;
+    onClearImage: () => void;
 }) {
     const [tone, setTone] = useState("");
     const [userPrompt, setUserPrompt] = useState("");
 
-    const blocks: ContentBlock[] = generatedDraft
-        ? (() => {
-            try {
-                const parsed = JSON.parse(generatedDraft.body);
-                return Array.isArray(parsed) ? parsed : [];
-            } catch { return []; }
-        })()
-        : [];
+    const blocks: ContentBlock[] = generatedDraft ? (() => {
+        try { const p = JSON.parse(generatedDraft.body); return Array.isArray(p) ? p : []; } catch { return []; }
+    })() : [];
 
     return (
         <div className="space-y-5">
+            <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl px-4 py-3.5 space-y-3">
+                <p className="text-xs text-slate-400 leading-relaxed">
+                    <span className="text-primary font-semibold">💡 Gợi ý:</span>{" "}
+                    Bạn có thể{" "}
+                    <span className="text-slate-200 font-medium">tạo ảnh AI</span> ở tab bên cạnh rồi gắn vào bài post,
+                    hoặc{" "}
+                    <span className="text-slate-200 font-medium">tải ảnh trực tiếp</span> từ máy để hiển thị trong bài.
+                </p>
+                <UploadImageSection
+                    selectedImageUrl={selectedImageUrl}
+                    onSelectImage={onSelectImage}
+                    onClearImage={onClearImage}
+                />
+            </div>
             {selectedImageUrl && (
                 <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2.5 text-xs text-green-400">
                     <img src={selectedImageUrl} alt="selected" className="w-10 h-10 rounded-lg object-cover border border-green-500/30" />
@@ -365,7 +445,6 @@ function InlineContentTab({
                     </div>
                 </div>
             )}
-
             <div>
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Phong cách <span className="text-slate-500 font-normal text-xs">(tùy chọn)</span>
@@ -379,33 +458,22 @@ function InlineContentTab({
                     ))}
                 </div>
             </div>
-
             <div>
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Yêu cầu thêm <span className="text-slate-500 font-normal text-xs">(tùy chọn)</span>
                 </label>
-                <textarea
-                    rows={3}
-                    value={userPrompt}
-                    onChange={(e) => setUserPrompt(e.target.value)}
+                <textarea rows={3} value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)}
                     placeholder="Ví dụ: Nhấn mạnh vào giá vé ưu đãi, thêm emoji..."
                     className="w-full bg-background-dark border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-600 px-4 py-3 text-sm resize-none focus:ring-primary focus:border-primary transition-colors"
                 />
             </div>
-
             {error?.generateAI && (
                 <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error.generateAI}</p>
             )}
-
-            <button
-                type="button"
-                onClick={() => onGenerate(tone, userPrompt)}
-                disabled={loading?.generateAI}
-                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all neon-button-glow"
-            >
+            <button type="button" onClick={() => onGenerate(tone, userPrompt)} disabled={loading?.generateAI}
+                className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all neon-button-glow">
                 {loading?.generateAI ? <><Spinner /><span>Đang tạo...</span></> : <><MdOutlineBolt /><span>Tạo nội dung với AI</span></>}
             </button>
-
             {blocks.length > 0 && (
                 <div className="space-y-3 animate-fadeIn">
                     <div className="flex items-center gap-2">
@@ -413,7 +481,6 @@ function InlineContentTab({
                         <span className="text-xs font-bold text-primary uppercase tracking-widest">Kết quả</span>
                         <span className="ml-auto text-xs text-slate-600">{blocks.length} blocks</span>
                     </div>
-
                     <div className="bg-background-dark border border-slate-800 rounded-xl px-4 py-3 space-y-1.5 max-h-40 overflow-y-auto">
                         {blocks.map((b, i) => (
                             <div key={i} className="flex items-center gap-2 text-xs text-slate-400">
@@ -421,21 +488,14 @@ function InlineContentTab({
                                 <span className="bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">
                                     {b.type}{b.level ? ` h${b.level}` : ""}
                                 </span>
-                                <span className="truncate text-slate-500">
-                                    {b.text ?? b.content ?? b.label ?? b.alt ?? ""}
-                                </span>
+                                <span className="truncate text-slate-500">{b.text ?? b.content ?? b.label ?? b.alt ?? ""}</span>
                             </div>
                         ))}
                     </div>
-
-                    <button
-                        type="button"
-                        onClick={() => onPreview(blocks, generatedDraft?.title ?? "")}
-                        className="w-full border border-primary text-primary hover:bg-primary hover:text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all"
-                    >
+                    <button type="button" onClick={() => onPreview(blocks, generatedDraft?.title ?? "")}
+                        className="w-full border border-primary text-primary hover:bg-primary hover:text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all">
                         Xem preview & Áp dụng
                     </button>
-
                     {generatedDraft && (
                         <div className="flex gap-4 text-xs text-slate-600">
                             {generatedDraft.aiModel && <span>Model: <span className="text-slate-400">{generatedDraft.aiModel}</span></span>}
@@ -452,55 +512,29 @@ function InlineContentTab({
 
 type ActiveTab = "content" | "image";
 
-function InlineGenerateSection({
-    post,
-    onApplied,
-}: {
-    post: PostDetail;
-    onApplied: () => void;
-}) {
+function InlineGenerateSection({ post, onApplied }: { post: PostDetail; onApplied: () => void }) {
     const dispatch = useDispatch<AppDispatch>();
     const { generatedDraft, generatedImageUrl, loading, error } = useSelector((s: RootState) => s.POST);
     const { loading: postLoading } = useSelector((s: RootState) => s.POST);
-
     const [activeTab, setActiveTab] = useState<ActiveTab>("content");
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
     const [previewData, setPreviewData] = useState<{ blocks: ContentBlock[]; title: string } | null>(null);
 
-    // Cleanup on unmount
     useEffect(() => {
-        return () => {
-            dispatch(clearGeneratedDraft());
-            dispatch(clearGeneratedImageUrl());
-        };
+        return () => { dispatch(clearGeneratedDraft()); dispatch(clearGeneratedImageUrl()); };
     }, []);
 
     const handleGenerate = (tone: string, userPrompt: string) => {
-        const context = buildContextPrompt(
-            { title: post.title } as any,
-            tone || undefined,
-            selectedImageUrl ?? undefined,
-        );
-        const finalPrompt = userPrompt.trim()
-            ? `${context}\n\nAdditional requirement: ${userPrompt.trim()}`
-            : context;
+        const context = buildContextPrompt({ title: post.title } as any, tone || undefined, selectedImageUrl ?? undefined);
+        const finalPrompt = userPrompt.trim() ? `${context}\n\nAdditional requirement: ${userPrompt.trim()}` : context;
         dispatch(generateContentPostUsingAI({ eventId: post.eventId, userPromptRequirement: finalPrompt }));
-    };
-
-    const handleGenerateImage = (prompt: string, aspectRatio: string, imageSize: string) => {
-        dispatch(generateImage({ prompt, aspectRatio, imageSize }));
-    };
-
-    const handleOpenPreview = (blocks: ContentBlock[], title: string) => {
-        setPreviewData({ blocks, title });
     };
 
     const handleConfirmApply = async () => {
         if (!previewData) return;
-        const newBody = serializeBlocksToBody(previewData.blocks);
         const data: UpdatePostContentRequest = {
             title: previewData.title || post.title,
-            body: newBody,
+            body: serializeBlocksToBody(previewData.blocks),
             promptUsed: generatedDraft?.promptUsed ?? post.promptUsed,
             aiModel: generatedDraft?.aiModel ?? post.aiModel,
             aiTokensUsed: generatedDraft?.aiTokensUsed ?? post.aiTokensUsed,
@@ -526,7 +560,6 @@ function InlineGenerateSection({
     return (
         <>
             <div className="bg-[#0B0B12] border border-primary/20 rounded-[32px] overflow-hidden shadow-xl shadow-primary/5">
-                {/* Header */}
                 <div className="px-8 pt-7 pb-4 border-b border-slate-800/60">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
@@ -534,78 +567,55 @@ function InlineGenerateSection({
                         </div>
                         <div>
                             <h3 className="text-base font-bold text-white">Generate lại bằng AI</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                                Nội dung mới sẽ thay thế nội dung hiện tại sau khi bạn xác nhận.
-                            </p>
+                            <p className="text-xs text-slate-500 mt-0.5">Nội dung mới sẽ thay thế nội dung hiện tại sau khi bạn xác nhận.</p>
                         </div>
                     </div>
                 </div>
-
-                {/* Tabs */}
                 <div className="flex border-b border-slate-800 px-8">
                     {TABS.map((tab) => {
                         const Icon = tab.icon;
                         const isActive = activeTab === tab.id;
                         return (
-                            <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2 ${isActive ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-300"}`}
-                            >
+                            <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2 ${isActive ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-300"}`}>
                                 <Icon className="text-base" />
                                 {tab.label}
-                                {tab.id === "image" && selectedImageUrl && (
-                                    <span className="w-2 h-2 rounded-full bg-green-400 ml-0.5" />
-                                )}
+                                {tab.id === "image" && selectedImageUrl && <span className="w-2 h-2 rounded-full bg-green-400 ml-0.5" />}
                             </button>
                         );
                     })}
                 </div>
-
-                {/* Tab content */}
                 <div className="px-8 py-6">
                     {activeTab === "content" && (
-                        <InlineContentTab
-                            generatedDraft={generatedDraft}
-                            loading={loading}
-                            error={error}
-                            selectedImageUrl={selectedImageUrl}
-                            onGenerate={handleGenerate}
-                            onPreview={handleOpenPreview}
-                        />
-                    )}
-                    {activeTab === "image" && (
-                        <InlineImageTab
-                            generatedImageUrl={generatedImageUrl}
-                            selectedImageUrl={selectedImageUrl}
-                            loading={loading}
-                            error={error}
-                            onGenerate={handleGenerateImage}
-                            onSelectImage={(url) => setSelectedImageUrl(url)}
+                        <InlineContentTab generatedDraft={generatedDraft} loading={loading} error={error}
+                            selectedImageUrl={selectedImageUrl} onGenerate={handleGenerate}
+                            onPreview={(blocks, title) => setPreviewData({ blocks, title })}
+                            onSelectImage={setSelectedImageUrl}
                             onClearImage={() => setSelectedImageUrl(null)}
                         />
                     )}
+                    {activeTab === "image" && (
+                        <InlineImageTab generatedImageUrl={generatedImageUrl} selectedImageUrl={selectedImageUrl}
+                            loading={loading} error={error}
+                            onGenerate={(p, a, s) => dispatch(generateImage({ prompt: p, aspectRatio: a, imageSize: s }))}
+                            onSelectImage={setSelectedImageUrl} onClearImage={() => setSelectedImageUrl(null)} />
+                    )}
                 </div>
             </div>
-
             {previewData && (
-                <GeneratePreviewModal
-                    blocks={previewData.blocks}
-                    title={previewData.title}
-                    onConfirm={handleConfirmApply}
-                    onCancel={() => setPreviewData(null)}
-                    loading={!!postLoading.updateContent}
-                />
+                <GeneratePreviewModal blocks={previewData.blocks} title={previewData.title}
+                    onConfirm={handleConfirmApply} onCancel={() => setPreviewData(null)}
+                    loading={!!postLoading.updateContent} />
             )}
         </>
     );
 }
 
+// ─── PromptUsedDisplay ────────────────────────────────────────────────────────
+
 function PromptUsedDisplay({ promptUsed }: { promptUsed: string }) {
     const additionalMatch = promptUsed.match(/Additional requirement:\s*([\s\S]+)$/i);
     const additionalRequirement = additionalMatch ? additionalMatch[1].trim() : null;
-
     const toneLabels: Record<string, string> = {
         "formal, clear, and informative": "Chuyên nghiệp",
         "casual, trendy Gen Z": "Gen Z",
@@ -619,47 +629,53 @@ function PromptUsedDisplay({ promptUsed }: { promptUsed: string }) {
     )?.[1] ?? null;
 
     if (!additionalRequirement && !detectedTone) {
-        return (
-            <p className="text-slate-500 text-xs italic">Không có yêu cầu đặc biệt.</p>
-        );
+        return <p className="text-slate-500 text-xs italic">Không có yêu cầu đặc biệt.</p>;
     }
-
     return (
         <div className="space-y-2">
             {detectedTone && (
                 <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Giọng điệu:</span>
-                    <span className="bg-primary/15 text-primary border border-primary/30 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                        {detectedTone}
-                    </span>
+                    <span className="bg-primary/15 text-primary border border-primary/30 text-xs font-semibold px-2.5 py-0.5 rounded-full">{detectedTone}</span>
                 </div>
             )}
             {additionalRequirement && (
                 <div>
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Yêu cầu thêm:</span>
-                    <p className="text-slate-300 text-xs leading-relaxed bg-slate-900/40 border border-slate-800 rounded-xl px-3 py-2.5 font-mono whitespace-pre-wrap">
-                        {additionalRequirement}
-                    </p>
+                    <p className="text-slate-300 text-xs leading-relaxed bg-slate-900/40 border border-slate-800 rounded-xl px-3 py-2.5 font-mono whitespace-pre-wrap">{additionalRequirement}</p>
                 </div>
             )}
         </div>
     );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getLatestDistribution(distributions: PostDistribution[]): PostDistribution | null {
+    if (!distributions?.length) return null;
+    return [...distributions].sort((a, b) => {
+        const ta = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+        const tb = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+        return tb - ta;
+    })[0];
+}
+
+// ─── ContentDetail ────────────────────────────────────────────────────────────
+
 export default function ContentDetail({
-    post,
-    loading,
-    error,
+    post, loading, error, onReload
 }: {
     post: PostDetail | null;
     loading: boolean;
     error: string | null;
+    onReload?: () => void;
 }) {
     const dispatch = useDispatch<AppDispatch>();
-    const { loading: postLoading } = useSelector((s: RootState) => s.POST);
+    const { loading: postLoading, error: postError } = useSelector((s: RootState) => s.POST);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showGenerateSection, setShowGenerateSection] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [showPushConfirm, setShowPushConfirm] = useState(false);
     const generateSectionRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
@@ -668,28 +684,34 @@ export default function ContentDetail({
     const canPublish = post?.canPublish && post.status === "Approved";
     const canEdit = post?.canEdit && post.status === "Draft";
     const canArchive = post?.canArchive && post.status === "Published";
+    const canPushFacebook = post?.status === "Published";
 
     const blocks = parseBodyToBlocks(post?.body ?? "");
     const isBlockContent = blocks.length > 0;
 
-    const handleOpenGenerate = () => {
-        setShowGenerateSection(true);
-        // Scroll after state update + render
-        setTimeout(() => {
-            generateSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 80);
-    };
+    const latestDistribution = post ? getLatestDistribution(post.distributions ?? []) : null;
+    const facebookDistribution = post?.distributions?.find(d => d.platform === "Facebook") ?? null;
+    const hasFacebookDistribution = !!facebookDistribution;
 
-    const handleGenerateApplied = () => {
-        setShowGenerateSection(false);
+    const handlePushFacebook = async () => {
+        if (!post) return;
+        try {
+            console.log("Simulating push to Facebook with postId:", post.postId);
+            await dispatch(pushPostToOtherPlatform({ postId: post.postId, platform: "Facebook", isRetry: true })).unwrap();
+            notify.success("Đã đẩy bài lên Facebook thành công!");
+            setTimeout(() => {
+                onReload?.();
+            }, 1000);
+            setShowPushConfirm(false);
+        } catch (err: any) {
+            notify.error(err?.message || "Đẩy bài lên Facebook thất bại");
+            setShowPushConfirm(false);
+        }
     };
 
     return (
         <section className="space-y-6 pb-16">
-            {/* Edit title modal */}
-            {showEditModal && post && (
-                <EditTitleModal post={post} onClose={() => setShowEditModal(false)} />
-            )}
+            {showEditModal && post && <EditTitleModal post={post} onClose={() => setShowEditModal(false)} />}
 
             {/* Header */}
             <div className="flex items-center justify-between">
@@ -705,12 +727,8 @@ export default function ContentDetail({
                 )}
             </div>
 
-            {loading && (
-                <p className="text-slate-500 text-sm animate-pulse px-2">Đang tải nội dung...</p>
-            )}
-            {error && (
-                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>
-            )}
+            {loading && <p className="text-slate-500 text-sm animate-pulse px-2">Đang tải nội dung...</p>}
+            {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{error}</p>}
 
             {post && (
                 <div className="space-y-6">
@@ -722,7 +740,7 @@ export default function ContentDetail({
                             </span>
                         </MetaItem>
                         <MetaItem label="Phiên bản">v{post.version}</MetaItem>
-                        <MetaItem label="Nền tảng">{post.platform || "—"}</MetaItem>
+                        <MetaItem label="Nền tảng">AIPromo</MetaItem>
                         <MetaItem label="Ngày tạo">{formatDateTime(post.createdAt)}</MetaItem>
                         {post.modifiedAt && <MetaItem label="Cập nhật lần cuối">{formatDateTime(post.modifiedAt)}</MetaItem>}
                         {post.publishedAt && <MetaItem label="Ngày đăng">{formatDateTime(post.publishedAt)}</MetaItem>}
@@ -738,7 +756,19 @@ export default function ContentDetail({
                         </div>
                     )}
 
-                    {/* Content */}
+                    {/* ── Latest Distribution ── */}
+                    {latestDistribution && (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <span className="w-1 h-4 bg-blue-400 rounded-full" />
+                                <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Phân phối gần nhất</h3>
+                                <span className="text-xs text-slate-600 ml-1">({post.distributions?.length ?? 0} nền tảng)</span>
+                            </div>
+                            <LatestDistributionCard distribution={latestDistribution} />
+                        </div>
+                    )}
+
+                    {/* Content blocks */}
                     <div className="glass rounded-[32px] p-8 border border-slate-800/50 space-y-8">
                         <Block label="Tiêu đề nội dung">{post.title}</Block>
                         <Block label="Nội dung chi tiết">
@@ -770,22 +800,73 @@ export default function ContentDetail({
                         {post.externalPostUrl && (
                             <Block label="Link bài đăng">
                                 <a href={post.externalPostUrl} target="_blank" rel="noreferrer"
-                                    className="text-primary text-sm hover:underline break-all">
-                                    {post.externalPostUrl}
-                                </a>
+                                    className="text-primary text-sm hover:underline break-all">{post.externalPostUrl}</a>
                             </Block>
                         )}
                         {post.promptUsed && (
-                            <Block label="Prompt đã dùng">
-                                <PromptUsedDisplay promptUsed={post.promptUsed} />
-                            </Block>
+                            <Block label="Prompt đã dùng"><PromptUsedDisplay promptUsed={post.promptUsed} /></Block>
                         )}
                     </div>
 
-                    {/* ── Generate lại button (full-width, primary) ── */}
+                    {/* ── Push to Facebook (Published only) ── */}
+                    {canPushFacebook && (
+                        <div className="bg-[#0B0B12] border border-blue-500/20 rounded-[32px] px-8 py-6 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center">
+                                    <MdFacebook className="text-blue-400 text-xl" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-base font-bold text-white">Đăng lên Facebook</h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {hasFacebookDistribution
+                                            ? "Bài đã được phân phối lên Facebook. Bấm để đăng lại."
+                                            : "Phân phối bài viết này lên trang Facebook của sự kiện."}
+                                    </p>
+                                </div>
+                                {facebookDistribution && (
+                                    <DistributionStatusBadge status={facebookDistribution.status} />
+                                )}
+                            </div>
+
+                            {facebookDistribution?.externalUrl && (
+                                <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-900/40 border border-slate-800 rounded-xl px-4 py-2.5">
+                                    <MdOutlineLink className="text-slate-600 shrink-0" />
+                                    <a href={facebookDistribution.externalUrl} target="_blank" rel="noreferrer"
+                                        className="text-blue-400 hover:underline truncate">{facebookDistribution.externalUrl}</a>
+                                    <MdOutlineOpenInNew className="text-slate-600 shrink-0 ml-auto" />
+                                </div>
+                            )}
+
+                            {facebookDistribution?.errorMessage && (
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                                    <p className="text-red-400 text-xs">{facebookDistribution.errorMessage}</p>
+                                </div>
+                            )}
+
+                            {postError.pushPost && (
+                                <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">{postError.pushPost}</p>
+                            )}
+
+                            <button onClick={() => setShowPushConfirm(true)} disabled={postLoading.pushPost}
+                                className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99] shadow-lg shadow-blue-500/20 transition-all">
+                                {postLoading.pushPost ? (
+                                    <><Spinner /> Đang đăng bài...</>
+                                ) : (
+                                    <><MdFacebook className="text-lg" />
+                                        {hasFacebookDistribution ? "Đăng lại lên Facebook" : "Đăng bài lên Facebook"}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── Generate lại button ── */}
                     {canEdit && !showGenerateSection && (
                         <button
-                            onClick={handleOpenGenerate}
+                            onClick={() => {
+                                setShowGenerateSection(true);
+                                setTimeout(() => generateSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+                            }}
                             className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base bg-primary text-white hover:bg-primary/90 active:scale-[0.99] shadow-lg shadow-primary/30 transition-all neon-button-glow"
                         >
                             <MdOutlineRefresh className="text-xl" />
@@ -796,21 +877,18 @@ export default function ContentDetail({
                     {/* ── Inline generate section ── */}
                     {canEdit && showGenerateSection && (
                         <div ref={generateSectionRef} className="space-y-4 scroll-mt-8">
-                            {/* Collapse button */}
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                     <MdOutlineSmartToy className="text-primary" />
                                     Generate nội dung mới
                                 </span>
-                                <button
-                                    onClick={() => setShowGenerateSection(false)}
-                                    className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-                                >
+                                <button onClick={() => setShowGenerateSection(false)}
+                                    className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors">
                                     <MdOutlineClose className="text-sm" />
                                     Thu gọn
                                 </button>
                             </div>
-                            <InlineGenerateSection post={post} onApplied={handleGenerateApplied} />
+                            <InlineGenerateSection post={post} onApplied={() => setShowGenerateSection(false)} />
                         </div>
                     )}
 
@@ -818,52 +896,32 @@ export default function ContentDetail({
                     {(canEdit || canSubmit || canPublish || canArchive) && (
                         <div className="flex justify-end gap-3 flex-wrap">
                             {canEdit && (
-                                <button
-                                    onClick={() => setShowEditModal(true)}
-                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white transition-all"
-                                >
-                                    <MdOutlineEdit className="text-base" />
-                                    Chỉnh sửa tiêu đề
+                                <button onClick={() => setShowEditModal(true)}
+                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white transition-all">
+                                    <MdOutlineEdit className="text-base" />Chỉnh sửa tiêu đề
                                 </button>
                             )}
                             {canSubmit && (
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            await dispatch(requestToSubmitPost(post.postId)).unwrap();
-                                            notify.success("Đã gửi yêu cầu duyệt bài đăng!");
-                                        } catch (err: any) {
-                                            notify.error(err?.message || "Gửi yêu cầu thất bại");
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20 transition-all"
-                                >
-                                    <MdOutlineSend className="text-base" />
-                                    Yêu cầu duyệt
+                                <button onClick={async () => {
+                                    try { await dispatch(requestToSubmitPost(post.postId)).unwrap(); notify.success("Đã gửi yêu cầu duyệt!"); }
+                                    catch (err: any) { notify.error(err?.message || "Gửi yêu cầu thất bại"); }
+                                }}
+                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20 transition-all">
+                                    <MdOutlineSend className="text-base" />Yêu cầu duyệt
                                 </button>
                             )}
                             {canPublish && (
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            await dispatch(publishApprovedPost(post.postId)).unwrap();
-                                            notify.success("Đăng bài thành công!");
-                                        } catch (err: any) {
-                                            notify.error(err?.message || "Đăng bài thất bại");
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm bg-primary text-white border border-primary hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/40 transition-all"
-                                >
-                                    <MdOutlineCheckCircle className="text-base" />
-                                    Đăng bài lên công khai
+                                <button onClick={async () => {
+                                    try { await dispatch(publishApprovedPost(post.postId)).unwrap(); notify.success("Đăng bài thành công!"); }
+                                    catch (err: any) { notify.error(err?.message || "Đăng bài thất bại"); }
+                                }}
+                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm bg-primary text-white border border-primary hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/40 transition-all">
+                                    <MdOutlineCheckCircle className="text-base" />Đăng bài lên công khai
                                 </button>
                             )}
                             {canArchive && (
-                                <button
-                                    onClick={() => setShowConfirm(true)}
-                                    disabled={postLoading.archive}
-                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
+                                <button onClick={() => setShowConfirm(true)} disabled={postLoading.archive}
+                                    className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
                                     <MdOutlineArchive className="text-base" />
                                     {postLoading.archive ? "Đang lưu trữ..." : "Lưu trữ bài đăng"}
                                 </button>
@@ -871,23 +929,23 @@ export default function ContentDetail({
                         </div>
                     )}
 
-                    <ConfirmModal
-                        open={showConfirm}
-                        title="Lưu trữ bài đăng"
+                    <ConfirmModal open={showConfirm} title="Lưu trữ bài đăng"
                         description="Bạn có chắc muốn lưu trữ bài đăng này? Hành động này có thể không hoàn tác."
-                        confirmText="Lưu trữ"
-                        loading={postLoading.archive}
+                        confirmText="Lưu trữ" loading={postLoading.archive}
                         onCancel={() => setShowConfirm(false)}
                         onConfirm={async () => {
-                            try {
-                                await dispatch(archivePost(post!.postId)).unwrap();
-                                notify.success("Đã lưu trữ bài đăng!");
-                                setShowConfirm(false);
-                            } catch (err: any) {
-                                notify.error(err?.message || "Lưu trữ thất bại");
-                            }
-                        }}
-                    />
+                            try { await dispatch(archivePost(post!.postId)).unwrap(); notify.success("Đã lưu trữ!"); setShowConfirm(false); }
+                            catch (err: any) { notify.error(err?.message || "Lưu trữ thất bại"); }
+                        }} />
+
+                    <ConfirmModal open={showPushConfirm} title="Đăng bài lên Facebook"
+                        description={hasFacebookDistribution
+                            ? "Bài đã được đăng lên Facebook trước đó. Bạn có chắc muốn đăng lại không?"
+                            : "Xác nhận đăng bài viết này lên trang Facebook của sự kiện?"}
+                        confirmText={hasFacebookDistribution ? "Đăng lại" : "Đăng bài"}
+                        loading={postLoading.pushPost}
+                        onCancel={() => setShowPushConfirm(false)}
+                        onConfirm={handlePushFacebook} />
                 </div>
             )}
         </section>

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { GrFormNextLink } from "react-icons/gr";
 import {
-    MdOutlineBolt, MdOutlineCategory, MdOutlineImage,
+    MdOutlineBolt, MdOutlineCategory,
+    MdOutlineDownload, MdOutlineImage,
     MdOutlinePerson, MdOutlineSmartToy, MdOutlineTag,
-    MdOutlineTextFields,
+    MdOutlineTextFields
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -19,6 +20,7 @@ import { buildContextPrompt } from "../../../utils/buildContextPrompt";
 import { formatDateTime } from "../../../utils/formatDateTime";
 import { serializeBlocksToBody } from "../../../utils/renderPostContent";
 import PostBlockRenderer from "../post/PostBlockRenderer";
+import UploadImageSection from "./UploadImageSection";
 
 
 function ReadOnlyField({ label, value }: { label: string; value?: string | null }) {
@@ -111,8 +113,6 @@ function SessionList({ sessions }: { sessions: any[] }) {
     );
 }
 
-// ─── Tab: Tạo nội dung ────────────────────────────────────────────────────────
-
 function ContentTab({
     event,
     generatedDraft,
@@ -122,6 +122,8 @@ function ContentTab({
     onGenerate,
     onSaveDraft,
     onPreview,
+    onSelectImage,
+    onClearImage,
 }: {
     event: any;
     generatedDraft: any;
@@ -131,6 +133,8 @@ function ContentTab({
     onGenerate: (tone: string, userPrompt: string) => void;
     onSaveDraft: (blocks: ContentBlock[]) => void;
     onPreview: (blocks: ContentBlock[]) => void;
+    onSelectImage: (url: string) => void;
+    onClearImage: () => void;
 }) {
     const [tone, setTone] = useState("");
     const [userPrompt, setUserPrompt] = useState("");
@@ -157,6 +161,23 @@ function ContentTab({
 
     return (
         <div className="space-y-6">
+            <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl px-4 py-3.5 space-y-3">
+                <p className="text-xs text-slate-400 leading-relaxed">
+                    <span className="text-primary font-semibold">💡 Gợi ý:</span>{" "}
+                    Bạn có thể{" "}
+                    <span className="text-slate-200 font-medium">tạo ảnh AI</span> ở tab bên cạnh rồi gắn vào bài post,
+                    hoặc{" "}
+                    <span className="text-slate-200 font-medium">tải ảnh trực tiếp</span> từ máy để hiển thị trong bài.
+                </p>
+
+                {/* Upload ảnh trực tiếp */}
+                <UploadImageSection
+                    selectedImageUrl={selectedImageUrl}
+                    onSelectImage={onSelectImage}
+                    onClearImage={onClearImage}
+                />
+            </div>
+
             {/* Selected image badge */}
             {selectedImageUrl && (
                 <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20
@@ -169,6 +190,7 @@ function ContentTab({
                     </div>
                 </div>
             )}
+
 
             {/* Tone */}
             <div>
@@ -379,12 +401,26 @@ function ImageTab({
                             className="w-full object-cover" />
                     </div>
 
+                    {/* Nút tải ảnh */}
+                    <a
+                        href={generatedImageUrl}
+                        download="ai-generated-image.png"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full flex items-center justify-center gap-2 border border-slate-700
+                       text-slate-300 hover:border-primary/50 hover:text-white
+                       py-2.5 rounded-2xl font-semibold text-sm transition-all"
+                    >
+                        <MdOutlineDownload className="text-base" />
+                        Tải ảnh xuống
+                    </a>
+
                     <div className="grid grid-cols-2 gap-3">
                         {isSelected ? (
                             <button type="button" onClick={onClearImage}
                                 className="col-span-2 border border-red-500/40 text-red-400
-                                           hover:bg-red-500/10 py-3 rounded-2xl font-semibold
-                                           text-sm transition-all">
+                               hover:bg-red-500/10 py-3 rounded-2xl font-semibold
+                               text-sm transition-all">
                                 Bỏ chọn ảnh này
                             </button>
                         ) : (
@@ -392,15 +428,15 @@ function ImageTab({
                                 <button type="button"
                                     onClick={() => onSelectImage(generatedImageUrl)}
                                     className="bg-green-600 hover:bg-green-500 text-white
-                                               py-3 rounded-2xl font-bold text-sm transition-all">
-                                    Dùng ảnh này
+                                   py-3 rounded-2xl font-bold text-sm transition-all">
+                                    Dùng ảnh này cho bài Post
                                 </button>
                                 <button type="button"
                                     onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
                                     disabled={loading.generateImage || !prompt.trim()}
                                     className="border border-slate-700 text-slate-300
-                                               hover:border-primary/50 hover:text-white disabled:opacity-50
-                                               py-3 rounded-2xl font-semibold text-sm transition-all">
+                                   hover:border-primary/50 hover:text-white disabled:opacity-50
+                                   py-3 rounded-2xl font-semibold text-sm transition-all">
                                     Tạo lại
                                 </button>
                             </>
@@ -572,6 +608,8 @@ export default function PromptFormMarketing() {
                                 onGenerate={handleGenerate}
                                 onSaveDraft={handleSaveDraft}
                                 onPreview={handlePreview}
+                                onSelectImage={(url) => setSelectedImageUrl(url)}
+                                onClearImage={() => setSelectedImageUrl(null)}
                             />
                         )}
 
