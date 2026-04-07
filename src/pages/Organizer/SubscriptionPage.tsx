@@ -105,7 +105,7 @@ function QuotaCard({ icon, label, value, sub, accent = "text-white" }: QuotaCard
 
 // ─── Section title ────────────────────────────────────────────────────────────
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+export function SectionTitle({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex items-center gap-3 mb-4">
             <p className="text-sm font-semibold text-white">{children}</p>
