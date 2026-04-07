@@ -31,7 +31,7 @@ export function buildContextPrompt(
         sessions && `Sessions: ${sessions}`,
     ].filter(Boolean).join(". ");
 
-    const eventDetailUrl = `${window.location.origin}/event-detail/${event.id}`;
+    const eventDetailUrl = `${window.location.origin}/event-detail/${event.urlPath}`;
 
     const ctaInstruction = event.id
         ? `The call-to-action button must link directly to: ${eventDetailUrl}. Do not use placeholder text.`
