@@ -44,7 +44,6 @@ export interface PostDetail {
     body: string;
     imageUrl: null;
     status: PostStatus;
-    platform: string;
     promptUsed: string;
     aiModel: string;
     aiTokensUsed: number;
@@ -59,6 +58,7 @@ export interface PostDetail {
     canSubmit: boolean;
     canPublish: boolean;
     canArchive: boolean;
+    distributions: PostDistribution[];
 }
 
 export type GetPostDetailResponse = ApiResponse<PostDetail>
