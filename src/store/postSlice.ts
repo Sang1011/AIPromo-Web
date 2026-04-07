@@ -13,6 +13,9 @@ import type {
     AdminPaginatedResult,
     GetAdminPostsQueryParams,
     DistributionMetricsFacebook,
+    UploadImageResponseItem,
+    GetTotalMetricsItem,
+    PeriodOptionMetrics,
 } from "../types/post/post";
 import type { PaginatedResponse } from "../types/api";
 
@@ -32,7 +35,7 @@ interface PostState {
     adminPagination: Omit<AdminPaginatedResult<AdminPostItem>, "items"> | null;
     distributionMetrics: DistributionMetricsFacebook | null;
     distributionMetricsMap: Record<string, DistributionMetricsFacebook>;
-
+    facebookTotalMetrics: GetTotalMetricsItem | null;
     loading: {
         fetchDetail: boolean;
         updateContent: boolean;
@@ -47,8 +50,10 @@ interface PostState {
         fetchAdminList: boolean;
         fetchAdminDetail: boolean;
         pushPost: boolean;
-        fetchDistributionMetrics: boolean,
-        fetchAllDistributionMetrics: boolean,
+        fetchDistributionMetrics: boolean;
+        fetchAllDistributionMetrics: boolean;
+        uploadImage: boolean;
+        fetchFacebookTotalMetrics: boolean;
     };
 
     error: {
@@ -66,7 +71,9 @@ interface PostState {
         fetchAdminDetail: string | null;
         fetchDistributionMetrics: string | null;
         pushPost: string | null;
-        fetchAllDistributionMetrics: string | null,
+        fetchAllDistributionMetrics: string | null;
+        uploadImage: string | null;
+        fetchFacebookTotalMetrics: string | null;
     };
 }
 
@@ -90,6 +97,7 @@ const initialState: PostState = {
     adminPostDetail: null,
     adminPagination: null,
     distributionMetrics: null,
+    facebookTotalMetrics: null,
     loading: {
         fetchDetail: false,
         updateContent: false,
@@ -106,6 +114,8 @@ const initialState: PostState = {
         fetchDistributionMetrics: false,
         fetchAllDistributionMetrics: false,
         pushPost: false,
+        uploadImage: false,
+        fetchFacebookTotalMetrics: false,
     },
     error: {
         fetchDetail: null,
@@ -123,6 +133,8 @@ const initialState: PostState = {
         pushPost: null,
         fetchDistributionMetrics: null,
         fetchAllDistributionMetrics: null,
+        uploadImage: null,
+        fetchFacebookTotalMetrics: null,
     },
 };
 
@@ -328,6 +340,39 @@ export const fetchAllDistributionMetrics = createAsyncThunk(
     }
 );
 
+export const uploadImagePost = createAsyncThunk(
+    "post/uploadImagePost",
+    async (
+        { postId, imageFile, folder }: { postId: string; imageFile: File; folder: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await postService.uploadAndAttachImageToPost(postId, imageFile, folder);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi upload ảnh");
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi upload ảnh");
+        }
+    }
+);
+
+export const fetchFacebookTotalMetrics = createAsyncThunk(
+    "post/fetchFacebookTotalMetrics",
+    async (period: PeriodOptionMetrics, { rejectWithValue }) => {
+        try {
+            const res = await postService.getFacebookMetricsTotals(period);
+            if (!res.data.isSuccess) {
+                return rejectWithValue(res.data.message ?? "Failed to fetch Facebook total metrics");
+            }
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(
+                error?.response?.data?.message ?? "Failed to fetch Facebook total metrics"
+            );
+        }
+    }
+);
+
 const postSlice = createSlice({
     name: "post",
     initialState,
@@ -345,6 +390,7 @@ const postSlice = createSlice({
         clearChatBoxReply(state) { state.chatBoxReply = null; },
         clearDistributionMetrics(state) { state.distributionMetrics = null; },
         clearDistributionMetricsMap(state) { state.distributionMetricsMap = {}; },
+        clearFacebookTotalMetrics(state) { state.facebookTotalMetrics = null; },
     },
     extraReducers: (builder) => {
         builder
@@ -470,6 +516,35 @@ const postSlice = createSlice({
                 state.loading.fetchAllDistributionMetrics = false;
                 state.error.fetchAllDistributionMetrics = action.payload as string;
             });
+
+        builder
+            .addCase(uploadImagePost.pending, (state) => {
+                state.loading.uploadImage = true;
+                state.error.uploadImage = null;
+            })
+            .addCase(uploadImagePost.fulfilled, (state, action: PayloadAction<UploadImageResponseItem>) => {
+                state.loading.uploadImage = false;
+                if (state.postDetail) {
+                    state.postDetail.imageUrl = action.payload.imageUrl;
+                }
+            })
+            .addCase(uploadImagePost.rejected, (state, action) => {
+                state.loading.uploadImage = false;
+                state.error.uploadImage = action.payload as string;
+            })
+        builder
+            .addCase(fetchFacebookTotalMetrics.pending, (state) => {
+                state.loading.fetchFacebookTotalMetrics = true;
+                state.error.fetchFacebookTotalMetrics = null;
+            })
+            .addCase(fetchFacebookTotalMetrics.fulfilled, (state, action: PayloadAction<GetTotalMetricsItem>) => {
+                state.loading.fetchFacebookTotalMetrics = false;
+                state.facebookTotalMetrics = action.payload;
+            })
+            .addCase(fetchFacebookTotalMetrics.rejected, (state, action) => {
+                state.loading.fetchFacebookTotalMetrics = false;
+                state.error.fetchFacebookTotalMetrics = action.payload as string;
+            });
     },
 });
 
@@ -485,5 +560,6 @@ export const {
     clearChatBoxReply,
     clearDistributionMetrics,
     clearDistributionMetricsMap,
+    clearFacebookTotalMetrics,
 } = postSlice.actions;
 export default postSlice.reducer;

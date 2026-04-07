@@ -20,7 +20,7 @@ import { buildContextPrompt } from "../../../utils/buildContextPrompt";
 import { formatDateTime } from "../../../utils/formatDateTime";
 import { serializeBlocksToBody } from "../../../utils/renderPostContent";
 import PostBlockRenderer from "../post/PostBlockRenderer";
-import UploadImageSection from "./UploadImageSection";
+import { injectImageBlock } from "../../../utils/injectImageBlock";
 
 
 function ReadOnlyField({ label, value }: { label: string; value?: string | null }) {
@@ -121,9 +121,7 @@ function ContentTab({
     selectedImageUrl,
     onGenerate,
     onSaveDraft,
-    onPreview,
-    onSelectImage,
-    onClearImage,
+    onPreview
 }: {
     event: any;
     generatedDraft: any;
@@ -149,7 +147,6 @@ function ContentTab({
         { value: "aggressive", label: "Mạnh mẽ / Urgent" },
     ];
 
-    // Parse JSON blocks từ draft.body
     const blocks: ContentBlock[] = generatedDraft
         ? (() => {
             try {
@@ -165,20 +162,11 @@ function ContentTab({
                 <p className="text-xs text-slate-400 leading-relaxed">
                     <span className="text-primary font-semibold">💡 Gợi ý:</span>{" "}
                     Bạn có thể{" "}
-                    <span className="text-slate-200 font-medium">tạo ảnh AI</span> ở tab bên cạnh rồi gắn vào bài post,
-                    hoặc{" "}
-                    <span className="text-slate-200 font-medium">tải ảnh trực tiếp</span> từ máy để hiển thị trong bài.
+                    <span className="text-slate-200 font-medium">tạo ảnh AI</span> ở tab bên cạnh rồi chọn dùng cho bài post.
+                    Ảnh sẽ được lưu kèm theo bản nháp khi bạn bấm lưu.
                 </p>
-
-                {/* Upload ảnh trực tiếp */}
-                <UploadImageSection
-                    selectedImageUrl={selectedImageUrl}
-                    onSelectImage={onSelectImage}
-                    onClearImage={onClearImage}
-                />
             </div>
 
-            {/* Selected image badge */}
             {selectedImageUrl && (
                 <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20
                                 rounded-xl px-4 py-2.5 text-xs text-green-400">
@@ -186,13 +174,11 @@ function ContentTab({
                         className="w-10 h-10 rounded-lg object-cover border border-green-500/30" />
                     <div>
                         <p className="font-semibold">Đã chọn ảnh AI</p>
-                        <p className="text-green-500/70">Ảnh sẽ được đưa vào bài viết khi tạo</p>
+                        <p className="text-green-500/70">Ảnh sẽ được lưu kèm bài viết khi tạo bản nháp</p>
                     </div>
                 </div>
             )}
 
-
-            {/* Tone */}
             <div>
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Phong cách <span className="text-slate-500 font-normal text-xs">(tùy chọn)</span>
@@ -211,7 +197,6 @@ function ContentTab({
                 </div>
             </div>
 
-            {/* Prompt */}
             <div>
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Yêu cầu thêm <span className="text-slate-500 font-normal text-xs">(tùy chọn)</span>
@@ -241,7 +226,6 @@ function ContentTab({
                 )}
             </button>
 
-            {/* Result */}
             {blocks.length > 0 && (
                 <div className="space-y-3 animate-fadeIn">
                     <div className="flex items-center gap-2">
@@ -250,7 +234,6 @@ function ContentTab({
                         <span className="ml-auto text-xs text-slate-600">{blocks.length} blocks</span>
                     </div>
 
-                    {/* Block summary */}
                     <div className="bg-background-dark border border-slate-800 rounded-xl
                                     px-4 py-3 space-y-1.5 max-h-48 overflow-y-auto">
                         {blocks.map((b, i) => (
@@ -294,8 +277,6 @@ function ContentTab({
         </div>
     );
 }
-
-// ─── Tab: Tạo ảnh ─────────────────────────────────────────────────────────────
 
 const ASPECT_OPTIONS = ["1:1", "16:9", "9:16", "4:3"];
 const SIZE_OPTIONS = ["512x512", "768x768", "1024x1024", "1024x576"];
@@ -393,7 +374,6 @@ function ImageTab({
                 )}
             </button>
 
-            {/* Result image */}
             {generatedImageUrl && (
                 <div className="space-y-3 animate-fadeIn">
                     <div className="rounded-2xl overflow-hidden border border-slate-800">
@@ -401,7 +381,6 @@ function ImageTab({
                             className="w-full object-cover" />
                     </div>
 
-                    {/* Nút tải ảnh */}
                     <a
                         href={generatedImageUrl}
                         download="ai-generated-image.png"
@@ -448,8 +427,6 @@ function ImageTab({
     );
 }
 
-// ─── Spinner ──────────────────────────────────────────────────────────────────
-
 function Spinner() {
     return (
         <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -458,8 +435,6 @@ function Spinner() {
         </svg>
     );
 }
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 type ActiveTab = "content" | "image";
 
@@ -495,7 +470,6 @@ export default function PromptFormMarketing() {
         const context = buildContextPrompt(
             currentEvent as GetEventDetailResponse,
             tone || undefined,
-            selectedImageUrl ?? undefined,
         );
         const finalPrompt = userPrompt.trim()
             ? `${context}\n\nAdditional requirement: ${userPrompt.trim()}`
@@ -517,7 +491,7 @@ export default function PromptFormMarketing() {
             promptUsed: generatedDraft.promptUsed,
             aiModel: generatedDraft.aiModel,
             aiTokensUsed: generatedDraft.aiTokensUsed,
-            imageUrl: selectedImageUrl ?? undefined,
+            imageUrl: selectedImageUrl ?? null,
         };
         dispatch(createPostDraft(payload));
     };
@@ -525,12 +499,10 @@ export default function PromptFormMarketing() {
     const [previewBlocks, setPreviewBlocks] = useState<ContentBlock[] | null>(null);
 
     const handlePreview = (blocks: ContentBlock[]) => {
-        setPreviewBlocks(blocks);
+        const blocksWithImage = injectImageBlock(blocks, selectedImageUrl);
+        setPreviewBlocks(blocksWithImage);
         setTimeout(() => {
-            const previewSection = document.getElementById("preview");
-            if (previewSection) {
-                previewSection.scrollIntoView({ behavior: "smooth" });
-            }
+            document.getElementById("preview")?.scrollIntoView({ behavior: "smooth" });
         }, 100);
     };
 

@@ -136,7 +136,7 @@ function App() {
             <Route path="/payment/packages/failed" element={<PackageOrderFailed />} />
             <Route path="/organizer/subscription" element={<SubscriptionPage />} />
             <Route
-              path="/organizer/my-events/:eventId/marketing/:marketingId/post-review"
+              path="/organizer/my-events/:eventId/marketing/:marketingId/post-preview/:postId"
               element={<PostPreviewPage />}
             />
             <Route

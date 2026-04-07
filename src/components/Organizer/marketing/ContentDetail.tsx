@@ -19,7 +19,7 @@ import {
     MdOutlineDownload,
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../../store";
 import {
     archivePost,
@@ -28,6 +28,7 @@ import {
     publishApprovedPost, requestToSubmitPost,
     updatePostContent,
     pushPostToOtherPlatform,
+    uploadImagePost,
 } from "../../../store/postSlice";
 import type { ContentBlock, PostDetail, PostDistribution, UpdatePostContentRequest } from "../../../types/post/post";
 import { buildContextPrompt } from "../../../utils/buildContextPrompt";
@@ -39,8 +40,7 @@ import ConfirmModal from "../shared/ConfirmModal";
 import Block from "./Block";
 import { MARKETING_STATUS_VI } from "./MarketingTable";
 import UploadImageSection from "./UploadImageSection";
-
-// ─── Spinner ──────────────────────────────────────────────────────────────────
+import { injectImageBlock } from "../../../utils/injectImageBlock";
 
 function Spinner() {
     return (
@@ -51,8 +51,6 @@ function Spinner() {
     );
 }
 
-// ─── MetaItem ─────────────────────────────────────────────────────────────────
-
 function MetaItem({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-4 flex flex-col gap-1">
@@ -61,8 +59,6 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
         </div>
     );
 }
-
-// ─── DistributionStatusBadge ──────────────────────────────────────────────────
 
 function DistributionStatusBadge({ status }: { status: string }) {
     const map: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
@@ -80,8 +76,6 @@ function DistributionStatusBadge({ status }: { status: string }) {
     );
 }
 
-// ─── LatestDistributionCard ───────────────────────────────────────────────────
-
 function LatestDistributionCard({ distribution }: { distribution: PostDistribution }) {
     const platformIcon: Record<string, React.ReactNode> = {
         Facebook: <MdFacebook className="text-blue-400 text-xl" />,
@@ -90,7 +84,6 @@ function LatestDistributionCard({ distribution }: { distribution: PostDistributi
 
     return (
         <div className="bg-slate-900/40 border border-slate-800 rounded-2xl px-5 py-4 space-y-3">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                     {icon}
@@ -99,7 +92,6 @@ function LatestDistributionCard({ distribution }: { distribution: PostDistributi
                 <DistributionStatusBadge status={distribution.status} />
             </div>
 
-            {/* Details */}
             <div className="grid grid-cols-2 gap-2 text-xs">
                 {distribution.sentAt && (
                     <div className="col-span-2 flex items-center gap-1.5 text-slate-500">
@@ -130,17 +122,33 @@ function LatestDistributionCard({ distribution }: { distribution: PostDistributi
     );
 }
 
-// ─── EditTitleModal ───────────────────────────────────────────────────────────
-
 function EditTitleModal({ post, onClose }: { post: PostDetail; onClose: () => void }) {
     const dispatch = useDispatch<AppDispatch>();
     const { loading } = useSelector((s: RootState) => s.POST);
     const [title, setTitle] = useState(post.title);
+    const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(post.imageUrl ?? null);
+    const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
 
     const handleSave = async () => {
+        let resolvedImageUrl: string | undefined = post.imageUrl ?? undefined;
+        if (pendingImageFile) {
+            try {
+                const uploadResult = await dispatch(uploadImagePost({
+                    postId: post.postId,
+                    imageFile: pendingImageFile,
+                    folder: "post-images",
+                })).unwrap();
+                resolvedImageUrl = uploadResult.imageUrl;
+            } catch (err: any) {
+                notify.error(err?.message || "Upload ảnh thất bại");
+                return;
+            }
+        }
+
         const data: UpdatePostContentRequest = {
             title,
             body: post.body,
+            imageUrl: resolvedImageUrl,
             promptUsed: post.promptUsed,
             aiModel: post.aiModel,
             aiTokensUsed: post.aiTokensUsed,
@@ -148,12 +156,14 @@ function EditTitleModal({ post, onClose }: { post: PostDetail; onClose: () => vo
         };
         try {
             await dispatch(updatePostContent({ postId: post.postId, data })).unwrap();
-            notify.success("Cập nhật tiêu đề thành công!");
+            notify.success("Cập nhật thành công!");
             onClose();
         } catch (err: any) {
             notify.error(err?.message || "Cập nhật thất bại");
         }
     };
+
+    const isSaving = loading.updateContent || loading.uploadImage;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -161,7 +171,7 @@ function EditTitleModal({ post, onClose }: { post: PostDetail; onClose: () => vo
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                         <MdOutlineEdit className="text-primary" />
-                        Chỉnh sửa tiêu đề
+                        Chỉnh sửa tiêu đề & ảnh
                     </h3>
                     <button onClick={onClose} className="text-slate-500 hover:text-slate-300 text-2xl leading-none">×</button>
                 </div>
@@ -176,12 +186,22 @@ function EditTitleModal({ post, onClose }: { post: PostDetail; onClose: () => vo
                         />
                     </div>
 
-                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-3">
-                        <p className="text-amber-400/80 text-xs leading-relaxed">
-                            <span className="font-bold">⚠ Nội dung bài viết</span> được lưu dưới dạng JSON blocks.
-                            Để thay đổi nội dung, hãy sử dụng chức năng{" "}
-                            <span className="text-primary uppercase font-semibold">Generate lại bài post</span> bên dưới.
-                        </p>
+                    {/* NEW: Upload ảnh */}
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Ảnh bài đăng</label>
+                        {/* Preview ảnh hiện tại nếu có và chưa chọn ảnh mới */}
+                        {post.imageUrl && !pendingImageFile && (
+                            <div className="mb-2 rounded-xl overflow-hidden border border-slate-800">
+                                <img src={post.imageUrl} alt="current" className="w-full h-32 object-cover" />
+                                <p className="text-[10px] text-slate-600 text-center py-1">Ảnh hiện tại</p>
+                            </div>
+                        )}
+                        <UploadImageSection
+                            selectedImageUrl={selectedImageUrl}
+                            onSelectImage={setSelectedImageUrl}
+                            onClearImage={() => { setSelectedImageUrl(post.imageUrl ?? null); setPendingImageFile(null); }}
+                            onFileSelected={(file) => setPendingImageFile(file)}
+                        />
                     </div>
                 </div>
 
@@ -194,18 +214,18 @@ function EditTitleModal({ post, onClose }: { post: PostDetail; onClose: () => vo
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={loading.updateContent}
+                        disabled={isSaving}
                         className="px-5 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/30 transition-all"
                     >
-                        {loading.updateContent ? "Đang lưu..." : "Lưu tiêu đề"}
+                        {isSaving
+                            ? (loading.uploadImage ? "Đang upload ảnh..." : "Đang lưu...")
+                            : "Lưu thay đổi"}
                     </button>
                 </div>
             </div>
         </div>
     );
 }
-
-// ─── GeneratePreviewModal ─────────────────────────────────────────────────────
 
 function GeneratePreviewModal({
     blocks,
@@ -277,8 +297,6 @@ function GeneratePreviewModal({
     );
 }
 
-// ─── Tone options ─────────────────────────────────────────────────────────────
-
 const TONE_OPTIONS = [
     { value: "", label: "Mặc định" },
     { value: "professional", label: "Chuyên nghiệp" },
@@ -291,8 +309,6 @@ const TONE_OPTIONS = [
 
 const ASPECT_OPTIONS = ["1:1", "16:9", "9:16", "4:3"];
 const SIZE_OPTIONS = ["512x512", "768x768", "1024x1024", "1024x576"];
-
-// ─── InlineImageTab ───────────────────────────────────────────────────────────
 
 function InlineImageTab({
     generatedImageUrl, selectedImageUrl, loading, error,
@@ -398,11 +414,10 @@ function InlineImageTab({
     );
 }
 
-// ─── InlineContentTab ─────────────────────────────────────────────────────────
-
 function InlineContentTab({
     generatedDraft, loading, error, selectedImageUrl, onGenerate, onPreview,
     onSelectImage, onClearImage,
+    onFileSelected,
 }: {
     generatedDraft: any;
     loading: any;
@@ -412,6 +427,7 @@ function InlineContentTab({
     onPreview: (blocks: ContentBlock[], title: string) => void;
     onSelectImage: (url: string) => void;
     onClearImage: () => void;
+    onFileSelected?: (file: File) => void;
 }) {
     const [tone, setTone] = useState("");
     const [userPrompt, setUserPrompt] = useState("");
@@ -434,14 +450,19 @@ function InlineContentTab({
                     selectedImageUrl={selectedImageUrl}
                     onSelectImage={onSelectImage}
                     onClearImage={onClearImage}
+                    onFileSelected={onFileSelected}
                 />
             </div>
             {selectedImageUrl && (
                 <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-2.5 text-xs text-green-400">
                     <img src={selectedImageUrl} alt="selected" className="w-10 h-10 rounded-lg object-cover border border-green-500/30" />
                     <div>
-                        <p className="font-semibold">Đã chọn ảnh AI</p>
-                        <p className="text-green-500/70">Ảnh sẽ được đưa vào bài viết khi tạo</p>
+                        <p className="font-semibold">Đã chọn ảnh</p>
+                        <p className="text-green-500/70">
+                            {selectedImageUrl.startsWith("blob:")
+                                ? "Ảnh từ máy — sẽ được upload khi áp dụng"
+                                : "Ảnh AI — sẽ được đưa vào bài viết khi tạo"}
+                        </p>
                     </div>
                 </div>
             )}
@@ -494,7 +515,7 @@ function InlineContentTab({
                     </div>
                     <button type="button" onClick={() => onPreview(blocks, generatedDraft?.title ?? "")}
                         className="w-full border border-primary text-primary hover:bg-primary hover:text-white py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all">
-                        Xem preview & Áp dụng
+                        Xem preview
                     </button>
                     {generatedDraft && (
                         <div className="flex gap-4 text-xs text-slate-600">
@@ -508,8 +529,6 @@ function InlineContentTab({
     );
 }
 
-// ─── InlineGenerateSection ────────────────────────────────────────────────────
-
 type ActiveTab = "content" | "image";
 
 function InlineGenerateSection({ post, onApplied }: { post: PostDetail; onApplied: () => void }) {
@@ -518,6 +537,7 @@ function InlineGenerateSection({ post, onApplied }: { post: PostDetail; onApplie
     const { loading: postLoading } = useSelector((s: RootState) => s.POST);
     const [activeTab, setActiveTab] = useState<ActiveTab>("content");
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+    const [pendingImageFile, setPendingImageFile] = useState<File | null>(null); // NEW
     const [previewData, setPreviewData] = useState<{ blocks: ContentBlock[]; title: string } | null>(null);
 
     useEffect(() => {
@@ -525,16 +545,34 @@ function InlineGenerateSection({ post, onApplied }: { post: PostDetail; onApplie
     }, []);
 
     const handleGenerate = (tone: string, userPrompt: string) => {
-        const context = buildContextPrompt({ title: post.title } as any, tone || undefined, selectedImageUrl ?? undefined);
+        const context = buildContextPrompt({ title: post.title } as any, tone || undefined);
         const finalPrompt = userPrompt.trim() ? `${context}\n\nAdditional requirement: ${userPrompt.trim()}` : context;
         dispatch(generateContentPostUsingAI({ eventId: post.eventId, userPromptRequirement: finalPrompt }));
     };
 
     const handleConfirmApply = async () => {
         if (!previewData) return;
+        let resolvedImageUrl: string | undefined = undefined;
+        if (pendingImageFile) {
+            try {
+                const uploadResult = await dispatch(uploadImagePost({
+                    postId: post.postId,
+                    imageFile: pendingImageFile,
+                    folder: "post-images",
+                })).unwrap();
+                resolvedImageUrl = uploadResult.imageUrl;
+            } catch (err: any) {
+                notify.error("Upload ảnh thất bại");
+                return;
+            }
+        } else if (selectedImageUrl?.startsWith("http")) {
+            resolvedImageUrl = selectedImageUrl;
+        }
+
         const data: UpdatePostContentRequest = {
             title: previewData.title || post.title,
             body: serializeBlocksToBody(previewData.blocks),
+            imageUrl: resolvedImageUrl,
             promptUsed: generatedDraft?.promptUsed ?? post.promptUsed,
             aiModel: generatedDraft?.aiModel ?? post.aiModel,
             aiTokensUsed: generatedDraft?.aiTokensUsed ?? post.aiTokensUsed,
@@ -544,12 +582,18 @@ function InlineGenerateSection({ post, onApplied }: { post: PostDetail; onApplie
             await dispatch(updatePostContent({ postId: post.postId, data })).unwrap();
             notify.success("Đã cập nhật nội dung bài đăng!");
             setPreviewData(null);
+            setPendingImageFile(null);
             dispatch(clearGeneratedDraft());
             dispatch(clearGeneratedImageUrl());
             onApplied();
         } catch (err: any) {
             notify.error(err?.message || "Cập nhật thất bại");
         }
+    };
+
+    const handleClearImage = () => {
+        setSelectedImageUrl(null);
+        setPendingImageFile(null); // NEW
     };
 
     const TABS: { id: ActiveTab; label: string; icon: any }[] = [
@@ -587,31 +631,33 @@ function InlineGenerateSection({ post, onApplied }: { post: PostDetail; onApplie
                 </div>
                 <div className="px-8 py-6">
                     {activeTab === "content" && (
-                        <InlineContentTab generatedDraft={generatedDraft} loading={loading} error={error}
+                        <InlineContentTab
+                            generatedDraft={generatedDraft} loading={loading} error={error}
                             selectedImageUrl={selectedImageUrl} onGenerate={handleGenerate}
-                            onPreview={(blocks, title) => setPreviewData({ blocks, title })}
+                            onPreview={(blocks, title) => setPreviewData({ blocks: injectImageBlock(blocks, selectedImageUrl), title })}
                             onSelectImage={setSelectedImageUrl}
-                            onClearImage={() => setSelectedImageUrl(null)}
+                            onClearImage={handleClearImage}
+                            onFileSelected={(file) => setPendingImageFile(file)}
                         />
                     )}
                     {activeTab === "image" && (
                         <InlineImageTab generatedImageUrl={generatedImageUrl} selectedImageUrl={selectedImageUrl}
                             loading={loading} error={error}
                             onGenerate={(p, a, s) => dispatch(generateImage({ prompt: p, aspectRatio: a, imageSize: s }))}
-                            onSelectImage={setSelectedImageUrl} onClearImage={() => setSelectedImageUrl(null)} />
+                            onSelectImage={(url) => { setSelectedImageUrl(url); setPendingImageFile(null); }}
+                            onClearImage={handleClearImage} />
                     )}
                 </div>
             </div>
             {previewData && (
                 <GeneratePreviewModal blocks={previewData.blocks} title={previewData.title}
                     onConfirm={handleConfirmApply} onCancel={() => setPreviewData(null)}
-                    loading={!!postLoading.updateContent} />
+                    loading={!!postLoading.updateContent || !!postLoading.uploadImage}
+                />
             )}
         </>
     );
 }
-
-// ─── PromptUsedDisplay ────────────────────────────────────────────────────────
 
 function PromptUsedDisplay({ promptUsed }: { promptUsed: string }) {
     const additionalMatch = promptUsed.match(/Additional requirement:\s*([\s\S]+)$/i);
@@ -649,8 +695,6 @@ function PromptUsedDisplay({ promptUsed }: { promptUsed: string }) {
     );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function getLatestDistribution(distributions: PostDistribution[]): PostDistribution | null {
     if (!distributions?.length) return null;
     return [...distributions].sort((a, b) => {
@@ -659,8 +703,6 @@ function getLatestDistribution(distributions: PostDistribution[]): PostDistribut
         return tb - ta;
     })[0];
 }
-
-// ─── ContentDetail ────────────────────────────────────────────────────────────
 
 export default function ContentDetail({
     post, loading, error, onReload
@@ -678,7 +720,7 @@ export default function ContentDetail({
     const [showPushConfirm, setShowPushConfirm] = useState(false);
     const generateSectionRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
-
+    const { eventId, marketingId } = useParams();
     const statusInfo = post ? (MARKETING_STATUS_VI[post.status] ?? { label: post.status, className: "" }) : null;
     const canSubmit = post?.canSubmit && post.status === "Draft";
     const canPublish = post?.canPublish && post.status === "Approved";
@@ -686,7 +728,8 @@ export default function ContentDetail({
     const canArchive = post?.canArchive && post.status === "Published";
     const canPushFacebook = post?.status === "Published";
 
-    const blocks = parseBodyToBlocks(post?.body ?? "");
+    const rawBlocks = parseBodyToBlocks(post?.body ?? "");
+    const blocks = injectImageBlock(rawBlocks, post?.imageUrl ?? null);
     const isBlockContent = blocks.length > 0;
 
     const latestDistribution = post ? getLatestDistribution(post.distributions ?? []) : null;
@@ -696,7 +739,6 @@ export default function ContentDetail({
     const handlePushFacebook = async () => {
         if (!post) return;
         try {
-            console.log("Simulating push to Facebook with postId:", post.postId);
             await dispatch(pushPostToOtherPlatform({ postId: post.postId, platform: "Facebook", isRetry: true })).unwrap();
             notify.success("Đã đẩy bài lên Facebook thành công!");
             setTimeout(() => {
@@ -713,7 +755,6 @@ export default function ContentDetail({
         <section className="space-y-6 pb-16">
             {showEditModal && post && <EditTitleModal post={post} onClose={() => setShowEditModal(false)} />}
 
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white flex items-center">
                     <span className="w-1.5 h-6 bg-primary rounded-full mr-3" />
@@ -732,7 +773,6 @@ export default function ContentDetail({
 
             {post && (
                 <div className="space-y-6">
-                    {/* Meta grid */}
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                         <MetaItem label="Trạng thái">
                             <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full uppercase border ${statusInfo?.className}`}>
@@ -748,7 +788,6 @@ export default function ContentDetail({
                         {post.aiTokensUsed > 0 && <MetaItem label="Tokens dùng">{post.aiTokensUsed.toLocaleString()}</MetaItem>}
                     </div>
 
-                    {/* Rejection reason */}
                     {post.rejectionReason && (
                         <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-4">
                             <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">Lý do từ chối</p>
@@ -756,7 +795,6 @@ export default function ContentDetail({
                         </div>
                     )}
 
-                    {/* ── Latest Distribution ── */}
                     {latestDistribution && (
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
@@ -768,7 +806,6 @@ export default function ContentDetail({
                         </div>
                     )}
 
-                    {/* Content blocks */}
                     <div className="glass rounded-[32px] p-8 border border-slate-800/50 space-y-8">
                         <Block label="Tiêu đề nội dung">{post.title}</Block>
                         <Block label="Nội dung chi tiết">
@@ -777,10 +814,11 @@ export default function ContentDetail({
                                     <PostBlockRenderer blocks={blocks} />
                                     <div className="flex justify-end pt-2">
                                         <button
-                                            onClick={() => navigate(
-                                                `/organizer/my-events/${post.eventId}/marketing/${post.postId}/post-review`,
-                                                { state: { blocks, title: post.title } }
-                                            )}
+                                            onClick={() =>
+                                                navigate(
+                                                    `/organizer/my-events/${eventId}/marketing/${marketingId}/post-preview/${post.postId}`
+                                                )
+                                            }
                                             className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-primary/40 bg-primary text-white hover:bg-primary/80 transition-all"
                                         >
                                             <MdOutlineOpenInNew className="text-sm" />
@@ -808,7 +846,6 @@ export default function ContentDetail({
                         )}
                     </div>
 
-                    {/* ── Push to Facebook (Published only) ── */}
                     {canPushFacebook && (
                         <div className="bg-[#0B0B12] border border-blue-500/20 rounded-[32px] px-8 py-6 space-y-4">
                             <div className="flex items-center gap-3">
@@ -860,7 +897,6 @@ export default function ContentDetail({
                         </div>
                     )}
 
-                    {/* ── Generate lại button ── */}
                     {canEdit && !showGenerateSection && (
                         <button
                             onClick={() => {
@@ -874,7 +910,6 @@ export default function ContentDetail({
                         </button>
                     )}
 
-                    {/* ── Inline generate section ── */}
                     {canEdit && showGenerateSection && (
                         <div ref={generateSectionRef} className="space-y-4 scroll-mt-8">
                             <div className="flex items-center justify-between">
@@ -892,7 +927,6 @@ export default function ContentDetail({
                         </div>
                     )}
 
-                    {/* ── Action buttons ── */}
                     {(canEdit || canSubmit || canPublish || canArchive) && (
                         <div className="flex justify-end gap-3 flex-wrap">
                             {canEdit && (

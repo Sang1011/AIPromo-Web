@@ -12,7 +12,6 @@ const toneMap: Record<string, string> = {
 export function buildContextPrompt(
     event: GetEventDetailResponse,
     tone?: string,
-    imageUrl?: string,
 ): string {
     const hashtags = event.hashtags?.map((h) => h.name).join(", ") || "";
     const categories = event.categories?.map((c) => c.name).join(", ") || "";
@@ -41,11 +40,7 @@ export function buildContextPrompt(
         ? `Writing style: ${toneMap[tone]}.`
         : "";
 
-    const imageInstruction = imageUrl
-        ? `Include exactly one image block using this URL: ${imageUrl} — do not use any other image URL.`
-        : `Do not include any image block.`;
-
-    return [eventContext, ctaInstruction, toneInstruction, imageInstruction]
+    return [eventContext, ctaInstruction, toneInstruction, "Do not include any image block."]
         .filter(Boolean)
         .join("\n");
 }
