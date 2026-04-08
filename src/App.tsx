@@ -62,6 +62,7 @@ import PackageVnpayReturn from "./pages/Organizer/PackageVNPayReturn";
 import PackageOrderSuccess from "./pages/Organizer/PackageOrderSuccess";
 import LegalDetailPage from "./pages/Organizer/LegalDetailPage";
 import RequireEventPermission from "./components/Guards/RequireEventPermission";
+import PolicyManagement from "./components/Admin/policy";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -157,6 +158,7 @@ function App() {
           <Route path="refunds" element={<RefundManagementPage />} />
           <Route path="withdrawals" element={<WithdrawalPage />} />
           <Route path="ai-packages" element={<AIPackagesPage />} />
+          <Route path="policy" element={<PolicyManagement />} />
         </Route>
 
         {/* Staff group */}
