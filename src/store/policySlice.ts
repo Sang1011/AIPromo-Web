@@ -72,6 +72,19 @@ export const fetchUploadPolicy = createAsyncThunk(
 );
 
 
+export const fetchDeletedPolicy = createAsyncThunk(
+    "policy/fetchDeletedPolicy",
+    async (id: string, { rejectWithValue }) => {
+        try {
+            const res = await policyService.deletePolicy(id);
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+
 
 
 const policySlice = createSlice({
