@@ -56,8 +56,6 @@ export default function AdminLayout() {
     const user = (currentInfor as any) || {};
     const userName = user.name || user.userName || "Admin";
     const userEmail = user.email || "";
-    const userRoles = user.roles ? (Array.isArray(user.roles) ? user.roles : [user.roles]) : [];
-    const roleLabel = userRoles.includes("Admin") ? "Super Admin" : userRoles[0] || "Admin";
 
     const handleLogoutClick = () => {
         setDropdownOpen(false);
@@ -262,11 +260,8 @@ export default function AdminLayout() {
                             className="flex items-center gap-3 hover:bg-white/5 rounded-xl px-3 py-1.5 transition-colors"
                         >
                             <div className="text-right hidden sm:block">
-                                <p className="text-xs font-bold text-white">
+                                <p className="text-sm font-bold text-white">
                                     {userName}
-                                </p>
-                                <p className="text-[10px] text-[#a592c8]">
-                                    {roleLabel}
                                 </p>
                             </div>
                             <div className="w-10 h-10 rounded-full border-2 border-primary/30 p-0.5 bg-[#302447] flex items-center justify-center text-sm font-bold text-primary">

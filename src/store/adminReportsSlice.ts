@@ -1,10 +1,10 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import adminReportsService from "../services/adminReportsService";
-import type { 
-    AdminReportsResponse, 
+import type {
+    AdminReportsResponse,
     AdminReportsData,
     SalesTrendResponse,
-    SalesTrendDataPoint 
+    SalesTrendDataPoint
 } from "../types/adminReports/adminReports";
 
 const name = "adminReports";

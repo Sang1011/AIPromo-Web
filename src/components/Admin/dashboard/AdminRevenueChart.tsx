@@ -16,15 +16,22 @@ const timeRangeOptions: { label: string; value: TimeRange }[] = [
     { label: "30 ngày", value: 30 },
 ];
 
+// Helper to format date as YYYY-MM-DD
+const formatDateKey = (date: Date): string => {
+    return date.toISOString().split("T")[0];
+};
+
 export default function AdminRevenueChart() {
     const dispatch = useDispatch<AppDispatch>();
     const { salesTrend, loading } = useSelector((state: RootState) => state.ADMIN_REPORTS);
-    const [selectedDays, setSelectedDays] = useState<TimeRange>(30);
-    const [hoveredPoint, setHoveredPoint] = useState<{
+    const [selectedDays, setSelectedDays] = useState<TimeRange>(7);
+    const [hoveredBar, setHoveredBar] = useState<{
         index: number;
         data: SalesTrendDataPoint;
         x: number;
         y: number;
+        width: number;
+        height: number;
     } | null>(null);
 
     useEffect(() => {
@@ -32,6 +39,13 @@ export default function AdminRevenueChart() {
     }, [dispatch, selectedDays]);
 
     const formatCurrency = (value: number): string => {
+        if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B`;
+        if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+        if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+        return new Intl.NumberFormat("vi-VN").format(value);
+    };
+
+    const formatCurrencyFull = (value: number): string => {
         return new Intl.NumberFormat("vi-VN", {
             style: "currency",
             currency: "VND",
@@ -43,97 +57,125 @@ export default function AdminRevenueChart() {
         return `${date.getDate()}/${date.getMonth() + 1}`;
     };
 
-    // Chart calculations
+    // Chart calculations - Fill in missing days with zero values
     const chartData = useMemo(() => {
         if (!salesTrend || salesTrend.length === 0) return null;
 
-        const maxRevenue = Math.max(...salesTrend.map(d => d.revenue), 1);
-        const maxTransactions = Math.max(...salesTrend.map(d => d.transactions), 1);
-        
-        const width = 800;
-        const height = 200;
-        const padding = 20;
-        
-        const points = salesTrend.map((data, index) => {
-            const x = padding + (index / (salesTrend.length - 1)) * (width - padding * 2);
-            const y = height - padding - (data.revenue / maxRevenue) * (height - padding * 2);
-            return { x, y, data };
+        // Create a map of existing data by date
+        const dataMap = new Map<string, SalesTrendDataPoint>();
+        salesTrend.forEach(d => {
+            dataMap.set(d.dateLabel, d);
         });
 
-        // Create smooth curve path
-        const linePath = points.length > 1
-            ? `M ${points[0].x},${points[0].y} ` +
-              points.slice(1).map((point, i) => {
-                  const prev = points[i];
-                  const cpx1 = prev.x + (point.x - prev.x) / 3;
-                  const cpx2 = prev.x + 2 * (point.x - prev.x) / 3;
-                  return `C ${cpx1},${prev.y} ${cpx2},${point.y} ${point.x},${point.y}`;
-              }).join(" ")
-            : "";
+        // Generate all dates from (selectedDays ago) to today
+        const allDays: SalesTrendDataPoint[] = [];
+        const today = new Date();
+        for (let i = selectedDays - 1; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = formatDateKey(date);
+            
+            // Use existing data or create empty entry
+            if (dataMap.has(dateKey)) {
+                allDays.push(dataMap.get(dateKey)!);
+            } else {
+                allDays.push({
+                    dateLabel: dateKey,
+                    revenue: 0,
+                    transactions: 0,
+                });
+            }
+        }
 
-        // Create area path
-        const areaPath = linePath
-            ? `${linePath} L ${points[points.length - 1].x},${height} L ${points[0].x},${height} Z`
-            : "";
+        const maxRevenue = Math.max(...allDays.map(d => d.revenue), 1);
 
-        // X-axis labels (show 4-5 labels evenly spaced)
-        const labelIndices = [0, Math.floor(salesTrend.length / 3), Math.floor(2 * salesTrend.length / 3), salesTrend.length - 1];
-        const xLabels = labelIndices.map(i => ({
-            x: points[i]?.x || 0,
-            label: formatDate(salesTrend[i]?.dateLabel || ""),
+        const width = 800;
+        const height = 240;
+        const padding = { top: 20, right: 20, bottom: 40, left: 60 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        const barCount = allDays.length;
+        const barGap = Math.max(4, Math.min(12, chartWidth / barCount * 0.2));
+        const barWidth = (chartWidth - barGap * (barCount + 1)) / barCount;
+
+        const bars = allDays.map((data, index) => {
+            const x = padding.left + barGap + index * (barWidth + barGap);
+            const barHeight = (data.revenue / maxRevenue) * chartHeight;
+            const y = padding.top + chartHeight - barHeight;
+            return { x, y, width: barWidth, height: barHeight, data };
+        });
+
+        // Y-axis labels (5 levels)
+        const yLevels = [0, 0.25, 0.5, 0.75, 1].map(ratio => ({
+            y: padding.top + chartHeight * (1 - ratio),
+            value: Math.round(maxRevenue * ratio),
+            label: formatCurrency(maxRevenue * ratio),
         }));
 
+        // X-axis labels (show some labels based on data count)
+        const labelCount = Math.min(7, barCount);
+        const labelIndices = Array.from({ length: labelCount }, (_, i) => {
+            if (barCount === 1) return 0;
+            return Math.floor((i / (labelCount - 1)) * (barCount - 1));
+        });
+        const xLabels = labelIndices.map(i => ({
+            x: bars[i]?.x + bars[i]?.width / 2 || 0,
+            label: formatDate(allDays[i]?.dateLabel || ""),
+        }));
+
+        console.log(`Bar chart: ${bars.length} bars, ${salesTrend.length} from API, Max: ${maxRevenue}`);
+
         return {
-            linePath,
-            areaPath,
+            bars,
             xLabels,
-            points,
+            yLevels,
             maxRevenue,
-            maxTransactions,
+            width,
+            height,
+            padding,
+            chartWidth,
+            chartHeight,
         };
-    }, [salesTrend]);
+    }, [salesTrend, selectedDays]);
 
     const handleMouseMove = useCallback(
         (e: React.MouseEvent<SVGSVGElement>) => {
-            if (!chartData || !chartData.points.length) return;
+            if (!chartData || !chartData.bars.length) return;
 
             const svg = e.currentTarget;
             const rect = svg.getBoundingClientRect();
-            const mouseX = ((e.clientX - rect.left) / rect.width) * 800;
+            const mouseX = ((e.clientX - rect.left) / rect.width) * chartData.width;
+            const mouseY = ((e.clientY - rect.top) / rect.height) * chartData.height;
 
-            // Find closest point
-            let closestIndex = 0;
-            let closestDistance = Infinity;
+            // Find which bar the mouse is over
+            const bar = chartData.bars.find(b => 
+                mouseX >= b.x && mouseX <= b.x + b.width &&
+                mouseY >= b.y && mouseY <= chartData!.padding.top + chartData!.chartHeight
+            );
 
-            chartData.points.forEach((point, index) => {
-                const distance = Math.abs(point.x - mouseX);
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestIndex = index;
-                }
-            });
-
-            // Only show tooltip if mouse is within reasonable range (50px in SVG coordinates)
-            if (closestDistance < 50) {
-                const point = chartData.points[closestIndex];
-                setHoveredPoint({
-                    index: closestIndex,
-                    data: point.data,
-                    x: point.x,
-                    y: point.y,
+            if (bar) {
+                const index = chartData.bars.indexOf(bar);
+                setHoveredBar({
+                    index,
+                    data: bar.data,
+                    x: bar.x,
+                    y: bar.y,
+                    width: bar.width,
+                    height: bar.height,
                 });
             } else {
-                setHoveredPoint(null);
+                setHoveredBar(null);
             }
         },
         [chartData]
     );
 
     const handleMouseLeave = useCallback(() => {
-        setHoveredPoint(null);
+        setHoveredBar(null);
     }, []);
 
-    if (loading || !chartData) {
+    if (loading) {
         return (
             <div
                 className={`lg:col-span-2 ${glassCard} rounded-xl p-8 ${neonGlow}`}
@@ -147,11 +189,48 @@ export default function AdminRevenueChart() {
                             Đang tải dữ liệu...
                         </p>
                     </div>
-                    <div className="bg-[#302447] text-white text-xs rounded-lg py-1.5 pl-3 pr-8 animate-pulse">
-                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    </div>
                 </div>
                 <div className="h-64 bg-[#302447] rounded-lg animate-pulse" />
+            </div>
+        );
+    }
+
+    if (!chartData) {
+        return (
+            <div
+                className={`lg:col-span-2 ${glassCard} rounded-xl p-8 ${neonGlow}`}
+            >
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 className="text-lg font-bold text-white">
+                            Xu hướng Doanh thu & Giao dịch
+                        </h2>
+                        <p className="text-[#a592c8] text-sm">
+                            Số liệu {selectedDays} ngày gần nhất
+                        </p>
+                    </div>
+                    <select
+                        className="bg-[#302447] border-none text-white text-xs rounded-lg py-1.5 pl-3 pr-8 focus:ring-1 focus:ring-primary cursor-pointer"
+                        value={selectedDays}
+                        onChange={(e) => setSelectedDays(Number(e.target.value) as TimeRange)}
+                    >
+                        {timeRangeOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="h-64 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 rounded-full bg-[#302447] flex items-center justify-center">
+                            <svg className="w-8 h-8 text-[#524a6e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <span className="text-[#a592c8] text-sm">Không có dữ liệu</span>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -166,11 +245,11 @@ export default function AdminRevenueChart() {
                         Xu hướng Doanh thu & Giao dịch
                     </h2>
                     <p className="text-[#a592c8] text-sm">
-                        Số liệu hiệu suất hàng ngày trong {selectedDays} ngày gần nhất
+                        Số liệu {selectedDays} ngày gần nhất
                     </p>
                 </div>
                 <select
-                    className="bg-[#302447] border-none text-white text-xs rounded-lg py-1.5 pl-3 pr-8 focus:ring-1 focus:ring-primary cursor-pointer"
+                    className="bg-[#302447] border-none text-white text-xs rounded-lg py-1.5 pl-3 pr-8 focus:ring-1 focus:ring-primary cursor-pointer hover:bg-[#3d2f5a] transition-colors"
                     value={selectedDays}
                     onChange={(e) => setSelectedDays(Number(e.target.value) as TimeRange)}
                 >
@@ -185,15 +264,14 @@ export default function AdminRevenueChart() {
             <div className="h-64 relative w-full">
                 <svg
                     className="w-full h-full"
-                    preserveAspectRatio="none"
-                    viewBox="0 0 800 200"
+                    viewBox={`0 0 ${chartData.width} ${chartData.height}`}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
-                    style={{ cursor: hoveredPoint ? "pointer" : "default" }}
+                    style={{ cursor: hoveredBar ? "pointer" : "default" }}
                 >
                     <defs>
                         <linearGradient
-                            id="adminGradient"
+                            id="barGradient"
                             x1="0%"
                             x2="0%"
                             y1="0%"
@@ -202,135 +280,137 @@ export default function AdminRevenueChart() {
                             <stop
                                 offset="0%"
                                 stopColor="#7c3bed"
-                                stopOpacity={0.3}
+                                stopOpacity={1}
+                            />
+                            <stop
+                                offset="100%"
+                                stopColor="#6d28d9"
+                                stopOpacity={0.8}
+                            />
+                        </linearGradient>
+                        <linearGradient
+                            id="barGradientHover"
+                            x1="0%"
+                            x2="0%"
+                            y1="0%"
+                            y2="100%"
+                        >
+                            <stop
+                                offset="0%"
+                                stopColor="#8b5cf6"
+                                stopOpacity={1}
                             />
                             <stop
                                 offset="100%"
                                 stopColor="#7c3bed"
-                                stopOpacity={0}
+                                stopOpacity={1}
                             />
                         </linearGradient>
                     </defs>
-                    
-                    {/* Grid lines */}
-                    {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-                        <line
-                            key={ratio}
-                            x1="20"
-                            y1={20 + ratio * 160}
-                            x2="780"
-                            y2={20 + ratio * 160}
-                            stroke="rgba(124, 59, 237, 0.1)"
-                            strokeWidth="1"
-                        />
-                    ))}
-                    
-                    {/* Area fill */}
-                    {chartData.areaPath && (
-                        <path
-                            d={chartData.areaPath}
-                            fill="url(#adminGradient)"
-                        />
-                    )}
-                    
-                    {/* Revenue line */}
-                    {chartData.linePath && (
-                        <path
-                            d={chartData.linePath}
-                            fill="none"
-                            stroke="#7c3bed"
-                            strokeLinecap="round"
-                            strokeWidth={3}
-                        />
-                    )}
-                    
-                    {/* Data points (only show if less than 15 points, otherwise too crowded) */}
-                    {chartData.points.length <= 15 && chartData.points.map((point, index) => (
-                        <circle
-                            key={index}
-                            className={neonGlow}
-                            cx={point.x}
-                            cy={point.y}
-                            fill={point.data.revenue > 0 ? "#7c3bed" : "transparent"}
-                            stroke="#7c3bed"
-                            strokeWidth="2"
-                            r={4}
-                        />
-                    ))}
-                    
-                    {/* Hovered point indicator */}
-                    {hoveredPoint && (
-                        <>
-                            {/* Vertical line */}
+
+                    {/* Grid lines and Y-axis labels */}
+                    {chartData.yLevels.map((level, index) => (
+                        <g key={index}>
                             <line
-                                x1={hoveredPoint.x}
-                                y1="20"
-                                x2={hoveredPoint.x}
-                                y2="180"
-                                stroke="rgba(124, 59, 237, 0.5)"
-                                strokeWidth="2"
-                                strokeDasharray="4,4"
+                                x1={chartData.padding.left}
+                                y1={level.y}
+                                x2={chartData.width - chartData.padding.right}
+                                y2={level.y}
+                                stroke="rgba(124, 59, 237, 0.1)"
+                                strokeWidth="1"
                             />
-                            
-                            {/* Highlighted circle */}
-                            <circle
-                                cx={hoveredPoint.x}
-                                cy={hoveredPoint.y}
-                                fill="#7c3bed"
-                                stroke="#fff"
-                                strokeWidth="3"
-                                r="7"
-                                className={neonGlow}
-                            />
-                        </>
-                    )}
+                            <text
+                                x={chartData.padding.left - 10}
+                                y={level.y + 4}
+                                textAnchor="end"
+                                fill="#a592c8"
+                                fontSize="10"
+                                fontWeight="bold"
+                            >
+                                {level.label}
+                            </text>
+                        </g>
+                    ))}
+
+                    {/* Bars */}
+                    {chartData.bars.map((bar, index) => {
+                        const isHovered = hoveredBar?.index === index;
+                        return (
+                            <g key={index}>
+                                {/* Invisible hit area for easier hovering */}
+                                <rect
+                                    x={bar.x - 2}
+                                    y={chartData.padding.top}
+                                    width={bar.width + 4}
+                                    height={chartData.chartHeight}
+                                    fill="transparent"
+                                />
+                                {/* Bar */}
+                                <rect
+                                    x={bar.x}
+                                    y={bar.y}
+                                    width={bar.width}
+                                    height={bar.height}
+                                    fill={isHovered ? "url(#barGradientHover)" : "url(#barGradient)"}
+                                    rx="4"
+                                    ry="4"
+                                    style={{
+                                        filter: isHovered ? "drop-shadow(0 0 8px rgba(124, 59, 237, 0.6))" : "none",
+                                        transition: "all 0.2s ease",
+                                    }}
+                                />
+                            </g>
+                        );
+                    })}
                 </svg>
-                
+
                 {/* Tooltip */}
-                {hoveredPoint && (
+                {hoveredBar && (
                     <div
-                        className="absolute bg-[rgba(24,18,43,0.95)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.4)] rounded-lg p-3 shadow-[0_0_20px_rgba(124,59,237,0.5)] pointer-events-none z-10"
+                        className="absolute bg-[rgba(24,18,43,0.95)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.4)] rounded-xl p-4 shadow-[0_0_20px_rgba(124,59,237,0.5)] pointer-events-none z-10"
                         style={{
-                            left: `${(hoveredPoint.x / 800) * 100}%`,
+                            left: `${((hoveredBar.x + hoveredBar.width / 2) / chartData.width) * 100}%`,
                             top: "0%",
                             transform: `translateX(-50%) translateY(calc(-100% - 10px))`,
                         }}
                     >
-                        <div className="text-[10px] text-[#a592c8] mb-2 font-bold">
-                            {new Date(hoveredPoint.data.dateLabel).toLocaleDateString("vi-VN", {
+                        <div className="text-[10px] text-[#a592c8] mb-2 font-bold uppercase tracking-wider">
+                            {new Date(hoveredBar.data.dateLabel).toLocaleDateString("vi-VN", {
                                 weekday: "long",
-                                year: "numeric",
-                                month: "2-digit",
                                 day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
                             })}
                         </div>
-                        <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center justify-between gap-4">
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-6">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-primary" />
-                                    <span className="text-xs text-[#a592c8]">Doanh thu:</span>
+                                    <span className="text-xs text-[#a592c8]">Doanh thu</span>
                                 </div>
-                                <span className="text-xs text-white font-bold">
-                                    {formatCurrency(hoveredPoint.data.revenue)}
+                                <span className="text-sm font-bold text-white">
+                                    {formatCurrencyFull(hoveredBar.data.revenue)}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center justify-between gap-6">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-indigo-400" />
-                                    <span className="text-xs text-[#a592c8]">Giao dịch:</span>
+                                    <span className="text-xs text-[#a592c8]">Giao dịch</span>
                                 </div>
-                                <span className="text-xs text-white font-bold">
-                                    {hoveredPoint.data.transactions}
+                                <span className="text-sm font-bold text-white">
+                                    {hoveredBar.data.transactions}
                                 </span>
                             </div>
                         </div>
                     </div>
                 )}
-                
+
                 {/* X-axis labels */}
-                <div className="flex justify-between mt-4 text-[10px] text-[#a592c8] font-bold px-2">
+                <div className="flex justify-between mt-2 text-[10px] text-[#a592c8] font-bold px-2">
                     {chartData.xLabels.map((label, index) => (
-                        <span key={index}>{label.label}</span>
+                        <span key={index} style={{ position: 'absolute', left: `${(label.x / chartData.width) * 100}%`, transform: 'translateX(-50%)' }}>
+                            {label.label}
+                        </span>
                     ))}
                 </div>
             </div>
@@ -338,12 +418,8 @@ export default function AdminRevenueChart() {
             {/* Legend */}
             <div className="flex items-center justify-center gap-6 mt-4 text-xs text-[#a592c8]">
                 <div className="flex items-center gap-2">
-                    <div className="w-3 h-0.5 bg-primary" />
-                    <span>Doanh thu</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-primary/30 rounded-full" />
-                    <span>Giao dịch</span>
+                    <div className="w-3 h-3 bg-primary rounded" />
+                    <span>Doanh thu theo ngày</span>
                 </div>
             </div>
         </div>

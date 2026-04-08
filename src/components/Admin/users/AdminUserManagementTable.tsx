@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../store";
 import { fetchAllUsers } from "../../../store/userSlice";
-import { MdFilterList, MdPersonAdd, MdMoreVert } from "react-icons/md";
+import { MdPersonAdd, MdMoreVert } from "react-icons/md";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import CreateStaffUserModal from "./CreateStaffUserModal";
 
 const glassCard = "bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.2)]";
 
@@ -20,10 +21,11 @@ export interface UserItem {
 
 export default function AdminUserManagementTable() {
     const dispatch = useDispatch<AppDispatch>();
-    
+
     const { users, pagination, loading } = useSelector((state: RootState) => state.USER);
-    
+
     const [pageNumber, setPageNumber] = useState(1);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const pageSize = 10;
 
     useEffect(() => {
@@ -57,6 +59,18 @@ export default function AdminUserManagementTable() {
         setPageNumber(newPage);
     };
 
+    const handleCreateSuccess = () => {
+        // Refresh user list after successful creation
+        dispatch(fetchAllUsers({
+            PageNumber: pageNumber,
+            PageSize: pageSize,
+            SortColumn: "userId",
+            Dir: "desc",
+        })).unwrap().catch((err: any) => {
+            console.error(err);
+        });
+    };
+
     const getRoleStyles = (role: string) => {
         switch (role) {
             case "Admin":
@@ -82,10 +96,10 @@ export default function AdminUserManagementTable() {
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="bg-[#302447] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-white/10 transition-colors">
-                        <MdFilterList className="text-base" /> Lọc
-                    </button>
-                    <button className="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(124,59,237,0.4)]">
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(124,59,237,0.4)]"
+                    >
                         <MdPersonAdd className="text-base" /> Thêm người dùng
                     </button>
                 </div>
@@ -192,6 +206,13 @@ export default function AdminUserManagementTable() {
                     })()}
                 </>
             )}
+
+            {/* Create Staff User Modal */}
+            <CreateStaffUserModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={handleCreateSuccess}
+            />
         </div>
     );
 }

@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchGlobalRevenue } from "../../../store/revenueSlice";
+import { fetchAdminPaymentTransactions } from "../../../store/paymentSlice";
 import {
     MdTrendingUp,
     MdAccountBalanceWallet,
@@ -10,14 +11,26 @@ import {
 } from "react-icons/md";
 import AdminStatsCard from "../shared/AdminStatsCard";
 
+const PLATFORM_FEE_PERCENTAGE = 15; // 15% platform fee
+
 export default function AdminFinanceStats() {
     const dispatch = useDispatch<AppDispatch>();
-    const { globalRevenue, loading, error } = useSelector(
+    const { globalRevenue, loading: revenueLoading, error } = useSelector(
         (state: RootState) => state.REVENUE
+    );
+    const { adminTransactions, loading: transactionLoading } = useSelector(
+        (state: RootState) => state.PAYMENT
     );
 
     useEffect(() => {
         dispatch(fetchGlobalRevenue());
+        // Fetch all transactions to get total count
+        dispatch(fetchAdminPaymentTransactions({
+            PageNumber: 1,
+            PageSize: 1, // We only need the totalCount, not all items
+            SortColumn: "CreatedAt",
+            SortOrder: "desc",
+        }));
     }, [dispatch]);
 
     const formatCurrency = (value: number): string => {
@@ -30,12 +43,18 @@ export default function AdminFinanceStats() {
     const grossRevenue = globalRevenue?.data?.grossRevenue ?? 0;
     const netRevenue = globalRevenue?.data?.netRevenue ?? 0;
     const eventCount = globalRevenue?.data?.eventCount ?? 0;
+    const totalTransactions = adminTransactions?.totalCount ?? 0;
+
+    // Calculate platform fee (15% of gross revenue)
+    const platformFee = useMemo(() => {
+        return (grossRevenue * PLATFORM_FEE_PERCENTAGE) / 100;
+    }, [grossRevenue]);
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <AdminStatsCard
                 label="Tổng Doanh Thu"
-                value={loading ? "Đang tải..." : formatCurrency(grossRevenue)}
+                value={revenueLoading ? "Đang tải..." : formatCurrency(grossRevenue)}
                 change={error ? "Lỗi" : `${eventCount} sự kiện`}
                 subtext={error ? error : "tháng trước"}
                 icon={<MdTrendingUp className="text-sm" />}
@@ -45,14 +64,14 @@ export default function AdminFinanceStats() {
             />
             <AdminStatsCard
                 label="Phí nền tảng"
-                value="$19,267.50"
-                change="15% Fee"
-                subtext="platform average"
+                value={revenueLoading ? "Đang tải..." : formatCurrency(platformFee)}
+                change={`${PLATFORM_FEE_PERCENTAGE}% phí`}
+                subtext="chiết khấu từ tổng doanh thu"
                 icon={<MdAccountBalanceWallet className="text-sm" />}
             />
             <AdminStatsCard
                 label="Tổng Thanh toán"
-                value={loading ? "Đang tải..." : formatCurrency(netRevenue)}
+                value={revenueLoading ? "Đang tải..." : formatCurrency(netRevenue)}
                 change={error ? "Lỗi" : `${eventCount} sự kiện`}
                 subtext={error ? error : "đang chờ duyệt"}
                 icon={<MdOutbound className="text-sm" />}
@@ -61,9 +80,7 @@ export default function AdminFinanceStats() {
             />
             <AdminStatsCard
                 label="Giao dịch"
-                value="4,812"
-                change="+210"
-                subtext="trong 24 giờ qua"
+                value={transactionLoading.adminTransactions ? "Đang tải..." : totalTransactions.toLocaleString("vi-VN")}
                 icon={<MdReceiptLong className="text-sm" />}
                 iconBg="bg-purple-500/10"
                 iconColor="text-purple-400"
