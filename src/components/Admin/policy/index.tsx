@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import type { AppDispatch, RootState } from "../../../store";
 import {
     fetchAllPolicies,
+    fetchDeletedPolicy,
     fetchPolicyUploadFile,
     fetchUploadPolicy,
 } from "../../../store/policySlice";
@@ -55,6 +56,7 @@ function PolicyManagement() {
     const [uploadedFileUrl, setUploadedFileUrl] = useState("");
     const [isUploadingFile, setIsUploadingFile] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const sortedPolicies = useMemo(
         () => [...(list || [])].sort((a: Policy, b: Policy) => b.id.localeCompare(a.id)),
@@ -123,6 +125,21 @@ function PolicyManagement() {
             toast.error(err?.message || "Tạo policy thất bại");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDeletePolicy = async (id: string) => {
+        const confirmed = window.confirm("Bạn có chắc muốn xóa policy này?");
+        if (!confirmed) return;
+        try {
+            setDeletingId(id);
+            await dispatch(fetchDeletedPolicy(id)).unwrap();
+            toast.success("Xóa policy thành công");
+            await loadPolicies();
+        } catch (err: any) {
+            toast.error(err?.message || "Xóa policy thất bại");
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -223,12 +240,13 @@ function PolicyManagement() {
                                 <th className="px-7 py-3.5">Mô tả</th>
                                 <th className="px-7 py-3.5">Loại</th>
                                 <th className="px-7 py-3.5">Tệp điều khoản</th>
+                                <th className="px-7 py-3.5 text-right">Hành động</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading.list ? (
                                 <tr>
-                                    <td colSpan={3} className="px-7 py-10 text-center">
+                                    <td colSpan={4} className="px-7 py-10 text-center">
                                         <div className="flex items-center justify-center gap-2 text-sm text-[#5c4f72]">
                                             <MdRefresh className="animate-spin text-violet-500" />
                                             Đang tải dữ liệu...
@@ -237,11 +255,11 @@ function PolicyManagement() {
                                 </tr>
                             ) : error ? (
                                 <tr>
-                                    <td colSpan={3} className="px-7 py-8 text-center text-sm text-red-400/80">{error}</td>
+                                    <td colSpan={4} className="px-7 py-8 text-center text-sm text-red-400/80">{error}</td>
                                 </tr>
                             ) : currentSlice.length === 0 ? (
                                 <tr>
-                                    <td colSpan={3} className="px-7 py-12 text-center">
+                                    <td colSpan={4} className="px-7 py-12 text-center">
                                         <div className="flex flex-col items-center gap-2 text-[#5c4f72]">
                                             <MdDescription className="text-3xl opacity-30" />
                                             <p className="text-sm">Chưa có policy nào.</p>
@@ -279,6 +297,15 @@ function PolicyManagement() {
                                             ) : (
                                                 <span className="text-xs text-[#4a3f60] italic">Không có file</span>
                                             )}
+                                        </td>
+                                        <td className="px-7 py-4 text-right">
+                                            <button
+                                                onClick={() => handleDeletePolicy(policy.id)}
+                                                disabled={deletingId === policy.id}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-300 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                            >
+                                                {deletingId === policy.id ? "Đang xóa..." : "Xóa"}
+                                            </button>
                                         </td>
                                     </tr>
                                 ))

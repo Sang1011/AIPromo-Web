@@ -13,9 +13,12 @@ const policyService = {
         return interceptorAPI().post(`/policies`, data);
     },
     postPolicyfile: (data: { file: File }): Promise<AxiosResponse<any>> => {
-         const formData = new FormData();
-         formData.append("file", data.file);
+        const formData = new FormData();
+        formData.append("file", data.file);
         return interceptorAPI().post(`/policies/upload`, formData);
+    },
+    deletePolicy: (id: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().delete(`/policies/${id}`);
     },
 }
 
