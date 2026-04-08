@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Link, useLocation } from "react-router-dom";
-import { MdDashboard, MdFactCheck, MdBadge, MdSearch, MdNotifications, MdSettings } from "react-icons/md";
+import { MdDashboard, MdFactCheck, MdBadge, MdSearch, MdNotifications, MdSettings, MdPostAdd } from "react-icons/md";
 import { FiZap } from "react-icons/fi";
 
 const staffMenuItems = [
     { icon: MdDashboard, label: "Tổng quan", path: "/staff" },
     { icon: MdFactCheck, label: "Duyệt sự kiện", path: "/staff/event-approval" },
     { icon: MdBadge, label: "Duyệt nhà tổ chức", path: "/staff/organizer-profile" },
+    { icon: MdPostAdd, label: "Duyệt bài đăng", path: "/staff/post-approval" },
 ];
 
 const pageTitles: Record<string, string> = {
     "/staff": "Tổng quan Dashboard",
     "/staff/event-approval": "Danh sách chờ duyệt sự kiện",
     "/staff/organizer-profile": "Duyệt nhà tổ chức",
+    "/staff/post-approval": "Duyệt bài đăng Marketing",
 };
 
 export default function StaffLayout() {

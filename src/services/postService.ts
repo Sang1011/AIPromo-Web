@@ -58,6 +58,22 @@ const postService = {
     getAdminPostById: (id: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().get(`/admin/posts/${id}`);
     },
+    approveAdminPost: (
+        postId: string,
+        adminId: string
+    ): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().post(`/admin/posts/${postId}/approve`, { adminId });
+    },
+    rejectAdminPost: (
+        postId: string,
+        adminId: string,
+        reason: string
+    ): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().post(`/admin/posts/${postId}/reject`, { adminId, reason });
+    },
+    publishAdminPost: (id: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().post(`/admin/posts/${id}/publish`);
+    },
 }
 
 export default postService;
