@@ -4,7 +4,6 @@ import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchPostDetail } from "../../store/postSlice";
 import ContentDetail from "../../components/Organizer/marketing/ContentDetail";
-// import KPISummary from "../../components/Organizer/marketing/KPISummary";
 import FacebookMetricsSection from "../../components/Organizer/marketing/FacebookMetricsSection";
 
 export default function MarketingDetailPage() {
@@ -25,10 +24,6 @@ export default function MarketingDetailPage() {
     return (
         <div className="bg-background-dark text-slate-100 min-h-screen overflow-y-auto custom-scrollbar">
             <div className="p-8 space-y-8 max-w-7xl mx-auto w-full">
-                {/* KPISummary tạm thời ẩn — chưa có dữ liệu thật */}
-                {/* <KPISummary /> */}
-
-                {/* Facebook distribution metrics */}
                 {postDetail && <FacebookMetricsSection post={postDetail} />}
 
                 <ContentDetail

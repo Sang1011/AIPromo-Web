@@ -13,19 +13,19 @@ export default function PackageVnpayReturn() {
             .then((res) => res.json())
             .then((data) => {
                 if (data.isSuccess && data.data?.isSuccess) {
-                    navigate("/payment/packages/success", {
+                    navigate("/organizer/payment/packages/success", {
                         replace: true,
                         state: { transaction: data.data },
                     });
                 } else {
-                    navigate("/payment/packages/failed", {
+                    navigate("/organizer/payment/packages/failed", {
                         replace: true,
                         state: { message: data.data?.message ?? "Giao dịch thất bại." },
                     });
                 }
             })
             .catch(() => {
-                navigate("/payment/packages/failed", { replace: true });
+                navigate("/organizer/payment/packages/failed", { replace: true });
             });
     }, []);
 

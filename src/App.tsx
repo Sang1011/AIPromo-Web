@@ -133,9 +133,9 @@ function App() {
           </Route>
 
           <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
-            <Route path="/payment/packages/vnpay-return" element={<PackageVnpayReturn />} />
-            <Route path="/payment/packages/success" element={<PackageOrderSuccess />} />
-            <Route path="/payment/packages/failed" element={<PackageOrderFailed />} />
+            <Route path="/organizer/payment/packages/vnpay-return" element={<PackageVnpayReturn />} />
+            <Route path="/organizer/payment/packages/success" element={<PackageOrderSuccess />} />
+            <Route path="/organizer/payment/packages/failed" element={<PackageOrderFailed />} />
             <Route path="/organizer/subscription" element={<SubscriptionPage />} />
             <Route
               path="/organizer/my-events/:eventId/marketing/:marketingId/post-preview/:postId"
