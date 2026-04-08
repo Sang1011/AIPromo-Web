@@ -17,18 +17,23 @@ import {
     MdAccountBalanceWallet,
     MdLogout,
     MdKeyboardArrowDown,
+    MdChevronLeft,
+    MdChevronRight,
 } from "react-icons/md";
 
 const adminMenuItems = [
     { icon: MdDashboard, label: "Tổng quan", path: "/admin" },
     { icon: MdGroup, label: "Quản lý Người dùng", path: "/admin/users" },
     { icon: MdGavel, label: "Theo dõi Sự kiện", path: "/admin/events" },
-    { icon: MdCategory, label: "Quản lý Category", path: "/admin/categories" },
-    { icon: MdLocalOffer, label: "Quản lý Hashtags", path: "/admin/hashtags" },
     { icon: MdAutoAwesome, label: "Quản lý gói AI", path: "/admin/ai-packages" },
     { icon: MdAccountBalanceWallet, label: "Yêu cầu rút tiền", path: "/admin/withdrawals" },
     { icon: MdAssignmentReturn, label: "Quản lý hoàn tiền", path: "/admin/refunds" },
     { icon: MdPayments, label: "Tài chính & Doanh thu", path: "/admin/finance" },
+];
+
+const categoryMenuItems = [
+    { icon: MdCategory, label: "Quản lý Category", path: "/admin/categories" },
+    { icon: MdLocalOffer, label: "Quản lý Hashtags", path: "/admin/hashtags" },
 ];
 
 export default function AdminLayout() {
@@ -39,6 +44,8 @@ export default function AdminLayout() {
 
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
+    const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(true);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     useEffect(() => {
         dispatch(fetchMe());
@@ -68,20 +75,28 @@ export default function AdminLayout() {
     return (
         <div className="flex h-screen overflow-hidden bg-[#0B0B12] text-slate-100">
             {/* Sidebar */}
-            <aside className="w-72 bg-[#120D1D] border-r border-[#302447] flex flex-col justify-between py-6 shrink-0">
+            <aside
+                className={`${
+                    sidebarCollapsed ? "w-[96px]" : "w-72"
+                } bg-[#120D1D] border-r border-[#302447] flex flex-col justify-between py-6 shrink-0 transition-all duration-300`}
+            >
                 <div>
-                    <div className="px-6 mb-10 flex items-center gap-3">
-                        <div className="bg-primary rounded-lg p-1.5 flex items-center justify-center shadow-[0_0_15px_rgba(124,59,237,0.4)]">
+                    <div className={`${sidebarCollapsed ? "px-3" : "px-6"} mb-8 flex items-center gap-3`}>
+                        <div className="bg-primary rounded-lg p-1.5 flex items-center justify-center shadow-[0_0_15px_rgba(124,59,237,0.4)] shrink-0">
                             <MdRocketLaunch className="text-white text-xl" />
                         </div>
-                        <div>
-                            <h1 className="text-white text-lg font-bold leading-tight tracking-tight">
-                                AIPromo Admin
-                            </h1>
-                            <p className="text-[#a592c8] text-xs font-medium">
-                                Giám sát Hệ thống
-                            </p>
-                        </div>
+                        <span
+                            className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                                sidebarCollapsed ? "w-0 opacity-0" : "w-40 opacity-100"
+                            }`}
+                        >
+                            <div className="min-w-0">
+                                <h1 className="text-white text-lg font-bold leading-tight tracking-tight">
+                                    AIPromo Admin
+                                </h1>
+                                <p className="text-[#a592c8] text-xs font-medium">Giám sát Hệ thống</p>
+                            </div>
+                        </span>
                     </div>
                     <nav className="flex flex-col gap-1 px-3">
                         {adminMenuItems.map((item) => {
@@ -94,29 +109,131 @@ export default function AdminLayout() {
                                 <Link
                                     key={item.path}
                                     to={item.path || "/admin"}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative group ${
                                         isActive
                                             ? "bg-primary/10 text-primary border-r-4 border-primary"
                                             : "text-[#a592c8] hover:bg-white/5"
                                     }`}
                                 >
-                                    <Icon
-                                        className={
-                                            isActive ? "opacity-100" : ""
-                                        }
-                                        size={20}
-                                    />
-                                    <p
-                                        className={`text-sm ${
-                                            isActive ? "font-semibold" : "font-medium"
+                                    <Icon className={isActive ? "opacity-100" : ""} size={20} />
+                                    <span
+                                        className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                                            sidebarCollapsed ? "w-0 opacity-0" : "w-48 opacity-100"
                                         }`}
                                     >
-                                        {item.label}
-                                    </p>
+                                        <p className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>
+                                            {item.label}
+                                        </p>
+                                    </span>
+                                    {sidebarCollapsed && (
+                                        <div className="absolute left-full ml-3 px-3 py-1.5 bg-[#1a1232] border border-[#302447] rounded-lg text-sm text-white opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-xl">
+                                            {item.label}
+                                        </div>
+                                    )}
                                 </Link>
                             );
                         })}
+
+                        {/* Category & Hashtags Dropdown */}
+                        <div>
+                            <button
+                                onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-[#a592c8] hover:bg-white/5 relative group ${
+                                    sidebarCollapsed ? "justify-center" : "justify-between"
+                                }`}
+                            >
+                                <MdCategory size={20} />
+                                <span
+                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                                        sidebarCollapsed ? "w-0 opacity-0" : "w-48 opacity-100"
+                                    }`}
+                                >
+                                    <p className="text-sm font-medium">Category & Hashtag</p>
+                                </span>
+                                <span
+                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                        sidebarCollapsed ? "w-0 opacity-0" : "w-6 opacity-100"
+                                    }`}
+                                >
+                                    <MdKeyboardArrowDown
+                                        className={`transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`}
+                                        size={20}
+                                    />
+                                </span>
+                                {sidebarCollapsed && (
+                                    <div className="absolute left-full ml-3 px-3 py-1.5 bg-[#1a1232] border border-[#302447] rounded-lg text-sm text-white opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-xl">
+                                        Category & Hashtag
+                                    </div>
+                                )}
+                            </button>
+                            {/* Show dropdown items when expanded (regardless of sidebar state) */}
+                            {categoryDropdownOpen && (
+                                <div className={`${sidebarCollapsed ? "ml-0" : "ml-4"} mt-1 space-y-1 ${sidebarCollapsed ? "" : "pl-4 border-l-2 border-[#302447]"}`}>
+                                    {categoryMenuItems.map((item) => {
+                                        const isActive =
+                                            location.pathname === item.path ||
+                                            location.pathname.startsWith(item.path || "");
+                                        const Icon = item.icon;
+                                        return (
+                                            <Link
+                                                key={item.path}
+                                                to={item.path}
+                                                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors relative group ${
+                                                    isActive
+                                                        ? "bg-primary/10 text-primary border-r-4 border-primary"
+                                                        : "text-[#a592c8] hover:bg-white/5"
+                                                }`}
+                                            >
+                                                {sidebarCollapsed ? (
+                                                    <Icon size={18} className="mx-auto" />
+                                                ) : (
+                                                    <Icon size={18} />
+                                                )}
+                                                <span
+                                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                                                        sidebarCollapsed ? "w-0 opacity-0" : "w-48 opacity-100"
+                                                    }`}
+                                                >
+                                                    <p className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>
+                                                        {item.label}
+                                                    </p>
+                                                </span>
+                                                {sidebarCollapsed && (
+                                                    <div className="absolute left-full ml-3 px-3 py-1.5 bg-[#1a1232] border border-[#302447] rounded-lg text-sm text-white opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-xl">
+                                                        {item.label}
+                                                    </div>
+                                                )}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     </nav>
+                </div>
+
+                {/* Collapse Toggle Button */}
+                <div className="px-3 mt-auto">
+                    <button
+                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-[#a592c8] hover:bg-white/5 hover:text-white transition-colors"
+                        title={sidebarCollapsed ? "Mở rộng" : "Thu gọn"}
+                    >
+                        {sidebarCollapsed ? (
+                            <MdChevronRight size={22} />
+                        ) : (
+                            <>
+                                <MdChevronLeft size={22} />
+                                <span
+                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
+                                        sidebarCollapsed ? "w-0 opacity-0" : "w-20 opacity-100"
+                                    }`}
+                                >
+                                    <span className="text-sm font-medium">Thu gọn</span>
+                                </span>
+                            </>
+                        )}
+                    </button>
                 </div>
             </aside>
 
