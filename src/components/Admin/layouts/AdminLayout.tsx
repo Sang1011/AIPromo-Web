@@ -17,6 +17,7 @@ import {
     MdAccountBalanceWallet,
     MdLogout,
     MdKeyboardArrowDown,
+    MdPolicy
 } from "react-icons/md";
 
 const adminMenuItems = [
@@ -29,6 +30,7 @@ const adminMenuItems = [
     { icon: MdAccountBalanceWallet, label: "Yêu cầu rút tiền", path: "/admin/withdrawals" },
     { icon: MdAssignmentReturn, label: "Quản lý hoàn tiền", path: "/admin/refunds" },
     { icon: MdPayments, label: "Tài chính & Doanh thu", path: "/admin/finance" },
+     { icon: MdPolicy, label: "Quản Lý Điều Khoản", path: "/admin/policy" },
 ];
 
 export default function AdminLayout() {
