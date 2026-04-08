@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { Policy } from "../types/policy/policy";
+import type { Policy, PolicyRequest } from "../types/policy/policy";
 import policyService from "../services/policyService";
 
 interface PolicyState {
@@ -45,6 +45,47 @@ export const fetchPolicyById = createAsyncThunk(
         }
     }
 );
+
+
+export const fetchPolicyUploadFile = createAsyncThunk(
+    "policy/fetchPolicyUploadFile",
+    async (data: { file: File }, { rejectWithValue }) => {
+        try {
+            const res = await policyService.postPolicyfile(data);
+            return res.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+export const fetchUploadPolicy = createAsyncThunk(
+    "policy/fetchUploadPolicy",
+    async (data: PolicyRequest, { rejectWithValue }) => {
+        try {
+            const res = await policyService.postPolicy(data);
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+
+export const fetchDeletedPolicy = createAsyncThunk(
+    "policy/fetchDeletedPolicy",
+    async (id: string, { rejectWithValue }) => {
+        try {
+            const res = await policyService.deletePolicy(id);
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+
+
 
 const policySlice = createSlice({
     name: "policy",

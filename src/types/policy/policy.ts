@@ -7,5 +7,11 @@ export interface Policy {
     description: string;
 }
 
+export interface PolicyRequest {
+  type: string;
+  fileUrl: string;
+  description: string;
+}
+
 export type GetAllPoliciesResponse = ApiResponse<Policy[]>;
 export type GetPolicyByIdResponse = ApiResponse<Policy>;
