@@ -1,12 +1,9 @@
 import { FiDollarSign, FiPercent, FiShoppingBag, FiTag, FiTrendingUp, FiUserCheck } from "react-icons/fi";
 import type { SummaryOverview } from "../../../types/ticketing/ticketing";
+import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 
 interface RevenueCardsProps {
     summary: SummaryOverview;
-}
-
-function formatCurrency(value: number): string {
-    return value.toLocaleString("vi-VN") + " VND";
 }
 
 function RadialProgress({ percent }: { percent: number }) {
@@ -58,7 +55,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                         </div>
                         <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Doanh thu gộp</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(grossRevenue)}</p>
+                    <p className="text-2xl font-bold text-white">{fmtMoneyVND(grossRevenue)}</p>
                 </div>
 
                 {/* Discount */}
@@ -69,7 +66,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                         </div>
                         <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Tổng giảm giá</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalDiscount)}</p>
+                    <p className="text-2xl font-bold text-white">{fmtMoneyVND(totalDiscount)}</p>
                     <p className="text-xs text-slate-500 mt-1">{discountRate.toFixed(1)}% so với doanh thu gộp</p>
                 </div>
 
@@ -81,7 +78,7 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                         </div>
                         <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Doanh thu ròng</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(netRevenue)}</p>
+                    <p className="text-2xl font-bold text-white">{fmtMoneyVND(netRevenue)}</p>
                     <p className="text-xs text-slate-500 mt-1">Sau khi trừ khuyến mãi</p>
                 </div>
             </div>

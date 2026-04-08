@@ -5,7 +5,7 @@ import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage } from 'reac
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../store';
-import { fetchEventById } from '../../store/eventSlice';
+import { fetchEventByUrlPath } from '../../store/eventSlice';
 import { fetchGetSeatMap } from '../../store/seatMapSlice';
 import { fetchCreatePendingOrder } from '../../store/ticketingSlice';
 import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
@@ -735,7 +735,7 @@ const qtyBtn: React.CSSProperties = { width: 28, height: 28, borderRadius: 6, ba
 const popupQtyBtn: React.CSSProperties = { width: 32, height: 32, borderRadius: 8, background: '#f3f4f6', border: '1px solid #d1d5db', color: '#111', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, fontWeight: 700 };
 
 const SeatMapViewerPage: React.FC = () => {
-    const { id: eventId } = useParams<{ id: string }>();
+    const { urlPath } = useParams<{ urlPath: string }>();
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
     const location = useLocation();
@@ -744,26 +744,28 @@ const SeatMapViewerPage: React.FC = () => {
     const { spec, loading: seatMapLoading } = useSelector((state: RootState) => state.SEATMAP);
     const { ticketTypes: ticketTypeItems } = useSelector((state: RootState) => state.TICKET_TYPE);
     const { currentEvent } = useSelector((state: RootState) => state.EVENT);
+    const eventId = (currentEvent as any)?.id ?? null;
+    const handleBack = () => navigate(`/event-detail/${urlPath}`);
 
     useEffect(() => {
-        if (!eventId) return;
-        dispatch(fetchEventById(eventId)).finally(() => setEventLoading(false));
-    }, [eventId, dispatch]);
+        if (!urlPath) return;
+        dispatch(fetchEventByUrlPath(urlPath)).finally(() => setEventLoading(false));
+    }, [urlPath, dispatch]);
 
     useEffect(() => {
         if (!currentEvent) return;
         if (currentEvent.status !== 'Published' && currentEvent.status !== 'Completed') {
             notify.error('Sự kiện chưa được mở bán');
-            navigate(`/event-detail/${eventId}`);
+            handleBack();
         }
-    }, [currentEvent, eventId, navigate]);
+    }, [currentEvent, urlPath, navigate]);
 
     useEffect(() => {
         if (!eventSessionId) {
             notify.error('Thiếu session, quay lại trang sự kiện');
-            navigate(`/event-detail/${eventId}`);
+            handleBack();
         }
-    }, [eventSessionId, eventId, navigate]);
+    }, [eventSessionId, urlPath, navigate]);
 
     useEffect(() => {
         if (!eventId || !eventSessionId) return;
@@ -841,7 +843,7 @@ const SeatMapViewerPage: React.FC = () => {
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#0B0B12' }}>
             <div style={{ height: 48, background: '#18122B', borderBottom: '1px solid #2a2a3e', display: 'flex', alignItems: 'center', padding: '0 16px', flexShrink: 0, gap: 12 }}>
                 <button
-                    onClick={() => navigate(`/event-detail/${eventId}`)}
+                    onClick={() => handleBack()}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[#221A3A] text-gray-200 font-semibold text-sm hover:bg-[#2a2147] transition-colors"
                 >
                     <FiArrowLeft size={18} /> Trở về

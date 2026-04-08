@@ -4,9 +4,8 @@ import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchPostDetail } from "../../store/postSlice";
 import ContentDetail from "../../components/Organizer/marketing/ContentDetail";
-import KPISummary from "../../components/Organizer/marketing/KPISummary";
-import PerformanceChart from "../../components/Organizer/marketing/PerformanceChart";
-import PlatformContributionSection from "../../components/Organizer/marketing/PlatformContributionSection";
+// import KPISummary from "../../components/Organizer/marketing/KPISummary";
+import FacebookMetricsSection from "../../components/Organizer/marketing/FacebookMetricsSection";
 
 export default function MarketingDetailPage() {
     const { marketingId } = useParams<{ marketingId: string }>();
@@ -17,16 +16,26 @@ export default function MarketingDetailPage() {
         if (marketingId) dispatch(fetchPostDetail(marketingId));
     }, [marketingId, dispatch]);
 
+    const handleReload = () => {
+        if (marketingId) {
+            dispatch(fetchPostDetail(marketingId));
+        }
+    };
+
     return (
         <div className="bg-background-dark text-slate-100 min-h-screen overflow-y-auto custom-scrollbar">
             <div className="p-8 space-y-8 max-w-7xl mx-auto w-full">
-                <KPISummary />
-                <PlatformContributionSection />
-                <PerformanceChart />
+                {/* KPISummary tạm thời ẩn — chưa có dữ liệu thật */}
+                {/* <KPISummary /> */}
+
+                {/* Facebook distribution metrics */}
+                {postDetail && <FacebookMetricsSection post={postDetail} />}
+
                 <ContentDetail
                     post={postDetail}
                     loading={loading.fetchDetail}
                     error={error.fetchDetail}
+                    onReload={handleReload}
                 />
             </div>
         </div>

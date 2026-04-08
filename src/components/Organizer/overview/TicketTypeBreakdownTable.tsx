@@ -1,11 +1,8 @@
 import type { TicketTypeBreakdown } from "../../../types/ticketing/ticketing";
+import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 
 interface TicketTypeBreakdownTableProps {
     breakdown: TicketTypeBreakdown[];
-}
-
-function formatCurrency(value: number): string {
-    return value.toLocaleString("vi-VN") + " VND";
 }
 
 export default function TicketTypeBreakdownTable({ breakdown }: TicketTypeBreakdownTableProps) {
@@ -53,7 +50,7 @@ export default function TicketTypeBreakdownTable({ breakdown }: TicketTypeBreakd
                                     <span className="text-slate-300">{t.quantitySold.toLocaleString()}</span>
                                 </div>
 
-                                <div className="text-slate-300 font-medium">{formatCurrency(t.revenue)}</div>
+                                <div className="text-slate-300 font-medium">{fmtMoneyVND(t.revenue)}</div>
 
                                 {/* Sold progress bar */}
                                 <div className="flex items-center gap-3">

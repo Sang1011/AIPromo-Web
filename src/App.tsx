@@ -53,7 +53,7 @@ import OrderDetailUser from "./pages/User/EventUser/OrderDetailUser";
 import TicketingUser from "./pages/User/TickingUser";
 import PaymentHistoryUser from "./pages/User/HistoryPaymentUser";
 import PostPreviewPage from "./pages/Organizer/PostPreviewPage";
-import OrganizerOverviewAllPage from "./pages/Organizer/OgranizerOverviewAllPage";
+import OrganizerOverviewAllPage from "./pages/Organizer/OrganizerOverviewAllPage";
 import SubscriptionPage from "./pages/Organizer/SubscriptionPage";
 import RequireRole from "./components/Guards/RequireRole";
 import OrderSuccess from "./pages/OrderSuccess";
@@ -62,6 +62,7 @@ import PackageOrderFailed from "./pages/Organizer/PackageOrderFailed";
 import PackageVnpayReturn from "./pages/Organizer/PackageVNPayReturn";
 import PackageOrderSuccess from "./pages/Organizer/PackageOrderSuccess";
 import LegalDetailPage from "./pages/Organizer/LegalDetailPage";
+import RequireEventPermission from "./components/Guards/RequireEventPermission";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -82,12 +83,12 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/event-detail/:id" element={<EventDetail />} />
+        <Route path="/event-detail/:urlPath" element={<EventDetail />} />
         <Route path="/all-event" element={<AllEvent />} />
         <Route path="/history-event" element={<HistoryEvent />} />
         <Route path="/payment-ticket/:id" element={<PaymentTicket />} />
         <Route path="/payment-ticket" element={<PaymentTicket />} />
-        <Route path="/event-detail/:id/seat-map/show" element={<SeatMapViewerPage />} />
+        <Route path="/event-detail/:urlPath/seat-map/show" element={<SeatMapViewerPage />} />
         <Route path="/verify-organizer" element={<VerifyOrganizer />} />
         <Route path="/payment/vnpay-return" element={<VnpayReturn />} />
         <Route path="/order/success" element={<OrderSuccess />} />
@@ -114,13 +115,15 @@ function App() {
           </Route>
 
           <Route path="/organizer/my-events/:eventId" element={<ManagementLayout />}>
-            <Route path="overview" element={<SummaryPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route element={<RequireEventPermission />}>
+              <Route path="overview" element={<SummaryPage />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="check-in" element={<CheckInPage />} />
+            </Route>
             <Route element={<RequireRole allowedRoles={["Organizer"]} />}>
               <Route path="marketing" element={<MarketingPage />} />
               <Route path="marketing/:marketingId" element={<MarketingDetailPage />} />
               <Route path="orders" element={<OrderListPage />} />
-              <Route path="check-in" element={<CheckInPage />} />
               <Route path="members" element={<MemberManagementPage />} />
               <Route path="edit" element={<EditEventWizardPage />} />
               <Route path="seat-map" element={<EventTicketPage />} />
@@ -134,7 +137,7 @@ function App() {
             <Route path="/payment/packages/failed" element={<PackageOrderFailed />} />
             <Route path="/organizer/subscription" element={<SubscriptionPage />} />
             <Route
-              path="/organizer/my-events/:eventId/marketing/:marketingId/post-review"
+              path="/organizer/my-events/:eventId/marketing/:marketingId/post-preview/:postId"
               element={<PostPreviewPage />}
             />
             <Route

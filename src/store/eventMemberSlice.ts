@@ -2,7 +2,9 @@ import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/tool
 import eventMemberService from "../services/eventMemberService";
 import type {
     AddEventMemberRequest,
+    EventItemByEventMember,
     EventMember,
+    GetEventListByMemberAssignedResponse,
     GetEventMembersResponse,
     UpdateEventMemberPermissionsRequest
 } from "../types/eventMember/eventMember";
@@ -13,12 +15,16 @@ interface EventMemberState {
     members: EventMember[];
     fetchingMembers: boolean;
     addingMember: boolean;
+    assignedEvents: EventItemByEventMember[];
+    fetchingAssignedEvents: boolean;
 }
 
 const initialState: EventMemberState = {
     members: [],
     fetchingMembers: false,
     addingMember: false,
+    assignedEvents: [],
+    fetchingAssignedEvents: false,
 };
 
 export const fetchEventMembers = createAsyncThunk<GetEventMembersResponse, string>(
@@ -82,10 +88,7 @@ export const fetchRemoveEventMember = createAsyncThunk<
     }
 );
 
-export const fetchExportExcelMember = createAsyncThunk<
-    Blob,
-    string
->(
+export const fetchExportExcelMember = createAsyncThunk<Blob, string>(
     `${name}/fetchExportExcelMember`,
     async (eventId, { rejectWithValue }) => {
         try {
@@ -93,6 +96,24 @@ export const fetchExportExcelMember = createAsyncThunk<
             return res.data;
         } catch (err) {
             return rejectWithValue("Không thể export member");
+        }
+    }
+);
+
+export const fetchEventListAssignedForCurrentUser = createAsyncThunk<
+    GetEventListByMemberAssignedResponse,
+    void,
+    { rejectValue: string }
+>(
+    `${name}/fetchEventListAssignedForCurrentUser`,
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await eventMemberService.getEventListByMemberAssigned();
+            return response.data;
+        } catch (error: any) {
+            return rejectWithValue(
+                error?.response?.data?.message ?? "Không thể lấy danh sách sự kiện được phân công"
+            );
         }
     }
 );
@@ -147,6 +168,19 @@ const eventMemberSlice = createSlice({
                     const removedId = action.meta.arg.memberId;
                     state.members = state.members.filter((m) => m.id !== removedId);
                 }
+            })
+
+            .addCase(fetchEventListAssignedForCurrentUser.pending, (state) => {
+                state.fetchingAssignedEvents = true;
+            })
+            .addCase(fetchEventListAssignedForCurrentUser.fulfilled, (state, action) => {
+                state.fetchingAssignedEvents = false;
+                if (action.payload?.isSuccess) {
+                    state.assignedEvents = action.payload.data;
+                }
+            })
+            .addCase(fetchEventListAssignedForCurrentUser.rejected, (state) => {
+                state.fetchingAssignedEvents = false;
             });
     },
 });

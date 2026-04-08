@@ -28,3 +28,23 @@ export const EventMemberStatus = {
 } as const;
 
 export type EventMemberStatus = typeof EventMemberStatus[keyof typeof EventMemberStatus];
+
+export interface EventItemByEventMember {
+    eventId: string;
+    title: string;
+    bannerUrl: string;
+    eventStartAt: string;
+    eventEndAt: string;
+    sessions: SessionItemByEventMember[];
+    permissions?: string[];
+}
+
+export interface SessionItemByEventMember {
+    id: string;
+    title: string;
+    description: string;
+    startTime: string;
+    endTime: string;
+}
+
+export type GetEventListByMemberAssignedResponse = ApiResponse<EventItemByEventMember[]>

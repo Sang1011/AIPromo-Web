@@ -1,115 +1,394 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MdFacebook, MdOutlineBarChart, MdOutlineRefresh, MdOutlineTouchApp, MdOutlineVisibility } from "react-icons/md";
+import { useDispatch, useSelector } from "react-redux";
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis, YAxis,
+} from "recharts";
+import postService from "../../../services/postService";
+import type { AppDispatch, RootState } from "../../../store";
+import { clearDistributionMetricsMap, fetchAllDistributionMetrics, fetchOrganizerPosts } from "../../../store/postSlice";
+import type { DistributionMetricsFacebook, PostListItem } from "../../../types/post/post";
 
-interface MarketingData {
-    title: string;
-    value: number;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmt(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toFixed(n < 10 ? 2 : 0);
 }
 
-const mockData: MarketingData[] = [
-    { title: "Chiến dịch vé sớm Facebook", value: 120 },
-    { title: "Email mời tham dự VIP", value: 85 },
-    { title: "Bài viết blog PR sự kiện", value: 72 },
-    { title: "Instagram Stories highlight", value: 60 },
-    { title: "LinkedIn post B2B", value: 45 },
-];
+function truncateTitle(s: string, max = 22): string {
+    return s.length > max ? s.slice(0, max) + "…" : s;
+}
 
-export default function MarketingPerformanceBarChart() {
-    // Tìm giá trị cao nhất để highlight
-    const maxValue = Math.max(...mockData.map(item => item.value));
+// ─── Parse facebook metrics from distribution platformMetadata ────────────────
+// platformMetadata có thể chứa JSON metrics, hoặc dùng fallback từ distributions
 
-    // Custom tooltip
-    const CustomTooltip = ({ active, payload }: any) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-card-dark/95 backdrop-blur-sm border border-primary/20 rounded-lg p-3 shadow-xl">
-                    <p className="text-white font-semibold text-sm mb-1">
-                        {payload[0].payload.title}
-                    </p>
-                    <p className="text-primary font-bold text-lg">
-                        {payload[0].value} chuyển đổi
-                    </p>
+interface ParsedFbMetrics {
+    impressions: number;
+    reach: number;
+    clicks: number;
+    likes: number;
+    comments: number;
+    shares: number;
+}
+
+function parseFbMetrics(
+    post: PostListItem,
+    metricsMap: Record<string, DistributionMetricsFacebook>
+): ParsedFbMetrics | null {
+    const fbDist = (post.distributions ?? [])
+        .filter(d => d.platform === "Facebook" && d.status === "Sent")
+        .sort((a, b) => new Date(b.sentAt!).getTime() - new Date(a.sentAt!).getTime())[0];
+
+    if (!fbDist) return null;
+
+    const m = metricsMap[fbDist.id];
+    if (!m) return null;
+
+    return {
+        impressions: m.impressions ?? 0,
+        reach: m.reach ?? 0,
+        clicks: m.clicks ?? 0,
+        likes: m.likes ?? 0,
+        comments: m.comments ?? 0,
+        shares: m.shares ?? 0,
+    };
+}
+
+const CHART_CONFIGS = [
+    {
+        id: "reach",
+        title: "Reach & Impressions",
+        subtitle: "Độ phủ nội dung",
+        icon: <MdOutlineVisibility />,
+        color: "#3b82f6",
+        dimColor: "#3b82f680",
+        tooltipUnit: "",
+        getMetric: (m: ParsedFbMetrics) => m.reach,
+        getSecondary: (m: ParsedFbMetrics) => m.impressions,
+        secondaryLabel: "Impressions",
+        primaryLabel: "Reach",
+        description: "Số người tiếp cận bài viết so với tổng lượt hiển thị.",
+    },
+    {
+        id: "engagement",
+        title: "Engagement Rate",
+        subtitle: "Tỷ lệ tương tác",
+        icon: <MdOutlineBarChart />,
+        color: "#8b5cf6",
+        dimColor: "#8b5cf680",
+        tooltipUnit: "%",
+        getMetric: (m: ParsedFbMetrics) =>
+            m.reach > 0 ? +(((m.likes + m.comments + m.shares) / m.reach) * 100).toFixed(2) : 0,
+        getSecondary: null,
+        secondaryLabel: "",
+        primaryLabel: "Engagement Rate",
+        description: "(Likes + Comments + Shares) ÷ Reach × 100. Đo chất lượng nội dung.",
+    },
+    {
+        id: "ctr",
+        title: "Click-through Rate",
+        subtitle: "CTR — dẫn user mua vé",
+        icon: <MdOutlineTouchApp />,
+        color: "#10b981",
+        dimColor: "#10b98180",
+        tooltipUnit: "%",
+        getMetric: (m: ParsedFbMetrics) =>
+            m.impressions > 0 ? +((m.clicks / m.impressions) * 100).toFixed(2) : 0,
+        getSecondary: null,
+        secondaryLabel: "",
+        primaryLabel: "CTR",
+        description: "Clicks ÷ Impressions × 100. Metric cốt lõi đo hiệu quả dẫn traffic mua vé.",
+    },
+] as const;
+
+// ─── CustomTooltip ────────────────────────────────────────────────────────────
+
+function CustomTooltip({ active, payload, unit, primaryLabel, secondaryLabel }: any) {
+    if (!active || !payload?.length) return null;
+    return (
+        <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-xl px-4 py-3 shadow-xl text-xs space-y-1.5 min-w-[140px]">
+            <p className="text-white font-bold text-sm truncate max-w-[180px]">{payload[0].payload.title}</p>
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-slate-400">{primaryLabel}</span>
+                <span className="text-white font-bold">{payload[0].value}{unit}</span>
+            </div>
+            {secondaryLabel && payload[1] && (
+                <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-400">{secondaryLabel}</span>
+                    <span className="text-slate-300 font-semibold">{fmt(payload[1].value)}</span>
                 </div>
-            );
-        }
-        return null;
-    };
+            )}
+        </div>
+    );
+}
 
-    // Rút gọn tên bài marketing cho trục X
-    const formatXAxis = (value: string) => {
-        if (value.length > 20) {
-            return value.substring(0, 18) + "...";
-        }
-        return value;
-    };
+// ─── SingleChart ──────────────────────────────────────────────────────────────
+
+type ChartConfig = typeof CHART_CONFIGS[number];
+
+function SingleChart({ config, data }: { config: ChartConfig; data: any[] }) {
+    const maxVal = Math.max(...data.map(d => d.primary));
 
     return (
-        <section>
-            <div className="glass neon-glow-purple p-8 rounded-[32px] border border-primary/10">
-                <div className="mb-6">
-                    <h2 className="text-xl font-bold text-white mb-2">
-                        So sánh hiệu suất các nội dung Marketing
-                    </h2>
-                    <p className="text-slate-400 text-sm">
-                        So sánh theo tổng lượt chuyển đổi (30 ngày)
-                    </p>
+        <div className="glass border border-slate-800/50 rounded-[28px] p-6 space-y-4">
+            {/* Header */}
+            <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${config.color}20`, color: config.color }}>
+                    {config.icon}
                 </div>
-
-                <div className="w-full h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                            data={mockData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-                        >
-                            <XAxis
-                                dataKey="title"
-                                tick={{ fill: "#94a3b8", fontSize: 12 }}
-                                tickLine={{ stroke: "#334155" }}
-                                axisLine={{ stroke: "#334155" }}
-                                angle={-45}
-                                textAnchor="end"
-                                height={100}
-                                tickFormatter={formatXAxis}
-                            />
-                            <YAxis
-                                tick={{ fill: "#94a3b8", fontSize: 12 }}
-                                tickLine={{ stroke: "#334155" }}
-                                axisLine={{ stroke: "#334155" }}
-                                label={{
-                                    value: "Lượt chuyển đổi",
-                                    angle: -90,
-                                    position: "insideLeft",
-                                    style: { fill: "#94a3b8", fontSize: 12 }
-                                }}
-                            />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(124, 59, 237, 0.1)" }} />
-                            <Bar
-                                dataKey="value"
-                                radius={[8, 8, 0, 0]}
-                            >
-                                {mockData.map((entry, index) => (
-                                    <Cell
-                                        key={`cell-${index}`}
-                                        fill={entry.value === maxValue ? "#7c3bed" : "#7c3bed80"}
-                                        className="transition-all duration-300 hover:opacity-80"
-                                    />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-
-                {/* Legend - Highlight bài có hiệu suất cao nhất */}
-                <div className="mt-6 flex items-center justify-center gap-2">
+                <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-sm bg-primary"></div>
-                        <span className="text-xs text-slate-400">Hiệu suất cao nhất</span>
+                        <h3 className="text-sm font-bold text-white">{config.title}</h3>
+                        <span className="text-[10px] text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full font-semibold">
+                            {config.subtitle}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-2 ml-4">
-                        <div className="w-3 h-3 rounded-sm bg-primary/50"></div>
-                        <span className="text-xs text-slate-400">Các bài khác</span>
-                    </div>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{config.description}</p>
                 </div>
             </div>
+
+            {/* Chart */}
+            <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                        <CartesianGrid vertical={false} stroke="#1e293b" strokeDasharray="3 3" />
+                        <XAxis
+                            dataKey="shortTitle"
+                            tick={{ fill: "#64748b", fontSize: 10 }}
+                            axisLine={false}
+                            tickLine={false}
+                        />
+                        <YAxis
+                            tick={{ fill: "#64748b", fontSize: 10 }}
+                            axisLine={false}
+                            tickLine={false}
+                            tickFormatter={config.tooltipUnit === "%" ? (v) => `${v}%` : fmt}
+                        />
+                        <Tooltip
+                            content={
+                                <CustomTooltip
+                                    unit={config.tooltipUnit}
+                                    primaryLabel={config.primaryLabel}
+                                    secondaryLabel={config.secondaryLabel}
+                                />
+                            }
+                            cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                        />
+                        <Bar dataKey="primary" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                            {data.map((entry, i) => (
+                                <Cell
+                                    key={i}
+                                    fill={entry.primary === maxVal ? config.color : config.dimColor}
+                                />
+                            ))}
+                        </Bar>
+                        {config.getSecondary && (
+                            <Bar dataKey="secondary" radius={[4, 4, 0, 0]} maxBarSize={48}
+                                fill={`${config.color}30`} />
+                        )}
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+function EmptyState() {
+    return (
+        <div className="glass rounded-[32px] p-12 border border-slate-800/50 flex flex-col items-center justify-center text-center gap-4">
+            <MdFacebook className="text-blue-400/30 text-5xl" />
+            <div>
+                <p className="text-slate-400 font-semibold">Chưa có dữ liệu Facebook</p>
+                <p className="text-slate-600 text-xs mt-1 max-w-xs">
+                    Hiệu suất sẽ hiển thị khi các bài viết được đăng lên Facebook và có dữ liệu metrics.
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function SummaryCards({ metricsMap }: { metricsMap: Record<string, DistributionMetricsFacebook> }) {
+    const all = Object.values(metricsMap);
+    if (!all.length) return null;
+
+    const totalReach = all.reduce((s, m) => s + m.reach, 0);
+    const totalImpressions = all.reduce((s, m) => s + m.impressions, 0);
+    const totalClicks = all.reduce((s, m) => s + m.clicks, 0);
+    const totalEngagements = all.reduce((s, m) => s + m.likes + m.comments + m.shares, 0);
+    const avgEngRate = totalReach > 0
+        ? +((totalEngagements / totalReach) * 100).toFixed(2)
+        : 0;
+    const avgCtr = totalImpressions > 0
+        ? +((totalClicks / totalImpressions) * 100).toFixed(2)
+        : 0;
+
+    const cards = [
+        { label: "Tổng Reach", value: fmt(totalReach), sub: `${fmt(totalImpressions)} impressions`, color: "#3b82f6" },
+        { label: "Tổng Clicks", value: fmt(totalClicks), sub: `CTR trung bình ${avgCtr}%`, color: "#10b981" },
+        { label: "Tổng Tương tác", value: fmt(totalEngagements), sub: `Eng. Rate TB ${avgEngRate}%`, color: "#8b5cf6" },
+        { label: "Số bài đã phân tích", value: `${all.length}`, sub: "bài có Facebook distribution", color: "#f59e0b" },
+    ];
+
+    return (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {cards.map(card => (
+                <div key={card.label}
+                    className="glass border border-slate-800/50 rounded-2xl px-4 py-3 space-y-1">
+                    <p className="text-[11px] text-slate-500 font-medium">{card.label}</p>
+                    <p className="text-2xl font-bold" style={{ color: card.color }}>{card.value}</p>
+                    <p className="text-[10px] text-slate-600">{card.sub}</p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+export default function MarketingPerformanceBarChart() {
+    const dispatch = useDispatch<AppDispatch>();
+    const { loading, distributionMetricsMap } = useSelector((s: RootState) => s.POST);
+
+    const [localPosts, setLocalPosts] = useState<PostListItem[]>([]);
+
+    useEffect(() => {
+        dispatch(clearDistributionMetricsMap());
+        postService.getOrganizerPosts({
+            pageNumber: 1,
+            pageSize: 20,
+            sortColumn: "PublishedAt",
+            sortOrder: "desc",
+            status: "Published",
+            hasExternalPostUrl: true,
+        }).then(res => {
+            if (res.data.isSuccess) setLocalPosts(res.data.data.items);
+        });
+    }, []);
+
+    useEffect(() => {
+        if (!localPosts.length) return;
+        const targets = localPosts.flatMap(post =>
+            (post.distributions ?? [])
+                .filter(d => d.platform === "Facebook" && d.status === "Sent")
+                .map(d => ({ postId: post.id, distributionId: d.id }))
+        );
+        if (targets.length) dispatch(fetchAllDistributionMetrics(targets));
+    }, [localPosts]);
+
+
+    const isLoading = loading.fetchList || loading.fetchAllDistributionMetrics;
+
+    const FETCH_PARAMS = {
+        pageNumber: 1,
+        pageSize: 20,
+        sortColumn: "PublishedAt",
+        sortOrder: "desc",
+        status: "Published",
+        hasExternalPostUrl: true,
+    } as const;
+
+    const handleRefresh = useCallback(() => {
+        dispatch(fetchOrganizerPosts(FETCH_PARAMS));
+    }, [dispatch]);
+
+    useEffect(() => {
+        dispatch(fetchOrganizerPosts(FETCH_PARAMS));
+    }, []);
+
+    const chartData = useMemo(() => {
+        const postsWithFb = localPosts
+            .map(post => ({ post, metrics: parseFbMetrics(post, distributionMetricsMap) }))
+            .filter((x): x is { post: PostListItem; metrics: ParsedFbMetrics } => x.metrics !== null);
+
+        if (!postsWithFb.length) return null;
+
+        return CHART_CONFIGS.map(config => ({
+            config,
+            data: postsWithFb.map(({ post, metrics }) => ({
+                title: post.title,
+                shortTitle: truncateTitle(post.title),
+                primary: config.getMetric(metrics),
+                ...(config.getSecondary ? { secondary: config.getSecondary(metrics) } : {}),
+                hasRealData: metrics.impressions > 0 || metrics.reach > 0,
+            })),
+        }));
+    }, [localPosts, distributionMetricsMap]);
+
+    const hasData = chartData && chartData.length > 0 && chartData[0].data.length > 0;
+
+    return (
+        <section className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-bold text-white flex items-center mb-1">
+                        <span className="w-1.5 h-6 bg-blue-400 rounded-full mr-3" />
+                        Hiệu suất Marketing — Facebook
+                    </h2>
+                    <p className="text-xs text-slate-500 ml-6">
+                        So sánh các bài Published có phân phối Facebook. Metric tính từ dữ liệu distribution thực tế.
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-400 text-xs font-bold rounded-xl border border-blue-500/20">
+                        <MdFacebook />
+                        Dữ liệu bài đăng Facebook
+                    </span>
+                    <button
+                        onClick={handleRefresh}
+                        disabled={isLoading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-all disabled:opacity-50"
+                    >
+                        <MdOutlineRefresh className={isLoading ? "animate-spin" : ""} />
+                        Làm mới
+                    </button>
+                </div>
+            </div>
+
+            {!isLoading && hasData && (
+                <>
+                    <SummaryCards metricsMap={distributionMetricsMap} />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {chartData!.map(({ config, data }) => (
+                            <SingleChart key={config.id} config={config} data={data} />
+                        ))}
+                    </div>
+                </>
+            )}
+
+            {isLoading && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {[0, 1, 2].map(i => (
+                        <div key={i} className="glass border border-slate-800/50 rounded-[28px] h-[320px] animate-pulse" />
+                    ))}
+                </div>
+            )}
+
+            {!isLoading && !hasData && <EmptyState />}
+
+            {/* Legend */}
+            {hasData && (
+                <div className="flex items-center gap-6 text-xs text-slate-600 pl-2">
+                    <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block" />Reach tốt nhất
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-sm bg-blue-500/40 inline-block" />Các bài còn lại
+                    </span>
+                    <span className="ml-auto text-slate-700">
+                        Hiển thị {chartData![0].data.length} bài gần nhất
+                    </span>
+                </div>
+            )}
         </section>
     );
 }

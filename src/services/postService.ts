@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams } from "../types/post/post";
+import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams, GetDistributionMetricsResponse, UploadImageResponse, GetTotalMetricsResponse, PeriodOptionMetrics } from "../types/post/post";
 import type { ApiResponse, ApiResponseNoData } from "../types/api";
 
 const postService = {
@@ -51,7 +51,19 @@ const postService = {
             userPrompt
         });
     },
-
+    uploadAndAttachImageToPost: (postId: string, imageFile: File, folder: string): Promise<AxiosResponse<UploadImageResponse>> => {
+        const formData = new FormData();
+        formData.append("file", imageFile);
+        formData.append("folderName", folder);
+        return interceptorAPI().post(`organizer/posts/${postId}/image`, formData, {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        });
+    },
+    getFacebookMetricsTotals: (period: PeriodOptionMetrics): Promise<AxiosResponse<GetTotalMetricsResponse>> => {
+        return interceptorAPI().get(`/facebook/page/metrics?period=${period}`);
+    },
     getAdminPosts: (params: GetAdminPostsQueryParams): Promise<AxiosResponse<any>> => {
         return interceptorAPI().get("/admin/posts", { params });
     },
@@ -74,6 +86,12 @@ const postService = {
     publishAdminPost: (id: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().post(`/admin/posts/${id}/publish`);
     },
+    getDistributionMetricsFacebook: (postId: string, distributionId: string): Promise<AxiosResponse<GetDistributionMetricsResponse>> => {
+        return interceptorAPI().get(`/posts/${postId}/distributions/${distributionId}/metrics/facebook`);
+    },
+    pushPostToOtherPlatform: (postId: string, platform: string, isRetry: boolean): Promise<AxiosResponse<ApiResponseNoData>> => {
+        return interceptorAPI().post(`/posts/${postId}/distribute`, { platform, isRetry });
+    }
 }
 
 export default postService;

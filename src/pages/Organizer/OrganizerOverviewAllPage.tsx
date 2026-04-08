@@ -1,115 +1,78 @@
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useEffect, useMemo, useState } from "react";
 import {
-    RiMoneyDollarCircleLine,
-    RiRefund2Line,
     RiCalendarEventLine,
     RiLineChartLine,
+    RiMoneyDollarCircleLine,
+    RiRefund2Line,
 } from "react-icons/ri";
+import { useDispatch, useSelector } from "react-redux";
 import {
+    Area,
+    AreaChart,
     Bar,
     BarChart,
     CartesianGrid,
     Cell,
-    Line,
-    LineChart,
     Pie,
     PieChart,
     ResponsiveContainer,
     Tooltip,
     XAxis,
-    YAxis
+    YAxis,
 } from "recharts";
 import type { AppDispatch, RootState } from "../../store";
+import { fetchOrganizerProfile } from "../../store/organizerProfileSlice";
 import {
     fetchRevenueBreakdownOrganizer,
     fetchRevenueSummaryOrganizer,
 } from "../../store/reportSlice";
-import { fetchOrganizerProfile } from "../../store/organizerProfileSlice";
+import { fetchAllEventSalesTrend } from "../../store/ticketingSlice";
 import type { EventStatus } from "../../types/event/event";
+import { fmtMoneyVND } from "../../utils/fmtMoneyVND";
 
-// ─── Mock trend (no API available) ───────────────────────────────────────────
-const mockTrend = [
-    { month: "T10", revenue: 42 },
-    { month: "T11", revenue: 68 },
-    { month: "T12", revenue: 115 },
-    { month: "T1", revenue: 88 },
-    { month: "T2", revenue: 143 },
-    { month: "T3", revenue: 176 },
-    { month: "T4", revenue: 166 },
+const generateColor = (index: number): string => {
+    const hue = (index * 137.508) % 360;
+    const saturation = 65;
+    const lightness = 58;
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};
+
+type TrendRange = 1 | 3 | 6;
+const RANGE_OPTIONS: { label: string; value: TrendRange }[] = [
+    { label: "1 tháng", value: 1 },
+    { label: "3 tháng", value: 3 },
+    { label: "6 tháng", value: 6 },
 ];
 
-const DONUT_COLORS = ["#7c3bed", "#2dd4bf", "#fbbf24", "#f87171", "#60a5fa"];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const fmtVND = (n: number): string => {
-    if (n === 0) return "0";
-
-    const ty = Math.floor(n / 1_000_000_000);
-    const trieu = Math.floor((n % 1_000_000_000) / 1_000_000);
-    const nghin = Math.floor((n % 1_000_000) / 1_000);
-
-    const parts: string[] = [];
-    if (ty > 0) parts.push(`${ty} tỷ`);
-    if (trieu > 0) parts.push(`${trieu} triệu`);
-    if (nghin > 0) parts.push(`${nghin} nghìn`);
-
-    return parts.join(" ");
+const chartScale = (maxValue: number): { divisor: number; unit: string } => {
+    if (maxValue >= 1_000_000_000) return { divisor: 1_000_000_000, unit: "tỷ" };
+    if (maxValue >= 1_000_000) return { divisor: 1_000_000, unit: "triệu" };
+    if (maxValue >= 1_000) return { divisor: 1_000, unit: "nghìn" };
+    return { divisor: 1, unit: "đồng" };
 };
+
+/** "W2 T4" = tuần 2 của tháng 4 */
+const getWeekKey = (d: Date): string =>
+    `T${d.getMonth() + 1}/W${Math.ceil(d.getDate() / 7)}`;
 
 const statusBadge = (status: EventStatus) => {
-    switch (status) {
-        case "Published":
-            return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-emerald-950 text-emerald-400 border border-emerald-900">
-                    Đang mở
-                </span>
-            );
-        case "PendingReview":
-            return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-950 text-blue-400 border border-blue-900">
-                    Chờ duyệt
-                </span>
-            );
-        case "PendingCancellation":
-            return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-orange-950 text-orange-400 border border-orange-900">
-                    Chờ huỷ
-                </span>
-            );
-        case "Suspended":
-            return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-red-950 text-red-400 border border-red-900">
-                    Đã tạm dừng
-                </span>
-            );
-        case "Cancelled":
-            return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-rose-950 text-rose-400 border border-rose-900">
-                    Đã huỷ
-                </span>
-            );
-        case "Completed":
-            return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-slate-800 text-slate-400 border border-slate-700">
-                    Đã kết thúc
-                </span>
-            );
-        case "Draft":
-        default:
-            return (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-zinc-900 text-zinc-400 border border-zinc-700">
-                    Bản nháp
-                </span>
-            );
-    }
+    const map: Record<string, { bg: string; text: string; border: string; label: string }> = {
+        Published: { bg: "bg-emerald-950", text: "text-emerald-400", border: "border-emerald-900", label: "Đang mở" },
+        PendingReview: { bg: "bg-blue-950", text: "text-blue-400", border: "border-blue-900", label: "Chờ duyệt" },
+        PendingCancellation: { bg: "bg-orange-950", text: "text-orange-400", border: "border-orange-900", label: "Chờ huỷ" },
+        Suspended: { bg: "bg-red-950", text: "text-red-400", border: "border-red-900", label: "Đã tạm dừng" },
+        Cancelled: { bg: "bg-rose-950", text: "text-rose-400", border: "border-rose-900", label: "Đã huỷ" },
+        Completed: { bg: "bg-slate-800", text: "text-slate-400", border: "border-slate-700", label: "Đã kết thúc" },
+    };
+    const s = map[status] ?? { bg: "bg-zinc-900", text: "text-zinc-400", border: "border-zinc-700", label: "Bản nháp" };
+    return (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${s.bg} ${s.text} border ${s.border}`}>
+            {s.label}
+        </span>
+    );
 };
 
-const refundColor = (rate: number) => {
-    if (rate < 4) return "#4ade80";
-    if (rate < 8) return "#fbbf24";
-    return "#f87171";
-};
+const refundColor = (rate: number) => rate < 4 ? "#4ade80" : rate < 8 ? "#fbbf24" : "#f87171";
 
 const TooltipStyle = {
     contentStyle: {
@@ -126,15 +89,15 @@ const TooltipStyle = {
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
 interface MetricCardProps {
     icon: React.ReactNode;
     iconBg: string;
     label: string;
     value: string;
-    sub: string;
+    sub: React.ReactNode;
     subColor?: string;
 }
-
 function MetricCard({ icon, iconBg, label, value, sub, subColor }: MetricCardProps) {
     return (
         <div className="bg-card-dark rounded-xl border border-border-dark p-5 flex flex-col gap-3">
@@ -152,16 +115,22 @@ function MetricCard({ icon, iconBg, label, value, sub, subColor }: MetricCardPro
 
 interface SectionCardProps {
     title: string;
-    sub: string;
+    sub?: string;
     children: React.ReactNode;
     className?: string;
+    headerRight?: React.ReactNode;
 }
-
-function SectionCard({ title, sub, children, className = "" }: SectionCardProps) {
+function SectionCard({ title, sub, children, className = "", headerRight }: SectionCardProps) {
     return (
         <div className={`bg-card-dark rounded-xl border border-border-dark p-5 ${className}`}>
-            <p className="text-base font-semibold text-white">{title}</p>
-            <p className="text-sm text-text-muted mt-0.5 mb-4">{sub}</p>
+            <div className="flex items-start justify-between">
+                <p className="text-base font-semibold text-white">{title}</p>
+                {headerRight}
+            </div>
+            {sub
+                ? <p className="text-sm text-text-muted mt-0.5 mb-4">{sub}</p>
+                : <div className="mb-4" />
+            }
             {children}
         </div>
     );
@@ -175,16 +144,18 @@ export default function OrganizerOverviewAllPage() {
     const { revenueSummaryOrganizer, revenueBreakdownOrganizer, loading } = useSelector(
         (state: RootState) => state.REPORT
     );
+    const { allEventSalesTrend, allEventSalesTrendLoading } = useSelector(
+        (state: RootState) => state.TICKETING
+    );
 
     const [showGross, setShowGross] = useState(true);
     const [showNet, setShowNet] = useState(true);
+    const [trendRange, setTrendRange] = useState<TrendRange>(3);
 
-    // 1. Fetch profile trước để lấy profileId
-    useEffect(() => {
-        dispatch(fetchOrganizerProfile());
-    }, [dispatch]);
+    // 1. Fetch profile
+    useEffect(() => { dispatch(fetchOrganizerProfile()); }, [dispatch]);
 
-    // 2. Khi đã có profileId → fetch summary + breakdown
+    // 2. Fetch summary + breakdown
     useEffect(() => {
         if (!profile?.userId) return;
         dispatch(fetchRevenueSummaryOrganizer(profile.userId));
@@ -195,16 +166,30 @@ export default function OrganizerOverviewAllPage() {
         dispatch(fetchRevenueBreakdownOrganizer({ organizerId: profile.userId, byNet: false }));
     }, [dispatch, profile?.userId]);
 
-    // ─── Derived data ─────────────────────────────────────────────────────────
+    // 3. Fetch sales trend — re-fetch khi đổi range
+    useEffect(() => {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - trendRange);
+        dispatch(fetchAllEventSalesTrend({
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+        }));
+    }, [dispatch, trendRange]);
+
+    // ─── Derived: bar + donut ─────────────────────────────────────────────────
 
     const summary = revenueSummaryOrganizer;
     const breakdown = revenueBreakdownOrganizer ?? [];
 
     const barData = breakdown.map((item) => ({
         name: item.eventName ?? item.eventId,
-        gross: Math.round(item.grossRevenue / 1_000_000),
-        net: Math.round(item.netRevenue / 1_000_000),
+        gross: item.grossRevenue,
+        net: item.netRevenue,
     }));
+
+    const barMaxValue = Math.max(...breakdown.map((x) => Math.max(x.grossRevenue, x.netRevenue)), 0);
+    const barScale = chartScale(barMaxValue);
 
     const totalGross = breakdown.reduce((s, x) => s + x.grossRevenue, 0);
     const donutData = breakdown.map((x) => ({
@@ -212,9 +197,84 @@ export default function OrganizerOverviewAllPage() {
         value: totalGross > 0 ? Math.round((x.grossRevenue / totalGross) * 100) : 0,
     }));
 
+    // ─── Derived: stacked area ────────────────────────────────────────────────
+    /**
+     * Gộp theo ngày khi range = 1 tháng, gộp theo tuần khi range > 1 tháng.
+     * Output: [{ label, [eventTitle]: revenue, ... }]
+     */
+    const { areaData, eventTitles } = useMemo(() => {
+        if (!allEventSalesTrend?.events?.length) return { areaData: [], eventTitles: [] };
+
+        const byDay = trendRange === 1;
+        const map = new Map<string, Record<string, number>>();
+        const keyToDate = new Map<string, Date>();
+
+        for (const event of allEventSalesTrend.events) {
+            const title = event.title ?? event.eventId;
+            for (const point of event.salesTrend) {
+                const d = new Date(point.time);
+                const key = byDay
+                    ? `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`
+                    : getWeekKey(d);
+
+                if (!map.has(key)) {
+                    map.set(key, {});
+                    keyToDate.set(key, d);
+                }
+                const row = map.get(key)!;
+                row[title] = (row[title] ?? 0) + point.netRevenue;
+            }
+        }
+
+        const sorted = Array.from(map.entries()).sort(
+            ([ka], [kb]) => keyToDate.get(ka)!.getTime() - keyToDate.get(kb)!.getTime()
+        );
+
+        const titles = Array.from(
+            new Set(allEventSalesTrend.events.map((e) => e.title ?? e.eventId))
+        );
+
+        const data = sorted.map(([label, row]) => ({
+            label,
+            ...Object.fromEntries(titles.map((t) => [t, row[t] ?? 0])),
+        }));
+
+        return { areaData: data, eventTitles: titles };
+    }, [allEventSalesTrend, trendRange]);
+
+    const areaMaxValue = useMemo(() =>
+        areaData.length === 0 ? 0 : Math.max(
+            ...areaData.map((row) =>
+                eventTitles.reduce((s, t) => s + ((row as unknown as Record<string, number>)[t] ?? 0), 0)
+            )
+        ),
+        [areaData, eventTitles]
+    );
+    const areaScale = chartScale(areaMaxValue);
+
+    const xAxisInterval = areaData.length > 20
+        ? Math.floor(areaData.length / 8)
+        : areaData.length > 10 ? 1 : 0;
+
     const isLoadingSummary = loading?.organizerSummary;
     const isLoadingBreakdown = loading?.organizerBreakdown;
 
+    const colorMap = useMemo(() => {
+        const map: Record<string, string> = {};
+
+        const allKeys = [
+            ...new Set([
+                ...breakdown.map(x => x.eventName ?? x.eventId),
+                ...eventTitles
+            ])
+        ];
+
+        allKeys.forEach((key, i) => {
+            map[key] = generateColor(i);
+        });
+
+        return map;
+    }, [breakdown, eventTitles]);
     return (
         <div className="space-y-6">
 
@@ -228,36 +288,40 @@ export default function OrganizerOverviewAllPage() {
             ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <MetricCard
-                        iconBg="#7c3bed"
-                        icon={<RiLineChartLine size={20} color="#FFFFFF" />}
+                        iconBg="#7c3bed" icon={<RiLineChartLine size={20} color="#FFFFFF" />}
                         label="Tổng doanh thu gộp"
-                        value={fmtVND(summary.grossRevenue) + " đồng"}
+                        value={`${fmtMoneyVND(summary.grossRevenue)} đồng`}
                         sub="Tất cả sự kiện"
                     />
                     <MetricCard
-                        iconBg="#7c3bed"
-                        icon={<RiMoneyDollarCircleLine size={20} color="#FFFFFF" />}
+                        iconBg="#7c3bed" icon={<RiMoneyDollarCircleLine size={20} color="#FFFFFF" />}
                         label="Doanh thu ròng"
-                        value={fmtVND(summary.netRevenue) + " đồng"}
+                        value={`${fmtMoneyVND(summary.netRevenue)} đồng`}
                         sub="Sau hoàn vé & khuyến mãi"
                     />
                     <MetricCard
-                        iconBg="#7c3bed"
-                        icon={<RiCalendarEventLine size={20} color="#FFFFFF" />}
+                        iconBg="#7c3bed" icon={<RiCalendarEventLine size={20} color="#FFFFFF" />}
                         label="Số sự kiện"
                         value={String(summary.eventCount)}
-                        sub={`${summary.completedEventCount} đã hoàn thành · ${summary.activeEventCount} đang mở`}
+                        sub={
+                            <>
+                                <span className="text-emerald-400">
+                                    {summary.completedEventCount} đã hoàn thành
+                                </span>
+                                {" · "}
+                                <span className="text-blue-400">
+                                    {summary.activeEventCount} đang mở
+                                </span>
+                            </>
+                        }
                     />
                     <MetricCard
-                        iconBg="#7c3bed"
-                        icon={<RiRefund2Line size={20} color="#FFFFFF" />}
+                        iconBg="#7c3bed" icon={<RiRefund2Line size={20} color="#FFFFFF" />}
                         label="Tổng hoàn vé"
-                        value={fmtVND(summary.totalRefunds) + " đồng"}
-                        sub={
-                            summary.grossRevenue > 0
-                                ? ((summary.totalRefunds / summary.grossRevenue) * 100).toFixed(2) + "% tỉ lệ hoàn"
-                                : "0% tỉ lệ hoàn"
-                        }
+                        value={`${fmtMoneyVND(summary.totalRefunds)} đồng`}
+                        sub={summary.grossRevenue > 0
+                            ? `${((summary.totalRefunds / summary.grossRevenue) * 100).toFixed(2)}% tỉ lệ hoàn`
+                            : "0% tỉ lệ hoàn"}
                         subColor="#f87171"
                     />
                 </div>
@@ -268,7 +332,7 @@ export default function OrganizerOverviewAllPage() {
                 <SectionCard
                     className="lg:col-span-3"
                     title="Doanh thu theo sự kiện"
-                    sub="Doanh thu gộp và ròng từng sự kiện (triệuđ)"
+                    sub={`Doanh thu gộp và ròng từng sự kiện (${barScale.unit}đ)`}
                 >
                     <div className="flex items-center gap-2 mb-4">
                         <button
@@ -293,18 +357,20 @@ export default function OrganizerOverviewAllPage() {
                                 <BarChart data={barData} barCategoryGap="30%">
                                     <CartesianGrid vertical={false} stroke="#1e293b" />
                                     <XAxis dataKey="name" tick={{ fill: "#475569", fontSize: 12 }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fill: "#475569", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => v + "M"} width={44} />
+                                    <YAxis
+                                        tick={{ fill: "#475569", fontSize: 12 }} axisLine={false} tickLine={false}
+                                        tickFormatter={(v) => `${+(v / barScale.divisor).toFixed(1)}${barScale.unit[0]}`}
+                                        width={48}
+                                    />
                                     <Tooltip
                                         {...TooltipStyle}
-                                        formatter={(val, name) => {
-                                            return [
-                                                `${val ?? 0} triệu đồng`,
-                                                name === "Doanh thu gộp" ? "Doanh thu gộp" : "Doanh thu ròng"
-                                            ];
-                                        }}
+                                        formatter={(val: number | undefined, name: string | undefined) => [
+                                            `${fmtMoneyVND(val ?? 0)} đồng`,
+                                            name === "gross" ? "Doanh thu gộp" : "Doanh thu ròng",
+                                        ]}
                                     />
-                                    {showGross && <Bar dataKey="gross" name="Doanh thu gộp" fill="#7c3bed" radius={[4, 4, 0, 0]} />}
-                                    {showNet && <Bar dataKey="net" name="Doanh thu ròng" fill="#2dd4bf" radius={[4, 4, 0, 0]} />}
+                                    {showGross && <Bar dataKey="gross" name="gross" fill="#7c3bed" radius={[4, 4, 0, 0]} />}
+                                    {showNet && <Bar dataKey="net" name="net" fill="#2dd4bf" radius={[4, 4, 0, 0]} />}
                                 </BarChart>
                             </ResponsiveContainer>
                             <div className="flex items-center gap-5 mt-3">
@@ -333,8 +399,8 @@ export default function OrganizerOverviewAllPage() {
                             <ResponsiveContainer width="100%" height={200}>
                                 <PieChart>
                                     <Pie data={donutData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
-                                        {donutData.map((_, i) => (
-                                            <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                                        {donutData.map((d, i) => (
+                                            <Cell key={i} fill={colorMap[d.name]} />
                                         ))}
                                     </Pie>
                                     <Tooltip
@@ -348,7 +414,7 @@ export default function OrganizerOverviewAllPage() {
                                 {donutData.map((d, i) => (
                                     <div key={i} className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                                            <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: colorMap[d.name] }} />
                                             <span className="text-sm text-slate-400 truncate max-w-[130px]">{d.name}</span>
                                         </div>
                                         <span className="text-sm font-medium text-white">{d.value}%</span>
@@ -360,23 +426,102 @@ export default function OrganizerOverviewAllPage() {
                 </SectionCard>
             </div>
 
-            {/* ── Trend + Refund rates ── */}
+            {/* ── Stacked Area Trend + Refund rates ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <SectionCard title="Xu hướng doanh thu ròng" sub="Theo tháng (triệu đồng)">
-                    <ResponsiveContainer width="100%" height={190}>
-                        <LineChart data={mockTrend}>
-                            <CartesianGrid vertical={false} stroke="#1e293b" />
-                            <XAxis dataKey="month" tick={{ fill: "#475569", fontSize: 12 }} axisLine={false} tickLine={false} />
-                            <YAxis tick={{ fill: "#475569", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => v + "M"} width={44} />
-                            <Tooltip
-                                {...TooltipStyle}
-                                formatter={(val: number | string | undefined) => [(val ?? 0) + " triệu đồng", "Doanh thu ròng"]}
-                            />
-                            <Line type="monotone" dataKey="revenue" stroke="#7c3bed" strokeWidth={2} dot={{ fill: "#7c3bed", r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: "#9d6ef5" }} />
-                        </LineChart>
-                    </ResponsiveContainer>
+
+                {/* Stacked area */}
+                <SectionCard
+                    title="Xu hướng doanh thu ròng theo sự kiện"
+                    sub={trendRange === 1
+                        ? `Theo ngày — 1 tháng gần nhất (${areaScale.unit}đ)`
+                        : `Theo tuần — ${trendRange} tháng gần nhất (${areaScale.unit}đ)`}
+                    headerRight={
+                        <div className="flex items-center gap-1 -mt-0.5 flex-shrink-0">
+                            {RANGE_OPTIONS.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => setTrendRange(opt.value)}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${trendRange === opt.value
+                                        ? "bg-primary text-white"
+                                        : "bg-surface-dark text-text-muted hover:text-white"
+                                        }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    }
+                >
+                    {allEventSalesTrendLoading ? (
+                        <div className="h-52 bg-surface-dark rounded-lg animate-pulse" />
+                    ) : areaData.length === 0 ? (
+                        <div className="h-52 flex items-center justify-center text-sm text-text-muted">
+                            Chưa có dữ liệu xu hướng
+                        </div>
+                    ) : (
+                        <>
+                            <ResponsiveContainer width="100%" height={200}>
+                                <AreaChart data={areaData}>
+                                    <defs>
+                                        {eventTitles.map((title, i) => (
+                                            <linearGradient key={title} id={`areaGrad${i}`} x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor={colorMap[title]} stopOpacity={0.4} />
+                                                <stop offset="95%" stopColor={colorMap[title]} stopOpacity={0.05} />
+                                            </linearGradient>
+                                        ))}
+
+                                    </defs>
+                                    <CartesianGrid vertical={false} stroke="#1e293b" />
+                                    <XAxis
+                                        dataKey="label"
+                                        tick={{ fill: "#475569", fontSize: 11 }}
+                                        axisLine={false} tickLine={false}
+                                        interval={xAxisInterval}
+                                    />
+                                    <YAxis
+                                        tick={{ fill: "#475569", fontSize: 11 }}
+                                        axisLine={false} tickLine={false}
+                                        tickFormatter={(v) => `${+(v / areaScale.divisor).toFixed(1)}${areaScale.unit[0]}`}
+                                        width={48}
+                                    />
+                                    <Tooltip
+                                        {...TooltipStyle}
+                                        formatter={(val: number | undefined, name: string | undefined) => [
+                                            `${fmtMoneyVND(val ?? 0)} đồng`,
+                                            name,
+                                        ]}
+                                    />
+                                    {eventTitles.map((title, i) => (
+                                        <Area
+                                            key={title}
+                                            type="monotone"
+                                            dataKey={title}
+                                            stackId="1"
+                                            stroke={colorMap[title]}
+                                            strokeWidth={1.5}
+                                            fill={`url(#areaGrad${i})`}
+                                        />
+                                    ))}
+                                </AreaChart>
+                            </ResponsiveContainer>
+
+                            {/* Legend */}
+                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
+                                {eventTitles.map((title) => (
+                                    <div key={title} className="flex items-center gap-1.5">
+                                        <span
+                                            className="w-2.5 h-2.5 rounded-sm inline-block flex-shrink-0"
+                                            style={{ background: colorMap[title] }}
+                                        />
+                                        <span className="text-xs text-slate-400 truncate max-w-[120px]">{title}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </SectionCard>
 
+                {/* Refund rates */}
                 <SectionCard title="Tỉ lệ hoàn vé theo sự kiện" sub="% hoàn trên tổng doanh thu gộp">
                     {isLoadingBreakdown ? (
                         <div className="h-40 bg-surface-dark rounded-lg animate-pulse" />
@@ -414,7 +559,6 @@ export default function OrganizerOverviewAllPage() {
                     <p className="text-base font-semibold text-white">Tổng quan tất cả sự kiện</p>
                     <p className="text-sm text-text-muted mt-0.5">Doanh thu gộp · ròng · hoàn vé · trạng thái</p>
                 </div>
-
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
@@ -442,13 +586,13 @@ export default function OrganizerOverviewAllPage() {
                                             {row.eventName ?? row.eventId}
                                         </td>
                                         <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
-                                            {fmtVND(row.grossRevenue)}
+                                            {fmtMoneyVND(row.grossRevenue)} đồng
                                         </td>
                                         <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
-                                            {fmtVND(row.refundAmount)}
+                                            {fmtMoneyVND(row.refundAmount)} đồng
                                         </td>
                                         <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
-                                            {fmtVND(row.netRevenue)}
+                                            {fmtMoneyVND(row.netRevenue)} đồng
                                         </td>
                                         <td className="px-5 py-3.5">
                                             <div className="flex items-center gap-2.5">

@@ -17,7 +17,7 @@ export interface CreatePostDraftRequest {
     title: string;
     body: string;
     summary?: string;
-    imageUrl?: string;
+    imageUrl: string | null;
     promptUsed?: string;
     aiModel?: string;
     aiTokensUsed?: number;
@@ -42,16 +42,15 @@ export interface PostDetail {
     organizerId: string;
     title: string;
     body: string;
-    imageUrl: null;
+    imageUrl: null | string;
     status: PostStatus;
-    platform: string;
     promptUsed: string;
     aiModel: string;
     aiTokensUsed: number;
-    rejectionReason: null;
+    rejectionReason: null | string;
     publishedAt: Date;
     trackingToken: string;
-    externalPostUrl: null;
+    externalPostUrl: null | string;
     version: number;
     createdAt: Date;
     modifiedAt: Date;
@@ -59,6 +58,7 @@ export interface PostDetail {
     canSubmit: boolean;
     canPublish: boolean;
     canArchive: boolean;
+    distributions: PostDistribution[];
 }
 
 export type GetPostDetailResponse = ApiResponse<PostDetail>
@@ -106,6 +106,7 @@ export interface PostListItem {
     version: number;
     createdAt: string;
     modifiedAt: string | null;
+    distributions: PostDistribution[];
 }
 
 export type GetOrganizerPostsResponse = ApiResponse<PaginatedResponse<PostListItem>>;
@@ -116,6 +117,19 @@ export interface GenerateImageRequestBody {
     imageSize: string;
 }
 
+export interface DistributionMetricsFacebook {
+    externalPostId: string;
+    externalUrl: string;
+    likes: number;
+    comments: number;
+    shares: number;
+    impressions: number;
+    reach: number;
+    clicks: number;
+    fetchedAt: Date;
+}
+
+export type GetDistributionMetricsResponse = ApiResponse<DistributionMetricsFacebook>
 export type GenerateImageResponse = ApiResponse<{ imageUrl: string }>
 export type SendToChatBoxReponse = ApiResponse<string>
 
@@ -215,3 +229,27 @@ export interface GetAdminPostsQueryParams {
     PublishedTo?: string;
     HasExternalPostUrl?: boolean;
 }
+
+export interface UploadImageResponseItem {
+    imageUrl: string;
+    folder: string;
+}
+
+export type UploadImageResponse = ApiResponse<UploadImageResponseItem>;
+
+export interface GetTotalMetricsItem {
+    pageId: string;
+    pageUrl: string;
+    period: string;
+    dailyUnfollowsUnique: number;
+    dailyFollowsUnique: number;
+    viewsTotal: number;
+    impressionsUnique: number;
+    likesTotal: number;
+    postEngagements: number;
+    fetchedAt: string;
+}
+
+export type GetTotalMetricsResponse = ApiResponse<GetTotalMetricsItem>;
+
+export type PeriodOptionMetrics = "Day" | "Week" | "days_28"

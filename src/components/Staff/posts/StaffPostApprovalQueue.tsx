@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchAdminPosts, approveAdminPost, rejectAdminPost } from "../../../store/postSlice";
 import { FaArrowsRotate } from "react-icons/fa6";
+import { interceptorAPI } from "../../../utils/attachInterceptors";
 import toast from "react-hot-toast";
 import StaffPostApprovalCard from "./StaffPostApprovalCard";
 import StaffPostApprovalPagination from "./StaffPostApprovalPagination";
@@ -132,29 +133,36 @@ export default function StaffPostApprovalQueue({
     const [approveTarget, setApproveTarget] = useState<string | null>(null);
     const [rejectTarget, setRejectTarget] = useState<string | null>(null);
 
-    // Fetch counts for all tabs
-    const fetchTabCounts = useCallback(() => {
-        (["Pending", "Approved", "Published", "Rejected"] as const).forEach(
-            (status) => {
-                dispatch(
-                    fetchAdminPosts({
-                        PageNumber: 1,
-                        PageSize: 1,
-                        SortColumn: "CreatedAt",
-                        SortOrder: "desc",
-                        Status: status,
-                    })
-                ).then((result) => {
-                    if (fetchAdminPosts.fulfilled.match(result)) {
-                        setTabCounts((prev) => ({
-                            ...prev,
-                            [status]: result.payload.totalCount ?? 0,
-                        }));
-                    }
-                });
-            }
+    // Fetch counts for all tabs using direct service calls (not Redux)
+    // to avoid polluting the main adminPosts list
+    const fetchTabCounts = useCallback(async () => {
+        const statuses = ["Pending", "Approved", "Published", "Rejected"] as const;
+        const results = await Promise.all(
+            statuses.map(async (status) => {
+                try {
+                    const res = await interceptorAPI().get("/admin/posts", {
+                        params: {
+                            PageNumber: 1,
+                            PageSize: 1,
+                            SortColumn: "CreatedAt",
+                            SortOrder: "desc",
+                            Status: status,
+                        },
+                    });
+                    return { status, count: res.data.data?.totalCount ?? 0 };
+                } catch {
+                    return { status, count: 0 };
+                }
+            })
         );
-    }, [dispatch]);
+        setTabCounts((prev) => {
+            const next = { ...prev };
+            results.forEach((r) => {
+                next[r.status] = r.count;
+            });
+            return next;
+        });
+    }, []);
 
     useEffect(() => {
         fetchTabCounts();

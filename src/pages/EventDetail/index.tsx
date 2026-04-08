@@ -1,13 +1,13 @@
-import "./EventDetail.css"
-import Header from '../../components/Header'
-import Footer from '../../components/Footer'
-import { useDispatch, useSelector } from "react-redux"
-import type { AppDispatch, RootState } from "../../store"
-import { fetchAllEvents, fetchEventById } from "../../store/eventSlice"
-import { useEffect, useState } from "react"
-import type { GetEventDetailResponse } from "../../types/event/event"
-import { useParams, useNavigate } from "react-router-dom"
 import DOMPurify from 'dompurify'
+import { useEffect, useState } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import { useNavigate, useParams } from "react-router-dom"
+import Footer from '../../components/Footer'
+import Header from '../../components/Header'
+import type { AppDispatch, RootState } from "../../store"
+import { fetchAllEvents, fetchEventByUrlPath } from "../../store/eventSlice"
+import type { GetEventDetailResponse } from "../../types/event/event"
+import "./EventDetail.css"
 
 // ─── Skeleton Components ───────────────────────────────────────────────────────
 
@@ -166,9 +166,8 @@ function Lightbox({
           {images.map((_, i) => (
             <div
               key={i}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === currentIndex ? "w-6 bg-primary" : "w-1.5 bg-white/30"
-              }`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === currentIndex ? "w-6 bg-primary" : "w-1.5 bg-white/30"
+                }`}
             />
           ))}
         </div>
@@ -231,7 +230,7 @@ const RELATED_PAGE_SIZE = 3
 function EventDetail() {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
-  const { id } = useParams<{ id: string }>()
+  const { urlPath } = useParams<{ urlPath: string }>()
 
   // ── Lightbox state ──
   const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -247,9 +246,9 @@ function EventDetail() {
 
   useEffect(() => {
     window.scrollTo(0, 0)
-    if (!id) return
-    dispatch(fetchEventById(id))
-  }, [dispatch, id])
+    if (!urlPath) return
+    dispatch(fetchEventByUrlPath(urlPath))
+  }, [dispatch, urlPath])
 
   // ── Fetch related events whenever page changes ──
   useEffect(() => {
@@ -284,10 +283,6 @@ function EventDetail() {
   const saleStart = formatDate(eventDetail.ticketSaleStartAt)
   const saleEnd = formatDate(eventDetail.ticketSaleEndAt)
 
-  const serviceFee = firstTicket ? Math.round(firstTicket.price * 0.02) : 0
-  const vat = firstTicket ? Math.round(firstTicket.price * 0.1) : 0
-  const total = firstTicket ? firstTicket.price + serviceFee + vat : 0
-
   // ── Lightbox helpers ──
   const images = eventDetail.images ?? []
   const openLightbox = (index: number) => { setLightboxIndex(index); setLightboxOpen(true) }
@@ -302,7 +297,7 @@ function EventDetail() {
       document.getElementById("sessions-section")?.scrollIntoView({ behavior: "smooth", block: "center" })
       return
     }
-    navigate(`/event-detail/${id}/seat-map/show`, {
+    navigate(`/event-detail/${urlPath}/seat-map/show`, {
       state: { eventSessionId: selectedSessionId },
     })
   }
@@ -318,7 +313,7 @@ function EventDetail() {
   }
 
   // Filter out the current event from related list
-  const filteredRelated = relatedEvents.filter((e) => String(e.id) !== String(id))
+  const filteredRelated = relatedEvents.filter((e) => String(e.id) !== String(eventDetail.id))
 
   return (
     <>
@@ -496,19 +491,17 @@ function EventDetail() {
                       return (
                         <div key={session.id} className="relative mb-6 last:mb-0">
                           <div
-                            className={`absolute -left-10 mt-1.5 size-4 rounded-full transition-all duration-300 ${
-                              isSelected
-                                ? "bg-primary neon-glow scale-125"
-                                : "bg-primary/40 border-2 border-primary"
-                            }`}
+                            className={`absolute -left-10 mt-1.5 size-4 rounded-full transition-all duration-300 ${isSelected
+                              ? "bg-primary neon-glow scale-125"
+                              : "bg-primary/40 border-2 border-primary"
+                              }`}
                           />
                           <div
                             onClick={() => { setSelectedSessionId(session.id); setSessionError(false) }}
-                            className={`glass p-5 rounded-xl cursor-pointer transition-all duration-300 border-2 ${
-                              isSelected
-                                ? "border-primary/70 bg-primary/10 shadow-[0_0_20px_rgba(124,63,237,0.2)]"
-                                : "border-transparent hover:border-primary/30 hover:bg-white/5"
-                            }`}
+                            className={`glass p-5 rounded-xl cursor-pointer transition-all duration-300 border-2 ${isSelected
+                              ? "border-primary/70 bg-primary/10 shadow-[0_0_20px_rgba(124,63,237,0.2)]"
+                              : "border-transparent hover:border-primary/30 hover:bg-white/5"
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
@@ -519,9 +512,8 @@ function EventDetail() {
                                 <p className="text-gray-400 mt-2 text-sm">{session.description}</p>
                               </div>
                               <div
-                                className={`shrink-0 size-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 mt-1 ${
-                                  isSelected ? "border-primary bg-primary" : "border-white/30 bg-transparent"
-                                }`}
+                                className={`shrink-0 size-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 mt-1 ${isSelected ? "border-primary bg-primary" : "border-white/30 bg-transparent"
+                                  }`}
                               >
                                 {isSelected && (
                                   <span className="material-symbols-outlined text-white text-sm" style={{ fontSize: "14px" }}>
@@ -538,38 +530,7 @@ function EventDetail() {
                 </section>
               )}
 
-              {/* Location */}
-              <section>
-                <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
-                  <span className="w-1.5 h-8 bg-primary rounded-full" />
-                  Địa điểm tổ chức
-                </h2>
-                <div className="glass overflow-hidden rounded-2xl">
-                  <div className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <h3 className="text-xl font-bold">{eventDetail.location}</h3>
-                    </div>
-                    {eventDetail.mapUrl && (
-                      <a
-                        href={eventDetail.mapUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
-                      >
-                        <span className="material-symbols-outlined">directions</span>
-                        Chỉ đường
-                      </a>
-                    )}
-                  </div>
-                  <div className="h-80 w-full grayscale opacity-70 contrast-125 border-t border-white/10 bg-[#121218] flex items-center justify-center relative">
-                    <div className="absolute inset-0 bg-gradient-to-t from-background-dark/80 to-transparent pointer-events-none" />
-                    <div className="text-primary flex flex-col items-center">
-                      <span className="material-symbols-outlined text-5xl animate-bounce">location_on</span>
-                      <span className="font-bold text-lg mt-2 tracking-widest uppercase">Xem bản đồ</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
+             
 
             </div>
 
@@ -619,7 +580,6 @@ function EventDetail() {
                               >
                                 <div>
                                   <p className="text-sm font-bold">{ticket.name}</p>
-                                  {/* <p className="text-xs text-gray-400">{ticket.areaName}</p> */}
                                 </div>
                                 <span className="text-primary font-bold text-sm">
                                   {formatPrice(ticket.price)} VNĐ
@@ -631,13 +591,12 @@ function EventDetail() {
                       )}
 
                       {eventDetail.sessions?.length > 0 && (
-                        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 ${
-                          selectedSessionId
-                            ? "bg-primary/10 border-primary/40 text-primary"
-                            : sessionError
+                        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-300 ${selectedSessionId
+                          ? "bg-primary/10 border-primary/40 text-primary"
+                          : sessionError
                             ? "bg-red-500/10 border-red-500/30 text-red-400"
                             : "bg-white/5 border-white/10 text-gray-400"
-                        }`}>
+                          }`}>
                           <span className="material-symbols-outlined text-xl shrink-0">
                             {selectedSessionId ? "event_available" : "event_note"}
                           </span>
@@ -650,17 +609,9 @@ function EventDetail() {
                       )}
 
                       <div className="space-y-4">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-400">Phí dịch vụ (2%)</span>
-                          <span className="text-white">{formatPrice(serviceFee)} VNĐ</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-400">VAT (10%)</span>
-                          <span className="text-white">{formatPrice(vat)} VNĐ</span>
-                        </div>
                         <div className="pt-4 border-t border-white/10 flex justify-between items-center">
                           <span className="text-lg font-bold">Tổng cộng</span>
-                          <span className="text-2xl font-bold text-primary">{formatPrice(total)} VNĐ</span>
+                          <span className="text-2xl font-bold text-primary">{formatPrice(firstTicket.price)} VNĐ</span>
                         </div>
                       </div>
                     </>
@@ -766,63 +717,63 @@ function EventDetail() {
               {relatedLoading
                 ? [1, 2, 3].map((i) => <RelatedEventCardSkeleton key={i} />)
                 : filteredRelated.slice(0, RELATED_PAGE_SIZE).map((event) => (
-                    <div
-                      key={event.id}
-                      onClick={() => {
-                        navigate(`/event-detail/${event.id}`)
-                        window.scrollTo(0, 0)
-                      }}
-                      className="group glass rounded-2xl overflow-hidden hover:neon-border transition-all duration-300 cursor-pointer"
-                    >
-                      {/* Banner */}
-                      <div className="h-48 w-full overflow-hidden bg-slate-800 relative">
-                        {event.bannerUrl ? (
-                          <img
-                            src={event.bannerUrl}
-                            alt={event.title}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
-                            <span className="material-symbols-outlined text-slate-600 text-5xl">image</span>
-                          </div>
-                        )}
-                        {/* Categories overlay */}
-                        {event.categories && event.categories.length > 0 && (
-                          <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
-                            {event.categories.slice(0, 2).map((cat) => (
-                              <span
-                                key={cat.id}
-                                className="text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm bg-black/40 text-white border border-white/20"
-                              >
-                                {cat.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="p-6">
-                        <div className="flex justify-between items-start mb-3">
-                          {event.eventStartAt && (
-                            <span className="text-xs font-bold text-primary px-2 py-1 rounded bg-primary/10 border border-primary/20">
-                              {formatDateShort(event.eventStartAt)}
-                            </span>
-                          )}
-                          
+                  <div
+                    key={event.id}
+                    onClick={() => {
+                      navigate(`/event-detail/${event.id}`)
+                      window.scrollTo(0, 0)
+                    }}
+                    className="group glass rounded-2xl overflow-hidden hover:neon-border transition-all duration-300 cursor-pointer"
+                  >
+                    {/* Banner */}
+                    <div className="h-48 w-full overflow-hidden bg-slate-800 relative">
+                      {event.bannerUrl ? (
+                        <img
+                          src={event.bannerUrl}
+                          alt={event.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                          <span className="material-symbols-outlined text-slate-600 text-5xl">image</span>
                         </div>
-                        <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors line-clamp-2">
-                          {event.title}
-                        </h3>
-                        {event.location && (
-                          <div className="flex items-center gap-1.5 text-gray-400 text-sm mt-3">
-                            <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
-                            <span className="line-clamp-1">{event.location}</span>
-                          </div>
-                        )}
-                      </div>
+                      )}
+                      {/* Categories overlay */}
+                      {event.categories && event.categories.length > 0 && (
+                        <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
+                          {event.categories.slice(0, 2).map((cat) => (
+                            <span
+                              key={cat.id}
+                              className="text-[11px] font-bold px-2.5 py-1 rounded-full backdrop-blur-sm bg-black/40 text-white border border-white/20"
+                            >
+                              {cat.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  ))
+
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-3">
+                        {event.eventStartAt && (
+                          <span className="text-xs font-bold text-primary px-2 py-1 rounded bg-primary/10 border border-primary/20">
+                            {formatDateShort(event.eventStartAt)}
+                          </span>
+                        )}
+
+                      </div>
+                      <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                        {event.title}
+                      </h3>
+                      {event.location && (
+                        <div className="flex items-center gap-1.5 text-gray-400 text-sm mt-3">
+                          <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
+                          <span className="line-clamp-1">{event.location}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
               }
             </div>
 
@@ -834,11 +785,10 @@ function EventDetail() {
                     key={page}
                     onClick={() => setRelatedPage(page)}
                     disabled={relatedLoading}
-                    className={`h-1.5 rounded-full transition-all duration-300 disabled:cursor-not-allowed ${
-                      page === relatedPage
-                        ? "w-8 bg-primary"
-                        : "w-2 bg-white/20 hover:bg-white/40"
-                    }`}
+                    className={`h-1.5 rounded-full transition-all duration-300 disabled:cursor-not-allowed ${page === relatedPage
+                      ? "w-8 bg-primary"
+                      : "w-2 bg-white/20 hover:bg-white/40"
+                      }`}
                   />
                 ))}
               </div>

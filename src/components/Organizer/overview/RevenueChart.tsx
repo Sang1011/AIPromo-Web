@@ -8,20 +8,13 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import type { SalesTrendData, SalesTrendPeriod } from "../../../types/ticketing/ticketing";
+import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 
 interface RevenueChartProps {
     trendData: SalesTrendData | null;
     period: SalesTrendPeriod;
     loading: boolean;
     onPeriodChange: (period: SalesTrendPeriod) => void;
-}
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-
-function formatRevenue(value: number): string {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}tr`;
-    if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k`;
-    return `${value}`;
 }
 
 /**
@@ -158,7 +151,7 @@ export default function RevenueChart({ trendData, period, loading, onPeriodChang
                                 stroke="#6B7280"
                                 tickLine={false}
                                 axisLine={false}
-                                tickFormatter={formatRevenue}
+                                tickFormatter={fmtMoneyVND}
                                 tick={{ fontSize: 11 }}
                                 width={48}
                             />
