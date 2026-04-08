@@ -4,7 +4,6 @@ import {
     MdFilterList,
     MdRefresh,
     MdSearch,
-    MdPerson,
     MdCalendarToday,
     MdAccessTime,
 } from "react-icons/md";
@@ -88,7 +87,6 @@ export default function AdminEventModerationTable() {
     const [localFilters, setLocalFilters] = useState({
         Title: filters.Title || "",
         Statuses: filters.Statuses || "",
-        OrganizerId: filters.OrganizerId || "",
     });
 
     useEffect(() => {
@@ -99,7 +97,6 @@ export default function AdminEventModerationTable() {
         setLocalFilters({
             Title: filters.Title || "",
             Statuses: filters.Statuses || "",
-            OrganizerId: filters.OrganizerId || "",
         });
     }, [filters]);
 
@@ -113,7 +110,7 @@ export default function AdminEventModerationTable() {
     };
 
     const handleResetFilters = () => {
-        setLocalFilters({ Title: "", Statuses: "", OrganizerId: "" });
+        setLocalFilters({ Title: "", Statuses: "" });
         dispatch(resetFilters());
         dispatch(setPageNumber(1));
         setShowFilters(false);
@@ -167,7 +164,7 @@ export default function AdminEventModerationTable() {
             {/* Filters Panel */}
             {showFilters && (
                 <div className="px-6 py-5 border-b border-[#302447] bg-[rgba(24,18,43,0.6)]">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="relative">
                             <label className="block text-[10px] text-[#a592c8] uppercase font-bold mb-2 flex items-center gap-1">
                                 <MdSearch className="text-xs" />
@@ -198,20 +195,7 @@ export default function AdminEventModerationTable() {
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-[10px] text-[#a592c8] uppercase font-bold mb-2 flex items-center gap-1">
-                                <MdPerson className="text-xs" />
-                                Organizer ID
-                            </label>
-                            <input
-                                type="text"
-                                value={localFilters.OrganizerId}
-                                onChange={(e) => handleFilterChange("OrganizerId", e.target.value)}
-                                placeholder="Nhập Organizer ID..."
-                                className="w-full bg-[#1a122b] border border-[#302447] text-white text-sm rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-[#524a6e]"
-                            />
-                        </div>
-                        <div className="flex items-end gap-2 md:col-span-3">
+                        <div className="flex items-end gap-2">
                             <button
                                 onClick={applyFilters}
                                 className="bg-gradient-to-r from-primary to-purple-600 text-white text-xs px-6 py-2.5 rounded-lg font-bold hover:from-primary/90 hover:to-purple-600/90 transition-all shadow-[0_0_20px_rgba(124,59,237,0.4)] hover:shadow-[0_0_25px_rgba(124,59,237,0.5)]"

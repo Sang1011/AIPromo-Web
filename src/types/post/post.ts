@@ -17,7 +17,7 @@ export interface CreatePostDraftRequest {
     title: string;
     body: string;
     summary?: string;
-    imageUrl?: string;
+    imageUrl: string | null;
     promptUsed?: string;
     aiModel?: string;
     aiTokensUsed?: number;
@@ -42,15 +42,15 @@ export interface PostDetail {
     organizerId: string;
     title: string;
     body: string;
-    imageUrl: null;
+    imageUrl: null | string;
     status: PostStatus;
     promptUsed: string;
     aiModel: string;
     aiTokensUsed: number;
-    rejectionReason: null;
+    rejectionReason: null | string;
     publishedAt: Date;
     trackingToken: string;
-    externalPostUrl: null;
+    externalPostUrl: null | string;
     version: number;
     createdAt: Date;
     modifiedAt: Date;
@@ -229,3 +229,27 @@ export interface GetAdminPostsQueryParams {
     PublishedTo?: string;
     HasExternalPostUrl?: boolean;
 }
+
+export interface UploadImageResponseItem {
+    imageUrl: string;
+    folder: string;
+}
+
+export type UploadImageResponse = ApiResponse<UploadImageResponseItem>;
+
+export interface GetTotalMetricsItem {
+    pageId: string;
+    pageUrl: string;
+    period: string;
+    dailyUnfollowsUnique: number;
+    dailyFollowsUnique: number;
+    viewsTotal: number;
+    impressionsUnique: number;
+    likesTotal: number;
+    postEngagements: number;
+    fetchedAt: string;
+}
+
+export type GetTotalMetricsResponse = ApiResponse<GetTotalMetricsItem>;
+
+export type PeriodOptionMetrics = "Day" | "Week" | "days_28"

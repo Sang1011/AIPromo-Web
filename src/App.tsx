@@ -33,6 +33,7 @@ import StaffLayout from "./components/Staff/layouts/StaffLayout";
 import StaffDashboardPage from "./pages/Staff/StaffDashboardPage";
 import EventApprovalPage from "./pages/Staff/EventApprovalPage";
 import OrganizerProfilePage from "./pages/Staff/OrganizerProfilePage";
+import PostApprovalPage from "./pages/Staff/PostApprovalPage";
 import Login from "./pages/LoginPage";
 import SeatMapViewerPage from "./pages/Organizer/SeatMapViewerPage";
 import Register from "./pages/RegisterPage";
@@ -137,7 +138,7 @@ function App() {
             <Route path="/payment/packages/failed" element={<PackageOrderFailed />} />
             <Route path="/organizer/subscription" element={<SubscriptionPage />} />
             <Route
-              path="/organizer/my-events/:eventId/marketing/:marketingId/post-review"
+              path="/organizer/my-events/:eventId/marketing/:marketingId/post-preview/:postId"
               element={<PostPreviewPage />}
             />
             <Route
@@ -166,6 +167,7 @@ function App() {
           <Route index element={<StaffDashboardPage />} />
           <Route path="event-approval" element={<EventApprovalPage />} />
           <Route path="organizer-profile" element={<OrganizerProfilePage />} />
+          <Route path="post-approval" element={<PostApprovalPage />} />
         </Route>
       </Routes >
     </>

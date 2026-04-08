@@ -1,206 +1,227 @@
-import { MdStore } from "react-icons/md";
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { MdStore, MdVisibility, MdChevronLeft, MdChevronRight, MdRefresh } from "react-icons/md";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../../store";
+import { fetchAdminPaymentTransactions } from "../../../store/paymentSlice";
 
-const glassCard =
-    "bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.2)]";
+export default function AdminFinanceTransactionsTable() {
+    const dispatch = useDispatch<AppDispatch>();
+    const { adminTransactions, loading } = useSelector((state: RootState) => state.PAYMENT);
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 10;
 
-export interface FinanceTransaction {
-    id: string;
-    entity: string;
-    type: string;
-    amount: string;
-    fee: string;
-    method: string;
-    status: "completed" | "pending" | "failed";
-    avatar: string | null;
-    role: string;
-}
+    useEffect(() => {
+        dispatch(fetchAdminPaymentTransactions({
+            PageNumber: currentPage,
+            PageSize: pageSize,
+            SortColumn: "CreatedAt",
+            SortOrder: "desc",
+        }));
+    }, [dispatch, currentPage]);
 
-const defaultTransactions: FinanceTransaction[] = [
-    {
-        id: "#TXN-88291",
-        entity: "Vibe Collective",
-        type: "Payout",
-        amount: "$4,250.00",
-        fee: "$637.50",
-        method: "Bank Transfer",
-        status: "completed",
-        avatar:
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuBPpgJwx9-_D61wkKl3dsOf4eMniUmgnBLVY99tXLkB-WcVAu7fGHNh6yHSQcO3sV4tuSqNy43Sr2LpdM2fsP5EO8QMpNfVZhFmQfOPPXdQtMg6IKEGbCFQ6uXZ7r-ixv3xX6XGhOy1EAHwxQtcffVuyp8bE9WJxpeuHcpBJD0Fk1V3iCRX-gNU7yCeFpFr-UVYH9ElbaH44U67eQjXnZFJowRgzUlk6OcnsKjvUPAT5vJrp8CK6XQUgyxiUSSeJi36Cmfx-8YBhTM2",
-        role: "Organizer",
-    },
-    {
-        id: "#TXN-88290",
-        entity: "Sarah Wilson",
-        type: "Ticket Sale",
-        amount: "$85.00",
-        fee: "$12.75",
-        method: "VNPay",
-        status: "pending",
-        avatar:
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuDLd3Lrptc5vsqrxnxIszULo1pCpyIuJvmB5_sElcHxmPKpxhwCdWZNJ0SWAqpXooXaIVGBJ_t-AuMn4ClE7mOtkTpS_8K45zkRtIVFe1YWowMqvfFy2Vd9LW8t3oP7NgCuJ117FLoJ21WRrJ9ZW4PQmLokOi3CoR-t4u9E-bZrPZfTv3wKbqkGX74QdQApamCJ36JNVgWeCP-Cz22J0jBtyzuj3gT9t0TLYGfX8qBUczpy8ceuqLCPqfvObwJMtLRlGHzn06opT2TB",
-        role: "Attendee",
-    },
-    {
-        id: "#TXN-88289",
-        entity: "Michael Chen",
-        type: "Ticket Sale",
-        amount: "$150.00",
-        fee: "$22.50",
-        method: "MoMo",
-        status: "completed",
-        avatar:
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuBwULc5HdQIH2uuQr7i9dr1Oy5ZnO-py4nGHJYnI14gelm8hRIvlOQO44Oj6MYyXMh_WuRoajJfp0ztlRX-sDfIGc2PV5XnUoMz51FdEzgz-MnCvyLLNJkGM4M_RSGj-LWzeXOxfPcstn6CE3FLgewdbYhpV58jWiKMzTQHLfyc6Cath-TyvKe9g3c5XZK85N3us5jJTo9V-WHV8zoLBqt92afrSojGqh8yIcR2ufmv5G4aCRyvD5veS_Ejrj1dytd5SwdzwasaIlxD",
-        role: "Attendee",
-    },
-    {
-        id: "#TXN-88288",
-        entity: "Neon Nights Expo",
-        type: "Payout",
-        amount: "$12,800.00",
-        fee: "$1,920.00",
-        method: "Bank Transfer",
-        status: "failed",
-        avatar: null,
-        role: "Organizer",
-    },
-];
+    const handleRefresh = () => {
+        dispatch(fetchAdminPaymentTransactions({
+            PageNumber: currentPage,
+            PageSize: pageSize,
+            SortColumn: "CreatedAt",
+            SortOrder: "desc",
+        }));
+    };
 
-interface AdminFinanceTransactionsTableProps {
-    transactions?: FinanceTransaction[];
-}
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case "Completed":
+                return { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20", label: "Hoàn tất" };
+            case "Pending":
+                return { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/20", label: "Đang chờ" };
+            case "Failed":
+                return { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/20", label: "Thất bại" };
+            case "Refunded":
+                return { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20", label: "Đã hoàn tiền" };
+            default:
+                return { bg: "bg-slate-500/10", text: "text-slate-400", border: "border-slate-500/20", label: status };
+        }
+    };
 
-export default function AdminFinanceTransactionsTable({
-    transactions = defaultTransactions,
-}: AdminFinanceTransactionsTableProps) {
+    const getTypeBadge = (type: string) => {
+        switch (type) {
+            case "BatchDirectPay":
+                return { bg: "bg-blue-500/10", text: "text-blue-400", label: "Bank Transfer" };
+            case "BatchWalletPay":
+                return { bg: "bg-violet-500/10", text: "text-violet-400", label: "Wallet" };
+            default:
+                return { bg: "bg-slate-500/10", text: "text-slate-400", label: type };
+        }
+    };
+
+    const formatDateTime = (dateString: string | null) => {
+        if (!dateString) return "N/A";
+        return new Date(dateString).toLocaleString("vi-VN", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    const formatCurrency = (amount: number) => {
+        return `${new Intl.NumberFormat("vi-VN").format(amount)} VNĐ`;
+    };
+
+    const handleViewDetail = (transactionId: string) => {
+        // TODO: Call API to view transaction details
+        console.log("View transaction details:", transactionId);
+    };
+
+    const displayTransactions = adminTransactions?.items || [];
+    const totalCount = adminTransactions?.totalCount || 0;
+    const totalPages = adminTransactions?.totalPages || 1;
+    const currentStartIndex = adminTransactions?.currentStartIndex || 0;
+    const currentEndIndex = adminTransactions?.currentEndIndex || 0;
+
     return (
-        <div className={`${glassCard} rounded-xl overflow-hidden`}>
-            <div className="px-8 py-6 border-b border-[#302447] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="glass-effect rounded-2xl overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-[#1a122b] to-[#241838]">
                 <div>
                     <h2 className="text-lg font-bold text-white">
                         Lịch sử Giao dịch Chi tiết
                     </h2>
-                    <p className="text-[#a592c8] text-sm">
-                        Xem và quản lý tất cả các hoạt động tài chính trong hệ sinh
-                        thái
+                    <p className="text-[#a592c8] text-xs mt-1">
+                        Xem và quản lý tất cả các hoạt động tài chính trong hệ sinh thái
                     </p>
                 </div>
-                <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-[#18122B] border border-[#302447] rounded-lg text-[#a592c8] text-xs font-semibold hover:text-white transition-colors">
-                        Lọc
-                    </button>
-                    <button className="px-4 py-2 bg-[#18122B] border border-[#302447] rounded-lg text-[#a592c8] text-xs font-semibold hover:text-white transition-colors">
-                        Khoảng thời gian
-                    </button>
-                </div>
+                <button
+                    onClick={handleRefresh}
+                    disabled={loading.adminTransactions}
+                    className="bg-[#1b1230] text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <MdRefresh className={loading.adminTransactions ? 'animate-spin' : ''} />
+                    Làm mới
+                </button>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
                     <thead>
-                        <tr className="bg-white/5 text-[10px] text-[#a592c8] uppercase tracking-widest font-bold">
-                            <th className="px-8 py-4">Mã giao dịch</th>
-                            <th className="px-8 py-4">Thực thể</th>
-                            <th className="px-8 py-4">Loại</th>
-                            <th className="px-8 py-4">Tổng tiền</th>
-                            <th className="px-8 py-4">Phí ròng</th>
-                            <th className="px-8 py-4">Phương thức</th>
-                            <th className="px-8 py-4 text-center">Trạng thái</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#302447]">
-                        {transactions.map((tx) => (
-                            <tr
-                                key={tx.id}
-                                className="hover:bg-white/5 transition-colors"
-                            >
-                                <td className="px-8 py-5 text-sm font-medium text-[#a592c8]">
-                                    {tx.id}
-                                </td>
-                                <td className="px-8 py-5">
-                                    <div className="flex items-center gap-3">
-                                        {tx.avatar ? (
-                                            <div
-                                                className="w-8 h-8 rounded-full bg-cover"
-                                                style={{
-                                                    backgroundImage: `url('${tx.avatar}')`,
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-[#302447] flex items-center justify-center">
-                                                <MdStore className="text-xs text-primary" />
-                                            </div>
-                                        )}
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-semibold text-white">
-                                                {tx.entity}
-                                            </span>
-                                            <span className="text-[10px] text-[#a592c8]">
-                                                {tx.role}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-8 py-5">
-                                    <span
-                                        className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${
-                                            tx.type === "Payout"
-                                                ? "bg-primary/10 text-primary"
-                                                : "bg-blue-500/10 text-blue-400"
-                                        }`}
-                                    >
-                                        {tx.type}
-                                    </span>
-                                </td>
-                                <td className="px-8 py-5 text-sm font-bold text-white">
-                                    {tx.amount}
-                                </td>
-                                <td className="px-8 py-5 text-sm text-[#a592c8]">
-                                    {tx.fee}
-                                </td>
-                                <td className="px-8 py-5 text-sm text-[#a592c8]">
-                                    {tx.method}
-                                </td>
-                                <td className="px-8 py-5 text-center">
-                                    <span
-                                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
-                                            tx.status === "completed"
-                                                ? "bg-emerald-500/10 text-emerald-400"
-                                                : tx.status === "pending"
-                                                ? "bg-amber-500/10 text-amber-400"
-                                                : "bg-red-500/10 text-red-400"
-                                        }`}
-                                    >
-                                        <span
-                                            className={`w-1.5 h-1.5 rounded-full ${
-                                                tx.status === "completed"
-                                                    ? "bg-emerald-400"
-                                                    : tx.status === "pending"
-                                                    ? "bg-amber-400"
-                                                    : "bg-red-400"
-                                            }`}
-                                        />
-                                        {tx.status === "completed"
-                                            ? "Hoàn tất"
-                                            : tx.status === "pending"
-                                            ? "Đang chờ"
-                                            : "Thất bại"}
-                                    </span>
-                                </td>
+                            <tr className="text-[10px] uppercase tracking-widest text-slate-500 font-bold border-b border-white/5">
+                                <th className="px-8 py-4">Người dùng</th>
+                                <th className="px-8 py-4">Loại</th>
+                                <th className="px-8 py-4">Số tiền</th>
+                                <th className="px-8 py-4">Trạng thái</th>
+                                <th className="px-8 py-4">Thời gian hoàn tất</th>
+                                <th className="px-8 py-4 text-right">Chi tiết</th>
                             </tr>
-                        ))}
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {loading.adminTransactions ? (
+                                <tr>
+                                    <td colSpan={6} className="px-8 py-12 text-center text-slate-400">
+                                        <div className="flex items-center justify-center gap-3">
+                                            <div className="w-5 h-5 border-2 border-[#7c3bed] border-t-transparent rounded-full animate-spin"></div>
+                                            <span>Loading...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : displayTransactions.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-8 py-12 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-16 h-16 rounded-full bg-[#1a1625] flex items-center justify-center">
+                                                <MdStore className="text-3xl text-[#a592c8]" />
+                                            </div>
+                                            <p className="text-slate-400 text-sm font-medium">Chưa có dữ liệu</p>
+                                            <p className="text-[#a592c8] text-xs">Không có giao dịch nào phù hợp với bộ lọc hiện tại</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                displayTransactions.map((tx) => {
+                                    const statusBadge = getStatusBadge(tx.internalStatus);
+                                    const typeBadge = getTypeBadge(tx.type);
+                                    return (
+                                        <tr key={tx.id} className="hover:bg-white/5 transition-colors group">
+                                            <td className="px-8 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-full bg-[#302447] flex items-center justify-center border border-white/10">
+                                                        <MdStore className="text-xs text-[#7c3bed]" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-white text-sm">{tx.username}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase ${typeBadge.bg} ${typeBadge.text}`}>
+                                                    {typeBadge.label}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-4 font-mono font-bold text-[#7c3bed] text-sm">
+                                                {formatCurrency(tx.amount)}
+                                            </td>
+                                            <td className="px-8 py-4">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tighter ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
+                                                    {statusBadge.label}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-4 text-[11px] text-slate-500 font-bold">
+                                                {formatDateTime(tx.completedAt)}
+                                            </td>
+                                            <td className="px-8 py-4 text-right">
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        onClick={() => handleViewDetail(tx.id)}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-slate-400 transition-colors text-[10px] font-bold uppercase"
+                                                    >
+                                                        <MdVisibility className="text-sm" />
+                                                        Xem chi tiết
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                     </tbody>
                 </table>
             </div>
-            <div className="px-8 py-4 bg-white/2 flex justify-between items-center border-t border-[#302447]">
-                <span className="text-xs text-[#a592c8]">
-                    Hiển thị 4 trên 24.192 kết quả
-                </span>
-                <div className="flex gap-2">
-                    <button className="p-1.5 rounded bg-[#18122B] border border-[#302447] text-[#a592c8] hover:text-white transition-colors">
-                        <FiChevronLeft className="text-sm" />
+            <div className="px-8 py-4 border-t border-white/5 flex items-center justify-between">
+                <p className="text-xs text-slate-500">
+                    {displayTransactions.length === 0 ? (
+                        <span>Không có dữ liệu</span>
+                    ) : (
+                        <>
+                            Hiển thị <span className="text-white font-bold">{currentEndIndex - currentStartIndex + 1}</span> trong tổng <span className="text-white font-bold">{totalCount}</span> giao dịch
+                        </>
+                    )}
+                </p>
+                <div className="flex items-center gap-2">
+                    <button
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5 text-slate-500 hover:bg-white/5 disabled:opacity-30"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    >
+                        <MdChevronLeft className="text-sm" />
                     </button>
-                    <button className="p-1.5 rounded bg-[#18122B] border border-[#302447] text-[#a592c8] hover:text-white transition-colors">
-                        <FiChevronRight className="text-sm" />
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
+                        <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold ${
+                                currentPage === page
+                                    ? "bg-[#7c3bed] text-white"
+                                    : "border border-white/5 text-slate-400 hover:bg-white/5"
+                            }`}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                    <button
+                        className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/5 text-slate-400 hover:bg-white/5 disabled:opacity-30"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    >
+                        <MdChevronRight className="text-sm" />
                     </button>
                 </div>
             </div>

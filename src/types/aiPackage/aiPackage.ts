@@ -46,8 +46,26 @@ export interface PaymentPackageItem {
     completedAt: string;
 }
 
+export interface TotalRevenue {
+    value: number;
+    monthlyGrowthRate: number;
+    isPositiveGrowth: boolean;
+}
+
+export interface MostActivePackage {
+    packageId: string;
+    packageName: string;
+    organizationsUsing: number;
+}
+
+export interface AIPackageOverview {
+    totalRevenue: TotalRevenue;
+    mostActivePackage: MostActivePackage;
+}
+
 export type CreatePaymentPackageResponse = ApiResponse<PaymentPackageItem>;
 export type GetPurchasedPackagesResponse = ApiResponse<AIPurchasedPackage[]>;
 export type GetAIQuotaResponse = ApiResponse<AIQuota>;
 export type GetListAIPackageResponse = ApiResponse<AIPackage[]>;
 export type GetDetailAIPackageResponse = ApiResponse<AIPackage>;
+export type GetAIPackageOverviewResponse = ApiResponse<AIPackageOverview>;

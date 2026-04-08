@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePaymentPackageResponse, GetAIQuotaResponse, GetDetailAIPackageResponse, GetListAIPackageResponse, GetPurchasedPackagesResponse, PaymentPackageRequest } from "../types/aiPackage/aiPackage";
+import type { CreatePaymentPackageResponse, GetAIQuotaResponse, GetDetailAIPackageResponse, GetListAIPackageResponse, GetPurchasedPackagesResponse, PaymentPackageRequest, GetAIPackageOverviewResponse } from "../types/aiPackage/aiPackage";
 
 const aiPackageService = {
     getAllAIPackages: (): Promise<AxiosResponse<GetListAIPackageResponse>> => {
@@ -30,6 +30,9 @@ const aiPackageService = {
     },
     togglePackageStatus: (id: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().patch(`/ai/packages/${id}/toggle-status`);
+    },
+    getAIPackageOverview: (): Promise<AxiosResponse<GetAIPackageOverviewResponse>> => {
+        return interceptorAPI().get("/admin/reports/ai-package-overview");
     }
 }
 

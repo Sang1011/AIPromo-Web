@@ -5,19 +5,21 @@ export default function UploadImageSection({
     selectedImageUrl,
     onSelectImage,
     onClearImage,
+    onFileSelected,
 }: {
     selectedImageUrl: string | null;
     onSelectImage: (url: string) => void;
     onClearImage: () => void;
+    onFileSelected?: (file: File) => void;
 }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [dragOver, setDragOver] = useState(false);
 
     const handleFile = (file: File) => {
         if (!file.type.startsWith("image/")) return;
-        // TODO: replace với API upload thực tế
         const localUrl = URL.createObjectURL(file);
         onSelectImage(localUrl);
+        onFileSelected?.(file);
     };
 
     const handleDrop = (e: React.DragEvent) => {
@@ -34,7 +36,6 @@ export default function UploadImageSection({
             </p>
 
             {selectedImageUrl && !selectedImageUrl.startsWith("http") ? (
-                /* Preview ảnh đã upload */
                 <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20
                                 rounded-xl px-3 py-2.5">
                     <img src={selectedImageUrl} alt="uploaded"
@@ -49,7 +50,6 @@ export default function UploadImageSection({
                     </button>
                 </div>
             ) : (
-                /* Drop zone */
                 <div
                     onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                     onDragLeave={() => setDragOver(false)}
@@ -77,9 +77,6 @@ export default function UploadImageSection({
                         Kéo thả hoặc <span className="text-primary underline">chọn file</span>
                     </p>
                     <p className="text-[10px] text-slate-600 mt-0.5">PNG, JPG, WEBP — Tối đa 10MB</p>
-                    <p className="text-[10px] text-amber-500/60 mt-1.5 italic">
-                        ⚠ Chức năng đang phát triển — ảnh chưa được lưu lên server
-                    </p>
                 </div>
             )}
         </div>

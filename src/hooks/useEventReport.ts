@@ -11,34 +11,51 @@ export interface ReportItem {
     createdBy: string;
 }
 
-export const useEventReports = () => {
+const sanitizeEmail = (email: string) => email.replace(/\./g, ",");
+
+export const useEventReports = (email?: string) => {
     const [reports, setReports] = useState<ReportItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const reportsRef = ref(db, "reports/events");
+        if (!email) {
+            setReports([]);
+            setLoading(false);
+            return;
+        }
+
+        const safeEmail = sanitizeEmail(email);
+        const reportsRef = ref(db, `email/reports/${safeEmail}`);
 
         onValue(reportsRef, (snapshot) => {
             const data = snapshot.val();
+
             if (!data) {
                 setReports([]);
             } else {
                 const parsed: ReportItem[] = [];
+
                 Object.entries(data).forEach(([eventId, records]) => {
-                    Object.entries(records as Record<string, Omit<ReportItem, "id" | "eventId">>).forEach(
-                        ([id, value]) => {
-                            parsed.push({ id, eventId, ...value });
-                        }
-                    );
+                    Object.entries(
+                        records as Record<string, Omit<ReportItem, "id" | "eventId">>
+                    ).forEach(([id, value]) => {
+                        parsed.push({
+                            id,
+                            eventId,
+                            ...value
+                        });
+                    });
                 });
+
                 parsed.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
                 setReports(parsed);
             }
+
             setLoading(false);
         });
 
         return () => off(reportsRef);
-    }, []);
+    }, [email]);
 
     return { reports, loading };
 };
