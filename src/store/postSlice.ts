@@ -54,6 +54,9 @@ interface PostState {
         fetchAllDistributionMetrics: boolean;
         uploadImage: boolean;
         fetchFacebookTotalMetrics: boolean;
+        approvePost: boolean;
+        rejectPost: boolean;
+        publishAdminPost: boolean;
     };
 
     error: {
@@ -69,11 +72,14 @@ interface PostState {
         sendToChatBox: string | null;
         fetchAdminList: string | null;
         fetchAdminDetail: string | null;
-        fetchDistributionMetrics: string | null;
         pushPost: string | null;
+        fetchDistributionMetrics: string | null;
         fetchAllDistributionMetrics: string | null;
         uploadImage: string | null;
         fetchFacebookTotalMetrics: string | null;
+        approvePost: string | null;
+        rejectPost: string | null;
+        publishAdminPost: string | null;
     };
 }
 
@@ -116,6 +122,9 @@ const initialState: PostState = {
         pushPost: false,
         uploadImage: false,
         fetchFacebookTotalMetrics: false,
+        approvePost: false,
+        rejectPost: false,
+        publishAdminPost: false,
     },
     error: {
         fetchDetail: null,
@@ -135,6 +144,9 @@ const initialState: PostState = {
         fetchAllDistributionMetrics: null,
         uploadImage: null,
         fetchFacebookTotalMetrics: null,
+        approvePost: null,
+        rejectPost: null,
+        publishAdminPost: null,
     },
 };
 
@@ -285,6 +297,52 @@ export const fetchAdminPostById = createAsyncThunk(
             return res.data.data;
         } catch (error: any) {
             return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch admin post detail");
+        }
+    }
+);
+
+export const approveAdminPost = createAsyncThunk(
+    "post/approveAdminPost",
+    async (
+        { postId, adminId }: { postId: string; adminId: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await postService.approveAdminPost(postId, adminId);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to approve post");
+            return postId;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Failed to approve post");
+        }
+    }
+);
+
+export const rejectAdminPost = createAsyncThunk(
+    "post/rejectAdminPost",
+    async (
+        { postId, adminId, reason }: { postId: string; adminId: string; reason: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await postService.rejectAdminPost(postId, adminId, reason);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to reject post");
+            return postId;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Failed to reject post");
+        }
+    }
+);
+
+export const publishAdminPost = createAsyncThunk(
+    "post/publishAdminPost",
+    async (id: string, { rejectWithValue, dispatch }) => {
+        try {
+            const res = await postService.publishAdminPost(id);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to publish post");
+            dispatch(fetchAdminPosts({ PageNumber: 1, PageSize: 10, SortColumn: "CreatedAt", SortOrder: "desc" }));
+            return id;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Failed to publish post");
         }
     }
 );
@@ -531,7 +589,7 @@ const postSlice = createSlice({
             .addCase(uploadImagePost.rejected, (state, action) => {
                 state.loading.uploadImage = false;
                 state.error.uploadImage = action.payload as string;
-            })
+            });
         builder
             .addCase(fetchFacebookTotalMetrics.pending, (state) => {
                 state.loading.fetchFacebookTotalMetrics = true;
@@ -545,6 +603,24 @@ const postSlice = createSlice({
                 state.loading.fetchFacebookTotalMetrics = false;
                 state.error.fetchFacebookTotalMetrics = action.payload as string;
             });
+
+        // ── approveAdminPost ────────────────────────────────────────────────
+        builder
+            .addCase(approveAdminPost.pending, (state) => { state.loading.approvePost = true; state.error.approvePost = null; })
+            .addCase(approveAdminPost.fulfilled, (state) => { state.loading.approvePost = false; })
+            .addCase(approveAdminPost.rejected, (state, action) => { state.loading.approvePost = false; state.error.approvePost = action.payload as string; });
+
+        // ── rejectAdminPost ─────────────────────────────────────────────────
+        builder
+            .addCase(rejectAdminPost.pending, (state) => { state.loading.rejectPost = true; state.error.rejectPost = null; })
+            .addCase(rejectAdminPost.fulfilled, (state) => { state.loading.rejectPost = false; })
+            .addCase(rejectAdminPost.rejected, (state, action) => { state.loading.rejectPost = false; state.error.rejectPost = action.payload as string; });
+
+        // ── publishAdminPost ────────────────────────────────────────────────
+        builder
+            .addCase(publishAdminPost.pending, (state) => { state.loading.publishAdminPost = true; state.error.publishAdminPost = null; })
+            .addCase(publishAdminPost.fulfilled, (state) => { state.loading.publishAdminPost = false; })
+            .addCase(publishAdminPost.rejected, (state, action) => { state.loading.publishAdminPost = false; state.error.publishAdminPost = action.payload as string; });
     },
 });
 

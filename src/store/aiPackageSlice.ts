@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import type { AIPackage, AIPurchasedPackage, AIQuota, PaymentPackageRequest } from "../types/aiPackage/aiPackage";
+import type { AIPackage, AIPurchasedPackage, AIQuota, PaymentPackageRequest, AIPackageOverview } from "../types/aiPackage/aiPackage";
 import aiPackageService from "../services/aiPackageService";
 
 interface AIPackageState {
@@ -7,6 +7,7 @@ interface AIPackageState {
     detail: AIPackage | null;
     quota: AIQuota | null;
     purchasedPackages: AIPurchasedPackage[];
+    overview: AIPackageOverview | null;
     loading: {
         list: boolean;
         detail: boolean;
@@ -17,6 +18,7 @@ interface AIPackageState {
         quota: boolean;
         purchased: boolean;
         payment: boolean;
+        overview: boolean;
     };
     error: string | null;
 }
@@ -26,6 +28,7 @@ const initialState: AIPackageState = {
     detail: null,
     quota: null,
     purchasedPackages: [],
+    overview: null,
     loading: {
         list: false,
         detail: false,
@@ -35,7 +38,8 @@ const initialState: AIPackageState = {
         toggleStatus: false,
         quota: false,
         purchased: false,
-        payment: false
+        payment: false,
+        overview: false
     },
     error: null,
 };
@@ -141,6 +145,18 @@ export const togglePackageStatus = createAsyncThunk(
     async (id: string, { rejectWithValue }) => {
         try {
             const res = await aiPackageService.togglePackageStatus(id);
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message || "Error");
+        }
+    }
+);
+
+export const fetchAIPackageOverview = createAsyncThunk(
+    "aiPackage/fetchOverview",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await aiPackageService.getAIPackageOverview();
             return res.data.data;
         } catch (err: any) {
             return rejectWithValue(err.response?.data?.message || "Error");
@@ -276,6 +292,18 @@ const aiPackageSlice = createSlice({
             })
             .addCase(createPaymentPackageThunk.rejected, (state, action) => {
                 state.loading.payment = false;
+                state.error = action.payload as string;
+            })
+            .addCase(fetchAIPackageOverview.pending, (state) => {
+                state.loading.overview = true;
+                state.error = null;
+            })
+            .addCase(fetchAIPackageOverview.fulfilled, (state, action) => {
+                state.loading.overview = false;
+                state.overview = action.payload;
+            })
+            .addCase(fetchAIPackageOverview.rejected, (state, action) => {
+                state.loading.overview = false;
                 state.error = action.payload as string;
             });
     },
