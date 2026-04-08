@@ -1,6 +1,5 @@
 import RefundStats from "../../components/Admin/refund/RefundStats";
 import RefundTable from "../../components/Admin/refund/RefundTable";
-import RefundTrendChart, { RefundReasons } from "../../components/Admin/refund/RefundTrendChart";
 
 export default function RefundManagementPage() {
     return (
@@ -20,11 +19,6 @@ export default function RefundManagementPage() {
             <RefundStats />
             <RefundTable />
 
-            {/* Charts & Insights */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <RefundTrendChart />
-                <RefundReasons />
-            </div>
         </div>
     );
 }
