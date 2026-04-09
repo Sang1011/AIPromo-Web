@@ -139,7 +139,7 @@ export default function AdminLayout() {
                             <button
                                 onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-[#a592c8] hover:bg-white/5 relative group ${
-                                    sidebarCollapsed ? "justify-center" : "justify-between"
+                                    sidebarCollapsed ? "justify-center" : ""
                                 }`}
                             >
                                 <MdCategory size={20} />
@@ -149,16 +149,6 @@ export default function AdminLayout() {
                                     }`}
                                 >
                                     <p className="text-sm font-medium">Category & Hashtag</p>
-                                </span>
-                                <span
-                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                                        sidebarCollapsed ? "w-0 opacity-0" : "w-6 opacity-100"
-                                    }`}
-                                >
-                                    <MdKeyboardArrowDown
-                                        className={`transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`}
-                                        size={20}
-                                    />
                                 </span>
                                 {sidebarCollapsed && (
                                     <div className="absolute left-full ml-3 px-3 py-1.5 bg-[#1a1232] border border-[#302447] rounded-lg text-sm text-white opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-xl">

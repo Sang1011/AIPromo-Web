@@ -1,4 +1,4 @@
-import { MdAdd, MdRefresh } from "react-icons/md";
+import { MdAdd, MdRefresh, MdEdit, MdDelete } from "react-icons/md";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
@@ -95,8 +95,12 @@ export default function AdminHashtagTable() {
                                     <td className="px-8 py-5 text-right relative">
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2">
                                             <div className="inline-flex gap-2">
-                                                <button onClick={() => setEditingId(h.id)} className="px-3 py-1.5 text-xs rounded-lg bg-[#302447] text-white">Cập nhật</button>
-                                                <button onClick={() => setDeleteConfirm({ id: h.id, name: h.name })} className="px-3 py-1.5 text-xs rounded-lg bg-[#1b1230] text-[#a592c8]">Xoá</button>
+                                                <button onClick={() => setEditingId(h.id)} className="px-3 py-1.5 text-xs rounded-lg bg-[#302447] text-white flex items-center gap-1.5 hover:bg-[#3d2f5a] transition-colors">
+                                                    <MdEdit className="text-sm" /> Cập nhật
+                                                </button>
+                                                <button onClick={() => setDeleteConfirm({ id: h.id, name: h.name })} className="px-3 py-1.5 text-xs rounded-lg bg-[#1b1230] text-[#a592c8] flex items-center gap-1.5 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+                                                    <MdDelete className="text-sm" /> Xoá
+                                                </button>
                                             </div>
                                         </div>
                                     </td>
