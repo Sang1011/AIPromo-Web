@@ -12,6 +12,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+    Cell,
 } from "recharts";
 import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetrics, fetchDistributionMetricsFacebook } from "../../../store/postSlice";

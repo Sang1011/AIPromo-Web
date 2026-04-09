@@ -71,7 +71,7 @@ export default function RefundRateCard({ data, loading }: Props) {
                                 strokeWidth={2}
                                 stroke="#18122B"
                             >
-                                {pieData.map((entry, index) => (
+                                {pieData.map((_entry, index) => (
                                     <Cell key={index} fill={index === 0 ? "url(#refundGradient)" : "url(#retainedGradient)"} />
                                 ))}
                             </Pie>

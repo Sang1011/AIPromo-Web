@@ -33,7 +33,7 @@ export default function TicketTypeBreakdownTable({ breakdown }: TicketTypeBreakd
 
                 {/* Rows */}
                 <div className="relative divide-y divide-white/5">
-                    {breakdown.map((t, index) => {
+                    {breakdown.map((t, _index) => {
                         const soldPercent =
                             t.totalQuantity === 0
                                 ? 0

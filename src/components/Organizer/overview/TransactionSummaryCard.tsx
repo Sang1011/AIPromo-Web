@@ -139,7 +139,7 @@ export default function TransactionSummaryCard({ data, loading }: Props) {
                                 cursor={{ fill: "rgba(255,255,255,0.04)" }}
                             />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]} minPointSize={3}>
-                                {statusData.map((entry, index) => (
+                                {statusData.map((_entry, index) => (
                                     <Cell key={index} fill={`url(#${index === 0 ? 'success' : index === 1 ? 'failed' : 'refunded'}Gradient)`} />
                                 ))}
                                 <LabelList
