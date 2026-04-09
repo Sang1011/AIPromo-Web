@@ -21,7 +21,7 @@ jest.mock('../../../config/firebase', () => ({
 }))
 
 describe('useOrderTimer', () => {
-  const mockOnExpired = jest.fn()
+  const mockOnExpired = jest.fn(jest.fn())
   const mockGet = firebaseDb.get as jest.Mock
   const mockSet = firebaseDb.set as jest.Mock
   const mockRemove = firebaseDb.remove as jest.Mock
@@ -60,7 +60,7 @@ describe('useOrderTimer', () => {
   describe('Timer initialization', () => {
     it('should create new order in Firebase when no existing order', async () => {
       mockSnapshot.exists.mockReturnValue(false)
-      mockRef.mockReturnValue('mock-ref')
+      mockRef.mockReturnValue({ key: 'mock-ref' } as any)
 
       renderHook(() => useOrderTimer('order-1', mockOnExpired))
 
@@ -198,7 +198,7 @@ describe('useOrderTimer', () => {
   describe('clearOrderFromFirebase', () => {
     it('should remove order from Firebase and clear localStorage', async () => {
       mockSnapshot.exists.mockReturnValue(false)
-      mockRef.mockReturnValue('mock-ref')
+      mockRef.mockReturnValue({ key: 'mock-ref' } as any)
 
       const { result } = renderHook(() => useOrderTimer('order-1', mockOnExpired))
 
@@ -226,7 +226,7 @@ describe('useOrderTimer', () => {
     })
 
     it('should handle Firebase get error gracefully', async () => {
-      mockRef.mockReturnValue('mock-ref')
+      mockRef.mockReturnValue({ key: 'mock-ref' } as any)
       // The hook's init() doesn't catch errors, so we test the happy path
       mockGet.mockResolvedValue(mockSnapshot)
       mockSnapshot.exists.mockReturnValue(false)

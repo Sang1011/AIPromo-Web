@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import { renderHook, waitFor } from '@testing-library/react'
+import type { DatabaseReference, DataSnapshot } from 'firebase/database'
 import { useEventReports } from '../../../hooks/useEventReport'
 
 // Mock Firebase
@@ -8,9 +9,9 @@ const mockOff = jest.fn()
 const mockRef = jest.fn()
 
 jest.mock('firebase/database', () => ({
-  ref: (...args: any[]) => mockRef(...args),
-  onValue: (...args: any[]) => mockOnValue(...args),
-  off: (...args: any[]) => mockOff(...args),
+  ref: (...args: unknown[]) => mockRef(...args),
+  onValue: (...args: unknown[]) => mockOnValue(...args),
+  off: (...args: unknown[]) => mockOff(...args),
 }))
 
 jest.mock('../../../config/firebase', () => ({
@@ -20,8 +21,8 @@ jest.mock('../../../config/firebase', () => ({
 describe('useEventReports', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockOnValue.mockImplementation((ref, callback) => {
-      callback({ val: () => null })
+    mockOnValue.mockImplementation((_ref: DatabaseReference, callback: (snapshot: DataSnapshot) => void) => {
+      callback({ val: () => null } as DataSnapshot)
     })
   })
 
@@ -50,7 +51,7 @@ describe('useEventReports', () => {
     })
 
     it('should set loading false when data is null', async () => {
-      mockOnValue.mockImplementation((ref, callback) => {
+      mockOnValue.mockImplementation((_ref, callback) => {
         callback({ val: () => null })
       })
 
@@ -88,7 +89,7 @@ describe('useEventReports', () => {
         },
       }
 
-      mockOnValue.mockImplementation((ref, callback) => {
+      mockOnValue.mockImplementation((_ref, callback) => {
         callback({ val: () => mockData })
       })
 
@@ -116,7 +117,7 @@ describe('useEventReports', () => {
         },
       }
 
-      mockOnValue.mockImplementation((ref, callback) => {
+      mockOnValue.mockImplementation((_ref, callback) => {
         callback({ val: () => mockData })
       })
 
@@ -158,7 +159,7 @@ describe('useEventReports', () => {
     })
 
     it('should handle empty data object', async () => {
-      mockOnValue.mockImplementation((ref, callback) => {
+      mockOnValue.mockImplementation((_ref, callback) => {
         callback({ val: () => ({}) })
       })
 
@@ -179,7 +180,7 @@ describe('useEventReports', () => {
         },
       }
 
-      mockOnValue.mockImplementation((ref, callback) => {
+      mockOnValue.mockImplementation((_ref, callback) => {
         callback({ val: () => mockData })
       })
 

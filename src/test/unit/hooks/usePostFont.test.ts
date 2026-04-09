@@ -93,7 +93,6 @@ describe('usePostFont', () => {
     it('should handle document.head being undefined gracefully', () => {
       // Mock document.head to simulate SSR environment
       const originalHead = (document as any).head
-      const originalGetElementById = document.getElementById.bind(document)
 
       // Mock getElement to return null (simulating no existing font link)
       // and make head undefined - but the hook checks getElementById first,

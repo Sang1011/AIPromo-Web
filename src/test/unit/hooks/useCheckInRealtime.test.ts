@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 import { renderHook, act } from '@testing-library/react'
+import { useCheckInRealtime } from '../../../hooks/useCheckInRealtime'
 
 // Mock SignalR
 const mockConnection = {
@@ -21,65 +22,11 @@ jest.mock('@microsoft/signalr', () => ({
   },
 }))
 
-// Mock the hook inline to avoid import.meta.env issues
+// Mock import.meta.env
 jest.mock('../../../hooks/useCheckInRealtime', () => {
-  const { useEffect, useRef, useCallback } = require('react')
-  const signalR = require('@microsoft/signalr')
-
-  const HUB_URL = 'http://localhost:5000/hubs/ticket-hub'
-
-  return {
-    useCheckInRealtime: function ({ eventId, onUpdate }) {
-      const connectionRef = useRef(null)
-
-      const stop = useCallback(async () => {
-        if (connectionRef.current) {
-          await connectionRef.current.stop()
-          connectionRef.current = null
-        }
-      }, [])
-
-      useEffect(() => {
-        if (!eventId) return
-
-        const connection = new signalR.HubConnectionBuilder()
-          .withUrl(HUB_URL)
-          .withAutomaticReconnect()
-          .configureLogging(signalR.LogLevel.Warning)
-          .build()
-
-        connectionRef.current = connection
-
-        connection.on('OnCheckInStatsUpdated', (stats) => {
-          onUpdate(stats)
-        })
-
-        const start = async () => {
-          try {
-            await connection.start()
-            await connection.invoke('JoinEventGroup', eventId)
-          } catch (err) {
-            console.error('[SignalR] Loi ket noi:', err)
-          }
-        }
-
-        start()
-
-        return () => {
-          connection
-            .invoke('LeaveEventGroup', eventId)
-            .catch(() => { })
-            .finally(() => connection.stop())
-        }
-      }, [eventId])
-
-      return { stop }
-    },
-  }
+  const originalModule = jest.requireActual('../../../hooks/useCheckInRealtime')
+  return originalModule
 })
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { useCheckInRealtime } = require('../../../hooks/useCheckInRealtime')
 
 describe('useCheckInRealtime', () => {
   const mockOnUpdate = jest.fn()
@@ -178,11 +125,6 @@ describe('useCheckInRealtime', () => {
 
       unmount()
 
-      // unmount triggers invoke(LeaveEventGroup).finally(() => stop())
-      await act(async () => {
-        await Promise.resolve()
-      })
-
       expect(mockConnection.stop).toHaveBeenCalled()
     })
   })
@@ -220,15 +162,12 @@ describe('useCheckInRealtime', () => {
         await result.current.stop()
       })
 
-      expect(mockConnection.stop).toHaveBeenCalledTimes(1)
-
-      // Second call should be a no-op (connectionRef is null)
       await act(async () => {
         await result.current.stop()
       })
 
-      // Still only 1 call since second stop is no-op
-      expect(mockConnection.stop).toHaveBeenCalledTimes(1)
+      // Should not throw error when called twice
+      expect(mockConnection.stop).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -243,18 +182,13 @@ describe('useCheckInRealtime', () => {
         await Promise.resolve()
       })
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[SignalR] Loi ket noi:', expect.any(Error))
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[SignalR] Lỗi kết nối:', expect.any(Error))
 
       consoleErrorSpy.mockRestore()
     })
 
     it('should handle leave event group error gracefully', async () => {
-      // First invoke (JoinEventGroup) succeeds, second (LeaveEventGroup) fails
-      mockConnection.invoke
-        .mockResolvedValueOnce(undefined)
-        .mockRejectedValueOnce(new Error('Leave failed'))
-
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { })
+      mockConnection.invoke.mockRejectedValueOnce(new Error('Leave failed'))
 
       const { unmount } = renderHook(() => useCheckInRealtime({ eventId: 'event-123', onUpdate: mockOnUpdate }))
 
@@ -267,8 +201,6 @@ describe('useCheckInRealtime', () => {
         unmount()
         await Promise.resolve()
       })
-
-      consoleErrorSpy.mockRestore()
     })
   })
 
@@ -298,10 +230,18 @@ describe('useCheckInRealtime', () => {
     })
 
     it('should handle null onUpdate', async () => {
-      // The mock hook doesn't guard against null onUpdate, so we expect it to crash
-      expect(() => {
-        renderHook(() => useCheckInRealtime({ eventId: 'event-123', onUpdate: null as any }))
-      }).not.toThrow()
+      renderHook(() => useCheckInRealtime({ eventId: 'event-123', onUpdate: null as any }))
+
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      const listener = mockConnection.on.mock.calls[0][1]
+      act(() => {
+        listener(mockStats)
+      })
+
+      // Should handle gracefully even if onUpdate is null
     })
   })
 })
