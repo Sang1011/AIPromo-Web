@@ -1,28 +1,62 @@
-import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { Link, useLocation } from "react-router-dom";
-import { MdDashboard, MdFactCheck, MdBadge, MdSearch, MdNotifications, MdSettings, MdPostAdd } from "react-icons/md";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { MdFactCheck, MdBadge, MdPostAdd } from "react-icons/md";
 import { FiZap } from "react-icons/fi";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "../../../store";
+import { clearAuth } from "../../../store/authSlice";
+import { useState, useRef, useEffect } from "react";
 
 const staffMenuItems = [
-    { icon: MdDashboard, label: "Tổng quan", path: "/staff" },
     { icon: MdFactCheck, label: "Duyệt sự kiện", path: "/staff/event-approval" },
     { icon: MdBadge, label: "Duyệt nhà tổ chức", path: "/staff/organizer-profile" },
     { icon: MdPostAdd, label: "Duyệt bài đăng", path: "/staff/post-approval" },
 ];
 
 const pageTitles: Record<string, string> = {
-    "/staff": "Tổng quan Dashboard",
     "/staff/event-approval": "Danh sách chờ duyệt sự kiện",
     "/staff/organizer-profile": "Duyệt nhà tổ chức",
     "/staff/post-approval": "Duyệt bài đăng Marketing",
 };
 
 export default function StaffLayout() {
-    const [searchQuery, setSearchQuery] = useState("");
     const location = useLocation();
-    const pageTitle =
-        pageTitles[location.pathname] || "Tổng quan Dashboard";
+    const navigate = useNavigate();
+    const dispatch = useDispatch<AppDispatch>();
+    const { currentInfor } = useSelector((state: RootState) => state.AUTH);
+
+    const pageTitle = pageTitles[location.pathname] || "Tổng quan Dashboard";
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const user = currentInfor as {
+        userId?: string;
+        name?: string;
+        userName?: string;
+        email?: string;
+        roles?: string[];
+    };
+
+    const handleLogout = () => {
+        dispatch(clearAuth());
+        navigate("/login");
+    };
+
+    const getInitials = (name?: string) => {
+        if (!name) return "S";
+        return name.charAt(0).toUpperCase();
+    };
+
+    // Đóng dropdown khi click ngoài
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     return (
         <div className="flex h-screen overflow-hidden bg-[#0B0B12] text-slate-100">
@@ -73,18 +107,48 @@ export default function StaffLayout() {
                     })}
                 </nav>
                 <div className="p-4 border-t border-primary/10">
-                    <div className="flex items-center gap-3 p-2 rounded-xl bg-primary/5">
-                        <img
-                            className="size-9 rounded-full object-cover border border-primary/20"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2SWvpHRV5ngFZqjGFBBuO4f85Xr2NO53XwN7dpCs57cvku7PW_2mKS1pAKrFv4seq32tBeICCvRilI9gvp4o39c3CNNRot_l_7TjG30QApOUKzzaAMTI1mxnx7wq3jc9x2qjeC-R68djgpncLV99wTRstnX6_XdQUru-wEr4_WGzUpa4phu-8UelN6sUBPIFn82TtFN2NMoqKR6bYonZX7vxNMk3XD_KDwPOc63ciMpCbysrlvn7OVRYZpb1Fzfl0qmkgRTql--Ad"
-                            alt="Staff avatar"
-                        />
-                        <div className="flex flex-col min-w-0">
-                            <p className="text-xs font-bold truncate">Hoàng Nguyễn</p>
-                            <p className="text-[10px] text-slate-500 uppercase">
-                                Kiểm duyệt viên cao cấp
-                            </p>
-                        </div>
+                    <div className="relative" ref={dropdownRef}>
+                        <button
+                            onClick={() => setDropdownOpen((prev) => !prev)}
+                            className="w-full flex items-center gap-3 p-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors"
+                        >
+                            <div
+                                className="size-9 rounded-full flex items-center justify-center text-white text-sm font-bold bg-gradient-to-br from-purple-500 to-purple-700 border border-primary/20"
+                            >
+                                {getInitials(user?.name)}
+                            </div>
+                            <div className="flex flex-col min-w-0 text-left">
+                                <p className="text-sm font-bold text-white truncate">{user?.userName}</p>
+                                <p className="text-[10px] text-slate-400 uppercase">Nhân viên</p>
+                            </div>
+                        </button>
+
+                        {dropdownOpen && (
+                            <div className="absolute bottom-full left-0 right-0 mb-2 bg-[#13131f] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                                {/* User info */}
+                                <div className="px-4 py-3 border-b border-white/8">
+                                    <p className="text-white text-sm font-semibold">{user?.name || "Staff"}</p>
+                                    <p className="text-slate-500 text-xs truncate">{user?.email || ""}</p>
+                                    <p className="text-slate-600 text-[10px] mt-1">Nhân viên</p>
+                                </div>
+
+                                {/* Logout */}
+                                <button
+                                    onClick={() => {
+                                        setDropdownOpen(false);
+                                        handleLogout();
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-400 hover:bg-red-500/8 transition-all"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                        <polyline points="16 17 21 12 16 7" />
+                                        <line x1="21" y1="12" x2="9" y2="12" />
+                                    </svg>
+                                    <span className="text-sm font-medium">Đăng xuất</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </aside>
@@ -94,26 +158,6 @@ export default function StaffLayout() {
                 <header className="h-16 border-b border-primary/10 flex items-center justify-between px-8 bg-[#0B0B12]/50 backdrop-blur-md z-10 shrink-0">
                     <div className="flex items-center gap-4">
                         <h2 className="text-lg font-bold">{pageTitle}</h2>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <div className="relative group">
-                            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
-                            <input
-                                className="pl-10 pr-4 py-1.5 bg-slate-800 border-none rounded-lg text-sm w-64 focus:ring-1 focus:ring-primary transition-all text-white placeholder:text-slate-500"
-                                placeholder="Tìm kiếm hệ thống..."
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-3 border-l border-primary/10 pl-6">
-                            <button className="size-8 flex items-center justify-center rounded-lg hover:bg-slate-800 transition-colors text-slate-500">
-                                <MdNotifications size={20} />
-                            </button>
-                            <button className="size-8 flex items-center justify-center rounded-lg hover:bg-slate-800 transition-colors text-slate-500">
-                                <MdSettings size={20} />
-                            </button>
-                        </div>
                     </div>
                 </header>
 
