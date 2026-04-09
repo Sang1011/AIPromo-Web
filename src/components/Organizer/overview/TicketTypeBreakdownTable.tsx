@@ -17,11 +17,13 @@ export default function TicketTypeBreakdownTable({ breakdown }: TicketTypeBreakd
 
     return (
         <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Theo loại vé</h3>
+            <h3 className="text-lg font-bold text-white">Theo loại vé</h3>
 
-            <div className="rounded-2xl border border-white/5 bg-gradient-to-b from-[#0f0b1f] to-[#0b0816] overflow-hidden">
+            <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-[#0f0b1f] to-[#0b0816]">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl" />
+
                 {/* Header */}
-                <div className="grid grid-cols-[1.4fr_1fr_1fr_1.2fr_1.6fr] px-6 py-4 text-xs font-semibold tracking-widest text-slate-400 uppercase">
+                <div className="relative grid grid-cols-[1.4fr_1fr_1fr_1.2fr_1.6fr] px-6 py-4 text-xs font-semibold tracking-widest text-slate-400 uppercase border-b border-white/5">
                     <div>Loại vé</div>
                     <div>Số lượng</div>
                     <div>Đã bán</div>
@@ -30,8 +32,8 @@ export default function TicketTypeBreakdownTable({ breakdown }: TicketTypeBreakd
                 </div>
 
                 {/* Rows */}
-                <div className="divide-y divide-white/5">
-                    {breakdown.map((t) => {
+                <div className="relative divide-y divide-white/5">
+                    {breakdown.map((t, index) => {
                         const soldPercent =
                             t.totalQuantity === 0
                                 ? 0
@@ -40,9 +42,9 @@ export default function TicketTypeBreakdownTable({ breakdown }: TicketTypeBreakd
                         return (
                             <div
                                 key={t.ticketTypeId}
-                                className="grid grid-cols-[1.4fr_1fr_1fr_1.2fr_1.6fr] px-6 py-4 items-center"
+                                className="grid grid-cols-[1.4fr_1fr_1fr_1.2fr_1.6fr] px-6 py-4 items-center hover:bg-white/5 transition-all duration-300 group"
                             >
-                                <div className="font-medium text-white">{t.ticketTypeName}</div>
+                                <div className="font-medium text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-primary group-hover:to-purple-400 transition-all duration-300">{t.ticketTypeName}</div>
                                 <div className="text-slate-300">{t.totalQuantity.toLocaleString()}</div>
 
                                 {/* sold + mini check-in badge */}
@@ -56,11 +58,11 @@ export default function TicketTypeBreakdownTable({ breakdown }: TicketTypeBreakd
                                 <div className="flex items-center gap-3">
                                     <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-primary rounded-full transition-all duration-500"
+                                            className="h-full bg-gradient-to-r from-primary to-purple-400 rounded-full transition-all duration-500"
                                             style={{ width: `${soldPercent}%` }}
                                         />
                                     </div>
-                                    <span className="text-xs text-slate-400 w-9 text-right shrink-0">
+                                    <span className="text-xs text-slate-400 w-9 text-right shrink-0 font-semibold">
                                         {soldPercent}%
                                     </span>
                                 </div>

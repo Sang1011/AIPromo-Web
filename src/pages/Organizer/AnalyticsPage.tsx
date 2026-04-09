@@ -1,19 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import {
-    AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
-    ResponsiveContainer, CartesianGrid, Cell,
-} from "recharts";
-import {
-    MdFacebook, MdOutlineVisibility, MdOutlineTouchApp,
-    MdOutlinePeopleAlt, MdOutlineBarChart, MdOutlineRefresh,
-    MdOutlineThumbUp, MdOutlineChatBubbleOutline, MdOutlineShare,
+    MdFacebook,
+    MdOutlineBarChart,
+    MdOutlineChatBubbleOutline,
+    MdOutlinePeopleAlt,
+    MdOutlineRefresh,
+    MdOutlineShare,
+    MdOutlineThumbUp,
+    MdOutlineTouchApp,
+    MdOutlineVisibility,
 } from "react-icons/md";
-import type { AppDispatch, RootState } from "../../store";
-import { fetchAllDistributionMetrics, fetchOrganizerPosts } from "../../store/postSlice";
-import type { DistributionMetricsFacebook, PostListItem } from "../../types/post/post";
+import { useParams } from "react-router-dom";
+import {
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid, Cell,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis, YAxis,
+} from "recharts";
+import { useAnalyticsData } from "../../hooks/useAnalyticsData";
+import type { DistributionMetricsFacebook, GetPostsParams, PostListItem } from "../../types/post/post";
 
 function fmt(n: number): string {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -35,63 +45,10 @@ function truncate(s: string, max = 18): string {
     return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-interface PostWithMetrics {
+export interface PostWithMetrics {
     post: PostListItem;
     metrics: DistributionMetricsFacebook;
     distributionId: string;
-}
-
-const FETCH_PARAMS = {
-    pageNumber: 1,
-    pageSize: 20,
-    sortColumn: "PublishedAt",
-    sortOrder: "asc" as const,
-    status: "Published" as const,
-    hasExternalPostUrl: true,
-};
-
-function useAnalyticsData() {
-    const dispatch = useDispatch<AppDispatch>();
-    const { posts, loading, distributionMetricsMap } = useSelector((s: RootState) => s.POST);
-
-    const refresh = useCallback(() => {
-        dispatch(fetchOrganizerPosts(FETCH_PARAMS));
-    }, [dispatch]);
-
-    useEffect(() => {
-        dispatch(fetchOrganizerPosts(FETCH_PARAMS));
-    }, [dispatch]);
-
-    useEffect(() => {
-        if (!posts.length) return;
-        const targets = posts.flatMap(post =>
-            (post.distributions ?? [])
-                .filter(d => d.platform === "Facebook" && d.status === "Sent")
-                .map(d => ({ postId: post.id, distributionId: d.id }))
-        );
-        if (targets.length) dispatch(fetchAllDistributionMetrics(targets));
-    }, [posts, dispatch]);
-
-    const postsWithMetrics = useMemo((): PostWithMetrics[] => {
-        return posts
-            .map(post => {
-                const fbDist = (post.distributions ?? [])
-                    .filter(d => d.platform === "Facebook" && d.status === "Sent")
-                    .sort((a, b) => new Date(b.sentAt!).getTime() - new Date(a.sentAt!).getTime())[0];
-                if (!fbDist) return null;
-                const metrics = distributionMetricsMap[fbDist.id];
-                if (!metrics) return null;
-                return { post, metrics, distributionId: fbDist.id };
-            })
-            .filter((x): x is PostWithMetrics => x !== null)
-            .sort((a, b) =>
-                new Date(a.post.publishedAt ?? 0).getTime() - new Date(b.post.publishedAt ?? 0).getTime()
-            );
-    }, [posts, distributionMetricsMap]);
-
-    const isLoading = loading.fetchList || loading.fetchDistributionMetrics;
-
-    return { postsWithMetrics, isLoading, refresh };
 }
 
 interface KpiCardProps {
@@ -121,21 +78,19 @@ function SummaryKpis({ data }: { data: PostWithMetrics[] }) {
     if (!data.length) return null;
 
     const totalReach = data.reduce((s, d) => s + d.metrics.reach, 0);
-    const totalImpressions = data.reduce((s, d) => s + d.metrics.impressions, 0);
     const totalClicks = data.reduce((s, d) => s + d.metrics.clicks, 0);
     const totalLikes = data.reduce((s, d) => s + d.metrics.likes, 0);
     const totalComments = data.reduce((s, d) => s + d.metrics.comments, 0);
     const totalShares = data.reduce((s, d) => s + d.metrics.shares, 0);
     const totalEngagements = totalLikes + totalComments + totalShares;
     const avgEngRate = totalReach > 0 ? ((totalEngagements / totalReach) * 100).toFixed(2) : "0";
-    const avgCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : "0";
 
     const cards: KpiCardProps[] = [
         {
             icon: <MdOutlinePeopleAlt />,
             label: "Tổng Reach",
             value: fmt(totalReach),
-            sub: `${fmt(totalImpressions)} impressions`,
+            sub: "Người tiếp cận duy nhất",
             color: "text-blue-400",
             borderColor: "border-blue-500/20",
             bgColor: "bg-blue-500/5",
@@ -144,7 +99,7 @@ function SummaryKpis({ data }: { data: PostWithMetrics[] }) {
             icon: <MdOutlineTouchApp />,
             label: "Tổng Clicks",
             value: fmt(totalClicks),
-            sub: `CTR tổng hợp ${avgCtr}%`,
+            sub: "Lượt click tổng hợp",
             color: "text-emerald-400",
             borderColor: "border-emerald-500/20",
             bgColor: "bg-emerald-500/5",
@@ -215,7 +170,6 @@ function ReachTrendChart({ data }: { data: PostWithMetrics[] }) {
         label: d.post.publishedAt ? `${fmtDate(d.post.publishedAt)} #${idx + 1}` : `#${idx + 1}`,
         title: d.post.title,
         reach: d.metrics.reach,
-        impressions: d.metrics.impressions,
     }));
 
     const CustomTooltip = ({ active, payload }: any) => {
@@ -228,10 +182,6 @@ function ReachTrendChart({ data }: { data: PostWithMetrics[] }) {
                     <span className="text-blue-400">Reach</span>
                     <span className="text-white font-bold">{fmt(payload[0]?.value ?? 0)}</span>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                    <span className="text-slate-400">Impressions</span>
-                    <span className="text-slate-300 font-semibold">{fmt(payload[1]?.value ?? 0)}</span>
-                </div>
             </div>
         );
     };
@@ -241,7 +191,7 @@ function ReachTrendChart({ data }: { data: PostWithMetrics[] }) {
             <div className="mb-5">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <MdOutlinePeopleAlt className="text-blue-400" />
-                    Reach & Impressions theo bài đăng
+                    Reach theo bài đăng
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">Mỗi điểm = 1 bài đăng Facebook, sắp xếp theo publishedAt tăng dần</p>
             </div>
@@ -253,23 +203,17 @@ function ReachTrendChart({ data }: { data: PostWithMetrics[] }) {
                                 <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.35} />
                                 <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                             </linearGradient>
-                            <linearGradient id="impressionsGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.2} />
-                                <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
-                            </linearGradient>
                         </defs>
                         <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                         <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `#${v}`} />
                         <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.1)", strokeWidth: 1 }} />
-                        <Area type="monotone" dataKey="impressions" stroke="#8b5cf6" strokeWidth={2} fill="url(#impressionsGrad)" strokeDasharray="4 2" />
                         <Area type="monotone" dataKey="reach" stroke="#3b82f6" strokeWidth={2.5} fill="url(#reachGrad)" />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
             <div className="flex items-center gap-5 mt-3 text-xs text-slate-500">
                 <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-400 inline-block rounded" />Reach</span>
-                <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-violet-400 inline-block rounded border-dashed border-t border-violet-400" />Impressions</span>
             </div>
         </div>
     );
@@ -279,25 +223,23 @@ function CtrPerPostChart({ data }: { data: PostWithMetrics[] }) {
     const chartData = data.map(d => ({
         shortTitle: truncate(d.post.title),
         title: d.post.title,
-        ctr: d.metrics.impressions > 0
-            ? +((d.metrics.clicks / d.metrics.impressions) * 100).toFixed(2)
-            : 0,
+        clicks: d.metrics.clicks,
         engRate: d.metrics.reach > 0
             ? +(((d.metrics.likes + d.metrics.comments + d.metrics.shares) / d.metrics.reach) * 100).toFixed(2)
             : 0,
     }));
 
-    const maxCtr = Math.max(...chartData.map(d => d.ctr));
+    const maxClicks = Math.max(...chartData.map(d => d.clicks));
     const maxEng = Math.max(...chartData.map(d => d.engRate));
 
-    const CtrTooltip = ({ active, payload }: any) => {
+    const ClicksTooltip = ({ active, payload }: any) => {
         if (!active || !payload?.length) return null;
         return (
             <div className="bg-slate-900/95 border border-slate-700 rounded-xl px-4 py-3 text-xs space-y-1.5 min-w-[160px]">
                 <p className="text-white font-bold text-sm truncate max-w-[200px]">{payload[0]?.payload?.title}</p>
                 <div className="flex justify-between gap-4">
-                    <span className="text-emerald-400">CTR</span>
-                    <span className="text-white font-bold">{payload[0]?.value}%</span>
+                    <span className="text-emerald-400">Clicks</span>
+                    <span className="text-white font-bold">{fmt(payload[0]?.value ?? 0)}</span>
                 </div>
             </div>
         );
@@ -322,20 +264,20 @@ function CtrPerPostChart({ data }: { data: PostWithMetrics[] }) {
                 <div className="mb-4">
                     <h3 className="text-base font-bold text-white flex items-center gap-2">
                         <MdOutlineTouchApp className="text-emerald-400" />
-                        CTR theo bài đăng
+                        Clicks theo bài đăng
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Clicks ÷ Impressions × 100</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Số lượt click vào bài viết</p>
                 </div>
                 <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                             <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
                             <XAxis dataKey="shortTitle" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
-                            <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
-                            <Tooltip content={<CtrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                            <Bar dataKey="ctr" radius={[6, 6, 0, 0]} maxBarSize={44}>
+                            <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                            <Tooltip content={<ClicksTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                            <Bar dataKey="clicks" radius={[6, 6, 0, 0]} maxBarSize={44}>
                                 {chartData.map((entry, i) => (
-                                    <Cell key={i} fill={entry.ctr === maxCtr ? "#10b981" : "#10b98150"} />
+                                    <Cell key={i} fill={entry.clicks === maxClicks ? "#10b981" : "#10b98150"} />
                                 ))}
                             </Bar>
                         </BarChart>
@@ -474,15 +416,12 @@ function TopPostsTable({ data }: { data: PostWithMetrics[] }) {
                         <tr className="border-b border-white/5">
                             <th className="text-left text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Bài viết</th>
                             <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Reach</th>
-                            <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Impressions</th>
                             <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Clicks</th>
-                            <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">CTR</th>
                             <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Eng. Rate</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                         {top5.map(({ post, metrics }) => {
-                            const ctr = pct(metrics.clicks, metrics.impressions);
                             const engRate = pct(metrics.likes + metrics.comments + metrics.shares, metrics.reach);
                             return (
                                 <tr key={post.id} className="hover:bg-white/2 transition-colors">
@@ -493,9 +432,7 @@ function TopPostsTable({ data }: { data: PostWithMetrics[] }) {
                                         </p>
                                     </td>
                                     <td className="text-right text-blue-400 font-bold py-3">{fmt(metrics.reach)}</td>
-                                    <td className="text-right text-slate-400 py-3">{fmt(metrics.impressions)}</td>
                                     <td className="text-right text-emerald-400 py-3">{fmt(metrics.clicks)}</td>
-                                    <td className="text-right text-emerald-300 font-semibold py-3">{ctr}</td>
                                     <td className="text-right text-violet-400 font-semibold py-3">{engRate}</td>
                                 </tr>
                             );
@@ -539,7 +476,17 @@ function EmptyState() {
 }
 
 export default function AnalyticsPage() {
-    const { postsWithMetrics, isLoading, refresh } = useAnalyticsData();
+    const { eventId } = useParams<{ eventId: string }>();
+    const FETCH_PARAMS: GetPostsParams = {
+        pageNumber: 1,
+        pageSize: 20,
+        sortColumn: "PublishedAt",
+        sortOrder: "asc" as const,
+        status: "Published" as const,
+        hasExternalPostUrl: true,
+        eventId: eventId
+    };
+    const { postsWithMetrics, isLoading, refresh } = useAnalyticsData(FETCH_PARAMS);
 
     return (
         <div className="space-y-6">

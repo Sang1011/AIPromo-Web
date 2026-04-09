@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import {
     MdFacebook,
-    MdOutlineVisibility,
     MdOutlineTouchApp,
     MdOutlinePeopleAlt,
     MdOutlineThumbUp,
@@ -13,7 +12,6 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-    RadialBarChart, RadialBar, Cell,
 } from "recharts";
 import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetrics, fetchDistributionMetricsFacebook } from "../../../store/postSlice";
@@ -99,53 +97,6 @@ function EngagementBar({ likes, comments, shares }: { likes: number; comments: n
     );
 }
 
-// ─── Reach vs Impressions radial visual ──────────────────────────────────────
-
-function ReachImpressionsCard({ reach, impressions }: { reach: number; impressions: number }) {
-    const reachPct = impressions > 0 ? Math.round((reach / impressions) * 100) : 0;
-    const data = [
-        { name: "Impressions", value: 100, fill: "#1e293b" },
-        { name: "Reach", value: reachPct, fill: "#7c3bed" },
-    ];
-
-    return (
-        <div className="bg-slate-900/50 border border-primary/20 rounded-2xl px-5 py-4 flex flex-col gap-3">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Reach / Impressions</p>
-            <div className="flex items-center gap-4">
-                {/* Mini radial */}
-                <div className="relative w-24 h-24 shrink-0">
-                    <RadialBarChart
-                        width={96} height={96}
-                        cx={48} cy={48}
-                        innerRadius={28} outerRadius={44}
-                        data={data} startAngle={90} endAngle={-270}
-                    >
-                        <RadialBar dataKey="value" background={false} cornerRadius={8} />
-                    </RadialBarChart>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-lg font-black text-primary">{reachPct}%</span>
-                    </div>
-                </div>
-                {/* Stats */}
-                <div className="space-y-2 flex-1">
-                    <div>
-                        <p className="text-xs text-slate-500">Impressions</p>
-                        <p className="text-base font-black text-white">{fmt(impressions)}</p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-slate-500">Reach</p>
-                        <p className="text-base font-black text-primary">{fmt(reach)}</p>
-                    </div>
-                </div>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-                <span className="text-primary font-semibold">{reachPct}%</span> người xem thấy bài ít nhất một lần.
-                Tỷ lệ cao = nội dung ít lặp lại, tiếp cận nhiều người mới.
-            </p>
-        </div>
-    );
-}
-
 // ─── CTR & Engagement Rate cards ─────────────────────────────────────────────
 
 function RateCard({
@@ -223,7 +174,6 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
 
     // Derived metrics
     const engagementRate = m ? pct(m.likes + m.comments + m.shares, m.reach) : "—";
-    const ctr = m ? pct(m.clicks, m.impressions) : "—";
 
     return (
         <section className="space-y-6">
@@ -275,16 +225,8 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
             {/* Metrics content */}
             {m && (
                 <div className="space-y-6">
-                    {/* ── Row 1: 6 core KPI cards ── */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-                        <StatCard
-                            icon={<MdOutlineVisibility />}
-                            label="Impressions"
-                            value={fmt(m.impressions)}
-                            sub="Tổng lượt hiển thị"
-                            color="text-blue-400"
-                            borderColor="border-blue-500/20"
-                        />
+                    {/* ── Row 1: 5 core KPI cards ── */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                         <StatCard
                             icon={<MdOutlinePeopleAlt />}
                             label="Reach"
@@ -297,7 +239,7 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                             icon={<MdOutlineTouchApp />}
                             label="Clicks"
                             value={fmt(m.clicks)}
-                            sub={`CTR: ${ctr}`}
+                            sub="Lượt click"
                             color="text-emerald-400"
                             borderColor="border-emerald-500/20"
                         />
@@ -324,11 +266,8 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                         />
                     </div>
 
-                    {/* ── Row 2: Reach/Impressions + Engagement breakdown chart ── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Reach vs Impressions */}
-                        <ReachImpressionsCard reach={m.reach} impressions={m.impressions} />
-
+                    {/* ── Row 2: Engagement breakdown chart ── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
                         {/* Engagement breakdown */}
                         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl px-5 py-4 space-y-2">
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Phân tích Engagement</p>
@@ -341,17 +280,8 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                         </div>
                     </div>
 
-                    {/* ── Row 3: CTR + Engagement Rate ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <RateCard
-                            label="Click-through Rate (CTR)"
-                            rate={ctr}
-                            numerator={m.clicks}
-                            denominator={m.impressions}
-                            numeratorLabel="Clicks"
-                            denominatorLabel="Impressions"
-                            color="text-emerald-400"
-                        />
+                    {/* ── Row 3: Engagement Rate ── */}
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                         <RateCard
                             label="Engagement Rate"
                             rate={engagementRate}

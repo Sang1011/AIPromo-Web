@@ -149,25 +149,30 @@ function App() {
         </Route>
 
         {/* Admin group */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboardPage />} />
-          <Route path="categories" element={<AdminCategoryPage />} />
-          <Route path="hashtags" element={<AdminHashtagPage />} />
-          <Route path="finance" element={<FinanceRevenuePage />} />
-          <Route path="events" element={<EventModerationPage />} />
-          <Route path="users" element={<UserManagementPage />} />
-          <Route path="refunds" element={<RefundManagementPage />} />
-          <Route path="withdrawals" element={<WithdrawalPage />} />
-          <Route path="ai-packages" element={<AIPackagesPage />} />
-          <Route path="policy" element={<PolicyManagement />} />
+        <Route element={<RequireRole allowedRoles={["Admin"]} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="categories" element={<AdminCategoryPage />} />
+            <Route path="hashtags" element={<AdminHashtagPage />} />
+            <Route path="finance" element={<FinanceRevenuePage />} />
+            <Route path="events" element={<EventModerationPage />} />
+            <Route path="users" element={<UserManagementPage />} />
+            <Route path="refunds" element={<RefundManagementPage />} />
+            <Route path="withdrawals" element={<WithdrawalPage />} />
+            <Route path="ai-packages" element={<AIPackagesPage />} />
+            <Route path="policy" element={<PolicyManagement />} />
+          </Route>
         </Route>
 
+
         {/* Staff group */}
-        <Route path="/staff" element={<StaffLayout />}>
-          <Route index element={<StaffDashboardPage />} />
-          <Route path="event-approval" element={<EventApprovalPage />} />
-          <Route path="organizer-profile" element={<OrganizerProfilePage />} />
-          <Route path="post-approval" element={<PostApprovalPage />} />
+        <Route element={<RequireRole allowedRoles={["Staff"]} />}>
+          <Route path="/staff" element={<StaffLayout />}>
+            <Route index element={<StaffDashboardPage />} />
+            <Route path="event-approval" element={<EventApprovalPage />} />
+            <Route path="organizer-profile" element={<OrganizerProfilePage />} />
+            <Route path="post-approval" element={<PostApprovalPage />} />
+          </Route>
         </Route>
       </Routes >
     </>
