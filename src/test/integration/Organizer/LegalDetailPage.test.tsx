@@ -29,7 +29,7 @@ jest.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
 }))
 
-jest.mock('../../store/policySlice', () => ({
+jest.mock('../../../store/policySlice', () => ({
   fetchPolicyById: jest.fn((id) => ({ type: 'POLICY/fetchPolicyById', payload: id })),
 }))
 
@@ -184,7 +184,7 @@ describe('LegalDetailPage', () => {
 
   describe('API Calls', () => {
     it('should call fetchPolicyById on mount', async () => {
-      const { fetchPolicyById } = require('../../store/policySlice')
+      const { fetchPolicyById } = require('../../../store/policySlice')
 
       await act(async () => render(<LegalDetailPage />))
 

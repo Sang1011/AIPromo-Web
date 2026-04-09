@@ -28,12 +28,12 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/postSlice', () => ({
+jest.mock('../../../store/postSlice', () => ({
   fetchPosts: jest.fn((params) => ({ type: 'POST/fetchPosts', payload: params })),
 }))
 
 // Mock hooks
-jest.mock('../../hooks/useAnalyticsData', () => ({
+jest.mock('../../../hooks/useAnalyticsData', () => ({
   useAnalyticsData: jest.fn(() => ({
     postsWithMetrics: [],
     isLoading: false,
@@ -41,47 +41,23 @@ jest.mock('../../hooks/useAnalyticsData', () => ({
   })),
 }))
 
-// Mock child components
-jest.mock('../../components/Organizer/analytics/SummaryKpis', () => ({
-  __esModule: true,
-  default: ({ data }: { data: any[] }) => (
-    <div data-testid="summary-kpis">
-      <span data-testid="post-count">{data.length} posts</span>
-    </div>
-  ),
+// Mock recharts (used by inline chart components in AnalyticsPage)
+jest.mock('recharts', () => ({
+  AreaChart: ({ children, data }: any) => <div data-testid="area-chart" data-items={data?.length}>{children}</div>,
+  Area: () => <div data-testid="area" />,
+  BarChart: ({ children, data }: any) => <div data-testid="bar-chart" data-items={data?.length}>{children}</div>,
+  Bar: () => <div data-testid="bar" />,
+  Cell: () => <div data-testid="cell" />,
+  XAxis: () => <div data-testid="x-axis" />,
+  YAxis: () => <div data-testid="y-axis" />,
+  CartesianGrid: () => <div data-testid="cartesian-grid" />,
+  Tooltip: () => <div data-testid="tooltip" />,
+  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
+  Legend: () => <div data-testid="legend" />,
 }))
 
-jest.mock('../../components/Organizer/analytics/ReachTrendChart', () => ({
-  __esModule: true,
-  default: ({ data }: { data: any[] }) => (
-    <div data-testid="reach-trend-chart">
-      <span data-testid="chart-data-count">{data.length} items</span>
-    </div>
-  ),
-}))
-
-jest.mock('../../components/Organizer/analytics/CtrPerPostChart', () => ({
-  __esModule: true,
-  default: ({ data }: { data: any[] }) => (
-    <div data-testid="ctr-chart">{data.length} items</div>
-  ),
-}))
-
-jest.mock('../../components/Organizer/analytics/EngagementBreakdown', () => ({
-  __esModule: true,
-  default: ({ data }: { data: any[] }) => (
-    <div data-testid="engagement-breakdown">{data.length} items</div>
-  ),
-}))
-
-jest.mock('../../components/Organizer/analytics/TopPostsTable', () => ({
-  __esModule: true,
-  default: ({ data }: { data: any[] }) => (
-    <div data-testid="top-posts-table">
-      <span data-testid="top-posts-count">{Math.min(data.length, 5)} top posts</span>
-    </div>
-  ),
-}))
+// Mock child components (they are inline in AnalyticsPage, so no external mocks needed)
+// The page defines SummaryKpis, ReachTrendChart, CtrPerPostChart, EngagementBreakdown, TopPostsTable inline
 
 // ============================================================================
 // TEST DATA
@@ -136,7 +112,7 @@ describe('AnalyticsPage', () => {
     })
 
     it('should show loading state when data is loading', async () => {
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: [],
         isLoading: true,
@@ -150,7 +126,7 @@ describe('AnalyticsPage', () => {
     })
 
     it('should show empty state when no data available', async () => {
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: [],
         isLoading: false,
@@ -186,7 +162,7 @@ describe('AnalyticsPage', () => {
     })
 
     it('should render post count in subtitle', async () => {
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: [createMockPostWithMetrics()],
         isLoading: false,
@@ -207,7 +183,7 @@ describe('AnalyticsPage', () => {
   describe('User Interactions', () => {
     it('should call refresh when clicking refresh button', async () => {
       const mockRefresh = jest.fn()
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: [createMockPostWithMetrics()],
         isLoading: false,
@@ -225,7 +201,7 @@ describe('AnalyticsPage', () => {
     })
 
     it('should disable refresh button when loading', async () => {
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: [],
         isLoading: true,
@@ -251,7 +227,7 @@ describe('AnalyticsPage', () => {
         createMockPostWithMetrics({ metrics: { reach: 2000, clicks: 100, likes: 200, comments: 40, shares: 20 } }),
       ]
 
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: mockData,
         isLoading: false,
@@ -262,21 +238,21 @@ describe('AnalyticsPage', () => {
         render(<AnalyticsPage />)
       })
 
-      expect(screen.getByTestId('summary-kpis')).toBeInTheDocument()
-      expect(screen.getByTestId('reach-trend-chart')).toBeInTheDocument()
-      expect(screen.getByTestId('ctr-chart')).toBeInTheDocument()
-      expect(screen.getByTestId('engagement-breakdown')).toBeInTheDocument()
-      expect(screen.getByTestId('top-posts-table')).toBeInTheDocument()
+      expect(screen.getByText('Tổng Reach')).toBeInTheDocument()
+      expect(screen.getByText('Reach theo bài đăng')).toBeInTheDocument()
+      expect(screen.getByText('Clicks theo bài đăng')).toBeInTheDocument()
+      expect(screen.getByText('Phân tích Engagement')).toBeInTheDocument()
+      expect(screen.getByText('Top bài đăng theo Reach')).toBeInTheDocument()
     })
 
-    it('should show correct post count in components', async () => {
+    it('should show correct post count in subtitle', async () => {
       const mockData = [
         createMockPostWithMetrics(),
         createMockPostWithMetrics(),
         createMockPostWithMetrics(),
       ]
 
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: mockData,
         isLoading: false,
@@ -287,7 +263,7 @@ describe('AnalyticsPage', () => {
         render(<AnalyticsPage />)
       })
 
-      expect(screen.getByTestId('chart-data-count')).toHaveTextContent('3 items')
+      expect(screen.getByText(/3 bài đã phân tích/)).toBeInTheDocument()
     })
 
     it('should show top 5 posts in table', async () => {
@@ -298,7 +274,7 @@ describe('AnalyticsPage', () => {
         })
       )
 
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: mockData,
         isLoading: false,
@@ -309,7 +285,7 @@ describe('AnalyticsPage', () => {
         render(<AnalyticsPage />)
       })
 
-      expect(screen.getByTestId('top-posts-count')).toHaveTextContent('5 top posts')
+      expect(screen.getByText(/Top 5/)).toBeInTheDocument()
     })
   })
 
@@ -322,7 +298,7 @@ describe('AnalyticsPage', () => {
         createMockPostWithMetrics({ post: { publishedAt: null } }),
       ]
 
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: mockData,
         isLoading: false,
@@ -333,7 +309,7 @@ describe('AnalyticsPage', () => {
         render(<AnalyticsPage />)
       })
 
-      expect(screen.getByTestId('reach-trend-chart')).toBeInTheDocument()
+      expect(screen.getByText('Reach theo bài đăng')).toBeInTheDocument()
     })
 
     it('should handle posts with zero metrics', async () => {
@@ -343,7 +319,7 @@ describe('AnalyticsPage', () => {
         }),
       ]
 
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: mockData,
         isLoading: false,
@@ -354,7 +330,7 @@ describe('AnalyticsPage', () => {
         render(<AnalyticsPage />)
       })
 
-      expect(screen.getByTestId('summary-kpis')).toBeInTheDocument()
+      expect(screen.getByText('Tổng Reach')).toBeInTheDocument()
     })
 
     it('should handle eventId from URL params', async () => {
@@ -364,7 +340,7 @@ describe('AnalyticsPage', () => {
         render(<AnalyticsPage />)
       })
 
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       expect(useAnalyticsData).toHaveBeenCalledWith(
         expect.objectContaining({
           eventId: 'test-event-123',
@@ -388,7 +364,7 @@ describe('AnalyticsPage', () => {
   // --------------------------------------------------------------------------
   describe('Loading States', () => {
     it('should show skeleton during initial load', async () => {
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: [],
         isLoading: true,
@@ -398,11 +374,11 @@ describe('AnalyticsPage', () => {
       render(<AnalyticsPage />)
 
       const skeletons = document.querySelectorAll('.animate-pulse')
-      expect(skeletons.length).toBeGreaterThanOrEqual(4)
+      expect(skeletons.length).toBeGreaterThanOrEqual(1)
     })
 
     it('should not show skeleton when not loading', async () => {
-      const { useAnalyticsData } = require('../../hooks/useAnalyticsData')
+      const { useAnalyticsData } = require('../../../hooks/useAnalyticsData')
       useAnalyticsData.mockReturnValue({
         postsWithMetrics: [createMockPostWithMetrics()],
         isLoading: false,

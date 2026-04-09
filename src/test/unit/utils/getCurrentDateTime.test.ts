@@ -18,14 +18,14 @@ describe('getCurrentDateTime', () => {
   })
 
   it('should return ISO string in correct format', () => {
-    jest.setSystemTime(new Date('2024-12-01T10:30:45.123Z'))
+    jest.setSystemTime(new Date('2024-12-01T10:30:45.123Z').getTime())
     const result = getCurrentDateTime()
 
     expect(result.iso).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/)
   })
 
   it('should return formatted string in DD-MM-YYYY_HH-mm format', () => {
-    jest.setSystemTime(new Date('2024-12-01T10:30:45.123Z'))
+    jest.setSystemTime(new Date('2024-12-01T10:30:45.123Z').getTime())
     const result = getCurrentDateTime()
 
     expect(result.formatted).toMatch(/\d{2}-\d{2}-\d{4}_\d{2}-\d{2}/)
@@ -33,7 +33,7 @@ describe('getCurrentDateTime', () => {
 
   it('should use local time for formatted string', () => {
     // Set to a specific time
-    const testDate = new Date('2024-12-15T14:25:30.000Z')
+    const testDate = new Date('2024-12-15T14:25:30.000Z').getTime()
     jest.setSystemTime(testDate)
 
     const result = getCurrentDateTime()
@@ -54,7 +54,7 @@ describe('getCurrentDateTime', () => {
   })
 
   it('should return consistent values when called multiple times at same moment', () => {
-    jest.setSystemTime(new Date('2024-06-15T08:30:00.000Z'))
+    jest.setSystemTime(new Date('2024-06-15T08:30:00.000Z').getTime())
 
     const result1 = getCurrentDateTime()
     const result2 = getCurrentDateTime()

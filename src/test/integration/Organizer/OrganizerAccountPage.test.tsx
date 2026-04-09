@@ -29,18 +29,39 @@ jest.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
 }))
 
-jest.mock('../../../store/authSlice', () => ({
-  fetchMe: jest.fn(() => ({ type: 'AUTH/fetchMe' })),
-}))
+jest.mock('../../../store/authSlice', () => {
+  const fetchMe: any = jest.fn(() => ({ type: 'AUTH/fetchMe' }))
+  fetchMe.fulfilled = {
+    type: 'AUTH/fetchMe/fulfilled',
+    match: (action: any) => action != null,
+  }
+  fetchMe.pending = { type: 'AUTH/fetchMe/pending', match: () => false }
+  fetchMe.rejected = { type: 'AUTH/fetchMe/rejected', match: () => false }
+  return { fetchMe }
+})
 
-jest.mock('../../../store/organizerProfileSlice', () => ({
-  fetchGetOrganizerProfileDetailById: jest.fn((userId) => ({
+jest.mock('../../../store/organizerProfileSlice', () => {
+  const fetchGetOrganizerProfileDetailById: any = jest.fn((userId: any) => ({
     type: 'ORGANIZER/fetchProfile',
     payload: userId,
-  })),
-  fetchCreateProfileOrganizer: jest.fn(() => ({ type: 'ORGANIZER/createProfile' })),
-  fetchVerifyProfileOrganizer: jest.fn(() => ({ type: 'ORGANIZER/verifyProfile' })),
-}))
+  }))
+  fetchGetOrganizerProfileDetailById.fulfilled = { match: (action: any) => action != null }
+  fetchGetOrganizerProfileDetailById.rejected = { match: () => false }
+
+  const fetchCreateProfileOrganizer: any = jest.fn(() => ({ type: 'ORGANIZER/createProfile' }))
+  fetchCreateProfileOrganizer.fulfilled = { match: (action: any) => action != null }
+  fetchCreateProfileOrganizer.rejected = { match: () => false }
+
+  const fetchVerifyProfileOrganizer: any = jest.fn(() => ({ type: 'ORGANIZER/verifyProfile' }))
+  fetchVerifyProfileOrganizer.fulfilled = { match: (action: any) => action != null }
+  fetchVerifyProfileOrganizer.rejected = { match: () => false }
+
+  return {
+    fetchGetOrganizerProfileDetailById,
+    fetchCreateProfileOrganizer,
+    fetchVerifyProfileOrganizer,
+  }
+})
 
 jest.mock('../../../utils/notify', () => ({
   notify: { success: jest.fn(), error: jest.fn(), warning: jest.fn() },
@@ -112,7 +133,21 @@ describe('OrganizerAccountPage', () => {
       },
     }
 
-    mockDispatch.mockResolvedValue({})
+    mockDispatch.mockImplementation((action: any) => {
+      if (action?.type === 'AUTH/fetchMe') {
+        return Promise.resolve({ payload: { data: { userId: 'user-123' } } })
+      }
+      if (action?.type === 'ORGANIZER/fetchProfile') {
+        return Promise.resolve({ payload: { data: mockOrganizerState.profileDetail } })
+      }
+      if (action?.type === 'ORGANIZER/createProfile') {
+        return Promise.resolve({ payload: {} })
+      }
+      if (action?.type === 'ORGANIZER/verifyProfile') {
+        return Promise.resolve({ payload: {} })
+      }
+      return Promise.resolve({})
+    })
   })
 
   describe('Render', () => {
@@ -128,6 +163,7 @@ describe('OrganizerAccountPage', () => {
 
     it('should render bank fields when loaded', async () => {
       await act(async () => render(<OrganizerAccountPage />))
+      await userEvent.click(screen.getByText('Tài khoản ngân hàng'))
       expect(screen.getByTestId('bank-select')).toBeInTheDocument()
     })
 

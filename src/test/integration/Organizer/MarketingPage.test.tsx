@@ -7,17 +7,17 @@ import MarketingPage from '../../../pages/Organizer/MarketingPage'
 // MOCKS
 // ============================================================================
 
-jest.mock('../../components/Organizer/marketing/MarketingPerformanceBarChart', () => ({
+jest.mock('../../../components/Organizer/marketing/MarketingPerformanceBarChart', () => ({
   __esModule: true,
   default: () => <div data-testid="marketing-performance-chart" />,
 }))
 
-jest.mock('../../components/Organizer/marketing/PromptFormMarketing', () => ({
+jest.mock('../../../components/Organizer/marketing/PromptFormMarketing', () => ({
   __esModule: true,
   default: () => <div data-testid="prompt-form-marketing" />,
 }))
 
-jest.mock('../../components/Organizer/marketing/MarketingTable', () => ({
+jest.mock('../../../components/Organizer/marketing/MarketingTable', () => ({
   __esModule: true,
   default: () => <div data-testid="marketing-table" />,
 }))

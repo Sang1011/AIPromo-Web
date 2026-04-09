@@ -41,7 +41,7 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/voucherSlice', () => ({
+jest.mock('../../../store/voucherSlice', () => ({
   fetchGetVouchers: jest.fn((params) => ({ type: 'VOUCHER/fetchGetVouchers', payload: params })),
   fetchCreateVoucher: jest.fn((data) => ({ type: 'VOUCHER/fetchCreateVoucher', payload: data })),
   fetchUpdateVoucher: jest.fn((params) => ({ type: 'VOUCHER/fetchUpdateVoucher', payload: params })),
@@ -49,17 +49,17 @@ jest.mock('../../store/voucherSlice', () => ({
   fetchExportExcelVoucher: jest.fn((eventId) => ({ type: 'VOUCHER/fetchExportExcelVoucher', payload: eventId })),
 }))
 
-jest.mock('../../store/authSlice', () => ({
+jest.mock('../../../store/authSlice', () => ({
   fetchMe: jest.fn(() => ({ type: 'AUTH/fetchMe' })),
 }))
 
 // Mock hooks
-jest.mock('../../hooks/useEventTitle', () => ({
+jest.mock('../../../hooks/useEventTitle', () => ({
   useEventTitle: jest.fn(() => 'Test Event'),
 }))
 
 // Mock utils
-jest.mock('../../utils/notify', () => ({
+jest.mock('../../../utils/notify', () => ({
   notify: {
     success: jest.fn(),
     error: jest.fn(),
@@ -67,23 +67,23 @@ jest.mock('../../utils/notify', () => ({
   },
 }))
 
-jest.mock('../../utils/downloadFileExcel', () => ({
+jest.mock('../../../utils/downloadFileExcel', () => ({
   downloadFileExcel: jest.fn(),
 }))
 
-jest.mock('../../utils/getCurrentDateTime', () => ({
+jest.mock('../../../utils/getCurrentDateTime', () => ({
   getCurrentDateTime: jest.fn(() => ({
     iso: '2024-12-01T10:00:00Z',
     formatted: '2024-12-01_10-00-00',
   })),
 }))
 
-jest.mock('../../utils/saveReportToFirebase', () => ({
+jest.mock('../../../utils/saveReportToFirebase', () => ({
   saveReportToFirebase: jest.fn().mockResolvedValue(undefined),
 }))
 
 // Mock DateTimeInput component
-jest.mock('../../components/Organizer/shared/DateTimeInput', () => ({
+jest.mock('../../../components/Organizer/shared/DateTimeInput', () => ({
   __esModule: true,
   default: ({ label, value, onChange, min }: any) => (
     <div data-testid="datetime-input">
@@ -100,7 +100,7 @@ jest.mock('../../components/Organizer/shared/DateTimeInput', () => ({
 }))
 
 // Mock Pagination component
-jest.mock('../../components/Organizer/shared/Pagination', () => ({
+jest.mock('../../../components/Organizer/shared/Pagination', () => ({
   __esModule: true,
   default: ({ currentPage, totalPages, onPageChange }: any) => (
     <div data-testid="pagination">
@@ -280,7 +280,7 @@ describe('VoucherManagementPage', () => {
   // --------------------------------------------------------------------------
   describe('API Calls', () => {
     it('should call fetchGetVouchers on mount', async () => {
-      const { fetchGetVouchers } = require('../../store/voucherSlice')
+      const { fetchGetVouchers } = require('../../../store/voucherSlice')
 
       await act(async () => {
         render(<VoucherManagementPage />)
@@ -294,7 +294,7 @@ describe('VoucherManagementPage', () => {
     })
 
     it('should call fetchCreateVoucher when creating voucher', async () => {
-      const { fetchCreateVoucher } = require('../../store/voucherSlice')
+      const { fetchCreateVoucher } = require('../../../store/voucherSlice')
 
       await act(async () => {
         render(<VoucherManagementPage />)
@@ -306,19 +306,39 @@ describe('VoucherManagementPage', () => {
       const codeInput = screen.getByPlaceholderText('VD: SUMMER2026')
       await userEvent.type(codeInput, 'NEWCODE')
 
+      // Fill value
+      const valueInputs = screen.getAllByRole('textbox')
+      const valueInput = valueInputs.find((input) => input.getAttribute('placeholder') === '0')
+      if (valueInput) {
+        await userEvent.type(valueInput, '10')
+      }
+
+      // Fill both date fields with future dates
+      const datetimeInputs = screen.getAllByTestId('datetime-field')
+      if (datetimeInputs.length >= 2) {
+        const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        const formattedDate = futureDate.toISOString().slice(0, 16)
+        await userEvent.clear(datetimeInputs[0])
+        await userEvent.type(datetimeInputs[0], formattedDate)
+        await userEvent.clear(datetimeInputs[1])
+        await userEvent.type(datetimeInputs[1], formattedDate)
+      }
+
       // Submit
       const saveBtn = screen.getByText('Tạo voucher')
       await userEvent.click(saveBtn)
 
       await waitFor(() => {
-        expect(mockDispatch).toHaveBeenCalledWith(
+        // First dispatch is fetchGetVouchers on mount, second is fetchCreateVoucher on submit
+        expect(mockDispatch).toHaveBeenNthCalledWith(
+          2,
           fetchCreateVoucher(expect.objectContaining({ couponCode: 'NEWCODE' }))
         )
       })
     })
 
     it('should call fetchDeleteVoucher when deleting voucher', async () => {
-      const { fetchDeleteVoucher } = require('../../store/voucherSlice')
+      const { fetchDeleteVoucher } = require('../../../store/voucherSlice')
       mockVoucherState.vouchers = createMockVouchersResponse({
         items: [createMockVoucher()],
       })
@@ -339,7 +359,7 @@ describe('VoucherManagementPage', () => {
     })
 
     it('should call fetchExportExcelVoucher when exporting', async () => {
-      const { fetchExportExcelVoucher } = require('../../store/voucherSlice')
+      const { fetchExportExcelVoucher } = require('../../../store/voucherSlice')
       const mockBlob = new Blob(['test'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       mockDispatch.mockResolvedValue(mockBlob)
 
@@ -406,9 +426,11 @@ describe('VoucherManagementPage', () => {
 
       // Open filter and select expired
       await userEvent.click(screen.getByText('Bộ lọc'))
-      await userEvent.click(screen.getByText('Hết hạn'))
+      // Use getAllByText to pick the first match (the dropdown button, not the badge)
+      const expiredBtns = screen.getAllByText('Hết hạn')
+      await userEvent.click(expiredBtns[0])
 
-      expect(screen.getByText('RUNNING')).not.toBeInTheDocument()
+      expect(screen.queryByText('RUNNING')).not.toBeInTheDocument()
     })
 
     it('should open create modal when clicking create button', async () => {
@@ -460,7 +482,9 @@ describe('VoucherManagementPage', () => {
       await userEvent.click(deleteBtns[0].parentElement!)
 
       expect(screen.getByText('Xác nhận xóa')).toBeInTheDocument()
-      expect(screen.getByText('TESTCODE')).toBeInTheDocument()
+      // Use getAllByText to handle duplicate matches (table row + dialog)
+      const codeEls = screen.getAllByText('TESTCODE')
+      expect(codeEls.length).toBeGreaterThan(0)
     })
 
     it('should close delete confirmation when clicking cancel', async () => {
@@ -650,8 +674,8 @@ describe('VoucherManagementPage', () => {
         render(<VoucherManagementPage />)
       })
 
-      // Dates should be formatted
-      expect(screen.getByText(/01\/01\/2024/)).toBeInTheDocument()
+      // Dates should be formatted (no leading zeros from toLocaleDateString)
+      expect(screen.getByText(/1\/1\/2024/)).toBeInTheDocument()
     })
   })
 
@@ -674,7 +698,8 @@ describe('VoucherManagementPage', () => {
     })
 
     it('should handle export failure', async () => {
-      mockDispatch.mockRejectedValue(new Error('Export failed'))
+      // Component uses dispatch().unwrap().catch(), so mock with unwrap returning rejected promise
+      mockDispatch.mockReturnValue({ unwrap: () => Promise.reject(new Error('Export failed')) })
 
       await act(async () => {
         render(<VoucherManagementPage />)
@@ -683,7 +708,7 @@ describe('VoucherManagementPage', () => {
       const exportBtn = screen.getByText('Xuất Excel')
       await userEvent.click(exportBtn)
 
-      const { notify } = require('../../utils/notify')
+      const { notify } = require('../../../utils/notify')
       await waitFor(() => {
         expect(notify.error).toHaveBeenCalledWith('Xuất Excel thất bại')
       })
@@ -694,7 +719,8 @@ describe('VoucherManagementPage', () => {
         items: [createMockVoucher()],
       })
 
-      mockDispatch.mockRejectedValue({ message: 'Voucher already used' })
+      // Mock delete to fail with "used" message - component uses dispatch().unwrap()
+      mockDispatch.mockReturnValue({ unwrap: () => Promise.reject({ message: 'Voucher already used' }) })
 
       await act(async () => {
         render(<VoucherManagementPage />)
@@ -706,14 +732,15 @@ describe('VoucherManagementPage', () => {
       const confirmBtn = screen.getByText('Xóa')
       await userEvent.click(confirmBtn)
 
-      const { notify } = require('../../utils/notify')
+      const { notify } = require('../../../utils/notify')
       await waitFor(() => {
         expect(notify.error).toHaveBeenCalledWith('Voucher đã được sử dụng, không thể xóa')
       })
     })
 
     it('should handle duplicate voucher code error', async () => {
-      mockDispatch.mockRejectedValue({ message: 'Duplicate voucher code' })
+      // Component uses dispatch().unwrap()
+      mockDispatch.mockReturnValue({ unwrap: () => Promise.reject({ message: 'Duplicate voucher code' }) })
 
       await act(async () => {
         render(<VoucherManagementPage />)
@@ -724,10 +751,28 @@ describe('VoucherManagementPage', () => {
       const codeInput = screen.getByPlaceholderText('VD: SUMMER2026')
       await userEvent.type(codeInput, 'DUPLICATE')
 
+      // Fill value
+      const valueInputs = screen.getAllByRole('textbox')
+      const valueInput = valueInputs.find((input) => input.getAttribute('placeholder') === '0')
+      if (valueInput) {
+        await userEvent.type(valueInput, '10')
+      }
+
+      // Fill both date fields with future dates
+      const datetimeInputs = screen.getAllByTestId('datetime-field')
+      if (datetimeInputs.length >= 2) {
+        const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        const formattedDate = futureDate.toISOString().slice(0, 16)
+        await userEvent.clear(datetimeInputs[0])
+        await userEvent.type(datetimeInputs[0], formattedDate)
+        await userEvent.clear(datetimeInputs[1])
+        await userEvent.type(datetimeInputs[1], formattedDate)
+      }
+
       const saveBtn = screen.getByText('Tạo voucher')
       await userEvent.click(saveBtn)
 
-      const { notify } = require('../../utils/notify')
+      const { notify } = require('../../../utils/notify')
       await waitFor(() => {
         expect(notify.error).toHaveBeenCalledWith('Mã voucher đã tồn tại, vui lòng chọn mã khác')
       })
@@ -752,18 +797,17 @@ describe('VoucherManagementPage', () => {
     })
 
     it('should reload vouchers after successful creation', async () => {
-      const { fetchGetVouchers } = require('../../store/voucherSlice')
+      const { fetchGetVouchers } = require('../../../store/voucherSlice')
       mockVoucherState.vouchers = createMockVouchersResponse({ items: [] })
-
-      // Mock dispatch to resolve create action
-      mockDispatch.mockResolvedValueOnce({})
 
       await act(async () => {
         render(<VoucherManagementPage />)
       })
 
+      // Clear initial mount dispatch calls
       mockDispatch.mockClear()
-      mockDispatch.mockResolvedValue({})
+      // Mock dispatch to resolve create action (component uses dispatch().unwrap())
+      mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) })
 
       await userEvent.click(screen.getByText('Tạo Voucher mới'))
 
@@ -791,28 +835,39 @@ describe('VoucherManagementPage', () => {
       const saveBtn = screen.getByText('Tạo voucher')
       await userEvent.click(saveBtn)
 
+      // After successful creation, component calls onSaved() which dispatches fetchGetVouchers
+      // First dispatch is fetchCreateVoucher, second is fetchGetVouchers (reload)
       await waitFor(() => {
-        expect(mockDispatch).toHaveBeenCalledWith(
+        expect(mockDispatch).toHaveBeenNthCalledWith(
+          2,
           fetchGetVouchers(expect.any(Object))
         )
       })
     })
 
     it('should handle pagination page change', async () => {
+      const { fetchGetVouchers } = require('../../../store/voucherSlice')
       mockVoucherState.vouchers = createMockVouchersResponse({
         pageNumber: 1,
         totalPages: 3,
         totalCount: 30,
+        items: [createMockVoucher()],
       })
 
       await act(async () => {
         render(<VoucherManagementPage />)
       })
 
+      // Clear initial mount dispatch
+      mockDispatch.mockClear()
+
       await userEvent.click(screen.getByTestId('page-next'))
 
+      // Clicking Next should dispatch fetchGetVouchers with PageNumber: 2
       await waitFor(() => {
-        expect(screen.getByTestId('current-page')).toHaveTextContent('2')
+        expect(mockDispatch).toHaveBeenCalledWith(
+          fetchGetVouchers(expect.objectContaining({ PageNumber: 2 }))
+        )
       })
     })
 

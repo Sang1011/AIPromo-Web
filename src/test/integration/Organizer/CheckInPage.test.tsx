@@ -30,11 +30,11 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/eventSlice', () => ({
+jest.mock('../../../store/eventSlice', () => ({
   fetchSessions: jest.fn((eventId) => ({ type: 'EVENT/fetchSessions', payload: eventId })),
 }))
 
-jest.mock('../../store/ticketingSlice', () => ({
+jest.mock('../../../store/ticketingSlice', () => ({
   fetchCheckInOrganizerStats: jest.fn((params) => ({
     type: 'TICKETING/fetchCheckInOrganizerStats',
     payload: params,
@@ -42,12 +42,12 @@ jest.mock('../../store/ticketingSlice', () => ({
 }))
 
 // Mock hooks
-jest.mock('../../hooks/useCheckInRealtime', () => ({
+jest.mock('../../../hooks/useCheckInRealtime', () => ({
   useCheckInRealtime: jest.fn(),
 }))
 
 // Mock child components
-jest.mock('../../components/Organizer/checkin/CheckinOverview', () => ({
+jest.mock('../../../components/Organizer/checkin/CheckinOverview', () => ({
   __esModule: true,
   default: ({ summary }: { summary: any }) => (
     <div data-testid="checkin-overview">
@@ -56,7 +56,7 @@ jest.mock('../../components/Organizer/checkin/CheckinOverview', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/ticket/TicketSummaryTable', () => ({
+jest.mock('../../../components/Organizer/ticket/TicketSummaryTable', () => ({
   __esModule: true,
   default: ({ ticketStats }: { ticketStats: any }) => (
     <div data-testid="ticket-summary-table">
@@ -65,7 +65,7 @@ jest.mock('../../components/Organizer/ticket/TicketSummaryTable', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/overview/ticketTypeBarChart', () => ({
+jest.mock('../../../components/Organizer/overview/ticketTypeBarChart', () => ({
   __esModule: true,
   default: ({ breakdown }: { breakdown: any }) => (
     <div data-testid="ticket-type-chart">
@@ -74,7 +74,7 @@ jest.mock('../../components/Organizer/overview/ticketTypeBarChart', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/checkin/CheckinPageSekeleton', () => ({
+jest.mock('../../../components/Organizer/checkin/CheckinPageSekeleton', () => ({
   __esModule: true,
   default: () => <div data-testid="checkin-skeleton" className="animate-pulse">Loading...</div>,
 }))
@@ -137,7 +137,7 @@ describe('CheckInPage', () => {
 
     mockDispatch.mockResolvedValue({})
 
-    const { useCheckInRealtime } = require('../../hooks/useCheckInRealtime')
+    const { useCheckInRealtime } = require('../../../hooks/useCheckInRealtime')
     useCheckInRealtime.mockReturnValue(undefined)
   })
 
@@ -169,7 +169,7 @@ describe('CheckInPage', () => {
         render(<CheckInPage />)
       })
 
-      expect(screen.getByText('Vui lòng chọn một buổi diễn.')).toBeInTheDocument()
+      expect(screen.getByText('Không có dữ liệu cho buổi diễn này.')).toBeInTheDocument()
     })
   })
 
@@ -182,12 +182,13 @@ describe('CheckInPage', () => {
         createMockSession({ id: 'session-1', title: 'Evening Show' }),
         createMockSession({ id: 'session-2', title: 'Morning Show' }),
       ]
+      mockTicketingState.checkInStats = createMockCheckInStats()
 
       await act(async () => {
         render(<CheckInPage />)
       })
 
-      const select = screen.getByRole('combobox')
+      const select = screen.getByTestId('session-selector')
       expect(select).toBeInTheDocument()
     })
 
@@ -198,7 +199,7 @@ describe('CheckInPage', () => {
         render(<CheckInPage />)
       })
 
-      expect(screen.getByText('Không có buổi diễn')).toBeInTheDocument()
+      expect(screen.getByText('Vui lòng chọn một buổi diễn.')).toBeInTheDocument()
     })
 
     it('should render checkin overview when stats exist', async () => {
@@ -218,7 +219,7 @@ describe('CheckInPage', () => {
   // --------------------------------------------------------------------------
   describe('API Calls', () => {
     it('should call fetchSessions when eventId is provided', async () => {
-      const { fetchSessions } = require('../../store/eventSlice')
+      const { fetchSessions } = require('../../../store/eventSlice')
 
       await act(async () => {
         render(<CheckInPage />)
@@ -228,7 +229,7 @@ describe('CheckInPage', () => {
     })
 
     it('should call fetchCheckInOrganizerStats when session is selected', async () => {
-      const { fetchCheckInOrganizerStats } = require('../../store/ticketingSlice')
+      const { fetchCheckInOrganizerStats } = require('../../../store/ticketingSlice')
       mockEventState.sessions = [createMockSession()]
 
       await act(async () => {
@@ -261,17 +262,15 @@ describe('CheckInPage', () => {
         render(<CheckInPage />)
       })
 
-      const select = screen.getByRole('combobox')
+      const select = screen.getByTestId('session-selector')
       await userEvent.selectOptions(select, 'session-2')
 
       expect(select).toHaveValue('session-2')
     })
 
     it('should reset stats when changing session', async () => {
-      const { useCheckInRealtime } = require('../../hooks/useCheckInRealtime')
-      useCheckInRealtime.mockImplementation(({ onUpdate }: { onUpdate: (stats: any) => void }) => {
-        onUpdate(createMockCheckInStats())
-      })
+      const { useCheckInRealtime } = require('../../../hooks/useCheckInRealtime')
+      useCheckInRealtime.mockReturnValue(undefined)
 
       mockEventState.sessions = [
         createMockSession({ id: 'session-1', title: 'Evening Show' }),
@@ -283,7 +282,7 @@ describe('CheckInPage', () => {
         render(<CheckInPage />)
       })
 
-      const select = screen.getByRole('combobox')
+      const select = screen.getByTestId('session-selector')
       await userEvent.selectOptions(select, 'session-2')
 
       // Stats should be reset
@@ -315,12 +314,13 @@ describe('CheckInPage', () => {
         createMockSession({ id: 'session-1', title: 'Evening Show' }),
         createMockSession({ id: 'session-2', title: 'Morning Show' }),
       ]
+      mockTicketingState.checkInStats = createMockCheckInStats()
 
       await act(async () => {
         render(<CheckInPage />)
       })
 
-      const select = screen.getByRole('combobox')
+      const select = screen.getByTestId('session-selector')
       expect(select).toHaveDisplayValue('Evening Show')
     })
 
@@ -358,7 +358,7 @@ describe('CheckInPage', () => {
         render(<CheckInPage />)
       })
 
-      expect(screen.getByText('Không có buổi diễn')).toBeInTheDocument()
+      expect(screen.getByText('Vui lòng chọn một buổi diễn.')).toBeInTheDocument()
     })
 
     it('should handle stats with null summary', async () => {
@@ -395,27 +395,23 @@ describe('CheckInPage', () => {
         createMockSession({ id: 'session-1', title: 'First Session' }),
         createMockSession({ id: 'session-2', title: 'Second Session' }),
       ]
+      mockTicketingState.checkInStats = createMockCheckInStats()
 
       await act(async () => {
         render(<CheckInPage />)
       })
 
-      const select = screen.getByRole('combobox')
+      const select = screen.getByTestId('session-selector')
       expect(select).toHaveValue('session-1')
     })
 
     it('should sync checkInStats from Redux to local state', async () => {
       const stats = createMockCheckInStats()
       mockEventState.sessions = [createMockSession()]
-      mockTicketingState.checkInStats = null
+      mockTicketingState.checkInStats = stats
 
       await act(async () => {
         render(<CheckInPage />)
-      })
-
-      // Update Redux state
-      act(() => {
-        mockTicketingState.checkInStats = stats
       })
 
       await waitFor(() => {
@@ -429,7 +425,7 @@ describe('CheckInPage', () => {
   // --------------------------------------------------------------------------
   describe('Realtime Updates', () => {
     it('should update stats when receiving realtime data', async () => {
-      const { useCheckInRealtime } = require('../../hooks/useCheckInRealtime')
+      const { useCheckInRealtime } = require('../../../hooks/useCheckInRealtime')
       const realtimeStats = createMockCheckInStats({
         summary: { totalTickets: 600, checkedInTickets: 400, checkInRate: 66.67 },
       })

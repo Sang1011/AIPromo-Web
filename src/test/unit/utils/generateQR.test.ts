@@ -27,6 +27,8 @@ describe('generateQR', () => {
         'https://example.com',
         {
           errorCorrectionLevel: 'H',
+          type: 'image/png',
+          margin: 2,
           width: 300,
         }
       )

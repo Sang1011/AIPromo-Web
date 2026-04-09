@@ -1,6 +1,7 @@
 /// <reference types="jest" />
 import { renderHook, waitFor } from '@testing-library/react'
 import { useAnalyticsData } from '../../../hooks/useAnalyticsData'
+import type { GetPostsParams } from '../../../types/post/post'
 
 // Mock Redux
 const mockDispatch = jest.fn()
@@ -20,10 +21,12 @@ jest.mock('../../../store/postSlice', () => ({
 }))
 
 describe('useAnalyticsData', () => {
-  const mockParams = {
+  const mockParams: GetPostsParams = {
     pageNumber: 1,
     pageSize: 10,
     eventId: 'event-123',
+    sortColumn: 'createdAt',
+    sortOrder: 'desc',
   }
 
   beforeEach(() => {

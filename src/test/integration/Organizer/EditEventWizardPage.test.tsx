@@ -28,16 +28,16 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/authSlice', () => ({
+jest.mock('../../../store/authSlice', () => ({
   fetchMe: jest.fn(() => ({ type: 'AUTH/fetchMe' })),
 }))
 
-jest.mock('../../store/eventSlice', () => ({
+jest.mock('../../../store/eventSlice', () => ({
   fetchEventById: jest.fn((eventId) => ({ type: 'EVENT/fetchEventById', payload: eventId })),
 }))
 
 // Mock child components
-jest.mock('../../components/Organizer/Stepper', () => ({
+jest.mock('../../../components/Organizer/Stepper', () => ({
   __esModule: true,
   default: ({ currentStep }: { currentStep: number }) => (
     <div data-testid="stepper">
@@ -46,7 +46,7 @@ jest.mock('../../components/Organizer/Stepper', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/steps/Step1EventInfo', () => ({
+jest.mock('../../../components/Organizer/steps/Step1EventInfo', () => ({
   __esModule: true,
   default: ({ mode, onNext, eventData }: { mode: string; onNext: () => void; eventData: any }) => (
     <div data-testid="step1-event-info">
@@ -57,7 +57,7 @@ jest.mock('../../components/Organizer/steps/Step1EventInfo', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/steps/Step2Schedule', () => ({
+jest.mock('../../../components/Organizer/steps/Step2Schedule', () => ({
   __esModule: true,
   default: ({ onNext, onBack, eventData }: { onNext: () => void; onBack: () => void; eventData: any }) => (
     <div data-testid="step2-schedule">
@@ -68,7 +68,7 @@ jest.mock('../../components/Organizer/steps/Step2Schedule', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/steps/Step3Settings', () => ({
+jest.mock('../../../components/Organizer/steps/Step3Settings', () => ({
   __esModule: true,
   default: ({ onNext, onBack, eventData }: { onNext: () => void; onBack: () => void; eventData: any }) => (
     <div data-testid="step3-settings">
@@ -79,7 +79,7 @@ jest.mock('../../components/Organizer/steps/Step3Settings', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/steps/Step4Policy', () => ({
+jest.mock('../../../components/Organizer/steps/Step4Policy', () => ({
   __esModule: true,
   default: ({ onBack, eventData }: { onBack: () => void; eventData: any }) => (
     <div data-testid="step4-policy">
@@ -104,6 +104,20 @@ const createMockEvent = (overrides = {}) => ({
   ...overrides,
 })
 
+// Helper to create a mock dispatch result that supports .unwrap() like RTK async thunks
+const createDispatchResult = (value: any) => {
+  const promise = Promise.resolve(value) as Promise<any> & { unwrap: () => Promise<any> }
+  promise.unwrap = () => promise
+  return promise
+}
+
+const createDispatchReject = (error: Error) => {
+  const promise = Promise.reject(error) as Promise<never> & { unwrap: () => Promise<never> }
+  promise.unwrap = () => promise
+  promise.catch(() => { }) // suppress unhandled rejection
+  return promise
+}
+
 // ============================================================================
 // TESTS
 // ============================================================================
@@ -119,9 +133,9 @@ describe('EditEventWizardPage', () => {
     }
 
     // Mock dispatch to resolve with event data
-    mockDispatch.mockResolvedValue({
+    mockDispatch.mockReturnValue(createDispatchResult({
       data: createMockEvent(),
-    })
+    }))
   })
 
   // --------------------------------------------------------------------------
@@ -167,12 +181,12 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should show rejection reason banner for Draft events', async () => {
-      mockDispatch.mockResolvedValue({
+      mockDispatch.mockReturnValue(createDispatchResult({
         data: createMockEvent({
           status: 'Draft',
           publishRejectionReason: 'Content not appropriate',
         }),
-      })
+      }))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -185,12 +199,12 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should show suspension reason banner for Suspended events', async () => {
-      mockDispatch.mockResolvedValue({
+      mockDispatch.mockReturnValue(createDispatchResult({
         data: createMockEvent({
           status: 'Suspended',
           suspensionReason: 'Technical issues',
         }),
-      })
+      }))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -208,7 +222,7 @@ describe('EditEventWizardPage', () => {
   // --------------------------------------------------------------------------
   describe('API Calls', () => {
     it('should call fetchMe on mount', async () => {
-      const { fetchMe } = require('../../store/authSlice')
+      const { fetchMe } = require('../../../store/authSlice')
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -218,7 +232,7 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should call fetchEventById when eventId is provided', async () => {
-      const { fetchEventById } = require('../../store/eventSlice')
+      const { fetchEventById } = require('../../../store/eventSlice')
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -304,9 +318,9 @@ describe('EditEventWizardPage', () => {
   // --------------------------------------------------------------------------
   describe('Data Display', () => {
     it('should display event data in steps', async () => {
-      mockDispatch.mockResolvedValue({
+      mockDispatch.mockReturnValue(createDispatchResult({
         data: createMockEvent({ title: 'My Awesome Event' }),
-      })
+      }))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -319,7 +333,7 @@ describe('EditEventWizardPage', () => {
 
     it('should pass event data to all step components', async () => {
       const eventData = createMockEvent({ title: 'Test Event Title' })
-      mockDispatch.mockResolvedValue({ data: eventData })
+      mockDispatch.mockReturnValue(createDispatchResult({ data: eventData }))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -347,7 +361,7 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should handle event fetch error', async () => {
-      mockDispatch.mockRejectedValue(new Error('Failed to fetch event'))
+      mockDispatch.mockReturnValue(createDispatchReject(new Error('Failed to fetch event')))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -358,12 +372,12 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should handle event with cancellation reason', async () => {
-      mockDispatch.mockResolvedValue({
+      mockDispatch.mockReturnValue(createDispatchResult({
         data: createMockEvent({
           status: 'Cancelled',
           cancellationReason: 'Force majeure',
         }),
-      })
+      }))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -376,12 +390,12 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should handle event with cancellation rejection reason', async () => {
-      mockDispatch.mockResolvedValue({
+      mockDispatch.mockReturnValue(createDispatchResult({
         data: createMockEvent({
           status: 'PendingCancellation',
           cancellationRejectionReason: 'Cannot cancel at this time',
         }),
-      })
+      }))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -394,11 +408,11 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should not show any banner for Published events', async () => {
-      mockDispatch.mockResolvedValue({
+      mockDispatch.mockReturnValue(createDispatchResult({
         data: createMockEvent({
           status: 'Published',
         }),
-      })
+      }))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -412,9 +426,9 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should set isAllowUpdate to true for Draft events', async () => {
-      mockDispatch.mockResolvedValue({
+      mockDispatch.mockReturnValue(createDispatchResult({
         data: createMockEvent({ status: 'Draft' }),
-      })
+      }))
 
       await act(async () => {
         render(<EditEventWizardPage />)
@@ -425,9 +439,9 @@ describe('EditEventWizardPage', () => {
     })
 
     it('should set isAllowUpdate to true for Suspended events', async () => {
-      mockDispatch.mockResolvedValue({
+      mockDispatch.mockReturnValue(createDispatchResult({
         data: createMockEvent({ status: 'Suspended' }),
-      })
+      }))
 
       await act(async () => {
         render(<EditEventWizardPage />)

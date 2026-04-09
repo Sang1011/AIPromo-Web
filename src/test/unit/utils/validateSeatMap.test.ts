@@ -12,6 +12,7 @@ describe('validateSeatMap', () => {
     y: 0,
     width: 100,
     height: 100,
+    rotation: 0,
     fill: '#cccccc',
     stroke: '#000000',
     isAreaType: true,
@@ -30,6 +31,8 @@ describe('validateSeatMap', () => {
     y: 0,
     width: 20,
     height: 20,
+    rotation: 0,
+    fill: '#000000',
     status: 'available',
     ...overrides,
   })
@@ -59,9 +62,9 @@ describe('validateSeatMap', () => {
 
       expect(result.valid).toBe(false)
       expect(result.errors).toHaveLength(1)
-      expect(result.errors[0].message).toContain('trùng lặp')
-      expect(result.errors[0].areaIds).toContain('area-1')
-      expect(result.errors[0].areaIds).toContain('area-2')
+      expect(result.errors[0].message).toContain('nhiều hơn 1')
+      expect(result.errors[0].areaIds).toContain('1')
+      expect(result.errors[0].areaIds).toContain('2')
     })
 
     it('should skip areas without ticketTypeId', () => {

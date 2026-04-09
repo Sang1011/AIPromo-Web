@@ -9,7 +9,7 @@ jest.mock('firebase/database', () => ({
   remove: jest.fn(),
 }))
 
-jest.mock('../../config/firebase', () => ({
+jest.mock('../../../config/firebase', () => ({
   db: {},
 }))
 
@@ -87,6 +87,7 @@ describe('orderFirebase', () => {
   describe('Edge cases', () => {
     it('should handle whitespace-only orderId', async () => {
       localStorage.setItem('currentOrderId', '   ')
+      mockRemove.mockResolvedValue(undefined)
 
       await clearOldOrderFromFirebase()
 

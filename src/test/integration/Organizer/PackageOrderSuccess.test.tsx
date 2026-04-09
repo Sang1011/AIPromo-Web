@@ -88,32 +88,35 @@ describe('PackageOrderSuccess', () => {
       })
 
       await act(async () => render(<PackageOrderSuccess />))
-      expect(screen.getByText(/#txn-123-456-789/)).toBeInTheDocument()
+      // Component slices to 12 chars: 'txn-123-456-' + '...'
+      expect(screen.getByText(/#txn-123-456-/)).toBeInTheDocument()
     })
 
     it('should show formatted date from transaction', async () => {
       mockUseLocation.mockReturnValue({
         state: {
           transaction: {
+            paymentTransactionId: 'txn-abc',
             completedAt: '2024-12-01T10:30:00Z',
           },
         },
       })
 
       await act(async () => render(<PackageOrderSuccess />))
-      // Should show some date
-      expect(screen.queryByText(/Chi tiết giao dịch/)).toBeInTheDocument()
+      expect(screen.getByText('Chi tiết giao dịch')).toBeInTheDocument()
     })
 
     it('should use current date when completedAt is missing', async () => {
       mockUseLocation.mockReturnValue({
         state: {
-          transaction: {},
+          transaction: {
+            paymentTransactionId: 'txn-abc',
+          },
         },
       })
 
       await act(async () => render(<PackageOrderSuccess />))
-      expect(screen.queryByText(/Chi tiết giao dịch/)).toBeInTheDocument()
+      expect(screen.getByText('Chi tiết giao dịch')).toBeInTheDocument()
     })
   })
 

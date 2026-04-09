@@ -54,7 +54,7 @@ jest.mock('../../../store/ticketingSlice', () => ({
 }))
 
 jest.mock('../../../utils/fmtMoneyVND', () => ({
-  fmtMoneyVND: (n: number) => n.toLocaleString('vi-VN'),
+  fmtMoneyVND: (n: number | undefined) => n != null ? n.toLocaleString('vi-VN') : '0',
 }))
 
 // ============================================================================
@@ -81,8 +81,8 @@ describe('OrganizerOverviewAllPage', () => {
         activeEventCount: 2,
       },
       revenueBreakdownOrganizer: [
-        { eventName: 'Event 1', grossRevenue: 50000000, netRevenue: 45000000 },
-        { eventName: 'Event 2', grossRevenue: 100000000, netRevenue: 90000000 },
+        { eventName: 'Event 1', grossRevenue: 50000000, netRevenue: 45000000, refundRate: 5.0 },
+        { eventName: 'Event 2', grossRevenue: 100000000, netRevenue: 90000000, refundRate: 2.0 },
       ],
       loading: {
         organizerSummary: false,
@@ -105,15 +105,15 @@ describe('OrganizerOverviewAllPage', () => {
   describe('Render', () => {
     it('should render without crashing', async () => {
       await act(async () => render(<OrganizerOverviewAllPage />))
-      expect(screen.getByText('Tổng quan')).toBeInTheDocument()
+      expect(screen.getByText('Tổng quan tất cả sự kiện')).toBeInTheDocument()
     })
 
     it('should render metric cards', async () => {
       await act(async () => render(<OrganizerOverviewAllPage />))
       expect(screen.getByText('Tổng doanh thu gộp')).toBeInTheDocument()
-      expect(screen.getByText('Doanh thu ròng')).toBeInTheDocument()
-      expect(screen.getByText('Tổng giảm giá')).toBeInTheDocument()
-      expect(screen.getByText('Tổng hoàn tiền')).toBeInTheDocument()
+      expect(screen.getByText('Doanh thu ròng', { selector: 'p.text-sm' })).toBeInTheDocument()
+      expect(screen.getByText('Số sự kiện')).toBeInTheDocument()
+      expect(screen.getByText('Tổng hoàn vé')).toBeInTheDocument()
     })
 
     it('should render chart sections', async () => {
@@ -133,7 +133,7 @@ describe('OrganizerOverviewAllPage', () => {
   describe('Data Display', () => {
     it('should display formatted revenue values', async () => {
       await act(async () => render(<OrganizerOverviewAllPage />))
-      expect(screen.getByText('150.000.000')).toBeInTheDocument()
+      expect(screen.getByText(/150\.000\.000 đồng/)).toBeInTheDocument()
     })
 
     it('should display event counts', async () => {
@@ -143,7 +143,7 @@ describe('OrganizerOverviewAllPage', () => {
 
     it('should display refund rate', async () => {
       await act(async () => render(<OrganizerOverviewAllPage />))
-      expect(screen.getByText('3.3%')).toBeInTheDocument()
+      expect(screen.getByText(/3\.33% tỉ lệ hoàn/)).toBeInTheDocument()
     })
   })
 
@@ -244,13 +244,14 @@ describe('OrganizerOverviewAllPage', () => {
     it('should handle large revenue values', async () => {
       mockReportState.revenueSummaryOrganizer.grossRevenue = 10000000000
       await act(async () => render(<OrganizerOverviewAllPage />))
-      expect(screen.getByText('10.000.000.000')).toBeInTheDocument()
+      expect(screen.getByText(/10\.000\.000\.000 đồng/)).toBeInTheDocument()
     })
 
     it('should handle high refund rate', async () => {
-      mockReportState.revenueSummaryOrganizer.refundRate = 15.5
+      mockReportState.revenueSummaryOrganizer.totalRefunds = 23250000
+      mockReportState.revenueSummaryOrganizer.grossRevenue = 150000000
       await act(async () => render(<OrganizerOverviewAllPage />))
-      expect(screen.getByText('15.5%')).toBeInTheDocument()
+      expect(screen.getByText(/15\.50% tỉ lệ hoàn/)).toBeInTheDocument()
     })
   })
 })

@@ -13,6 +13,8 @@ describe('getSeatsBoundingBox', () => {
     y: overrides.y ?? 0,
     width: overrides.width ?? 20,
     height: overrides.height ?? 20,
+    rotation: 0,
+    fill: '#000000',
     status: 'available',
     ...overrides,
   })
@@ -112,7 +114,7 @@ describe('getSeatsBoundingBox', () => {
         minX: -50,
         minY: -30,
         maxX: 10, // -10 + 20
-        maxY: -10, // -10 + 20
+        maxY: 10, // -10 + 20
       })
     })
   })

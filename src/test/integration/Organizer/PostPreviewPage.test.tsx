@@ -27,12 +27,12 @@ jest.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
 }))
 
-jest.mock('../../store/postSlice', () => ({
+jest.mock('../../../store/postSlice', () => ({
   fetchPostDetail: jest.fn((id) => ({ type: 'POST/fetchPostDetail', payload: id })),
   clearPostDetail: jest.fn(() => ({ type: 'POST/clearPostDetail' })),
 }))
 
-jest.mock('../../components/Organizer/post/PostBlockRenderer', () => ({
+jest.mock('../../../components/Organizer/post/PostBlockRenderer', () => ({
   __esModule: true,
   default: ({ blocks }: { blocks: any[] }) => (
     <div data-testid="post-block-renderer">
@@ -41,11 +41,11 @@ jest.mock('../../components/Organizer/post/PostBlockRenderer', () => ({
   ),
 }))
 
-jest.mock('../../utils/renderPostContent', () => ({
+jest.mock('../../../utils/renderPostContent', () => ({
   parseBodyToBlocks: (body: string) => [{ type: 'paragraph', content: body }],
 }))
 
-jest.mock('../../utils/injectImageBlock', () => ({
+jest.mock('../../../utils/injectImageBlock', () => ({
   injectImageBlock: (blocks: any[], imageUrl: string | null) => {
     if (imageUrl) return [...blocks, { type: 'image', url: imageUrl }]
     return blocks
@@ -110,13 +110,13 @@ describe('PostPreviewPage', () => {
 
   describe('API Calls', () => {
     it('should call fetchPostDetail on mount', async () => {
-      const { fetchPostDetail } = require('../../store/postSlice')
+      const { fetchPostDetail } = require('../../../store/postSlice')
       await act(async () => render(<PostPreviewPage />))
       expect(mockDispatch).toHaveBeenCalledWith(fetchPostDetail('post-123'))
     })
 
     it('should call clearPostDetail on unmount', async () => {
-      const { clearPostDetail } = require('../../store/postSlice')
+      const { clearPostDetail } = require('../../../store/postSlice')
       const { unmount } = await act(async () => render(<PostPreviewPage />))
       unmount()
       expect(mockDispatch).toHaveBeenCalledWith(clearPostDetail())

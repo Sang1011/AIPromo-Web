@@ -97,7 +97,7 @@ export default function EventTicketPage() {
             {tab === "overview" && (
                 <div className="flex gap-8">
                     <div className="flex-1 space-y-6">
-                        {ticketTypes.length === 0 ? (
+                        {(!ticketTypes || ticketTypes.length === 0) ? (
                             <div className="rounded-2xl border border-white/5 bg-[#0b0816] p-8 text-center text-slate-400">
                                 Chưa tạo vé cho sự kiện này
                             </div>

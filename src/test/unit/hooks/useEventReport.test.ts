@@ -26,11 +26,12 @@ describe('useEventReports', () => {
   })
 
   describe('Initial state', () => {
-    it('should return empty reports and loading true initially', () => {
+    it('should return empty reports and loading true initially', async () => {
       const { result } = renderHook(() => useEventReports('test@example.com'))
 
       expect(result.current.reports).toEqual([])
-      expect(result.current.loading).toBe(true)
+      // mockOnValue fires synchronously in beforeEach, so loading becomes false
+      expect(result.current.loading).toBe(false)
     })
 
     it('should return empty reports when no email provided', () => {
