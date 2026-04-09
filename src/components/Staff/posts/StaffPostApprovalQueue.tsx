@@ -20,6 +20,175 @@ const tabs = [
 
 type TabKey = (typeof tabs)[number]["key"];
 
+// ─── Detail Modal ─────────────────────────────────────────────────────────
+function PostDetailModal({
+    postId,
+    onClose,
+}: {
+    postId: string;
+    onClose: () => void;
+}) {
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        interceptorAPI()
+            .get(`/posts/${postId}`)
+            .then((res) => {
+                if (!cancelled) {
+                    setData(res.data.data);
+                    setLoading(false);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setError("Không thể tải chi tiết bài đăng");
+                    setLoading(false);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [postId]);
+
+    const statusColors: Record<string, string> = {
+        Pending: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+        Approved: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+        Published: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+        Rejected: "bg-red-500/10 text-red-400 border border-red-500/20",
+    };
+
+    const statusLabels: Record<string, string> = {
+        Pending: "Chờ duyệt",
+        Approved: "Đã duyệt",
+        Published: "Đã đăng",
+        Rejected: "Bị từ chối",
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div
+                className="absolute inset-0"
+                onClick={onClose}
+            />
+            <div className="relative w-full max-w-2xl rounded-2xl border border-primary/10 bg-[#1a1530] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-slate-700/50 flex items-center justify-between shrink-0">
+                    <h3 className="text-lg font-bold text-white">Chi tiết bài đăng</h3>
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="overflow-y-auto flex-1 px-6 py-5">
+                    {loading ? (
+                        <div className="text-center py-12">
+                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-fuchsia-500 border-r-transparent" />
+                            <p className="text-slate-400 text-sm mt-3">Đang tải...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-12">
+                            <p className="text-red-400 text-sm">{error}</p>
+                        </div>
+                    ) : data ? (
+                        <div className="space-y-6">
+                            {/* Title + Status */}
+                            <div>
+                                <h4 className="text-xl font-bold text-white mb-3">{data.title}</h4>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusColors[data.status] ?? "bg-slate-700 text-slate-300"}`}>
+                                        {statusLabels[data.status] ?? data.status}
+                                    </span>
+                                    <span className="text-xs text-slate-500">
+                                        {formatDateDisplay(data.createdAt)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Image */}
+                            {data.imageUrl && (
+                                <div className="rounded-xl overflow-hidden border border-slate-700/50">
+                                    <img src={data.imageUrl} alt={data.title} className="w-full h-auto object-cover max-h-64" />
+                                </div>
+                            )}
+
+                            {/* Content */}
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Nội dung</label>
+                                <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
+                                    <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{data.body}</p>
+                                </div>
+                            </div>
+
+                            {/* AI Info */}
+                            {(data.promptUsed || data.aiModel) && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">Thông tin AI</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {data.aiModel && (
+                                            <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700/30">
+                                                <p className="text-[10px] text-slate-500 uppercase mb-1">AI Model</p>
+                                                <p className="text-sm text-white font-medium">{data.aiModel}</p>
+                                            </div>
+                                        )}
+                                        {data.aiTokensUsed != null && (
+                                            <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700/30">
+                                                <p className="text-[10px] text-slate-500 uppercase mb-1">Tokens dùng</p>
+                                                <p className="text-sm text-white font-medium">{data.aiTokensUsed.toLocaleString()}</p>
+                                            </div>
+                                        )}
+                                        {data.promptUsed && (
+                                            <div className="col-span-2 bg-slate-900/50 rounded-lg p-3 border border-slate-700/30">
+                                                <p className="text-[10px] text-slate-500 uppercase mb-1">Prompt đã dùng</p>
+                                                <p className="text-sm text-slate-300">{data.promptUsed}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Rejection Reason */}
+                            {data.rejectionReason && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-red-400 mb-2 uppercase tracking-wider">Lý do từ chối</label>
+                                    <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
+                                        <p className="text-sm text-red-300">{data.rejectionReason}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Metadata */}
+                            <div className="pt-2 border-t border-slate-700/50">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase mb-1">Phiên bản</p>
+                                        <p className="text-sm text-slate-300">v{data.version ?? 1}</p>
+                                    </div>
+                                    {data.modifiedAt && (
+                                        <div>
+                                            <p className="text-[10px] text-slate-500 uppercase mb-1">Cập nhật lần cuối</p>
+                                            <p className="text-sm text-slate-300">{formatDateDisplay(data.modifiedAt)}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Approve Confirm Modal ───────────────────────────────────────────────
 function ApproveConfirmModal({
     onConfirm,
@@ -132,6 +301,7 @@ export default function StaffPostApprovalQueue({
     // Confirm modal state
     const [approveTarget, setApproveTarget] = useState<string | null>(null);
     const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+    const [detailPostId, setDetailPostId] = useState<string | null>(null);
 
     // Fetch counts for all tabs using direct service calls (not Redux)
     // to avoid polluting the main adminPosts list
@@ -250,7 +420,7 @@ export default function StaffPostApprovalQueue({
     };
 
     const handleView = (id: string) => {
-        console.log("View post:", id);
+        setDetailPostId(id);
     };
 
     const handleReReview = (id: string) => {
@@ -393,6 +563,12 @@ export default function StaffPostApprovalQueue({
                     onCancel={() => setRejectTarget(null)}
                 />
             )}
+            {detailPostId && (
+                <PostDetailModal
+                    postId={detailPostId}
+                    onClose={() => setDetailPostId(null)}
+                />
+            )}
         </div>
     );
 }
@@ -415,6 +591,17 @@ function mapStatus(
 }
 
 function formatDate(iso: string): string {
+    const d = new Date(iso);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${hh}:${mm}, ${dd}/${mo}/${yyyy}`;
+}
+
+function formatDateDisplay(iso: string): string {
+    if (!iso) return "";
     const d = new Date(iso);
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
