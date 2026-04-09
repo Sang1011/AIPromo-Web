@@ -1,6 +1,7 @@
 import {
     LineChart,
     Line,
+    Area,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -133,6 +134,12 @@ export default function RevenueChart({ trendData, period, loading, onPeriodChang
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#7c3bed" stopOpacity={0.4} />
+                                    <stop offset="100%" stopColor="#7c3bed" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
                             <CartesianGrid stroke="#1e293b" vertical={false} />
 
                             <XAxis
@@ -189,15 +196,31 @@ export default function RevenueChart({ trendData, period, loading, onPeriodChang
                                 }}
                             />
 
+                            <Area
+                                yAxisId="revenue"
+                                type="monotone"
+                                dataKey="revenue"
+                                fill="url(#revenueGradient)"
+                                stroke="transparent"
+                                strokeWidth={0}
+                            />
+
                             <Line
                                 yAxisId="revenue"
                                 type="monotone"
                                 dataKey="revenue"
-                                stroke="#7c3bed"
-                                strokeWidth={2.5}
-                                dot={{ r: 3, fill: "#7c3bed", strokeWidth: 0 }}
-                                activeDot={{ r: 5, strokeWidth: 0 }}
+                                stroke="url(#revenueLineGradient)"
+                                strokeWidth={3}
+                                dot={{ r: 4, fill: "#7c3bed", strokeWidth: 2, stroke: "#0f0c1a" }}
+                                activeDot={{ r: 6, strokeWidth: 0, filter: "drop-shadow(0 0 8px rgba(124,59,237,0.6))" }}
                             />
+                            <defs>
+                                <linearGradient id="revenueLineGradient" x1="0" y1="0" x2="1" y2="0">
+                                    <stop offset="0%" stopColor="#7c3bed" />
+                                    <stop offset="50%" stopColor="#a855f7" />
+                                    <stop offset="100%" stopColor="#7c3bed" />
+                                </linearGradient>
+                            </defs>
 
                             <Line
                                 yAxisId="tickets"

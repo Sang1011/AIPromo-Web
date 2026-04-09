@@ -155,10 +155,10 @@ export const fetchPostDetail = createAsyncThunk(
     async (postId: string, { rejectWithValue }) => {
         try {
             const res = await postService.getPostDetail(postId);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to fetch post detail");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi fetch chi tiết bài viết");
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch post detail");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi fetch chi tiết bài viết");
         }
     }
 );
@@ -168,10 +168,10 @@ export const fetchOrganizerPosts = createAsyncThunk(
     async (params: GetPostsParams, { rejectWithValue }) => {
         try {
             const res = await postService.getOrganizerPosts(params);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to fetch posts");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi fetch posts");
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to fetch posts");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi fetch posts");
         }
     }
 );
@@ -181,10 +181,10 @@ export const updatePostContent = createAsyncThunk(
     async ({ postId, data }: { postId: string; data: UpdatePostContentRequest }, { rejectWithValue }) => {
         try {
             const res = await postService.updatePostContent(postId, data);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to update post");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi cập nhật bài viết");
             return data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to update post");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi cập nhật bài viết");
         }
     }
 );
@@ -194,9 +194,9 @@ export const archivePost = createAsyncThunk(
     async (postId: string, { rejectWithValue }) => {
         try {
             const res = await postService.archivePost(postId);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to archive post");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi lưu trữ bài viết");
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to archive post");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi lưu trữ bài viết");
         }
     }
 );
@@ -206,9 +206,9 @@ export const requestToSubmitPost = createAsyncThunk(
     async (postId: string, { rejectWithValue }) => {
         try {
             const res = await postService.requestToSubmitPost(postId);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to submit post");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi gửi bài viết để duyệt");
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to submit post");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi gửi bài viết để duyệt");
         }
     }
 );
@@ -218,9 +218,9 @@ export const publishApprovedPost = createAsyncThunk(
     async (postId: string, { rejectWithValue }) => {
         try {
             const res = await postService.publishApprovedPost(postId);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to publish post");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi xuất bản bài viết");
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to publish post");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi xuất bản bài viết");
         }
     }
 );
@@ -230,10 +230,10 @@ export const generateContentPostUsingAI = createAsyncThunk(
     async ({ eventId, userPromptRequirement }: { eventId: string; userPromptRequirement?: string }, { rejectWithValue }) => {
         try {
             const res = await postService.generateContentPostUsingAI(eventId, userPromptRequirement);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to generate AI content");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Bạn không đủ token để tạo nội dung bằng AI");
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to generate AI content");
+            return rejectWithValue(error?.response?.data?.message ?? "Bạn không đủ token để tạo nội dung bằng AI");
         }
     }
 );
@@ -243,10 +243,10 @@ export const createPostDraft = createAsyncThunk(
     async (data: CreatePostDraftRequest, { rejectWithValue }) => {
         try {
             const res = await postService.createPostDraft(data);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to create post draft");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi tạo bản nháp bài viết");
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to create post draft");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi tạo bản nháp bài viết");
         }
     }
 );
@@ -256,10 +256,11 @@ export const generateImage = createAsyncThunk(
     async (data: GenerateImageRequestBody, { rejectWithValue }) => {
         try {
             const res = await postService.generateImage(data);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to generate image");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Bạn không thể tạo ảnh với prompt đã nhập");
+
             return res.data.data.imageUrl;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to generate image");
+            return rejectWithValue(error?.response?.data?.message ?? "Bạn không thể tạo ảnh với prompt đã nhập");
         }
     }
 );
@@ -269,10 +270,10 @@ export const sendToChatBox = createAsyncThunk(
     async (userPrompt: string, { rejectWithValue }) => {
         try {
             const res = await postService.sendToChatBox(userPrompt);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Failed to send message");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi gửi tin nhắn");
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Failed to send message");
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi gửi tin nhắn");
         }
     }
 );
@@ -420,12 +421,12 @@ export const fetchFacebookTotalMetrics = createAsyncThunk(
         try {
             const res = await postService.getFacebookMetricsTotals(period);
             if (!res.data.isSuccess) {
-                return rejectWithValue(res.data.message ?? "Failed to fetch Facebook total metrics");
+                return rejectWithValue(res.data.message ?? "Lỗi khi fetch tổng quan Facebook metrics");
             }
             return res.data.data;
         } catch (error: any) {
             return rejectWithValue(
-                error?.response?.data?.message ?? "Failed to fetch Facebook total metrics"
+                error?.response?.data?.message ?? "Lỗi khi fetch tổng quan Facebook metrics"
             );
         }
     }

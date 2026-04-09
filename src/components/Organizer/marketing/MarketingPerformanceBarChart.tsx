@@ -13,7 +13,8 @@ import {
 import postService from "../../../services/postService";
 import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetricsMap, fetchAllDistributionMetrics, fetchOrganizerPosts } from "../../../store/postSlice";
-import type { DistributionMetricsFacebook, PostListItem } from "../../../types/post/post";
+import type { DistributionMetricsFacebook, GetPostsParams, PostListItem } from "../../../types/post/post";
+import { useParams } from "react-router-dom";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -31,7 +32,6 @@ function truncateTitle(s: string, max = 22): string {
 // platformMetadata có thể chứa JSON metrics, hoặc dùng fallback từ distributions
 
 interface ParsedFbMetrics {
-    impressions: number;
     reach: number;
     clicks: number;
     likes: number;
@@ -53,7 +53,6 @@ function parseFbMetrics(
     if (!m) return null;
 
     return {
-        impressions: m.impressions ?? 0,
         reach: m.reach ?? 0,
         clicks: m.clicks ?? 0,
         likes: m.likes ?? 0,
@@ -62,20 +61,35 @@ function parseFbMetrics(
     };
 }
 
-const CHART_CONFIGS = [
+type ChartConfigType = {
+    id: string;
+    title: string;
+    subtitle: string;
+    icon: React.ReactNode;
+    color: string;
+    dimColor: string;
+    tooltipUnit: string;
+    getMetric: (m: ParsedFbMetrics) => number;
+    getSecondary: ((m: ParsedFbMetrics) => number) | null;
+    secondaryLabel: string;
+    primaryLabel: string;
+    description: string;
+};
+
+const CHART_CONFIGS: ChartConfigType[] = [
     {
         id: "reach",
-        title: "Reach & Impressions",
+        title: "Reach",
         subtitle: "Độ phủ nội dung",
         icon: <MdOutlineVisibility />,
         color: "#3b82f6",
         dimColor: "#3b82f680",
         tooltipUnit: "",
         getMetric: (m: ParsedFbMetrics) => m.reach,
-        getSecondary: (m: ParsedFbMetrics) => m.impressions,
-        secondaryLabel: "Impressions",
+        getSecondary: null,
+        secondaryLabel: "",
         primaryLabel: "Reach",
-        description: "Số người tiếp cận bài viết so với tổng lượt hiển thị.",
+        description: "Số người tiếp cận bài viết. Đo độ phủ của nội dung.",
     },
     {
         id: "engagement",
@@ -93,21 +107,20 @@ const CHART_CONFIGS = [
         description: "(Likes + Comments + Shares) ÷ Reach × 100. Đo chất lượng nội dung.",
     },
     {
-        id: "ctr",
-        title: "Click-through Rate",
-        subtitle: "CTR — dẫn user mua vé",
+        id: "clickThrough",
+        title: "Click Rate",
+        subtitle: "Tỷ lệ click",
         icon: <MdOutlineTouchApp />,
         color: "#10b981",
         dimColor: "#10b98180",
-        tooltipUnit: "%",
-        getMetric: (m: ParsedFbMetrics) =>
-            m.impressions > 0 ? +((m.clicks / m.impressions) * 100).toFixed(2) : 0,
+        tooltipUnit: "",
+        getMetric: (m: ParsedFbMetrics) => m.clicks,
         getSecondary: null,
         secondaryLabel: "",
-        primaryLabel: "CTR",
-        description: "Clicks ÷ Impressions × 100. Metric cốt lõi đo hiệu quả dẫn traffic mua vé.",
+        primaryLabel: "Clicks",
+        description: "Số lượt click vào bài viết. Đo hiệu quả dẫn traffic mua vé.",
     },
-] as const;
+];
 
 // ─── CustomTooltip ────────────────────────────────────────────────────────────
 
@@ -223,19 +236,15 @@ function SummaryCards({ metricsMap }: { metricsMap: Record<string, DistributionM
     if (!all.length) return null;
 
     const totalReach = all.reduce((s, m) => s + m.reach, 0);
-    const totalImpressions = all.reduce((s, m) => s + m.impressions, 0);
     const totalClicks = all.reduce((s, m) => s + m.clicks, 0);
     const totalEngagements = all.reduce((s, m) => s + m.likes + m.comments + m.shares, 0);
     const avgEngRate = totalReach > 0
         ? +((totalEngagements / totalReach) * 100).toFixed(2)
         : 0;
-    const avgCtr = totalImpressions > 0
-        ? +((totalClicks / totalImpressions) * 100).toFixed(2)
-        : 0;
 
     const cards = [
-        { label: "Tổng Reach", value: fmt(totalReach), sub: `${fmt(totalImpressions)} impressions`, color: "#3b82f6" },
-        { label: "Tổng Clicks", value: fmt(totalClicks), sub: `CTR trung bình ${avgCtr}%`, color: "#10b981" },
+        { label: "Tổng Reach", value: fmt(totalReach), sub: "Người tiếp cận duy nhất", color: "#3b82f6" },
+        { label: "Tổng Clicks", value: fmt(totalClicks), sub: "Lượt click vào bài", color: "#10b981" },
         { label: "Tổng Tương tác", value: fmt(totalEngagements), sub: `Eng. Rate TB ${avgEngRate}%`, color: "#8b5cf6" },
         { label: "Số bài đã phân tích", value: `${all.length}`, sub: "bài có Facebook distribution", color: "#f59e0b" },
     ];
@@ -257,7 +266,7 @@ function SummaryCards({ metricsMap }: { metricsMap: Record<string, DistributionM
 export default function MarketingPerformanceBarChart() {
     const dispatch = useDispatch<AppDispatch>();
     const { loading, distributionMetricsMap } = useSelector((s: RootState) => s.POST);
-
+    const { eventId } = useParams<{ eventId: string }>();
     const [localPosts, setLocalPosts] = useState<PostListItem[]>([]);
 
     useEffect(() => {
@@ -269,6 +278,7 @@ export default function MarketingPerformanceBarChart() {
             sortOrder: "desc",
             status: "Published",
             hasExternalPostUrl: true,
+            eventId: eventId
         }).then(res => {
             if (res.data.isSuccess) setLocalPosts(res.data.data.items);
         });
@@ -287,13 +297,14 @@ export default function MarketingPerformanceBarChart() {
 
     const isLoading = loading.fetchList || loading.fetchAllDistributionMetrics;
 
-    const FETCH_PARAMS = {
+    const FETCH_PARAMS: GetPostsParams = {
         pageNumber: 1,
         pageSize: 20,
         sortColumn: "PublishedAt",
         sortOrder: "desc",
         status: "Published",
         hasExternalPostUrl: true,
+        eventId: eventId
     } as const;
 
     const handleRefresh = useCallback(() => {
@@ -318,7 +329,7 @@ export default function MarketingPerformanceBarChart() {
                 shortTitle: truncateTitle(post.title),
                 primary: config.getMetric(metrics),
                 ...(config.getSecondary ? { secondary: config.getSecondary(metrics) } : {}),
-                hasRealData: metrics.impressions > 0 || metrics.reach > 0,
+                hasRealData: metrics.reach > 0,
             })),
         }));
     }, [localPosts, distributionMetricsMap]);

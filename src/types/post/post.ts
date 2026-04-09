@@ -123,7 +123,6 @@ export interface DistributionMetricsFacebook {
     likes: number;
     comments: number;
     shares: number;
-    impressions: number;
     reach: number;
     clicks: number;
     fetchedAt: Date;

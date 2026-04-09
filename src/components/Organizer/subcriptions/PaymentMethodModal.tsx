@@ -58,8 +58,7 @@ export default function PaymentMethodModal({ plan, onClose }: PaymentMethodModal
                 }
                 window.location.href = paymentUrl;
             } else {
-                // Wallet: navigate to success directly
-                navigate("/payment/packages/success", {
+                navigate("/organizer/payment/packages/success", {
                     replace: true,
                     state: { transaction: result },
                 });
@@ -68,7 +67,7 @@ export default function PaymentMethodModal({ plan, onClose }: PaymentMethodModal
             toast.dismiss(toastId);
             const message = typeof err === "string" ? err : "Thanh toán thất bại. Vui lòng thử lại.";
             if (!isVNPay) {
-                navigate("/payment/packages/failed", {
+                navigate("/organizer/payment/packages/failed", {
                     replace: true,
                     state: { message },
                 });

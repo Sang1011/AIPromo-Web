@@ -209,10 +209,10 @@ export default function SubscriptionPage() {
         );
 
     const SKIP_PATHS = [
-        "/payment/packages/vnpay-return",
-        "/payment/packages/success",
-        "/payment/packages/failed",
-        "/organizer/subscription",
+        "organizer/payment/packages/vnpay-return",
+        "organizer/payment/packages/success",
+        "organizer/payment/packages/failed",
+        "organizer/subscription",
     ];
 
     const handleBack = () => {
