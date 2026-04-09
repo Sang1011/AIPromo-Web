@@ -46,7 +46,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ProfileUser from "./pages/User/ProfileUser";
 import ProfileLayout from "./pages/User";
 import OrganizerAccountPage from "./pages/Organizer/OrganizerAccountPage";
-import VerifyOrganizer from "./pages/Organizer/VerifyOrganizer";
+import VerifyOrganizer from "./pages/VerifyOrganizer";
 import PaymentTicket from "./components/Payment";
 import EventUser from "./pages/User/EventUser";
 import OrderDetailUser from "./pages/User/EventUser/OrderDetailUser";

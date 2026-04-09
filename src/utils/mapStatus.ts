@@ -1,4 +1,4 @@
-import type { FilterStatus } from "../components/Organizer/shared/StatusFilter";
+import type { FilterStatus } from "../components/Organizer/shared/StatusFilters";
 import type { EventStatus } from "../types/event/event";
 
 export const STATUS_MAP: Record<

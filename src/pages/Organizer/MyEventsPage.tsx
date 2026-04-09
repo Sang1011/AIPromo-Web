@@ -6,7 +6,7 @@ import EventCard, {
 import SearchBar from "../../components/Organizer/shared/SearchBar";
 import StatusFilters, {
     type FilterStatus,
-} from "../../components/Organizer/shared/StatusFilter";
+} from "../../components/Organizer/shared/StatusFilters";
 import Pagination from "../../components/Organizer/shared/Pagination";
 import { useOutletContext } from "react-router-dom";
 import type { DashboardLayoutConfig } from "../../types/config/dashboard.config";
