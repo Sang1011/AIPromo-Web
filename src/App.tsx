@@ -30,7 +30,6 @@ import WithdrawalPage from "./pages/Admin/WithdrawalPage";
 import AIPackagesPage from "./pages/Admin/AIPackagesPage";
 import RefundManagementPage from "./pages/Admin/RefundManagementPage";
 import StaffLayout from "./components/Staff/layouts/StaffLayout";
-import StaffDashboardPage from "./pages/Staff/StaffDashboardPage";
 import EventApprovalPage from "./pages/Staff/EventApprovalPage";
 import OrganizerProfilePage from "./pages/Staff/OrganizerProfilePage";
 import PostApprovalPage from "./pages/Staff/PostApprovalPage";
@@ -164,11 +163,9 @@ function App() {
           </Route>
         </Route>
 
-
         {/* Staff group */}
         <Route element={<RequireRole allowedRoles={["Staff"]} />}>
           <Route path="/staff" element={<StaffLayout />}>
-            <Route index element={<StaffDashboardPage />} />
             <Route path="event-approval" element={<EventApprovalPage />} />
             <Route path="organizer-profile" element={<OrganizerProfilePage />} />
             <Route path="post-approval" element={<PostApprovalPage />} />
