@@ -13,7 +13,7 @@ jest.mock('react-router-dom', () => ({
   useOutletContext: () => mockUseOutletContext(),
 }))
 
-jest.mock('../../components/Organizer/overview/ReportTable', () => ({
+jest.mock('../../../components/Organizer/overview/ReportTable', () => ({
   __esModule: true,
   default: () => <div data-testid="report-table" />,
 }))

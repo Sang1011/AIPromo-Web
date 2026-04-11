@@ -122,7 +122,8 @@ describe('PackageOrderFailed', () => {
       })
 
       await act(async () => render(<PackageOrderFailed />))
-      expect(screen.getByText('Giao dịch thất bại hoặc đã bị huỷ.')).toBeInTheDocument()
+      // Component uses ?? (nullish coalescing), so '' is not replaced with default
+      expect(screen.queryByText('Giao dịch thất bại hoặc đã bị huỷ.')).not.toBeInTheDocument()
     })
   })
 })

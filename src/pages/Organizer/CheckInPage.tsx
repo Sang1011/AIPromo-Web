@@ -77,6 +77,7 @@ export default function CheckInPage() {
                             Chọn buổi diễn
                         </label>
                         <select
+                            data-testid="session-selector"
                             value={selectedSessionId}
                             onChange={handleSessionChange}
                             className="flex-1 max-w-sm bg-[#18122B] border border-white/10 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none cursor-pointer"

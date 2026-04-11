@@ -10,7 +10,7 @@ jest.mock('firebase/database', () => ({
   set: jest.fn(() => Promise.resolve()),
 }))
 
-jest.mock('../../config/firebase', () => ({
+jest.mock('../../../config/firebase', () => ({
   db: {},
 }))
 
@@ -89,7 +89,12 @@ describe('saveReportToFirebase', () => {
 
       await saveReportToFirebase(reportData)
 
-      expect(mockSet).toHaveBeenCalledWith(expect.anything(), reportData)
+      expect(mockSet).toHaveBeenCalledWith(expect.anything(), {
+        eventName: 'Test Event',
+        fileName: 'report.xlsx',
+        createdAt: '2024-12-01T10:00:00Z',
+        createdBy: 'user@example.com',
+      })
     })
 
     it('should generate unique push key', async () => {

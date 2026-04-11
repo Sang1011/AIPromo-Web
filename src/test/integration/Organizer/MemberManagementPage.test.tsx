@@ -35,23 +35,40 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/eventMemberSlice', () => ({
-  fetchEventMembers: jest.fn((eventId) => ({ type: 'EVENT_MEMBER/fetchEventMembers', payload: eventId })),
-  fetchAddEventMember: jest.fn((params) => ({ type: 'EVENT_MEMBER/fetchAddEventMember', payload: params })),
-  fetchExportExcelMember: jest.fn((eventId) => ({ type: 'EVENT_MEMBER/fetchExportExcelMember', payload: eventId })),
-}))
+jest.mock('../../../store/eventMemberSlice', () => {
+  const mockFetchEventMembers = jest.fn() as any
+  mockFetchEventMembers.fulfilled = { match: jest.fn(() => false) as any }
+  mockFetchEventMembers.rejected = { match: jest.fn(() => false) as any }
+  mockFetchEventMembers.pending = { match: jest.fn(() => false) as any }
 
-jest.mock('../../store/authSlice', () => ({
+  const mockFetchAddEventMember = jest.fn() as any
+  mockFetchAddEventMember.fulfilled = { match: jest.fn(() => false) as any }
+  mockFetchAddEventMember.rejected = { match: jest.fn(() => false) as any }
+  mockFetchAddEventMember.pending = { match: jest.fn(() => false) as any }
+
+  const mockFetchExportExcelMember = jest.fn() as any
+  mockFetchExportExcelMember.fulfilled = { match: jest.fn(() => false) as any }
+  mockFetchExportExcelMember.rejected = { match: jest.fn(() => false) as any }
+  mockFetchExportExcelMember.pending = { match: jest.fn(() => false) as any }
+
+  return {
+    fetchEventMembers: mockFetchEventMembers,
+    fetchAddEventMember: mockFetchAddEventMember,
+    fetchExportExcelMember: mockFetchExportExcelMember,
+  }
+})
+
+jest.mock('../../../store/authSlice', () => ({
   fetchMe: jest.fn(() => ({ type: 'AUTH/fetchMe' })),
 }))
 
 // Mock hooks
-jest.mock('../../hooks/useEventTitle', () => ({
+jest.mock('../../../hooks/useEventTitle', () => ({
   useEventTitle: jest.fn(() => 'Test Event'),
 }))
 
 // Mock utils
-jest.mock('../../utils/notify', () => ({
+jest.mock('../../../utils/notify', () => ({
   notify: {
     success: jest.fn(),
     error: jest.fn(),
@@ -59,23 +76,23 @@ jest.mock('../../utils/notify', () => ({
   },
 }))
 
-jest.mock('../../utils/downloadFileExcel', () => ({
+jest.mock('../../../utils/downloadFileExcel', () => ({
   downloadFileExcel: jest.fn(),
 }))
 
-jest.mock('../../utils/getCurrentDateTime', () => ({
+jest.mock('../../../utils/getCurrentDateTime', () => ({
   getCurrentDateTime: jest.fn(() => ({
     iso: '2024-12-01T10:00:00Z',
     formatted: '2024-12-01_10-00-00',
   })),
 }))
 
-jest.mock('../../utils/saveReportToFirebase', () => ({
+jest.mock('../../../utils/saveReportToFirebase', () => ({
   saveReportToFirebase: jest.fn().mockResolvedValue(undefined),
 }))
 
 // Mock child components
-jest.mock('../../components/Organizer/members/MembersTable', () => ({
+jest.mock('../../../components/Organizer/members/MembersTable', () => ({
   __esModule: true,
   default: ({ members, filteredMembers }: any) => (
     <div data-testid="members-table">
@@ -88,7 +105,7 @@ jest.mock('../../components/Organizer/members/MembersTable', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/shared/Pagination', () => ({
+jest.mock('../../../components/Organizer/shared/Pagination', () => ({
   __esModule: true,
   default: ({ currentPage, totalPages, onPageChange }: any) => (
     <div data-testid="pagination">
@@ -134,7 +151,7 @@ describe('MemberManagementPage', () => {
       currentUser: null,
     }
 
-    mockDispatch.mockResolvedValue({})
+    mockDispatch.mockReturnValue({ unwrap: () => Promise.resolve({}) })
   })
 
   // --------------------------------------------------------------------------
@@ -228,7 +245,7 @@ describe('MemberManagementPage', () => {
   // --------------------------------------------------------------------------
   describe('API Calls', () => {
     it('should call fetchEventMembers on mount', async () => {
-      const { fetchEventMembers } = require('../../store/eventMemberSlice')
+      const { fetchEventMembers } = require('../../../store/eventMemberSlice')
 
       await act(async () => {
         render(<MemberManagementPage />)
@@ -240,7 +257,7 @@ describe('MemberManagementPage', () => {
     })
 
     it('should call fetchAddEventMember when adding member', async () => {
-      const { fetchAddEventMember } = require('../../store/eventMemberSlice')
+      const eventMemberSlice = require('../../../store/eventMemberSlice')
 
       await act(async () => {
         render(<MemberManagementPage />)
@@ -259,7 +276,7 @@ describe('MemberManagementPage', () => {
 
       await waitFor(() => {
         expect(mockDispatch).toHaveBeenCalledWith(
-          fetchAddEventMember({
+          eventMemberSlice.fetchAddEventMember({
             eventId: 'event-1',
             data: { email: 'new@example.com', permissions: [] },
           })
@@ -268,9 +285,9 @@ describe('MemberManagementPage', () => {
     })
 
     it('should call fetchExportExcelMember when clicking export', async () => {
-      const { fetchExportExcelMember } = require('../../store/eventMemberSlice')
+      const eventMemberSlice = require('../../../store/eventMemberSlice')
       const mockBlob = new Blob(['test'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-      mockDispatch.mockResolvedValue(mockBlob)
+      mockDispatch.mockResolvedValue({ unwrap: () => Promise.resolve(mockBlob) })
 
       await act(async () => {
         render(<MemberManagementPage />)
@@ -280,7 +297,7 @@ describe('MemberManagementPage', () => {
       await userEvent.click(exportBtn)
 
       await waitFor(() => {
-        expect(mockDispatch).toHaveBeenCalledWith(fetchExportExcelMember('event-1'))
+        expect(mockDispatch).toHaveBeenCalledWith(eventMemberSlice.fetchExportExcelMember('event-1'))
       })
     })
   })
@@ -339,8 +356,8 @@ describe('MemberManagementPage', () => {
     })
 
     it('should close add modal when submit succeeds', async () => {
-      const { fetchAddEventMember } = require('../../store/eventMemberSlice')
-      fetchAddEventMember.fulfilled.match = jest.fn(() => true)
+      const eventMemberSlice = require('../../../store/eventMemberSlice')
+      eventMemberSlice.fetchAddEventMember.fulfilled.match = jest.fn(() => true)
 
       await act(async () => {
         render(<MemberManagementPage />)
@@ -404,9 +421,14 @@ describe('MemberManagementPage', () => {
     })
 
     it('should show warning for non-existent user (404)', async () => {
-      const { fetchAddEventMember } = require('../../store/eventMemberSlice')
-      fetchAddEventMember.fulfilled.match = jest.fn(() => false)
-      fetchAddEventMember.rejected.match = jest.fn(() => true)
+      const eventMemberSlice = require('../../../store/eventMemberSlice')
+      eventMemberSlice.fetchAddEventMember.fulfilled.match = jest.fn(() => false)
+      eventMemberSlice.fetchAddEventMember.rejected.match = jest.fn(() => true)
+
+      mockDispatch.mockReturnValue({
+        unwrap: () => Promise.reject({ payload: { status: 404 } }),
+        payload: { status: 404 },
+      })
 
       await act(async () => {
         render(<MemberManagementPage />)
@@ -419,15 +441,15 @@ describe('MemberManagementPage', () => {
       const submitBtn = screen.getByText('Thêm thành viên')
       await userEvent.click(submitBtn)
 
-      const { notify } = require('../../utils/notify')
+      const { notify } = require('../../../utils/notify')
       await waitFor(() => {
         expect(notify.warning).toHaveBeenCalledWith('Thành viên này không tồn tại')
       })
     })
 
     it('should reset form after successful add', async () => {
-      const { fetchAddEventMember } = require('../../store/eventMemberSlice')
-      fetchAddEventMember.fulfilled.match = jest.fn(() => true)
+      const eventMemberSlice = require('../../../store/eventMemberSlice')
+      eventMemberSlice.fetchAddEventMember.fulfilled.match = jest.fn(() => true)
 
       await act(async () => {
         render(<MemberManagementPage />)
@@ -590,7 +612,7 @@ describe('MemberManagementPage', () => {
     })
 
     it('should handle export failure', async () => {
-      mockDispatch.mockRejectedValue(new Error('Export failed'))
+      mockDispatch.mockReturnValue({ unwrap: () => Promise.reject(new Error('Export failed')) })
 
       await act(async () => {
         render(<MemberManagementPage />)
@@ -599,7 +621,7 @@ describe('MemberManagementPage', () => {
       const exportBtn = screen.getByText('Xuất Excel')
       await userEvent.click(exportBtn)
 
-      const { notify } = require('../../utils/notify')
+      const { notify } = require('../../../utils/notify')
       await waitFor(() => {
         expect(notify.error).toHaveBeenCalledWith('Xuất Excel thất bại')
       })

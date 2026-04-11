@@ -41,8 +41,9 @@ jest.mock('react-redux', () => ({
   ...jest.requireActual('react-redux'),
   useSelector: (selector: any) => selector({
     EVENT: mockEventState,
-    SEAT_MAP: mockSeatMapState,
+    SEATMAP: mockSeatMapState,
     TICKET_TYPE: mockTicketTypeState,
+    TICKETING: {},
   }),
   useDispatch: () => mockDispatch,
 }))
@@ -91,7 +92,7 @@ describe('SeatMapViewerPage', () => {
     jest.clearAllMocks()
     mockUseParams.mockReturnValue({ urlPath: 'test-event' })
     mockUseNavigate.mockReturnValue(jest.fn())
-    mockUseLocation.mockReturnValue({ state: null })
+    mockUseLocation.mockReturnValue({ state: { eventSessionId: 'session-1' } })
 
     mockEventState = {
       currentEvent: {
@@ -103,7 +104,7 @@ describe('SeatMapViewerPage', () => {
     }
 
     mockSeatMapState = {
-      seatMapData: null,
+      spec: null,
       loading: false,
     }
 
@@ -118,7 +119,11 @@ describe('SeatMapViewerPage', () => {
       ],
     }
 
-    mockDispatch.mockResolvedValue({})
+    const createThunk = () => ({
+      unwrap: () => Promise.resolve({}),
+      finally: (cb: any) => { cb(); return Promise.resolve({}); },
+    })
+    mockDispatch.mockImplementation(() => createThunk())
   })
 
   describe('Render', () => {
@@ -128,7 +133,7 @@ describe('SeatMapViewerPage', () => {
     })
 
     it('should render Konva stage when data is loaded', async () => {
-      mockSeatMapState.seatMapData = {
+      mockSeatMapState.spec = JSON.stringify({
         areas: [
           {
             id: 'area-1',
@@ -149,7 +154,7 @@ describe('SeatMapViewerPage', () => {
           },
         ],
         texts: [],
-      }
+      })
 
       await act(async () => render(<SeatMapViewerPage />))
       await waitFor(() => {
@@ -216,7 +221,7 @@ describe('SeatMapViewerPage', () => {
     })
 
     it('should handle seat map with no areas', async () => {
-      mockSeatMapState.seatMapData = { areas: [], texts: [] }
+      mockSeatMapState.spec = JSON.stringify({ areas: [], texts: [] })
       await act(async () => render(<SeatMapViewerPage />))
       await waitFor(() => {
         expect(screen.getByTestId('konva-stage')).toBeInTheDocument()
@@ -224,7 +229,7 @@ describe('SeatMapViewerPage', () => {
     })
 
     it('should handle seat map with seats', async () => {
-      mockSeatMapState.seatMapData = {
+      mockSeatMapState.spec = JSON.stringify({
         areas: [
           {
             id: 'area-1',
@@ -259,7 +264,7 @@ describe('SeatMapViewerPage', () => {
           },
         ],
         texts: [],
-      }
+      })
 
       await act(async () => render(<SeatMapViewerPage />))
       await waitFor(() => {

@@ -30,7 +30,7 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/ticketingSlice', () => ({
+jest.mock('../../../store/ticketingSlice', () => ({
   fetchOverviewOrganizerStats: jest.fn((params) => ({
     type: 'TICKETING/fetchOverviewOrganizerStats',
     payload: params,
@@ -41,7 +41,7 @@ jest.mock('../../store/ticketingSlice', () => ({
   })),
 }))
 
-jest.mock('../../store/reportSlice', () => ({
+jest.mock('../../../store/reportSlice', () => ({
   fetchRefundRate: jest.fn((eventId) => ({
     type: 'REPORT/fetchRefundRate',
     payload: eventId,
@@ -53,7 +53,7 @@ jest.mock('../../store/reportSlice', () => ({
 }))
 
 // Mock child components
-jest.mock('../../components/Organizer/overview/RevenueCards', () => ({
+jest.mock('../../../components/Organizer/overview/RevenueCards', () => ({
   __esModule: true,
   default: ({ summary }: { summary: any }) => (
     <div data-testid="revenue-cards">
@@ -63,7 +63,7 @@ jest.mock('../../components/Organizer/overview/RevenueCards', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/overview/RevenueChart', () => ({
+jest.mock('../../../components/Organizer/overview/RevenueChart', () => ({
   __esModule: true,
   default: ({ trendData, period, loading, onPeriodChange }: any) => (
     <div data-testid="revenue-chart" data-period={period} data-loading={loading}>
@@ -74,7 +74,7 @@ jest.mock('../../components/Organizer/overview/RevenueChart', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/overview/TicketTypeBreakdownTable', () => ({
+jest.mock('../../../components/Organizer/overview/TicketTypeBreakdownTable', () => ({
   __esModule: true,
   default: ({ breakdown }: { breakdown: any[] }) => (
     <div data-testid="ticket-type-table">
@@ -83,7 +83,7 @@ jest.mock('../../components/Organizer/overview/TicketTypeBreakdownTable', () => 
   ),
 }))
 
-jest.mock('../../components/Organizer/overview/ticketTypeBarChart', () => ({
+jest.mock('../../../components/Organizer/overview/ticketTypeBarChart', () => ({
   __esModule: true,
   default: ({ breakdown }: { breakdown: any[] }) => (
     <div data-testid="ticket-type-chart">
@@ -92,7 +92,7 @@ jest.mock('../../components/Organizer/overview/ticketTypeBarChart', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/overview/RefundRateCard', () => ({
+jest.mock('../../../components/Organizer/overview/RefundRateCard', () => ({
   __esModule: true,
   default: ({ data, loading }: { data: any; loading: boolean }) => (
     <div data-testid="refund-rate-card" data-loading={loading}>
@@ -101,7 +101,7 @@ jest.mock('../../components/Organizer/overview/RefundRateCard', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/overview/TransactionSummaryCard', () => ({
+jest.mock('../../../components/Organizer/overview/TransactionSummaryCard', () => ({
   __esModule: true,
   default: ({ data, loading }: { data: any; loading: boolean }) => (
     <div data-testid="transaction-summary-card" data-loading={loading}>
@@ -306,7 +306,7 @@ describe('SummaryPage', () => {
   // --------------------------------------------------------------------------
   describe('API Calls', () => {
     it('should call fetchOverviewOrganizerStats on mount', async () => {
-      const { fetchOverviewOrganizerStats } = require('../../store/ticketingSlice')
+      const { fetchOverviewOrganizerStats } = require('../../../store/ticketingSlice')
 
       await act(async () => {
         render(<SummaryPage />)
@@ -320,7 +320,7 @@ describe('SummaryPage', () => {
     })
 
     it('should call fetchSalesTrend on mount with default period', async () => {
-      const { fetchSalesTrend } = require('../../store/ticketingSlice')
+      const { fetchSalesTrend } = require('../../../store/ticketingSlice')
 
       await act(async () => {
         render(<SummaryPage />)
@@ -334,7 +334,7 @@ describe('SummaryPage', () => {
     })
 
     it('should call fetchRefundRate on mount', async () => {
-      const { fetchRefundRate } = require('../../store/reportSlice')
+      const { fetchRefundRate } = require('../../../store/reportSlice')
 
       await act(async () => {
         render(<SummaryPage />)
@@ -346,7 +346,7 @@ describe('SummaryPage', () => {
     })
 
     it('should call fetchTransactionSummary on mount', async () => {
-      const { fetchTransactionSummary } = require('../../store/reportSlice')
+      const { fetchTransactionSummary } = require('../../../store/reportSlice')
 
       await act(async () => {
         render(<SummaryPage />)
@@ -358,7 +358,7 @@ describe('SummaryPage', () => {
     })
 
     it('should call fetchSalesTrend when period changes', async () => {
-      const { fetchSalesTrend } = require('../../store/ticketingSlice')
+      const { fetchSalesTrend } = require('../../../store/ticketingSlice')
 
       await act(async () => {
         render(<SummaryPage />)
@@ -382,7 +382,7 @@ describe('SummaryPage', () => {
         render(<SummaryPage />)
       })
 
-      const { fetchOverviewOrganizerStats } = require('../../store/ticketingSlice')
+      const { fetchOverviewOrganizerStats } = require('../../../store/ticketingSlice')
       expect(mockDispatch).not.toHaveBeenCalledWith(
         fetchOverviewOrganizerStats({ eventId: undefined })
       )

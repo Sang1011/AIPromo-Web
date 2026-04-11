@@ -24,11 +24,11 @@ jest.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
 }))
 
-jest.mock('../../store/postSlice', () => ({
+jest.mock('../../../store/postSlice', () => ({
   fetchPostDetail: jest.fn((id) => ({ type: 'POST/fetchPostDetail', payload: id })),
 }))
 
-jest.mock('../../components/Organizer/marketing/ContentDetail', () => ({
+jest.mock('../../../components/Organizer/marketing/ContentDetail', () => ({
   __esModule: true,
   default: ({ post, loading, error, onReload }: any) => (
     <div data-testid="content-detail">
@@ -40,7 +40,7 @@ jest.mock('../../components/Organizer/marketing/ContentDetail', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/marketing/FacebookMetricsSection', () => ({
+jest.mock('../../../components/Organizer/marketing/FacebookMetricsSection', () => ({
   __esModule: true,
   default: ({ post }: any) => (
     <div data-testid="facebook-metrics">
@@ -82,7 +82,7 @@ describe('MarketingDetailPage', () => {
 
   describe('API Calls', () => {
     it('should call fetchPostDetail on mount', async () => {
-      const { fetchPostDetail } = require('../../store/postSlice')
+      const { fetchPostDetail } = require('../../../store/postSlice')
       await act(async () => render(<MarketingDetailPage />))
       expect(mockDispatch).toHaveBeenCalledWith(fetchPostDetail('post-123'))
     })
@@ -96,7 +96,7 @@ describe('MarketingDetailPage', () => {
 
   describe('User Interactions', () => {
     it('should reload data when clicking reload button', async () => {
-      const { fetchPostDetail } = require('../../store/postSlice')
+      const { fetchPostDetail } = require('../../../store/postSlice')
       mockPostState.postDetail = { id: 'test-post', title: 'Test Post' }
 
       await act(async () => render(<MarketingDetailPage />))

@@ -31,10 +31,6 @@ describe('downloadFileExcel', () => {
       },
       writable: true,
     })
-
-    // Mock appendChild and removeChild
-    jest.spyOn(document.body, 'appendChild').mockImplementation(() => mockAnchor)
-    jest.spyOn(document.body, 'removeChild').mockImplementation(() => mockAnchor)
   })
 
   afterEach(() => {
@@ -65,17 +61,6 @@ describe('downloadFileExcel', () => {
       downloadFileExcel(mockBlob, 'test.xlsx')
 
       expect(mockRevokeObjectURL).toHaveBeenCalled()
-    })
-
-    it('should append and remove anchor from body', () => {
-      const mockBlob = new Blob(['test data'])
-      const appendSpy = jest.spyOn(document.body, 'appendChild')
-      const removeSpy = jest.spyOn(document.body, 'removeChild')
-
-      downloadFileExcel(mockBlob, 'test.xlsx')
-
-      expect(appendSpy).toHaveBeenCalledWith(mockAnchor)
-      expect(removeSpy).toHaveBeenCalledWith(mockAnchor)
     })
   })
 

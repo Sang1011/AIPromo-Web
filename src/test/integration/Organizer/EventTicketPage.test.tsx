@@ -35,11 +35,11 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/eventSlice', () => ({
+jest.mock('../../../store/eventSlice', () => ({
   fetchEventById: jest.fn((eventId) => ({ type: 'EVENT/fetchEventById', payload: eventId })),
 }))
 
-jest.mock('../../store/ticketTypeSlice', () => ({
+jest.mock('../../../store/ticketTypeSlice', () => ({
   fetchGetAllTicketTypes: jest.fn((params) => ({
     type: 'TICKET_TYPE/fetchGetAllTicketTypes',
     payload: params,
@@ -47,28 +47,28 @@ jest.mock('../../store/ticketTypeSlice', () => ({
 }))
 
 // Mock child components
-jest.mock('../../components/Organizer/ticket/TicketSummary', () => ({
+jest.mock('../../../components/Organizer/ticket/TicketSummary', () => ({
   __esModule: true,
-  default: ({ ticketTypes, quantities }: { ticketTypes: any[]; quantities: Record<string, number> }) => (
+  default: ({ ticketTypes, quantities }: { ticketTypes: any[] | null; quantities: Record<string, number> }) => (
     <div data-testid="ticket-summary">
-      <span data-testid="ticket-type-count">{ticketTypes.length} types</span>
+      <span data-testid="ticket-type-count">{(ticketTypes ?? []).length} types</span>
       <span data-testid="quantities-count">{Object.keys(quantities).length} quantities</span>
     </div>
   ),
 }))
 
-jest.mock('../../components/Organizer/ticket/TicketTypeList', () => ({
+jest.mock('../../../components/Organizer/ticket/TicketTypeList', () => ({
   __esModule: true,
-  default: ({ ticketTypes }: { ticketTypes: any[] }) => (
+  default: ({ ticketTypes }: { ticketTypes: any[] | null }) => (
     <div data-testid="ticket-type-list">
-      {ticketTypes.map((t) => (
+      {(ticketTypes ?? []).map((t) => (
         <span key={t.id} data-testid="ticket-type-item">{t.name}</span>
       ))}
     </div>
   ),
 }))
 
-jest.mock('../../pages/Organizer/LockSeatTab', () => ({
+jest.mock('../../../pages/Organizer/LockSeatTab', () => ({
   __esModule: true,
   default: ({ selectedSessionId }: { selectedSessionId: string }) => (
     <div data-testid="lock-seat-tab" data-session-id={selectedSessionId}>
@@ -131,8 +131,21 @@ describe('EventTicketPage', () => {
       loading: false,
     }
 
-    mockDispatch.mockResolvedValue({
-      data: createMockEvent(),
+    mockDispatch.mockImplementation((action) => {
+      const actionType = action?.type
+      if (actionType === 'EVENT/fetchEventById') {
+        return {
+          unwrap: () => Promise.resolve({ data: createMockEvent() })
+        }
+      }
+      if (actionType === 'TICKET_TYPE/fetchGetAllTicketTypes') {
+        return {
+          unwrap: () => Promise.resolve({ data: { ticketTypes: [] } })
+        }
+      }
+      return {
+        unwrap: () => Promise.resolve({ data: { sessions: [] } })
+      }
     })
   })
 
@@ -149,12 +162,18 @@ describe('EventTicketPage', () => {
     })
 
     it('should show loading state initially', () => {
-      mockDispatch.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(() => resolve({ data: createMockEvent() }), 100)
-          })
-      )
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return {
+            unwrap: () =>
+              new Promise((resolve) => {
+                setTimeout(() => resolve({ data: createMockEvent() }), 100)
+              })
+          }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
+      })
 
       render(<EventTicketPage />)
 
@@ -179,8 +198,12 @@ describe('EventTicketPage', () => {
   // --------------------------------------------------------------------------
   describe('UI Elements', () => {
     it('should render session selector dropdown', async () => {
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent(),
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: createMockEvent() }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -201,8 +224,12 @@ describe('EventTicketPage', () => {
     })
 
     it('should disable session selector when no sessions', async () => {
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent({ sessions: [] }),
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: createMockEvent({ sessions: [] }) }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -229,7 +256,7 @@ describe('EventTicketPage', () => {
   // --------------------------------------------------------------------------
   describe('API Calls', () => {
     it('should call fetchEventById on mount', async () => {
-      const { fetchEventById } = require('../../store/eventSlice')
+      const { fetchEventById } = require('../../../store/eventSlice')
 
       await act(async () => {
         render(<EventTicketPage />)
@@ -241,9 +268,13 @@ describe('EventTicketPage', () => {
     })
 
     it('should call fetchGetAllTicketTypes when session is selected', async () => {
-      const { fetchGetAllTicketTypes } = require('../../store/ticketTypeSlice')
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent(),
+      const { fetchGetAllTicketTypes } = require('../../../store/ticketTypeSlice')
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: createMockEvent() }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -264,7 +295,7 @@ describe('EventTicketPage', () => {
         render(<EventTicketPage />)
       })
 
-      const { fetchEventById } = require('../../store/eventSlice')
+      const { fetchEventById } = require('../../../store/eventSlice')
       expect(mockDispatch).not.toHaveBeenCalledWith(fetchEventById(undefined))
     })
   })
@@ -274,8 +305,12 @@ describe('EventTicketPage', () => {
   // --------------------------------------------------------------------------
   describe('User Interactions', () => {
     it('should change session when selecting different option', async () => {
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent(),
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: createMockEvent() }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -289,9 +324,13 @@ describe('EventTicketPage', () => {
     })
 
     it('should fetch ticket types when session changes', async () => {
-      const { fetchGetAllTicketTypes } = require('../../store/ticketTypeSlice')
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent(),
+      const { fetchGetAllTicketTypes } = require('../../../store/ticketTypeSlice')
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: createMockEvent() }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -344,8 +383,12 @@ describe('EventTicketPage', () => {
   // --------------------------------------------------------------------------
   describe('Data Display', () => {
     it('should display session titles in dropdown', async () => {
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent(),
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: createMockEvent() }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -387,8 +430,12 @@ describe('EventTicketPage', () => {
     })
 
     it('should show "Không có suất diễn" when sessions array is empty', async () => {
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent({ sessions: [] }),
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: createMockEvent({ sessions: [] }) }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -415,8 +462,12 @@ describe('EventTicketPage', () => {
     })
 
     it('should handle event with null sessions', async () => {
-      mockDispatch.mockResolvedValue({
-        data: { ...createMockEvent(), sessions: null },
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: { ...createMockEvent(), sessions: null } }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -453,8 +504,12 @@ describe('EventTicketPage', () => {
     })
 
     it('should auto-select first session when sessions load', async () => {
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent(),
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return { unwrap: () => Promise.resolve({ data: createMockEvent() }) }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {
@@ -468,10 +523,18 @@ describe('EventTicketPage', () => {
     })
 
     it('should handle single session', async () => {
-      mockDispatch.mockResolvedValue({
-        data: createMockEvent({
-          sessions: [{ id: 'session-only', title: 'Only Session' }],
-        }),
+      mockDispatch.mockImplementation((action) => {
+        const actionType = action?.type
+        if (actionType === 'EVENT/fetchEventById') {
+          return {
+            unwrap: () => Promise.resolve({
+              data: createMockEvent({
+                sessions: [{ id: 'session-only', title: 'Only Session' }],
+              })
+            })
+          }
+        }
+        return { unwrap: () => Promise.resolve({ data: { sessions: [] } }) }
       })
 
       await act(async () => {

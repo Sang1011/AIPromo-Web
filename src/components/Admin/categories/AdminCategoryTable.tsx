@@ -1,4 +1,4 @@
-import { MdAdd, MdMoreVert, MdRefresh } from "react-icons/md";
+import { MdAdd, MdRefresh, MdEdit, MdDelete } from "react-icons/md";
 import { useEffect, useMemo, useState } from "react";
 import AdminEditCategoryModal from "./AdminEditCategoryModal";
 import AdminFloatingMenu from "./AdminFloatingMenu";
@@ -26,7 +26,6 @@ export default function AdminCategoryTable() {
     const dispatch = useDispatch<AppDispatch>();
     const categories = useSelector((state: RootState) => state.CATEGORY.categories) as Category[];
     const [loading, setLoading] = useState(false);
-    const [openMenu, setOpenMenu] = useState<{ id: number; rect: DOMRect } | null>(null);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [openStatusMenu, setOpenStatusMenu] = useState<{ id: number; rect: DOMRect } | null>(null);
     const [statusConfirm, setStatusConfirm] = useState<{ id: number; activate: boolean } | null>(null);
@@ -133,9 +132,17 @@ export default function AdminCategoryTable() {
                                             </button>
                                     </td>
                                     <td className="px-8 py-5 text-right relative">
-                                        <button onClick={(e) => { const btn = e.currentTarget as HTMLElement; const rect = btn.getBoundingClientRect(); setOpenMenu(openMenu && openMenu.id === c.id ? null : { id: c.id, rect }); }} className="p-1.5 rounded-lg text-[#a592c8] hover:text-white hover:bg-white/5 transition-colors">
-                                            <MdMoreVert className="text-lg" />
-                                        </button>
+                                        <div className="inline-flex gap-2">
+                                            <button onClick={() => setEditingId(c.id)} className="px-3 py-1.5 text-xs rounded-lg bg-[#302447] text-white flex items-center gap-1.5 hover:bg-[#3d2f5a] transition-colors">
+                                                <MdEdit className="text-sm" /> Cập nhật
+                                            </button>
+                                            <button onClick={() => {
+                                                const catName = (categories || []).find(x => x.id === c.id)?.name ?? `#${c.id}`;
+                                                setDeleteConfirm({ id: c.id, name: catName });
+                                            }} className="px-3 py-1.5 text-xs rounded-lg bg-[#1b1230] text-[#a592c8] flex items-center gap-1.5 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+                                                <MdDelete className="text-sm" /> Xoá
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -238,19 +245,6 @@ export default function AdminCategoryTable() {
                             setDeleting(false);
                         }
                     }}
-                />
-            )}
-            {openMenu && (
-                <AdminFloatingMenu
-                    rect={openMenu.rect}
-                    items={[
-                        { key: 'edit', label: 'Cập nhật', onClick: () => setEditingId(openMenu.id) },
-                        { key: 'delete', label: 'Xoá', onClick: () => {
-                            const catName = (categories || []).find(x => x.id === openMenu.id)?.name ?? `#${openMenu.id}`;
-                            setDeleteConfirm({ id: openMenu.id, name: catName });
-                        } }
-                    ]}
-                    onClose={() => setOpenMenu(null)}
                 />
             )}
         </div>

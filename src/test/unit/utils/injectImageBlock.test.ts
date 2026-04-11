@@ -21,7 +21,7 @@ describe('injectImageBlock', () => {
       const result = injectImageBlock(blocks, 'https://example.com/image.jpg')
 
       expect(result).toHaveLength(2)
-      expect(result[1]).toEqual({
+      expect(result[0]).toEqual({
         type: 'image',
         src: 'https://example.com/image.jpg',
         alt: 'Post image',

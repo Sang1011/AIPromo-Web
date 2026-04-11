@@ -1,14 +1,52 @@
 /// <reference types="jest" />
 import { renderHook, waitFor } from '@testing-library/react'
 import { useAnalyticsData } from '../../../hooks/useAnalyticsData'
+import type { GetPostsParams, PostDistribution, PostListItem } from '../../../types/post/post'
+import type { DistributionMetricsFacebook } from '../../../types/post/post'
+
+type MockPostState = {
+  posts: Partial<PostListItem>[];
+  loading: Record<string, boolean>;
+  distributionMetricsMap: Record<string, Partial<DistributionMetricsFacebook>>;
+}
+
+// Helper to create mock distributions
+const createMockDistribution = (overrides: Partial<PostDistribution> = {}): PostDistribution => ({
+  id: 'dist-1',
+  platform: 'Facebook',
+  status: 'Sent',
+  externalUrl: null,
+  externalPostId: null,
+  platformMetadata: null,
+  errorMessage: null,
+  sentAt: '2024-12-01T09:00:00Z',
+  ...overrides,
+})
+
+// Helper to create mock Facebook metrics
+const createMockMetrics = (overrides: Partial<DistributionMetricsFacebook> = {}): DistributionMetricsFacebook => ({
+  externalPostId: 'fb-123',
+  externalUrl: 'https://facebook.com/post/123',
+  likes: 100,
+  comments: 20,
+  shares: 10,
+  reach: 1000,
+  clicks: 50,
+  fetchedAt: new Date(),
+  ...overrides,
+})
 
 // Mock Redux
 const mockDispatch = jest.fn()
-let mockPostState: any = {}
+let mockPostState: MockPostState = {
+  posts: [],
+  loading: { fetchList: false, fetchDistributionMetrics: false },
+  distributionMetricsMap: {},
+}
 
 jest.mock('react-redux', () => ({
   ...jest.requireActual('react-redux'),
-  useSelector: (selector: any) => selector({
+  useSelector: (selector: (state: { POST: typeof mockPostState }) => typeof mockPostState) => selector({
     POST: mockPostState,
   }),
   useDispatch: () => mockDispatch,
@@ -20,17 +58,38 @@ jest.mock('../../../store/postSlice', () => ({
 }))
 
 describe('useAnalyticsData', () => {
-  const mockParams = {
+  const mockParams: GetPostsParams = {
     pageNumber: 1,
     pageSize: 10,
     eventId: 'event-123',
+    sortColumn: 'createdAt',
+    sortOrder: 'desc',
   }
 
   beforeEach(() => {
     jest.clearAllMocks()
     mockPostState = {
       posts: [],
-      loading: { fetchList: false, fetchDistributionMetrics: false },
+      loading: {
+        fetchList: false,
+        fetchDistributionMetrics: false,
+        fetchDetail: false,
+        updateContent: false,
+        archive: false,
+        submitPost: false,
+        publishPost: false,
+        generateAI: false,
+        createDraft: false,
+        generateImage: false,
+        sendToChatbox: false,
+        fetchAdminPosts: false,
+        fetchPostDetail: false,
+        updatePost: false,
+        deletePost: false,
+        rejectPost: false,
+        approvePost: false,
+        publishAdminPost: false,
+      },
       distributionMetricsMap: {},
     }
     mockDispatch.mockResolvedValue({})
@@ -59,13 +118,11 @@ describe('useAnalyticsData', () => {
           id: 'post-1',
           title: 'Test Post',
           publishedAt: '2024-12-01T10:00:00Z',
-          distributions: [
-            { id: 'dist-1', platform: 'Facebook', status: 'Sent', sentAt: '2024-12-01T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution()],
         },
       ]
       mockPostState.distributionMetricsMap = {
-        'dist-1': { reach: 1000, clicks: 50, likes: 100, comments: 20, shares: 10 },
+        'dist-1': createMockMetrics(),
       }
 
       const { result } = renderHook(() => useAnalyticsData(mockParams))
@@ -84,9 +141,7 @@ describe('useAnalyticsData', () => {
           id: 'post-1',
           title: 'No Facebook Post',
           publishedAt: '2024-12-01T10:00:00Z',
-          distributions: [
-            { id: 'dist-1', platform: 'Instagram', status: 'Sent', sentAt: '2024-12-01T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution({ platform: 'Instagram' })],
         },
       ]
 
@@ -101,9 +156,7 @@ describe('useAnalyticsData', () => {
           id: 'post-1',
           title: 'No Metrics Post',
           publishedAt: '2024-12-01T10:00:00Z',
-          distributions: [
-            { id: 'dist-1', platform: 'Facebook', status: 'Sent', sentAt: '2024-12-01T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution()],
         },
       ]
       mockPostState.distributionMetricsMap = {}
@@ -119,22 +172,18 @@ describe('useAnalyticsData', () => {
           id: 'post-2',
           title: 'Later Post',
           publishedAt: '2024-12-02T10:00:00Z',
-          distributions: [
-            { id: 'dist-2', platform: 'Facebook', status: 'Sent', sentAt: '2024-12-02T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution({ id: 'dist-2', sentAt: '2024-12-02T09:00:00Z' })],
         },
         {
           id: 'post-1',
           title: 'Earlier Post',
           publishedAt: '2024-12-01T10:00:00Z',
-          distributions: [
-            { id: 'dist-1', platform: 'Facebook', status: 'Sent', sentAt: '2024-12-01T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution({ id: 'dist-1', sentAt: '2024-12-01T09:00:00Z' })],
         },
       ]
       mockPostState.distributionMetricsMap = {
-        'dist-1': { reach: 100, clicks: 10, likes: 20, comments: 5, shares: 2 },
-        'dist-2': { reach: 200, clicks: 20, likes: 40, comments: 10, shares: 5 },
+        'dist-1': createMockMetrics({ reach: 100, clicks: 10, likes: 20, comments: 5, shares: 2 }),
+        'dist-2': createMockMetrics({ reach: 200, clicks: 20, likes: 40, comments: 10, shares: 5 }),
       }
 
       const { result } = renderHook(() => useAnalyticsData(mockParams))
@@ -150,14 +199,14 @@ describe('useAnalyticsData', () => {
           title: 'Test Post',
           publishedAt: '2024-12-01T10:00:00Z',
           distributions: [
-            { id: 'dist-old', platform: 'Facebook', status: 'Sent', sentAt: '2024-11-01T09:00:00Z' },
-            { id: 'dist-new', platform: 'Facebook', status: 'Sent', sentAt: '2024-12-01T09:00:00Z' },
+            createMockDistribution({ id: 'dist-old', sentAt: '2024-11-01T09:00:00Z' }),
+            createMockDistribution({ id: 'dist-new', sentAt: '2024-12-01T09:00:00Z' }),
           ],
         },
       ]
       mockPostState.distributionMetricsMap = {
-        'dist-old': { reach: 100, clicks: 10, likes: 20, comments: 5, shares: 2 },
-        'dist-new': { reach: 500, clicks: 50, likes: 100, comments: 25, shares: 10 },
+        'dist-old': createMockMetrics({ reach: 100, clicks: 10, likes: 20, comments: 5, shares: 2 }),
+        'dist-new': createMockMetrics({ reach: 500, clicks: 50, likes: 100, comments: 25, shares: 10 }),
       }
 
       const { result } = renderHook(() => useAnalyticsData(mockParams))
@@ -211,9 +260,7 @@ describe('useAnalyticsData', () => {
           id: 'post-1',
           title: 'Test Post',
           publishedAt: '2024-12-01T10:00:00Z',
-          distributions: [
-            { id: 'dist-1', platform: 'Facebook', status: 'Sent', sentAt: '2024-12-01T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution()],
         },
       ]
 
@@ -249,9 +296,7 @@ describe('useAnalyticsData', () => {
           id: 'post-1',
           title: 'Test Post',
           publishedAt: '2024-12-01T10:00:00Z',
-          distributions: [
-            { id: 'dist-1', platform: 'Instagram', status: 'Sent', sentAt: '2024-12-01T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution({ platform: 'Instagram' })],
         },
       ]
 
@@ -268,9 +313,7 @@ describe('useAnalyticsData', () => {
           id: 'post-1',
           title: 'Test Post',
           publishedAt: '2024-12-01T10:00:00Z',
-          distributions: [
-            { id: 'dist-1', platform: 'Facebook', status: 'Pending', sentAt: '2024-12-01T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution({ status: 'Pending' })],
         },
       ]
 
@@ -283,13 +326,13 @@ describe('useAnalyticsData', () => {
   })
 
   describe('Edge cases', () => {
-    it('should handle posts with null distributions', () => {
+    it('should handle posts with empty distributions', () => {
       mockPostState.posts = [
         {
           id: 'post-1',
           title: 'Test Post',
           publishedAt: '2024-12-01T10:00:00Z',
-          distributions: null,
+          distributions: [],
         },
       ]
 
@@ -305,13 +348,11 @@ describe('useAnalyticsData', () => {
           id: 'post-1',
           title: 'Test Post',
           publishedAt: null,
-          distributions: [
-            { id: 'dist-1', platform: 'Facebook', status: 'Sent', sentAt: '2024-12-01T09:00:00Z' },
-          ],
+          distributions: [createMockDistribution()],
         },
       ]
       mockPostState.distributionMetricsMap = {
-        'dist-1': { reach: 100, clicks: 10, likes: 20, comments: 5, shares: 2 },
+        'dist-1': createMockMetrics({ reach: 100, clicks: 10, likes: 20, comments: 5, shares: 2 }),
       }
 
       const { result } = renderHook(() => useAnalyticsData(mockParams))

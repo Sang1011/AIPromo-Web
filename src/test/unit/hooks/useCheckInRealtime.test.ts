@@ -173,7 +173,7 @@ describe('useCheckInRealtime', () => {
 
   describe('Error handling', () => {
     it('should handle connection start error', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => { })
       mockConnection.start.mockRejectedValue(new Error('Connection failed'))
 
       renderHook(() => useCheckInRealtime({ eventId: 'event-123', onUpdate: mockOnUpdate }))

@@ -57,9 +57,9 @@ describe('dateTimeVN', () => {
       expect(result).toContain('12')
     })
 
-    it('should return "---" for invalid input', () => {
-      expect(formatVN('')).toBe('---')
-      expect(formatVN(null as any)).toBe('---')
+    it('should return "—" for invalid input', () => {
+      expect(formatVN('')).toBe('—')
+      expect(formatVN(null as any)).toBe('—')
     })
 
     it('should include time in formatted string', () => {
@@ -71,18 +71,18 @@ describe('dateTimeVN', () => {
   describe('formatShortVN', () => {
     it('should format to short VN format', () => {
       const result = formatShortVN('2024-12-01T10:00:00Z')
-      // Should be DD/MM HH:mm in VN time
-      expect(result).toMatch(/\d{2}\/\d{2} \d{2}:\d{2}/)
+      // Should be HH:mm DD-MM in VN time (17:00 01-12)
+      expect(result).toMatch(/\d{2}:\d{2} \d{2}-\d{2}/)
     })
 
-    it('should return "---" for invalid input', () => {
-      expect(formatShortVN('')).toBe('---')
+    it('should return "—" for invalid input', () => {
+      expect(formatShortVN('')).toBe('—')
     })
 
     it('should handle date change', () => {
       const result = formatShortVN('2024-12-01T20:00:00Z')
       // 20:00 UTC = 03:00 next day VN
-      expect(result).toMatch(/02\/12 03:00/)
+      expect(result).toMatch(/03:00 02-12/)
     })
   })
 
@@ -97,7 +97,8 @@ describe('dateTimeVN', () => {
     it('should not include seconds', () => {
       const date = new Date('2024-12-01T10:30:45Z')
       const result = toISOLocal(date)
-      expect(result).not.toMatch(/:\d{2}$/)
+      // Format is YYYY-MM-DDTHH:mm, no seconds part
+      expect(result.split(':').length).toBe(2)
     })
   })
 })

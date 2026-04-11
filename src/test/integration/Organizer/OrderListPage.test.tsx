@@ -15,7 +15,7 @@ jest.mock('react-router-dom', () => ({
 }))
 
 // Mock child components
-jest.mock('../../components/Organizer/orders/OrderList', () => ({
+jest.mock('../../../components/Organizer/orders/OrderList', () => ({
   __esModule: true,
   default: ({ eventId }: { eventId: string }) => (
     <div data-testid="order-list">
@@ -124,7 +124,9 @@ describe('OrderListPage', () => {
           render(<OrderListPage />)
         })
 
-        expect(screen.getByTestId('event-id')).toHaveTextContent(eventId)
+        const allEventIds = screen.getAllByTestId('event-id')
+        const lastRendered = allEventIds[allEventIds.length - 1]
+        expect(lastRendered).toHaveTextContent(eventId)
       }
     })
 

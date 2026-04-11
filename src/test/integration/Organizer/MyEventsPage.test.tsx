@@ -32,22 +32,22 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/eventSlice', () => ({
+jest.mock('../../../store/eventSlice', () => ({
   fetchAllEventsByMe: jest.fn((params) => ({ type: 'EVENT/fetchAllEventsByMe', payload: params })),
 }))
 
-jest.mock('../../store/authSlice', () => ({
+jest.mock('../../../store/authSlice', () => ({
   fetchMe: jest.fn(() => ({ type: 'AUTH/fetchMe' })),
 }))
 
-jest.mock('../../store/eventMemberSlice', () => ({
+jest.mock('../../../store/eventMemberSlice', () => ({
   fetchEventListAssignedForCurrentUser: jest.fn(() => ({
     type: 'EVENT_MEMBER/fetchEventListAssignedForCurrentUser',
   })),
 }))
 
 // Mock child components to simplify tests
-jest.mock('../../components/Organizer/events/EventCards', () => ({
+jest.mock('../../../components/Organizer/events/EventCards', () => ({
   __esModule: true,
   default: ({ event, isMember }: { event: any; isMember?: boolean }) => (
     <div data-testid="event-card" data-is-member={isMember}>
@@ -59,7 +59,7 @@ jest.mock('../../components/Organizer/events/EventCards', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/shared/SearchBar', () => ({
+jest.mock('../../../components/Organizer/shared/SearchBar', () => ({
   __esModule: true,
   default: ({
     value,
@@ -79,7 +79,7 @@ jest.mock('../../components/Organizer/shared/SearchBar', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/shared/StatusFilter', () => ({
+jest.mock('../../../components/Organizer/shared/StatusFilters', () => ({
   __esModule: true,
   default: ({
     activeFilter,
@@ -100,7 +100,7 @@ jest.mock('../../components/Organizer/shared/StatusFilter', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/shared/Pagination', () => ({
+jest.mock('../../../components/Organizer/shared/Pagination', () => ({
   __esModule: true,
   default: ({
     currentPage,
@@ -315,7 +315,7 @@ describe('MyEventsPage', () => {
   // --------------------------------------------------------------------------
   describe('API Calls', () => {
     it('should call fetchMe on mount', async () => {
-      const { fetchMe } = require('../../store/authSlice')
+      const { fetchMe } = require('../../../store/authSlice')
 
       await act(async () => {
         render(<MyEventsPage />)
@@ -325,7 +325,7 @@ describe('MyEventsPage', () => {
     })
 
     it('should call fetchAllEventsByMe for organizer after role resolved', async () => {
-      const { fetchAllEventsByMe } = require('../../store/eventSlice')
+      const { fetchAllEventsByMe } = require('../../../store/eventSlice')
       mockAuthState.currentInfor = { roles: ['Organizer'] }
 
       await act(async () => {
@@ -344,7 +344,7 @@ describe('MyEventsPage', () => {
     })
 
     it('should call fetchEventListAssignedForCurrentUser for member after role resolved', async () => {
-      const { fetchEventListAssignedForCurrentUser } = require('../../store/eventMemberSlice')
+      const { fetchEventListAssignedForCurrentUser } = require('../../../store/eventMemberSlice')
       mockAuthState.currentInfor = { roles: ['Member'] }
 
       await act(async () => {
@@ -394,7 +394,7 @@ describe('MyEventsPage', () => {
     })
 
     it('should change status filter and reset page for organizer', async () => {
-      const { fetchAllEventsByMe } = require('../../store/eventSlice')
+      const { fetchAllEventsByMe } = require('../../../store/eventSlice')
       mockAuthState.currentInfor = { roles: ['Organizer'] }
 
       await act(async () => {
@@ -418,7 +418,7 @@ describe('MyEventsPage', () => {
     })
 
     it('should change page when clicking pagination', async () => {
-      const { fetchAllEventsByMe } = require('../../store/eventSlice')
+      const { fetchAllEventsByMe } = require('../../../store/eventSlice')
       mockAuthState.currentInfor = { roles: ['Organizer'] }
       mockEventState.pagination = {
         pageNumber: 1,
@@ -673,7 +673,7 @@ describe('MyEventsPage', () => {
   // --------------------------------------------------------------------------
   describe('Role-based Behavior', () => {
     it('should fetch organizer data when user has Organizer role', async () => {
-      const { fetchAllEventsByMe } = require('../../store/eventSlice')
+      const { fetchAllEventsByMe } = require('../../../store/eventSlice')
       mockAuthState.currentInfor = { roles: ['Organizer'] }
 
       await act(async () => {
@@ -688,7 +688,7 @@ describe('MyEventsPage', () => {
     })
 
     it('should fetch member data when user does not have Organizer role', async () => {
-      const { fetchEventListAssignedForCurrentUser } = require('../../store/eventMemberSlice')
+      const { fetchEventListAssignedForCurrentUser } = require('../../../store/eventMemberSlice')
       mockAuthState.currentInfor = { roles: ['Member'] }
 
       await act(async () => {

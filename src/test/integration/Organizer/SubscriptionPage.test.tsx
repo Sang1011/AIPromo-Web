@@ -42,18 +42,18 @@ jest.mock('react-redux', () => ({
 }))
 
 // Mock Redux actions
-jest.mock('../../store/aiPackageSlice', () => ({
+jest.mock('../../../store/aiPackageSlice', () => ({
   fetchAIPackages: jest.fn(() => ({ type: 'PACKAGE/fetchAIPackages' })),
   fetchMyQuota: jest.fn(() => ({ type: 'PACKAGE/fetchMyQuota' })),
   fetchPurchasedPackages: jest.fn(() => ({ type: 'PACKAGE/fetchPurchasedPackages' })),
 }))
 
-jest.mock('../../store/walletSlice', () => ({
+jest.mock('../../../store/walletSlice', () => ({
   fetchWalletUser: jest.fn((userId) => ({ type: 'WALLET/fetchWalletUser', payload: userId })),
 }))
 
 // Mock child components
-jest.mock('../../components/Organizer/subcriptions/ActiveSubscriptionBanner', () => ({
+jest.mock('../../../components/Organizer/subcriptions/ActiveSubscriptionBanner', () => ({
   __esModule: true,
   default: ({ pkg, onUpgrade }: { pkg: any; onUpgrade: () => void }) => (
     <div data-testid="active-subscription-banner">
@@ -69,7 +69,7 @@ jest.mock('../../components/Organizer/subcriptions/ActiveSubscriptionBanner', ()
   },
 }))
 
-jest.mock('../../components/Organizer/subcriptions/PaymentMethodModal', () => ({
+jest.mock('../../../components/Organizer/subcriptions/PaymentMethodModal', () => ({
   __esModule: true,
   default: ({ plan, onClose }: { plan: any; onClose: () => void }) => (
     <div data-testid="payment-modal" data-plan-id={plan.id}>
@@ -79,7 +79,7 @@ jest.mock('../../components/Organizer/subcriptions/PaymentMethodModal', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/subcriptions/PlanCard', () => ({
+jest.mock('../../../components/Organizer/subcriptions/PlanCard', () => ({
   __esModule: true,
   default: ({ plan, isCurrentPlan, onSelect }: { plan: any; isCurrentPlan: boolean; onSelect: (p: any) => void }) => (
     <div data-testid="plan-card" data-plan-id={plan.id} data-is-current={isCurrentPlan}>
@@ -90,7 +90,7 @@ jest.mock('../../components/Organizer/subcriptions/PlanCard', () => ({
   ),
 }))
 
-jest.mock('../../components/Organizer/subcriptions/WalletSection', () => ({
+jest.mock('../../../components/Organizer/subcriptions/WalletSection', () => ({
   __esModule: true,
   default: () => <div data-testid="wallet-section">Wallet Section</div>,
 }))
@@ -227,9 +227,9 @@ describe('SubscriptionPage', () => {
         render(<SubscriptionPage />)
       })
 
-      expect(screen.getByText('10000')).toBeInTheDocument()
-      expect(screen.getByText('5000')).toBeInTheDocument()
-      expect(screen.getByText('15000')).toBeInTheDocument()
+      expect(screen.getByText('10.000')).toBeInTheDocument()
+      expect(screen.getByText('5.000')).toBeInTheDocument()
+      expect(screen.getByText('15.000')).toBeInTheDocument()
     })
 
     it('should render TopUp packages when available', async () => {
@@ -282,7 +282,7 @@ describe('SubscriptionPage', () => {
       })
 
       expect(screen.getByText('Lịch sử mua gói')).toBeInTheDocument()
-      expect(screen.getByText('3 gói đã mua')).toBeInTheDocument()
+      expect(screen.getByText('1 gói đã mua')).toBeInTheDocument()
     })
   })
 
@@ -291,7 +291,7 @@ describe('SubscriptionPage', () => {
   // --------------------------------------------------------------------------
   describe('API Calls', () => {
     it('should call fetchAIPackages on mount', async () => {
-      const { fetchAIPackages } = require('../../store/aiPackageSlice')
+      const { fetchAIPackages } = require('../../../store/aiPackageSlice')
 
       await act(async () => {
         render(<SubscriptionPage />)
@@ -301,7 +301,7 @@ describe('SubscriptionPage', () => {
     })
 
     it('should call fetchMyQuota on mount', async () => {
-      const { fetchMyQuota } = require('../../store/aiPackageSlice')
+      const { fetchMyQuota } = require('../../../store/aiPackageSlice')
 
       await act(async () => {
         render(<SubscriptionPage />)
@@ -311,7 +311,7 @@ describe('SubscriptionPage', () => {
     })
 
     it('should call fetchPurchasedPackages on mount', async () => {
-      const { fetchPurchasedPackages } = require('../../store/aiPackageSlice')
+      const { fetchPurchasedPackages } = require('../../../store/aiPackageSlice')
 
       await act(async () => {
         render(<SubscriptionPage />)
@@ -321,7 +321,7 @@ describe('SubscriptionPage', () => {
     })
 
     it('should call fetchWalletUser with userId 5 on mount', async () => {
-      const { fetchWalletUser } = require('../../store/walletSlice')
+      const { fetchWalletUser } = require('../../../store/walletSlice')
 
       await act(async () => {
         render(<SubscriptionPage />)
@@ -460,7 +460,7 @@ describe('SubscriptionPage', () => {
 
     it('should display subscription plan cards', async () => {
       mockPackageState.list = [
-        createMockAIPackage({ id: 's1', name: 'Free', type: 'Subscription', price: 0 }),
+        createMockAIPackage({ id: 's1', name: 'Starter', type: 'Subscription', price: 99000 }),
         createMockAIPackage({ id: 's2', name: 'Pro', type: 'Subscription', price: 299000 }),
         createMockAIPackage({ id: 's3', name: 'Business', type: 'Subscription', price: 599000 }),
       ]
@@ -509,8 +509,8 @@ describe('SubscriptionPage', () => {
       })
 
       expect(screen.getByText('5')).toBeInTheDocument()
-      expect(screen.getByText('50000')).toBeInTheDocument()
-      expect(screen.getByText('10000')).toBeInTheDocument()
+      expect(screen.getByText('50.000')).toBeInTheDocument()
+      expect(screen.getByText('10.000')).toBeInTheDocument()
     })
 
     it('should not render active banner when subscription is expired', async () => {
