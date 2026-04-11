@@ -1,5 +1,5 @@
 /// <reference types="jest" />
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { configureStore } from '@reduxjs/toolkit'
@@ -20,7 +20,7 @@ jest.mock('react-router-dom', () => ({
 jest.mock('../../../../store/organizerProfileSlice', () => {
   const mockSlice = {
     name: 'ORGANIZER_PROFILE',
-    reducer: (state = {}, action: any) => state,
+    reducer: (state = {}) => state,
     fetchCreateProfileOrganizer: jest.fn(() => ({ type: 'mock/create' })),
     fetchVerifyProfileOrganizer: jest.fn(() => ({ type: 'mock/verify' })),
   }
