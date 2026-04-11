@@ -20,7 +20,7 @@ export default function StaffPostApprovalPagination({
                 <span className="text-white font-semibold">{startItem}</span>{" "}
                 trên{" "}
                 <span className="text-white font-semibold">{endItem}</span>{" "}
-                hồ sơ
+                bài đăng
             </p>
             <div className="flex gap-2">
                 <button
