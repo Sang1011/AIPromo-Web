@@ -8,7 +8,11 @@
       "Bash(dir *)",
       "Bash(del *)",
       "Bash(findstr *)",
-      "Bash(rmdir *)"
+      "Bash(rmdir *)",
+      "Bash(powershell *)",
+      "Bash(python *)",
+      "Bash(out-file *)",
+      "Bash(git checkout *)"
     ]
   },
   "$version": 3
