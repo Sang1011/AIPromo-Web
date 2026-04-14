@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchAdminPosts, approveAdminPost, rejectAdminPost } from "../../../store/postSlice";
@@ -68,8 +69,8 @@ function PostDetailModal({
         Rejected: "Bị từ chối",
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    return createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div
                 className="absolute inset-0"
                 onClick={onClose}
@@ -185,7 +186,8 @@ function PostDetailModal({
                     ) : null}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 
@@ -197,8 +199,8 @@ function ApproveConfirmModal({
     onConfirm: () => void;
     onCancel: () => void;
 }) {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    return createPortal(
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="w-full max-w-sm rounded-2xl border border-primary/10 bg-[#1a1530] p-6 shadow-2xl">
                 <h3 className="text-lg font-bold text-white mb-2">Xác nhận duyệt</h3>
                 <p className="text-sm text-slate-400 mb-6">
@@ -219,7 +221,8 @@ function ApproveConfirmModal({
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 
@@ -233,8 +236,8 @@ function RejectConfirmModal({
 }) {
     const [reason, setReason] = useState("");
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    return createPortal(
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="w-full max-w-sm rounded-2xl border border-primary/10 bg-[#1a1530] p-6 shadow-2xl">
                 <h3 className="text-lg font-bold text-white mb-2">Xác nhận từ chối</h3>
                 <p className="text-sm text-slate-400 mb-4">
@@ -267,7 +270,8 @@ function RejectConfirmModal({
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../store";
 import {
@@ -428,8 +429,8 @@ export default function StaffEventApprovalQueue() {
       </div>
 
       {/* Cancel Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+      {showCancelModal && createPortal(
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100000]">
           <div className="bg-slate-900 border border-white/10 p-6 rounded-xl w-[400px]">
             <h2 className="text-white font-bold mb-3">Lý do huỷ sự kiện</h2>
             <textarea
@@ -454,13 +455,14 @@ export default function StaffEventApprovalQueue() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Detail Modal */}
-      {showDetailModal && currentEvent && (
+      {showDetailModal && currentEvent && createPortal(
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4"
           onClick={() => {
             setShowDetailModal(false);
             // Don't clear spec here - keep it cached for faster reopening
@@ -723,12 +725,13 @@ export default function StaffEventApprovalQueue() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Confirmation Modal - Approve */}
-      {showConfirmApprove && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      {showConfirmApprove && createPortal(
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.1)] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-purple-500/20 flex items-center gap-3">
               <div className="size-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -762,12 +765,13 @@ export default function StaffEventApprovalQueue() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Confirmation Modal - Reject */}
-      {showConfirmReject && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      {showConfirmReject && createPortal(
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.1)] w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-purple-500/20 flex items-center gap-3">
               <div className="size-10 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -805,7 +809,8 @@ export default function StaffEventApprovalQueue() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

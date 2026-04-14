@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { MdClose, MdInfo, MdVerifiedUser, MdPayments, MdWarning } from "react-icons/md";
 import { fetchGetOrganizerDetail, fetchVerifyOrganizer, fetchRejectOrganizer } from "../../../store/organizerProfileSlice";
@@ -97,10 +98,14 @@ export default function StaffOrganizerDetailModal({
     return (
         <>
             {/* Overlay */}
-            <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm" onClick={handleClose} />
-            
+            {createPortal(
+                <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm" onClick={handleClose} />,
+                document.body
+            )}
+
             {/* Modal */}
-            <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+            {createPortal(
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 pointer-events-none">
                 <div
                     className={`${glassCard} w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] pointer-events-auto`}
                 >
@@ -298,11 +303,13 @@ export default function StaffOrganizerDetailModal({
                         </button>
                     </div>
                 </div>
-            </div>
+            </div>,
+            document.body
+            )}
 
             {/* Confirmation Modal - Approve */}
-            {showConfirmApprove && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            {showConfirmApprove && createPortal(
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                     <div className={`${glassCard} w-full max-w-md rounded-2xl overflow-hidden shadow-2xl`}>
                         <div className="px-6 py-4 border-b border-primary/20 flex items-center gap-3">
                             <div className="size-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -336,12 +343,13 @@ export default function StaffOrganizerDetailModal({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Confirmation Modal - Reject */}
-            {showConfirmReject && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            {showConfirmReject && createPortal(
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                     <div className={`${glassCard} w-full max-w-md rounded-2xl overflow-hidden shadow-2xl`}>
                         <div className="px-6 py-4 border-b border-primary/20 flex items-center gap-3">
                             <div className="size-10 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -379,7 +387,8 @@ export default function StaffOrganizerDetailModal({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );
