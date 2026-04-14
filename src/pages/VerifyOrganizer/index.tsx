@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { fetchCreateProfileOrganizer, fetchVerifyProfileOrganizer } from "../../../store/organizerProfileSlice";
+import { fetchCreateProfileOrganizer, fetchVerifyProfileOrganizer } from "../../store/organizerProfileSlice";
 
 export default function VerifyOrganizer() {
   const dispatch = useDispatch<any>();
@@ -183,11 +183,10 @@ export default function VerifyOrganizer() {
               </label>
               <div
                 onClick={() => fileRef.current?.click()}
-                className={`aspect-square rounded-xl bg-[#0B0B12] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden relative transition-colors duration-200 group ${
-                  errors["logo"]
+                className={`aspect-square rounded-xl bg-[#0B0B12] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden relative transition-colors duration-200 group ${errors["logo"]
                     ? "border-red-500/60 hover:border-red-400"
                     : "border-[#1E293B] hover:border-primary/40"
-                }`}
+                  }`}
               >
                 {logoPreview ? (
                   <img src={logoPreview} alt="Logo" className="w-full h-full object-contain absolute inset-0" />
@@ -536,9 +535,8 @@ export default function VerifyOrganizer() {
             type="button"
             disabled={isSubmitting}
             onClick={handleSubmit}
-            className={`w-full md:w-auto flex items-center justify-center gap-2.5 px-12 py-4 bg-primary text-white font-bold text-[15px] rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 ${
-              isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-primary/90 active:scale-[0.98]"
-            }`}
+            className={`w-full md:w-auto flex items-center justify-center gap-2.5 px-12 py-4 bg-primary text-white font-bold text-[15px] rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-primary/90 active:scale-[0.98]"
+              }`}
           >
             {isSubmitting ? "Đang xử lý hồ sơ..." : "Gửi hồ sơ xác minh"}
             <span className="material-symbols-outlined text-[20px]">verified</span>

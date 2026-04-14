@@ -45,7 +45,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ProfileUser from "./pages/User/ProfileUser";
 import ProfileLayout from "./pages/User";
 import OrganizerAccountPage from "./pages/Organizer/OrganizerAccountPage";
-import VerifyOrganizer from "./pages/Organizer/VerifyOrganizer";
+import VerifyOrganizer from "./pages/VerifyOrganizer";
 import PaymentTicket from "./components/Payment";
 import EventUser from "./pages/User/EventUser";
 import OrderDetailUser from "./pages/User/EventUser/OrderDetailUser";
@@ -63,6 +63,7 @@ import PackageOrderSuccess from "./pages/Organizer/PackageOrderSuccess";
 import LegalDetailPage from "./pages/Organizer/LegalDetailPage";
 import RequireEventPermission from "./components/Guards/RequireEventPermission";
 import PolicyManagement from "./components/Admin/policy";
+import PostDetail from "./pages/PostDetail";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -92,6 +93,7 @@ function App() {
         <Route path="/verify-organizer" element={<VerifyOrganizer />} />
         <Route path="/payment/vnpay-return" element={<VnpayReturn />} />
         <Route path="/order/success" element={<OrderSuccess />} />
+        <Route path="/post-detail/:id" element={<PostDetail />} />
         <Route path="/profile" element={<ProfileLayout />}>
           <Route path="account" element={<ProfileUser />} />
           <Route path="events" element={<EventUser />} />
