@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import { FiLock, FiUnlock } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ConfirmModal from "../../components/Organizer/shared/ConfirmModal";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchGetSeatMap, fetchUpdateSeatMap } from "../../store/seatMapSlice";
+import { fetchUpdateEventSettings, fetchUpload } from "../../store/eventSlice";
 import { fetchGetAllTicketTypes } from "../../store/ticketTypeSlice";
 import type { SeatMapData, TicketType } from "../../types/config/seatmap";
 import { notify } from "../../utils/notify";
@@ -22,12 +23,15 @@ export default function LockSeatTab({ selectedSessionId }: LockSeatTabProps) {
     const dispatch = useDispatch<AppDispatch>();
     const { ticketTypes: ticketTypeItems } = useSelector((state: RootState) => state.TICKET_TYPE);
     const { currentEvent } = useSelector((state: RootState) => state.EVENT);
+    const { loading: seatMapLoading } = useSelector((state: RootState) => state.SEATMAP);
     const navigate = useNavigate();
     const location = useLocation();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [seatMapData, setSeatMapData] = useState<SeatMapData | null>(null);
     const [pendingSeats, setPendingSeats] = useState<SelectedSeat[]>([]);
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [showLockConfirm, setShowLockConfirm] = useState(false);
     const [resetKey, setResetKey] = useState(0);
 
@@ -145,6 +149,44 @@ export default function LockSeatTab({ selectedSessionId }: LockSeatTabProps) {
         border: 'none',
     };
 
+    const hasSeatMapData = seatMapData && seatMapData.areas && seatMapData.areas.length > 0;
+    const specImageUrl = (currentEvent as any)?.specImage;
+
+    const handleUploadSpecImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !eventId) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            notify.error('Vui lòng chọn file hình ảnh');
+            return;
+        }
+
+        setUploading(true);
+        try {
+            const uploadedUrl = await dispatch(fetchUpload({
+                folder: 'spec-images',
+                file,
+            })).unwrap();
+
+            await dispatch(fetchUpdateEventSettings({
+                eventId,
+                data: {
+                    isEmailReminderEnabled: currentEvent?.isEmailReminderEnabled ?? false,
+                    specImage: uploadedUrl,
+                },
+            })).unwrap();
+
+            notify.success('Đã cập nhật sơ đồ ghế dạng hình ảnh');
+        } catch (error) {
+            notify.error('Không thể tải lên sơ đồ ghế');
+        } finally {
+            setUploading(false);
+            // Reset file input
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     const lockActions = mode === 'seat' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {!isDraft && (
@@ -234,13 +276,48 @@ export default function LockSeatTab({ selectedSessionId }: LockSeatTabProps) {
         </div>
     );
 
+    // Actions when no seatMapData - show upload button only
+    const noSeatMapActions = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            <p style={{ fontSize: 12, color: TEXT_MUTED, textAlign: 'center', margin: 0, lineHeight: 1.5 }}>
+                Sự kiện chưa có sơ đồ ghế tương tác
+            </p>
+            <div>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadSpecImage}
+                    disabled={uploading}
+                    style={{ display: 'none' }}
+                />
+                <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full py-2 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 transition bg-gradient-to-r from-purple-500/30 to-purple-500/10 hover:from-purple-500/50 hover:to-purple-500/20 text-white hover:shadow-md hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    {uploading ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Đang tải lên...
+                        </>
+                    ) : (
+                        <>
+                            📤 Tải lên sơ đồ ghế
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
+    );
+
     if (!selectedSessionId) return (
         <div className="flex items-center justify-center h-[75vh] text-slate-400">
             Vui lòng chọn suất diễn
         </div>
     );
 
-    if (!seatMapData) return (
+    if (seatMapLoading) return (
         <div className="flex items-center justify-center h-[75vh] text-slate-400">
             Đang tải sơ đồ ghế...
         </div>
@@ -249,17 +326,43 @@ export default function LockSeatTab({ selectedSessionId }: LockSeatTabProps) {
     return (
         <>
             <div className="h-[75vh] rounded-2xl overflow-hidden border border-white/10">
-                <SeatMapViewer
-                    seatMapData={seatMapData}
-                    mode={mode}
-                    ticketTypes={ticketTypes}
-                    onConfirm={() => { }}
-                    extraActions={lockActions}
-                    hideConfirmButton={true}
-                    allowSelectBlocked={isDraft && mode === 'seat'}
-                    resetSelectionKey={resetKey}
-                    onSelectionChange={seats => setPendingSeats(seats)}
-                />
+                {hasSeatMapData ? (
+                    <SeatMapViewer
+                        seatMapData={seatMapData}
+                        mode={mode}
+                        ticketTypes={ticketTypes}
+                        onConfirm={() => { }}
+                        extraActions={lockActions}
+                        hideConfirmButton={true}
+                        allowSelectBlocked={isDraft && mode === 'seat'}
+                        resetSelectionKey={resetKey}
+                        onSelectionChange={seats => setPendingSeats(seats)}
+                    />
+                ) : specImageUrl ? (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, overflow: 'auto' }}>
+                            <img
+                                src={specImageUrl}
+                                alt="Seat Map"
+                                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            />
+                        </div>
+                        <div style={{ padding: '12px 16px', background: 'rgba(24,18,43,0.9)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                            {noSeatMapActions}
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, background: '#0B0B12', color: '#e5e7eb', padding: 40 }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 48, marginBottom: 12 }}>🎫</div>
+                            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Chưa có sơ đồ ghế</div>
+                            <div style={{ fontSize: 14, color: TEXT_MUTED, marginBottom: 20 }}>
+                                Tải lên hình ảnh sơ đồ ghế để khách xem
+                            </div>
+                            {noSeatMapActions}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <ConfirmModal
