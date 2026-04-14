@@ -1,11 +1,11 @@
-import Konva from 'konva';
+import type Konva from 'konva';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage } from 'react-konva';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../store';
-import { fetchEventByUrlPath } from '../../store/eventSlice';
+import { fetchEventById, fetchEventByUrlPath } from '../../store/eventSlice';
 import { fetchGetSeatMap } from '../../store/seatMapSlice';
 import { fetchCreatePendingOrder } from '../../store/ticketingSlice';
 import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
@@ -740,6 +740,7 @@ const SeatMapViewerPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [eventLoading, setEventLoading] = useState(true);
+    const [eventFetched, setEventFetched] = useState(false);
     const { eventSessionId } = location.state || {};
     const { spec, loading: seatMapLoading } = useSelector((state: RootState) => state.SEATMAP);
     const { ticketTypes: ticketTypeItems } = useSelector((state: RootState) => state.TICKET_TYPE);
@@ -772,6 +773,12 @@ const SeatMapViewerPage: React.FC = () => {
         dispatch(fetchGetSeatMap({ eventId, sessionId: eventSessionId }));
         dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId }));
     }, [eventId, eventSessionId, dispatch]);
+
+    // Fetch event by ID to get specImage when seatMapData is empty
+    useEffect(() => {
+        if (!eventId || eventFetched) return;
+        dispatch(fetchEventById(eventId)).finally(() => setEventFetched(true));
+    }, [eventId, eventFetched, dispatch]);
 
     const seatMapData = useMemo<SeatMapData>(() => {
         if (!spec) return { areas: [], texts: [] };
@@ -838,6 +845,16 @@ const SeatMapViewerPage: React.FC = () => {
             Đang tải...
         </div>
     );
+    // Show loading while fetching event for specImage fallback
+    if (!eventFetched) return (
+        <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0B12', color: 'white', fontSize: 16 }}>
+            Đang tải...
+        </div>
+    );
+
+    // Check if we should use specImage fallback (no seat map data)
+    const hasSeatMapData = seatMapData.areas && seatMapData.areas.length > 0;
+    const specImageUrl = (currentEvent as any)?.specImage;
 
     return (
         <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#0B0B12' }}>
@@ -849,16 +866,32 @@ const SeatMapViewerPage: React.FC = () => {
                     <FiArrowLeft size={18} /> Trở về
                 </button>
                 <span style={{ fontSize: 14, color: '#e5e7eb', fontWeight: 600 }}>
-                    Click trái để chọn ghế • Giữ chuột phải và kéo để di chuyển • Cuộn để zoom
+                    {hasSeatMapData
+                        ? 'Click trái để chọn ghế • Giữ chuột phải và kéo để di chuyển • Cuộn để zoom'
+                        : 'Sơ đồ ghế dạng hình ảnh'}
                 </span>
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-                <SeatMapViewer
-                    seatMapData={seatMapData}
-                    mode={mode}
-                    ticketTypes={ticketTypes}
-                    onConfirm={handleConfirm}
-                />
+                {hasSeatMapData ? (
+                    <SeatMapViewer
+                        seatMapData={seatMapData}
+                        mode={mode}
+                        ticketTypes={ticketTypes}
+                        onConfirm={handleConfirm}
+                    />
+                ) : specImageUrl ? (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, overflow: 'auto' }}>
+                        <img
+                            src={specImageUrl}
+                            alt="Seat Map"
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
+                    </div>
+                ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0B12', color: 'white', fontSize: 16 }}>
+                        Không có sơ đồ ghế
+                    </div>
+                )}
             </div>
         </div>
     );

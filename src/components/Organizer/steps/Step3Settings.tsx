@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch } from "../../../store";
 import { fetchEventById, fetchUpdateEventSettings, fetchUpload } from "../../../store/eventSlice";
-import { fetchGetSeatMap } from "../../../store/seatMapSlice";
+import { fetchAssignAreas, fetchGetSeatMap } from "../../../store/seatMapSlice";
 import type { EventSession, GetEventDetailResponse } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
 import ImageViewer from "../shared/ImagePreview";
@@ -118,6 +118,11 @@ export default function Step3Settings({
         updateForm("specImage", "");
     };
 
+    type mappingAssign = {
+        ticketTypeId: string;
+        areaId: string;
+    }[]
+
     const handleSubmit = async () => {
         if (!validateForm()) return;
         if (!isFormChanged()) { onNext?.(); return; }
@@ -126,7 +131,6 @@ export default function Step3Settings({
         try {
             let finalSpecImageUrl = settingsForm.specImage;
 
-            // Upload ảnh mới nếu có
             if (pendingFile) {
                 setUploading(true);
                 finalSpecImageUrl = await dispatch(fetchUpload({
@@ -151,12 +155,22 @@ export default function Step3Settings({
                         eventEndAt: eventData?.eventEndAt ?? "",
                     }
                 })).unwrap();
+
+                const ticketTypeIdList = eventData?.ticketTypes.map((type) => type.id);
+                const mappings: mappingAssign = ticketTypeIdList?.map((ticketTypeId) => ({
+                    ticketTypeId,
+                    areaId: crypto.randomUUID(),
+                })) ?? [];
+
+                await dispatch(fetchAssignAreas({
+                    eventId: eventId!,
+                    data: { mappings },
+                }));
             } else {
                 await dispatch(fetchUpdateEventSettings({
                     eventId,
                     data: {
                         isEmailReminderEnabled: settingsForm.isEmailReminderEnabled,
-                        specImage: finalSpecImageUrl,
                     }
                 })).unwrap();
             }
