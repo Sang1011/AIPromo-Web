@@ -64,6 +64,8 @@ import LegalDetailPage from "./pages/Organizer/LegalDetailPage";
 import RequireEventPermission from "./components/Guards/RequireEventPermission";
 import PolicyManagement from "./components/Admin/policy";
 import PostDetail from "./pages/PostDetail";
+import WalletTopUpSuccess from "./pages/Organizer/WalletTopUpSuccess";
+import WalletTopUpFailed from "./pages/Organizer/WalletTopUpFailed";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -137,6 +139,8 @@ function App() {
             <Route path="/organizer/payment/packages/vnpay-return" element={<PackageVnpayReturn />} />
             <Route path="/organizer/payment/packages/success" element={<PackageOrderSuccess />} />
             <Route path="/organizer/payment/packages/failed" element={<PackageOrderFailed />} />
+            <Route path="/organizer/payment/wallet/success" element={<WalletTopUpSuccess />} />
+            <Route path="/organizer/payment/wallet/failed" element={<WalletTopUpFailed />} />
             <Route path="/organizer/subscription" element={<SubscriptionPage />} />
             <Route
               path="/organizer/my-events/:eventId/marketing/:marketingId/post-preview/:postId"

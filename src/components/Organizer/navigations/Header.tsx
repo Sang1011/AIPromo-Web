@@ -204,7 +204,7 @@ export default function Header({
                                 className="flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm border border-amber-400/30 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition"
                             >
                                 <Crown size={15} strokeWidth={2} />
-                                Subscription
+                                AI Packages
                             </button>
                         )}
 
