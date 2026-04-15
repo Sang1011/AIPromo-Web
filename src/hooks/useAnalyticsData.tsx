@@ -2,14 +2,16 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../store";
 import type { GetPostsParams } from "../types/post/post";
 import { fetchAllDistributionMetrics, fetchOrganizerPosts } from "../store/postSlice";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PostWithMetrics } from "../pages/Organizer/AnalyticsPage";
 
 export function useAnalyticsData(params: GetPostsParams) {
     const dispatch = useDispatch<AppDispatch>();
     const { posts, loading, distributionMetricsMap } = useSelector((s: RootState) => s.POST);
+    const [metricsDispatched, setMetricsDispatched] = useState(false);
 
     const refresh = useCallback(() => {
+        setMetricsDispatched(false);
         dispatch(fetchOrganizerPosts(params));
     }, [dispatch]);
 
@@ -18,14 +20,21 @@ export function useAnalyticsData(params: GetPostsParams) {
     }, [dispatch]);
 
     useEffect(() => {
-        if (!posts.length) return;
+        if (loading.fetchList) return;
+
         const targets = posts.flatMap(post =>
             (post.distributions ?? [])
                 .filter(d => d.platform === "Facebook" && d.status === "Sent")
                 .map(d => ({ postId: post.id, distributionId: d.id }))
         );
-        if (targets.length) dispatch(fetchAllDistributionMetrics(targets));
-    }, [posts, dispatch]);
+
+        if (targets.length) {
+            dispatch(fetchAllDistributionMetrics(targets));
+        }
+
+        setMetricsDispatched(true);
+    }, [posts, loading.fetchList, dispatch]);
+
 
     const postsWithMetrics = useMemo((): PostWithMetrics[] => {
         return posts
@@ -44,7 +53,9 @@ export function useAnalyticsData(params: GetPostsParams) {
             );
     }, [posts, distributionMetricsMap]);
 
-    const isLoading = loading.fetchList || loading.fetchDistributionMetrics;
+    const isLoading = loading.fetchList
+        || !metricsDispatched
+        || loading.fetchAllDistributionMetrics;
 
     return { postsWithMetrics, isLoading, refresh };
 }

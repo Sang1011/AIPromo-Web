@@ -12,7 +12,6 @@ export default function VnpayReturn() {
     fetch(callbackUrl)
       .then((res) => res.json())
       .then((data) => {
-        console.log(callbackUrl);
         const target = localStorage.getItem("vnpay_return_target");
         localStorage.removeItem("vnpay_return_target");
 
