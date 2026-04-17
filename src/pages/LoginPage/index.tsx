@@ -90,6 +90,7 @@ function Login() {
     onSuccess: async (tokenResponse) => {
       setError("");
       setIsGoogleLoading(true);
+      console.log(tokenResponse);
       try {
         const deviceName = navigator.userAgent.length > 100
           ? navigator.userAgent.substring(0, 100)
