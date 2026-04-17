@@ -98,7 +98,7 @@ function Login() {
 
         const res = await dispatch(
           fetchLoginGoogle({
-            idToken: tokenResponse.access_token,
+            idToken: tokenResponse?.code,
             deviceName,
           })
         );
@@ -118,7 +118,7 @@ function Login() {
       setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
       setIsGoogleLoading(false);
     },
-    flow: "implicit", // hoặc "auth-code" tùy backend
+    flow: "auth-code",
   });
 
   const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,7 +184,6 @@ function Login() {
         </div>
       </header>
 
-      {/* Main */}
       <main className="flex-1 flex items-center justify-center p-6 relative z-10">
         <div className="glass-card w-full max-w-md p-8 rounded-xl shadow-2xl">
           <div className="text-center mb-8">
@@ -194,9 +193,7 @@ function Login() {
             </p>
           </div>
 
-          {/* ── Google Section ── */}
           <div className="mb-6">
-            {/* GoogleLogin thật — ẩn hoàn toàn, vẫn mount để handle OAuth callback */}
             <div
               ref={googleWrapperRef}
               aria-hidden="true"
@@ -238,6 +235,11 @@ function Login() {
                   setIsGoogleLoading(false);
                 }}
                 useOneTap={false}
+                theme="filled_black"
+                size="large"
+                width="100%"
+                text="continue_with"
+                shape="rectangular"
               />
             </div>
 
