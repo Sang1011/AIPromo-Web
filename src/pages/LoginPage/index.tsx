@@ -43,14 +43,14 @@ function Login() {
 
     try {
       await new Promise<void>((res) => setTimeout(res, 1200));
-
+      const deviceName = navigator.userAgent.length > 100 ? navigator.userAgent.substring(0, 100) : navigator.userAgent;
       const data: LoginRequest = {
         emailOrUserName: email,
         password,
         deviceId: crypto.randomUUID(),
         deviceName: navigator.platform,
         ipAddress: "",
-        userAgent: navigator.userAgent,
+        userAgent: deviceName,
       };
       dispatch(fetchLogin(data)).then((res) => {
         if (res.payload.isSuccess) {
@@ -142,9 +142,10 @@ function Login() {
             onSuccess={(credentialResponse) => {
               setError("");
               setIsGoogleLoading(true);
+              const deviceName = navigator.userAgent.length > 100 ? navigator.userAgent.substring(0, 100) : navigator.userAgent;
               const data = {
-                idToken: credentialResponse.credential, // ← This IS the id_token JWT
-                deviceName: navigator.userAgent,
+                idToken: credentialResponse.credential,
+                deviceName: deviceName,
               };
               dispatch(fetchLoginGoogle(data)).then((res) => {
                 if (res.payload?.isSuccess) {
