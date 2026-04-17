@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import "./login.css";
-import { useDispatch } from "react-redux";
-import { fetchLogin, fetchLoginGoogle } from "../../store/authSlice";
-import type { AppDispatch } from "../../store";
-import { Link, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import type { AppDispatch } from "../../store";
+import { fetchLogin, fetchLoginGoogle } from "../../store/authSlice";
 import type { LoginRequest } from "../../types/auth/auth";
+import "./login.css";
 
 const REMEMBER_ME_KEY = "aipromo_remember_me";
 const SAVED_EMAIL_KEY = "aipromo_saved_email";
