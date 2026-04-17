@@ -43,14 +43,14 @@ function Login() {
 
     try {
       await new Promise<void>((res) => setTimeout(res, 1200));
-      const deviceName = navigator.userAgent.length > 100 ? navigator.userAgent.substring(0, 100) : navigator.userAgent;
+
       const data: LoginRequest = {
         emailOrUserName: email,
         password,
         deviceId: crypto.randomUUID(),
         deviceName: navigator.platform,
         ipAddress: "",
-        userAgent: deviceName,
+        userAgent: navigator.userAgent,
       };
       dispatch(fetchLogin(data)).then((res) => {
         if (res.payload.isSuccess) {
@@ -138,156 +138,157 @@ function Login() {
             <p className="text-slate-300">Đăng nhập để quản lý sự kiện của bạn</p>
           </div>
 
-          <GoogleLogin
-            onSuccess={(credentialResponse) => {
-              setError("");
-              setIsGoogleLoading(true);
-              const deviceName = navigator.userAgent.length > 100 ? navigator.userAgent.substring(0, 100) : navigator.userAgent;
-              const data = {
-                idToken: credentialResponse.credential,
-                deviceName: deviceName,
-              };
-              dispatch(fetchLoginGoogle(data)).then((res) => {
-                if (res.payload?.isSuccess) {
-                  navigate("/");
-                } else {
-                  setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
-                }
+          {/* Custom Google Button */}
+          <div className="mb-6">
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                setError("");
+                setIsGoogleLoading(true);
+                const deviceName = navigator.userAgent.length > 100 ? navigator.userAgent.substring(0, 100) : navigator.userAgent;
+                const data = {
+                  idToken: credentialResponse.credential,
+                  deviceName: deviceName,
+                };
+                dispatch(fetchLoginGoogle(data)).then((res) => {
+                  if (res.payload?.isSuccess) {
+                    navigate("/");
+                  } else {
+                    setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
+                  }
+                  setIsGoogleLoading(false);
+                });
+              }}
+              onError={() => {
+                setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
                 setIsGoogleLoading(false);
-              });
-            }}
-            onError={() => {
-              setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
-              setIsGoogleLoading(false);
-            }}
-            useOneTap
-            width="100%"
-          />
-        </div>
+              }}
+              useOneTap
+              width="100%"
+            />
+          </div>
 
-        <div className="relative flex items-center mb-6">
-          <div className="flex-grow border-t border-white/20" />
-          <span className="flex-shrink mx-4 text-xs uppercase tracking-widest text-slate-400">
-            Hoặc sử dụng email
-          </span>
-          <div className="flex-grow border-t border-white/20" />
-        </div>
+          <div className="relative flex items-center mb-6">
+            <div className="flex-grow border-t border-white/20" />
+            <span className="flex-shrink mx-4 text-xs uppercase tracking-widest text-slate-400">
+              Hoặc sử dụng email
+            </span>
+            <div className="flex-grow border-t border-white/20" />
+          </div>
 
-        {
-          error && (
+          {error && (
             <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
               {error}
             </div>
-          )
-        }
+          )}
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-slate-200 mb-1.5" htmlFor="email">
-              Địa chỉ Email
-            </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                mail
-              </span>
-              <input
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder:text-slate-500 neon-focus transition-all"
-                id="email"
-                placeholder="example@aipromo.vn"
-                type="email"
-                value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-200" htmlFor="password">
-                Mật khẩu
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            <div>
+              <label className="block text-sm font-medium text-slate-200 mb-1.5" htmlFor="email">
+                Địa chỉ Email
               </label>
-              <Link to="/forgot-password"> <a className="text-xs text-primary hover:text-primary/80 transition-colors font-medium" href="#">
-                Quên mật khẩu?
-              </a>
-              </Link>
-            </div>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                lock
-              </span>
-              <input
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder:text-slate-500 neon-focus transition-all"
-                id="password"
-                placeholder="••••••••"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
-              >
-                <span className="material-symbols-outlined text-lg">
-                  {showPassword ? "visibility_off" : "visibility"}
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
+                  mail
                 </span>
-              </button>
+                <input
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder:text-slate-500 neon-focus transition-all"
+                  id="email"
+                  placeholder="example@aipromo.vn"
+                  type="email"
+                  value={email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
+
+            <div>
+              <div className="flex justify-between mb-1.5">
+                <label className="block text-sm font-medium text-slate-200" htmlFor="password">
+                  Mật khẩu
+                </label>
+                <Link to="/forgot-password"> <a className="text-xs text-primary hover:text-primary/80 transition-colors font-medium" href="#">
+                  Quên mật khẩu?
+                </a>
+                </Link>
+              </div>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
+                  lock
+                </span>
+                <input
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder:text-slate-500 neon-focus transition-all"
+                  id="password"
+                  placeholder="••••••••"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-lg">
+                    {showPassword ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary focus:ring-offset-background-dark"
+                id="remember"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={handleRememberMeChange}
+              />
+              <label className="ml-2 text-sm text-slate-300" htmlFor="remember">
+                Ghi nhớ đăng nhập
+              </label>
+            </div>
+
+            <button
+              className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg shadow-lg shadow-primary/30 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Đang đăng nhập...
+                </>
+              ) : (
+                <>Đăng nhập</>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-white/10 text-center">
+            <p className="text-sm text-slate-400">
+              Bằng cách đăng nhập, bạn đồng ý với{" "}
+              <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
+                Điều khoản dịch vụ
+              </a>{" "}
+              và{" "}
+              <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
+                Chính sách bảo mật
+              </a>{" "}
+              của chúng tôi.
+            </p>
           </div>
-
-          <div className="flex items-center">
-            <input
-              className="w-4 h-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary focus:ring-offset-background-dark"
-              id="remember"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={handleRememberMeChange}
-            />
-            <label className="ml-2 text-sm text-slate-300" htmlFor="remember">
-              Ghi nhớ đăng nhập
-            </label>
-          </div>
-
-          <button
-            className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg shadow-lg shadow-primary/30 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-            type="submit"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-                Đang đăng nhập...
-              </>
-            ) : (
-              <>Đăng nhập</>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-8 pt-6 border-t border-white/10 text-center">
-          <p className="text-sm text-slate-400">
-            Bằng cách đăng nhập, bạn đồng ý với{" "}
-            <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
-              Điều khoản dịch vụ
-            </a>{" "}
-            và{" "}
-            <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
-              Chính sách bảo mật
-            </a>{" "}
-            của chúng tôi.
-          </p>
         </div>
-      </main >
+      </main>
 
       <footer className="py-6 px-10 text-center text-slate-400 text-xs backdrop-blur-sm bg-background-dark/20 relative z-10">
         <p>© 2026 AIPromo Event Platform. Mọi quyền được bảo lưu.</p>
       </footer>
-    </div >
+    </div>
   );
 }
 
