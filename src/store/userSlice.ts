@@ -41,6 +41,20 @@ export const fetchAllUsers = createAsyncThunk<
     }
 );
 
+export const updateUserStatus = createAsyncThunk<
+    void,
+    { userId: string; userStatus: "Active" | "Inactive" | "Banned" }
+>(
+    `${name}/updateUserStatus`,
+    async ({ userId, userStatus }, thunkAPI) => {
+        try {
+            await userService.updateUserStatus(userId, userStatus);
+        } catch (error) {
+            return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
 const userSlice = createSlice({
     name,
     initialState,
@@ -60,11 +74,20 @@ const userSlice = createSlice({
                     totalPages: action.payload.data.totalPages,
                     hasPrevious: action.payload.data.hasPrevious,
                     hasNext: action.payload.data.hasNext,
-                    currentStartIndex: action.payload.data.currentStartIndex,   
+                    currentStartIndex: action.payload.data.currentStartIndex,
                     currentEndIndex: action.payload.data.currentEndIndex,
                 };
             })
             .addCase(fetchAllUsers.rejected, (state) => {
+                state.loading = false;
+            })
+            .addCase(updateUserStatus.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(updateUserStatus.fulfilled, (state) => {
+                state.loading = false;
+            })
+            .addCase(updateUserStatus.rejected, (state) => {
                 state.loading = false;
             });
     },

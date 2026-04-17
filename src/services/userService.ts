@@ -47,6 +47,15 @@ const userService = {
             },
         });
     },
+
+    updateUserStatus: (userId: string, userStatus: "Active" | "Inactive" | "Banned"): Promise<AxiosResponse<void>> => {
+        return interceptorAPI().patch("/users/status", null, {
+            params: {
+                userId,
+                userStatus,
+            },
+        });
+    },
 };
 
 export default userService;

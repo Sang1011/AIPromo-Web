@@ -1,5 +1,5 @@
 import type { AxiosResponse } from "axios";
-import type { AdminReportsResponse, SalesTrendResponse } from "../types/adminReports/adminReports";
+import type { AdminReportsResponse, SalesTrendResponse, TopEventsResponse } from "../types/adminReports/adminReports";
 import { interceptorAPI } from "../utils/attachInterceptors";
 
 const adminReportsService = {
@@ -9,6 +9,11 @@ const adminReportsService = {
     getSalesTrend: (days: number): Promise<AxiosResponse<SalesTrendResponse>> => {
         return interceptorAPI().get("/admin/reports/sales-trend", {
             params: { days },
+        });
+    },
+    getTopEvents: (top: number): Promise<AxiosResponse<TopEventsResponse>> => {
+        return interceptorAPI().get("/admin/reports/top-events", {
+            params: { top },
         });
     },
 };

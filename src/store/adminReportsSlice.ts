@@ -4,7 +4,9 @@ import type {
     AdminReportsResponse,
     AdminReportsData,
     SalesTrendResponse,
-    SalesTrendDataPoint
+    SalesTrendDataPoint,
+    TopEventsResponse,
+    TopEventItem,
 } from "../types/adminReports/adminReports";
 
 const name = "adminReports";
@@ -12,6 +14,7 @@ const name = "adminReports";
 interface AdminReportsState {
     data: AdminReportsData | null;
     salesTrend: SalesTrendDataPoint[];
+    topEvents: TopEventItem[];
     loading: boolean;
     error: string | null;
 }
@@ -19,6 +22,7 @@ interface AdminReportsState {
 const initialState: AdminReportsState = {
     data: null,
     salesTrend: [],
+    topEvents: [],
     loading: false,
     error: null,
 };
@@ -39,6 +43,17 @@ export const fetchSalesTrend = createAsyncThunk<SalesTrendResponse, number>(
     async (days, thunkAPI) => {
         try {
             return (await adminReportsService.getSalesTrend(days)).data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error?.response?.data ?? error?.message);
+        }
+    }
+);
+
+export const fetchTopEvents = createAsyncThunk<TopEventsResponse, number>(
+    `${name}/fetchTopEvents`,
+    async (top, thunkAPI) => {
+        try {
+            return (await adminReportsService.getTopEvents(top)).data;
         } catch (error: any) {
             return thunkAPI.rejectWithValue(error?.response?.data ?? error?.message);
         }
@@ -78,6 +93,20 @@ const adminReportsSlice = createSlice({
             .addCase(fetchSalesTrend.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.error.message ?? "Failed to fetch sales trend";
+            })
+            .addCase(fetchTopEvents.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchTopEvents.fulfilled, (state, action) => {
+                state.loading = false;
+                if (action.payload?.isSuccess && action.payload.data) {
+                    state.topEvents = action.payload.data.events;
+                }
+            })
+            .addCase(fetchTopEvents.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.error.message ?? "Failed to fetch top events";
             });
     },
 });

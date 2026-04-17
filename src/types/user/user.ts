@@ -13,6 +13,7 @@ export interface UserItem {
     profileImageUrl: string | null;
     status: "Active" | "Inactive" | "Banned";
     roles: string[];
+    createdAt: string;
 }
 
 export interface GetAllUsersRequest {

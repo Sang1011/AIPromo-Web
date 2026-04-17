@@ -1,31 +1,70 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../store";
-import { fetchAllUsers } from "../../../store/userSlice";
-import { MdPersonAdd, MdMoreVert } from "react-icons/md";
+import { fetchAllUsers, updateUserStatus } from "../../../store/userSlice";
+import { MdPersonAdd, MdAccessTime } from "react-icons/md";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import CreateStaffUserModal from "./CreateStaffUserModal";
+import UserStatusDropdown, { type UserStatus } from "./UserStatusDropdown";
+import ConfirmStatusChangeModal from "./ConfirmStatusChangeModal";
 
 const glassCard = "bg-[rgba(24,18,43,0.8)] backdrop-blur-[12px] border border-[rgba(124,59,237,0.2)]";
+
+
+function formatDate(dateString: string | undefined | null) {
+    if (!dateString) return "—";
+    try {
+        const d = new Date(dateString);
+        return d.toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        });
+    } catch (e) {
+        return dateString;
+    }
+}
+
+function formatTime(dateString: string | undefined | null) {
+    if (!dateString) return "—";
+    try {
+        const d = new Date(dateString);
+        return d.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    } catch (e) {
+        return dateString;
+    }
+}
 
 export interface UserItem {
     id: string;
     name: string;
     role: string;
     email: string;
-    joinDate: string;
-    status: "active" | "suspended";
+    createdAt: string;
+    status: UserStatus;
     avatar: string | null;
+}
+
+interface StatusChangeState {
+    userId: string;
+    userName: string;
+    currentStatus: UserStatus;
+    newStatus: UserStatus;
 }
 
 export default function AdminUserManagementTable() {
     const dispatch = useDispatch<AppDispatch>();
 
     const { users, pagination, loading } = useSelector((state: RootState) => state.USER);
+    const { loading: statusUpdating } = useSelector((state: RootState) => state.USER);
 
     const [pageNumber, setPageNumber] = useState(1);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [statusChange, setStatusChange] = useState<StatusChangeState | null>(null);
     const pageSize = 10;
 
     useEffect(() => {
@@ -45,10 +84,8 @@ export default function AdminUserManagementTable() {
         name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.userName,
         role: user.roles?.[0] || "Attendee",
         email: user.email,
-        joinDate: user.birthday 
-            ? new Date(user.birthday).toLocaleDateString("vi-VN")
-            : "Chưa cập nhật",
-        status: user.status === "Active" ? "active" : "suspended",
+        createdAt: user.createdAt,
+        status: user.status as UserStatus,
         avatar: user.profileImageUrl,
     }));
 
@@ -69,6 +106,46 @@ export default function AdminUserManagementTable() {
         })).unwrap().catch((err: any) => {
             console.error(err);
         });
+    };
+
+    const handleStatusSelect = (userId: string, userName: string, currentStatus: UserStatus, newStatus: UserStatus) => {
+        setStatusChange({
+            userId,
+            userName,
+            currentStatus,
+            newStatus,
+        });
+    };
+
+    const handleConfirmStatusChange = async () => {
+        if (!statusChange) return;
+
+        try {
+            await dispatch(updateUserStatus({
+                userId: statusChange.userId,
+                userStatus: statusChange.newStatus,
+            })).unwrap();
+
+            toast.success(`Đã cập nhật trạng thái cho ${statusChange.userName}`);
+            setStatusChange(null);
+
+            // Refresh user list
+            dispatch(fetchAllUsers({
+                PageNumber: pageNumber,
+                PageSize: pageSize,
+                SortColumn: "userId",
+                Dir: "desc",
+            }));
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error?.response?.data?.message || "Không thể cập nhật trạng thái");
+        }
+    };
+
+    const handleCloseModal = () => {
+        if (!statusUpdating) {
+            setStatusChange(null);
+        }
     };
 
     const getRoleStyles = (role: string) => {
@@ -100,7 +177,7 @@ export default function AdminUserManagementTable() {
                         onClick={() => setIsCreateModalOpen(true)}
                         className="bg-primary text-white text-xs font-bold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(124,59,237,0.4)]"
                     >
-                        <MdPersonAdd className="text-base" /> Thêm người dùng
+                        <MdPersonAdd className="text-base" /> Thêm tài khoản nhân viên
                     </button>
                 </div>
             </div>
@@ -115,7 +192,7 @@ export default function AdminUserManagementTable() {
             {/* Table + Pagination */}
             {!loading && (
                 <>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto overflow-y-visible">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-white/5 text-[10px] text-[#a592c8] uppercase tracking-widest font-bold">
@@ -124,12 +201,11 @@ export default function AdminUserManagementTable() {
                                     <th className="px-8 py-4">Email</th>
                                     <th className="px-8 py-4">Ngày tham gia</th>
                                     <th className="px-8 py-4 text-center">Trạng thái</th>
-                                    <th className="px-8 py-4 text-right">Hành động</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#302447]">
+                            <tbody className="divide-y divide-[#302447] overflow-visible">
                                 {tableUsers.map((user) => (
-                                    <tr key={user.id} className="hover:bg-white/5 transition-colors">
+                                    <tr key={user.id} className="hover:bg-white/5 transition-colors overflow-visible">
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-3">
                                                 {user.avatar ? (
@@ -155,23 +231,32 @@ export default function AdminUserManagementTable() {
                                             </span>
                                         </td>
                                         <td className="px-8 py-5 text-sm text-[#a592c8]">{user.email}</td>
-                                        <td className="px-8 py-5 text-sm text-white">{user.joinDate}</td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
-                                                user.status === "active"
-                                                    ? "bg-emerald-500/10 text-emerald-400"
-                                                    : "bg-amber-500/10 text-amber-400"
-                                            }`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${
-                                                    user.status === "active" ? "bg-emerald-400" : "bg-amber-400"
-                                                }`} />
-                                                {user.status === "active" ? "Hoạt động" : "Bị đình chỉ"}
-                                            </span>
+                                        <td className="px-8 py-5 text-sm text-white">
+                                            <div className="inline-flex w-full justify-end">
+                                                <div
+                                                    title={user.createdAt || "-"}
+                                                    className="flex flex-col items-end gap-0 px-3 py-1 rounded-full bg-gradient-to-r from-[#0b1020]/40 to-[#171025]/40 border border-[#2b2236] text-right transition-transform transform hover:-translate-y-0.5 hover:shadow-md"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/6 border border-white/6">
+                                                            <MdAccessTime className="text-[12px] text-purple-300" />
+                                                        </span>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-sm font-bold text-white leading-tight">{formatTime(user.createdAt)}</span>
+                                                            <span className="text-xs text-[#a592c8]">{formatDate(user.createdAt)}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <button className="p-1.5 rounded-lg text-[#a592c8] hover:text-white hover:bg-white/5 transition-colors">
-                                                <MdMoreVert className="text-lg" />
-                                            </button>
+                                        <td className="px-8 py-5 text-center overflow-visible">
+                                            <div className="overflow-visible">
+                                                <UserStatusDropdown
+                                                    currentStatus={user.status}
+                                                    onStatusSelect={(newStatus) => handleStatusSelect(user.id, user.name, user.status, newStatus)}
+                                                    disabled={statusUpdating}
+                                                />
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -213,6 +298,19 @@ export default function AdminUserManagementTable() {
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={handleCreateSuccess}
             />
+
+            {/* Confirm Status Change Modal */}
+            {statusChange && (
+                <ConfirmStatusChangeModal
+                    isOpen={!!statusChange}
+                    userName={statusChange.userName}
+                    currentStatus={statusChange.currentStatus}
+                    newStatus={statusChange.newStatus}
+                    onClose={handleCloseModal}
+                    onConfirm={handleConfirmStatusChange}
+                    loading={statusUpdating}
+                />
+            )}
         </div>
     );
 }
