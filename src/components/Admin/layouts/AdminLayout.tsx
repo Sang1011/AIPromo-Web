@@ -138,14 +138,14 @@ export default function AdminLayout() {
                         <div>
                             <button
                                 onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-[#a592c8] hover:bg-white/5 relative group ${
+                                className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-lg transition-colors text-[#a592c8] hover:bg-white/5 relative group ${
                                     sidebarCollapsed ? "justify-center" : ""
                                 }`}
                             >
-                                <MdCategory size={20} />
+                                <MdCategory size={20} className="shrink-0" />
                                 <span
                                     className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
-                                        sidebarCollapsed ? "w-0 opacity-0" : "w-48 opacity-100"
+                                        sidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
                                     }`}
                                 >
                                     <p className="text-sm font-medium">Category & Hashtag</p>

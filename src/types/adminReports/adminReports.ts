@@ -59,3 +59,23 @@ export type SalesTrendResponse = {
     message: string;
     timestamp: string;
 };
+
+export interface TopEventItem {
+    eventId: string;
+    title: string;
+    bannerUrl: string | null;
+    status: string;
+    totalRevenue: number;
+    ticketsSold: number;
+}
+
+export interface TopEventsData {
+    events: TopEventItem[];
+}
+
+export type TopEventsResponse = {
+    isSuccess: boolean;
+    data: TopEventsData;
+    message: string;
+    timestamp: string;
+};
