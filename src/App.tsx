@@ -66,6 +66,7 @@ import PolicyManagement from "./components/Admin/policy";
 import PostDetail from "./pages/PostDetail";
 import WalletTopUpSuccess from "./pages/Organizer/WalletTopUpSuccess";
 import WalletTopUpFailed from "./pages/Organizer/WalletTopUpFailed";
+import PrivacyPage from "./pages/Privacy";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -103,6 +104,7 @@ function App() {
           <Route path="ticking-user" element={<TicketingUser />} />
           <Route path="payment-history" element={<PaymentHistoryUser />} />
         </Route>
+        <Route path="/privacy" element={<PrivacyPage />} />
 
         {/* Organizer */}
         <Route element={<RequireRole allowedRoles={["Organizer", "Attendee"]} />}>

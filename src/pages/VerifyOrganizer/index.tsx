@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { fetchCreateProfileOrganizer, fetchVerifyProfileOrganizer } from "../../store/organizerProfileSlice";
+import type { CreateProfileOrganizerRequest } from "../../types/organizerProfile/organizerProfile";
 
 export default function VerifyOrganizer() {
   const dispatch = useDispatch<any>();
@@ -86,11 +87,11 @@ export default function VerifyOrganizer() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const buildPayload = () => {
+  const buildPayload = (): CreateProfileOrganizerRequest => {
     return {
-      logoFile: logoFile as File,
+      logoFile: logoFile ?? undefined,
       type: formData.type,
-      logo: formData.businessInfo.logo || null,
+      logo: formData.businessInfo.logo || undefined,
       displayName: formData.businessInfo.displayName,
       description: formData.businessInfo.description,
       address: formData.businessInfo.address,
@@ -184,8 +185,8 @@ export default function VerifyOrganizer() {
               <div
                 onClick={() => fileRef.current?.click()}
                 className={`aspect-square rounded-xl bg-[#0B0B12] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden relative transition-colors duration-200 group ${errors["logo"]
-                    ? "border-red-500/60 hover:border-red-400"
-                    : "border-[#1E293B] hover:border-primary/40"
+                  ? "border-red-500/60 hover:border-red-400"
+                  : "border-[#1E293B] hover:border-primary/40"
                   }`}
               >
                 {logoPreview ? (

@@ -22,7 +22,7 @@ const Footer: React.FC = () => {
       title: "Hỗ trợ",
       links: [
         { name: "Trung tâm trợ giúp", href: "#" },
-        { name: "Điều khoản", href: "#" },
+        { name: "Chính sách bảo mật", href: "/privacy" },
       ]
     }
   };
@@ -30,7 +30,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-background-dark border-t border-white/5 pt-32 pb-12">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-16 mb-24">
-        
+
         {/* Brand & Logo Section */}
         <div className="col-span-2 lg:col-span-2 space-y-8">
           <div className="flex items-center gap-2">
@@ -62,18 +62,10 @@ const Footer: React.FC = () => {
       </div>
 
       {/* Bottom Footer */}
-      <div className="max-w-7xl mx-auto px-6 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-8">
-        <p className="text-slate-500 text-sm">
+      <div className="max-w-7xl mx-auto px-6 pt-12 border-t border-white/5 flex justify-center items-center">
+        <p className="text-slate-500 text-sm text-center">
           © {new Date().getFullYear()} AIPromo. Mang lại giá trị cho cộng đồng.
         </p>
-        <div className="flex gap-8">
-          <a className="text-slate-500 text-sm hover:text-white transition-colors" href="#">
-            Tiếng Việt
-          </a>
-          <a className="text-slate-500 text-sm hover:text-white transition-colors" href="#">
-            English
-          </a>
-        </div>
       </div>
     </footer>
   );

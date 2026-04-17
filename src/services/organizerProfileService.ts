@@ -26,11 +26,32 @@ const organizerProfileService = {
         return interceptorAPI().get(`/organizers/detail/${userId}`);
     },
     createProfile: (data: CreateProfileOrganizerRequest): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().post("/organizer/profile/start-or-update", data, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        })
+        const formData = new FormData();
+
+        if (data.logoFile) {
+            formData.append("logoFile", data.logoFile);
+        }
+        if (data.logo) {
+            formData.append("logo", data.logo);
+        }
+
+        formData.append("type", data.type);
+        formData.append("displayName", data.displayName);
+        formData.append("description", data.description);
+        formData.append("address", data.address);
+        formData.append("socialLink", data.socialLink);
+        formData.append("businessType", data.businessType);
+        formData.append("taxCode", data.taxCode);
+        formData.append("identityNumber", data.identityNumber);
+        formData.append("companyName", data.companyName);
+        formData.append("accountName", data.accountName);
+        formData.append("accountNumber", data.accountNumber);
+        formData.append("bankCode", data.bankCode);
+        formData.append("branch", data.branch);
+
+        return interceptorAPI().post("/organizer/profile/start-or-update", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
     },
     verifyProfile: (): Promise<AxiosResponse<any>> => {
         return interceptorAPI().post(`/organizers/submit`)
