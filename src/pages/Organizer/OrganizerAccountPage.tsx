@@ -19,7 +19,7 @@ import type { ApiResponse } from "../../types/api";
 import ConfirmModal from "../../components/Organizer/shared/ConfirmModal";
 import { OrganizerStatus, type OrganizerProfileDetail } from "../../types/organizerProfile/organizerProfile";
 
-const BANKS = [
+export const BANKS = [
     { code: "VCB", name: "Vietcombank" },
     { code: "VTB", name: "VietinBank" },
     { code: "BIDV", name: "BIDV" },
