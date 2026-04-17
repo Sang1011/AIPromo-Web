@@ -93,10 +93,12 @@ function Login() {
           idToken: tokenResponse.access_token,
           deviceName: navigator.userAgent
         };
+        console.log("DATA:", data);
         dispatch(fetchLoginGoogle(data)).then((res) => {
           if (res.payload?.isSuccess) {
             navigate("/");
           } else {
+            console.log("PAYLOAD:", res.payload);
             setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
           }
         });
