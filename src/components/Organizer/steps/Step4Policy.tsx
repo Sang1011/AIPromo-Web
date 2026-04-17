@@ -303,19 +303,38 @@ export default function Step4Policy({
                 + Thêm điều khoản
             </button>
 
-            <div className={`flex items-start gap-2 text-sm ${!agreed ? "text-red-400" : "text-slate-300"}`}>
-                <input
-                    type="checkbox"
-                    checked={agreed}
-                    disabled={!isAllowUpdate}
-                    onChange={(e) => handleAgree(e.target.checked)}
-                />
-
-                <span className="text-white">
+            <div className={`flex items-center gap-3 p-4 rounded-xl border transition
+    ${!isAllowUpdate
+                    ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed"
+                    : agreed
+                        ? "border-violet-500/30 bg-violet-500/5"
+                        : "border-white/10 bg-white/5 hover:border-white/20"
+                }`}>
+                <div
+                    onClick={() => isAllowUpdate && handleAgree(!agreed)}
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition
+            ${!isAllowUpdate
+                            ? "border-white/10 bg-white/5 cursor-not-allowed"
+                            : agreed
+                                ? "border-violet-500 bg-violet-500 cursor-pointer"
+                                : "border-white/20 bg-transparent cursor-pointer hover:border-violet-400"
+                        }`}
+                >
+                    {agreed && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    )}
+                </div>
+                <span className={`text-sm ${!isAllowUpdate ? "text-slate-600" : "text-slate-300"}`}>
                     Tôi đồng ý với{" "}
                     <span
-                        onClick={() => window.open("/organizer/legal", "_blank")}
-                        className="underline text-violet-400 hover:text-violet-300 cursor-pointer"
+                        onClick={() => window.open("/organizer/legals", "_blank")}
+                        className={`underline transition
+                ${!isAllowUpdate
+                                ? "text-slate-600 cursor-not-allowed pointer-events-none"
+                                : "text-violet-400 hover:text-violet-300 cursor-pointer"
+                            }`}
                     >
                         các điều khoản của nền tảng
                     </span>

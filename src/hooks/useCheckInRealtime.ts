@@ -2,7 +2,10 @@ import { useEffect, useRef, useCallback } from "react";
 import * as signalR from "@microsoft/signalr";
 import type { CheckInStatistic } from "../types/ticketing/ticketing";
 
-const HUB_URL = `${import.meta.env.VITE_API_BASE_URL}/hubs/ticket-hub`;
+const API_URL: string = import.meta.env.VITE_API_BASE_URL;
+const changedURL = API_URL.replace('/api', '');
+
+const HUB_URL = `${changedURL}/hubs/ticket-hub`;
 
 interface UseCheckInRealtimeOptions {
     eventId: string | undefined;

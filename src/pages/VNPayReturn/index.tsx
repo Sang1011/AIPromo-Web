@@ -12,20 +12,36 @@ export default function VnpayReturn() {
     fetch(callbackUrl)
       .then((res) => res.json())
       .then((data) => {
+        const target = localStorage.getItem("vnpay_return_target");
+        localStorage.removeItem("vnpay_return_target");
+
+        const isOrganizerWallet = target === "organizer_wallet";
+
         if (data.isSuccess && data.data?.isSuccess) {
-          navigate("/order/success", {
-            replace: true,
-            state: { transaction: data.data },
-          });
+          navigate(
+            isOrganizerWallet
+              ? "/organizer/payment/wallet/success"
+              : "/order/success",
+            { replace: true, state: { transaction: data.data } }
+          );
         } else {
-          navigate("/order/failed", {
-            replace: true,
-            state: { message: data.data?.message ?? "Giao dịch thất bại." },
-          });
+          navigate(
+            isOrganizerWallet
+              ? "/organizer/payment/wallet/failed"
+              : "/order/failed",
+            { replace: true, state: { message: data.data?.message ?? "Giao dịch thất bại." } }
+          );
         }
       })
       .catch(() => {
-        navigate("/order/failed", { replace: true });
+        const target = localStorage.getItem("vnpay_return_target");
+        localStorage.removeItem("vnpay_return_target");
+        navigate(
+          target === "organizer_wallet"
+            ? "/organizer/payment/wallet/failed"
+            : "/order/failed",
+          { replace: true }
+        );
       });
   }, []);
 

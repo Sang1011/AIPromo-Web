@@ -82,6 +82,7 @@ function TopUpModal({ onClose }: TopUpModalProps) {
                 fetchToUpWallet({ amount: parsed, description: `Nạp tiền vào ví – ${formatVND(parsed)}` })
             ).unwrap();
             if (result?.data?.paymentUrl) {
+                localStorage.setItem("vnpay_return_target", "organizer_wallet");
                 window.location.href = result.data.paymentUrl;
             } else {
                 setError("Không nhận được link thanh toán. Vui lòng thử lại.");
