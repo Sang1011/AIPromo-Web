@@ -6,7 +6,7 @@ import type { AppDispatch } from "../../store";
 import { fetchLogin, fetchLoginGoogle } from "../../store/authSlice";
 import type { LoginRequest } from "../../types/auth/auth";
 import "./login.css";
-import logo from "../../../assets/logo.svg";
+import logo from "../../assets/logo.svg";
 
 const REMEMBER_ME_KEY = "aipromo_remember_me";
 const SAVED_EMAIL_KEY = "aipromo_saved_email";

@@ -5,7 +5,7 @@ import type { RegisterRequest } from "../../types/auth/auth";
 import { useDispatch } from "react-redux";
 import { fetchRegister } from "../../store/authSlice";
 import type { AppDispatch } from "../../store";
-import logo from "../../../assets/logo.svg";
+import logo from "../../assets/logo.svg";
 
 function Register() {
     const [form, setForm] = useState<RegisterRequest>({
