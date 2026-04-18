@@ -232,7 +232,7 @@ export default function WithdrawalDetailModal({ isOpen, onClose, withdrawalId }:
                                     <div>
                                         <p className="text-[10px] text-[#a592c8] uppercase">Chủ tài khoản</p>
                                         <p className="text-xs font-medium text-slate-300 mt-1 break-all">
-                                            {withdrawalDetail.userId}
+                                            {withdrawalDetail.receiverName || "Không có thông tin"}
                                         </p>
                                     </div>
                                 </div>
