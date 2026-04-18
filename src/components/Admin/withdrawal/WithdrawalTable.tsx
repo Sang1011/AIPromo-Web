@@ -10,7 +10,6 @@ import WithdrawalDetailModal from "./WithdrawalDetailModal";
 interface WithdrawalItem extends WithdrawalRequest {
     receiverName?: string;
     email?: string;
-    avatar?: string;
 }
 
 const formatCurrency = (amount: number) => {
@@ -329,11 +328,6 @@ export default function WithdrawalTable() {
                                         <tr key={request.id} className="hover:bg-white/5 transition-colors group">
                                             <td className="px-8 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <img
-                                                        alt="User"
-                                                        className="w-9 h-9 rounded-full border border-white/10"
-                                                        src={request.avatar || "https://ui-avatars.com/api/?name=User&background=7c3bed&color=fff"}
-                                                    />
                                                     <div>
                                                         <p className="font-bold text-white text-sm">{request.receiverName || "User Name"}</p>
                                                     </div>

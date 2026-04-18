@@ -42,7 +42,7 @@ function formatTime(dateString: string | undefined | null) {
 export interface UserItem {
     id: string;
     name: string;
-    role: string;
+    roles: string[];
     email: string;
     createdAt: string;
     status: UserStatus;
@@ -82,7 +82,7 @@ export default function AdminUserManagementTable() {
     const tableUsers: UserItem[] = users.map((user: any) => ({
         id: user.userId,
         name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.userName,
-        role: user.roles?.[0] || "Attendee",
+        roles: (user.roles && user.roles.length > 0) ? user.roles : ["Attendee"],
         email: user.email,
         createdAt: user.createdAt,
         status: user.status as UserStatus,
@@ -226,9 +226,13 @@ export default function AdminUserManagementTable() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-5">
-                                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${getRoleStyles(user.role)}`}>
-                                                {user.role}
-                                            </span>
+                                            <div className="flex flex-col gap-2 items-start">
+                                                {user.roles.map((r) => (
+                                                    <span key={r} className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase border ${getRoleStyles(r)}`}>
+                                                        {r}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </td>
                                         <td className="px-8 py-5 text-sm text-[#a592c8]">{user.email}</td>
                                         <td className="px-8 py-5 text-sm text-white">
