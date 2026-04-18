@@ -5,6 +5,7 @@ import type { RegisterRequest } from "../../types/auth/auth";
 import { useDispatch } from "react-redux";
 import { fetchRegister } from "../../store/authSlice";
 import type { AppDispatch } from "../../store";
+import logo from "../../assets/logo.svg";
 
 function Register() {
     const [form, setForm] = useState<RegisterRequest>({
@@ -91,9 +92,7 @@ function Register() {
             <header className="flex items-center justify-between px-6 py-4 md:px-10 lg:px-40 border-b border-primary/10 bg-background-dark/30 backdrop-blur-md sticky top-0 z-50">
                 <div className="flex items-center gap-3">
                     <div className="text-primary">
-                        <svg className="w-8 h-8" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                            <path clipRule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fillRule="evenodd" />
-                        </svg>
+                        <img src={logo} alt="Logo" className="h-16 w-auto" />
                     </div>
                     <h2 className="text-xl font-bold tracking-tight"><Link to="/">AIPromo</Link> </h2>
                 </div>
@@ -340,11 +339,10 @@ function Register() {
                     <div className="mt-6 pt-6 border-t border-white/10 text-center">
                         <p className="text-sm text-slate-400">
                             Bằng cách đăng ký, bạn đồng ý với{" "}
-                            <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
-                                Điều khoản dịch vụ
-                            </a>{" "}
-                            và{" "}
-                            <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
+                            <a
+                                className="text-slate-200 hover:text-primary transition-colors border-b border-white/20"
+                                href="/privacy"
+                            >
                                 Chính sách bảo mật
                             </a>{" "}
                             của chúng tôi.
