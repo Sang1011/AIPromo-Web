@@ -21,3 +21,100 @@
 .neural-overlay {
     background: radial-gradient(circle at center, rgba(11, 11, 18, 0.4) 0%, rgba(11, 11, 18, 0.9) 100%)
 }
+
+.google-custom-btn {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.google-custom-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.08) 100%);
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.google-custom-btn:active:not(:disabled) {
+    transform: translateY(0px);
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Shimmer sweep on hover */
+.google-btn-shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg,
+            transparent 40%,
+            rgba(255, 255, 255, 0.07) 50%,
+            transparent 60%);
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    transition: background-position 0s;
+    pointer-events: none;
+}
+
+.google-custom-btn:hover .google-btn-shimmer {
+    background-position: -200% 0;
+    transition: background-position 0.6s ease;
+}
+
+.google-login-wrapper {
+    width: 100% !important;
+    display: flex;
+    justify-content: center;
+}
+
+.google-login-wrapper iframe,
+.google-login-wrapper>div {
+    width: 100% !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+.google-login-overlay {
+    position: relative;
+    min-height: 48px;
+}
+
+.google-login-overlay>div {
+    position: relative !important;
+    width: 100% !important;
+    min-height: 48px !important;
+}
+
+.google-login-overlay iframe {
+    width: 100% !important;
+    min-width: unset !important;
+}
+
+.google-login-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.google-login-hidden {
+    position: absolute;
+    opacity: 0;
+    pointer-events: auto;
+    width: 100%;
+    z-index: 20;
+}
+
+div>#container-div {
+    width: 100% !important;
+}

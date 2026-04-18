@@ -2,6 +2,7 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { MenuItem } from "../shared/MenuItem";
 import { type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import logo from "../../../assets/logo.svg";
 
 export interface MenuItemConfig {
     icon: ReactNode;
@@ -40,9 +41,7 @@ export default function Sidebar({
                     to="/"
                     className="group relative flex items-center gap-3 cursor-pointer"
                 >
-                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">
-                        A
-                    </div>
+                    <img src={logo} alt="Logo" className="h-16 w-auto" />
 
                     {!collapsed && (
                         <span className="text-xl font-bold text-primary">

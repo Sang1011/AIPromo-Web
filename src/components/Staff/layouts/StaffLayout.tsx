@@ -1,11 +1,10 @@
-import { Outlet } from "react-router-dom";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { MdFactCheck, MdBadge, MdPostAdd } from "react-icons/md";
-import { FiZap } from "react-icons/fi";
-import { useSelector, useDispatch } from "react-redux";
-import type { RootState, AppDispatch } from "../../../store";
+import { useEffect, useRef, useState } from "react";
+import { MdBadge, MdFactCheck, MdPostAdd } from "react-icons/md";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import logo from '../../../assets/logo.svg';
+import type { AppDispatch, RootState } from "../../../store";
 import { clearAuth } from "../../../store/authSlice";
-import { useState, useRef, useEffect } from "react";
 
 const staffMenuItems = [
     { icon: MdFactCheck, label: "Duyệt sự kiện", path: "/staff/event-approval" },
@@ -63,9 +62,7 @@ export default function StaffLayout() {
             {/* Sidebar */}
             <aside className="w-64 flex flex-col border-r border-primary/10 bg-[#0B0B12] shrink-0">
                 <div className="p-6 flex items-center gap-3">
-                    <div className="size-10 rounded-lg bg-primary flex items-center justify-center shadow-[0_0_15px_rgba(124,59,237,0.4)]">
-                        <FiZap className="text-white text-xl" />
-                    </div>
+                    <img src={logo} alt="Logo" className="h-16 w-auto" />
                     <div className="flex flex-col">
                         <h1 className="text-lg font-bold leading-tight tracking-tight dark:text-white">
                             AIPromo
@@ -85,20 +82,18 @@ export default function StaffLayout() {
                             <Link
                                 key={item.path}
                                 to={item.path || "/staff"}
-                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
-                                    isActive
-                                        ? "bg-primary/10 text-primary"
-                                        : "text-slate-400 hover:bg-primary/10 hover:text-primary"
-                                }`}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${isActive
+                                    ? "bg-primary/10 text-primary"
+                                    : "text-slate-400 hover:bg-primary/10 hover:text-primary"
+                                    }`}
                             >
                                 <item.icon
                                     size={20}
                                     className={isActive ? "opacity-100" : "group-hover:text-primary"}
                                 />
                                 <span
-                                    className={`text-sm ${
-                                        isActive ? "font-semibold" : "font-medium"
-                                    }`}
+                                    className={`text-sm ${isActive ? "font-semibold" : "font-medium"
+                                        }`}
                                 >
                                     {item.label}
                                 </span>

@@ -438,9 +438,12 @@ const ProfileUser: React.FC = () => {
     );
   }
 
+  const clean = (v?: string | null) =>
+    v && v !== "null" && v !== "undefined" ? v : "";
+
   const fullName = editMode
-    ? `${form.firstName} ${form.lastName}`.trim()
-    : `${user.firstName} ${user.lastName}`.trim();
+    ? [clean(form.firstName), clean(form.lastName)].filter(Boolean).join(" ")
+    : [clean(user.firstName), clean(user.lastName)].filter(Boolean).join(" ");
 
   const initials = [
     user.firstName?.trim().charAt(0) ?? "",

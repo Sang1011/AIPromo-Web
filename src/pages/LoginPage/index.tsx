@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import "./login.css";
-import { useDispatch } from "react-redux";
-import { fetchLogin, fetchLoginGoogle } from "../../store/authSlice";
-import type { AppDispatch } from "../../store";
-import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
+import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import type { AppDispatch } from "../../store";
+import { fetchLogin, fetchLoginGoogle } from "../../store/authSlice";
 import type { LoginRequest } from "../../types/auth/auth";
+import "./login.css";
 
 const REMEMBER_ME_KEY = "aipromo_remember_me";
 const SAVED_EMAIL_KEY = "aipromo_saved_email";
@@ -15,12 +15,11 @@ function Login() {
   const [password, setPassword] = useState<string>("");
   const [rememberMe, setRememberMe] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
+  const [_isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const googleButtonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedRememberMe = localStorage.getItem(REMEMBER_ME_KEY) === "true";
@@ -31,7 +30,9 @@ function Login() {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> => {
     e.preventDefault();
     setError("");
 
@@ -39,11 +40,10 @@ function Login() {
       setError("Vui lòng nhập đầy đủ email và mật khẩu.");
       return;
     }
+
     setIsLoading(true);
 
     try {
-      await new Promise<void>((res) => setTimeout(res, 1200));
-
       const data: LoginRequest = {
         emailOrUserName: email,
         password,
@@ -52,28 +52,28 @@ function Login() {
         ipAddress: "",
         userAgent: navigator.userAgent,
       };
-      dispatch(fetchLogin(data)).then((res) => {
-        if (res.payload.isSuccess) {
-          if (rememberMe) {
-            localStorage.setItem(REMEMBER_ME_KEY, "true");
-            localStorage.setItem(SAVED_EMAIL_KEY, email);
-          } else {
-            localStorage.removeItem(REMEMBER_ME_KEY);
-            localStorage.removeItem(SAVED_EMAIL_KEY);
-          }
-          const roles = res.payload.data.user.roles;
-          if (roles.includes('Staff')) {
-            navigate("/staff/event-approval");
-          } else if (roles.includes('Admin')) {
-            navigate("/admin");
-          } else {
-            navigate("/");
-          }
 
+      const res = await dispatch(fetchLogin(data));
+
+      if (res.payload?.isSuccess) {
+        if (rememberMe) {
+          localStorage.setItem(REMEMBER_ME_KEY, "true");
+          localStorage.setItem(SAVED_EMAIL_KEY, email);
         } else {
-          setError("Email hoặc mật khẩu không đúng. Vui lòng thử lại.");
+          localStorage.removeItem(REMEMBER_ME_KEY);
+          localStorage.removeItem(SAVED_EMAIL_KEY);
         }
-      });
+        const roles = res.payload.data.user.roles;
+        if (roles.includes("Staff")) {
+          navigate("/staff/event-approval");
+        } else if (roles.includes("Admin")) {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      } else {
+        setError("Email hoặc mật khẩu không đúng. Vui lòng thử lại.");
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -83,40 +83,6 @@ function Login() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
-    const idToken = credentialResponse.credential;
-    if (!idToken) {
-      setError("Không lấy được token từ Google. Vui lòng thử lại.");
-      setIsGoogleLoading(false);
-      return;
-    }
-
-    setError("");
-
-    try {
-      const data = { idToken, deviceName: navigator.userAgent };
-      dispatch(fetchLoginGoogle(data)).then((res) => {
-        if (res.payload?.isSuccess) {
-          navigate("/");
-        } else {
-          setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
-        }
-      });
-    } catch {
-      setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
-
-  // Click vào hidden GoogleLogin button bên dưới
-  const handleGoogleButtonClick = () => {
-    setError("");
-    setIsGoogleLoading(true);
-    const hiddenBtn = googleButtonRef.current?.querySelector("div[role=button]") as HTMLElement;
-    hiddenBtn?.click();
   };
 
   const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,6 +96,7 @@ function Login() {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col z-10">
+      {/* Background video */}
       <div className="fixed inset-0 overflow-hidden z-0 pointer-events-none bg-black">
         <div className="absolute top-1/2 left-1/2 w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] -translate-x-1/2 -translate-y-1/2">
           <iframe
@@ -142,79 +109,96 @@ function Login() {
         <div
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.8) 100%)",
+            background:
+              "radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.8) 100%)",
           }}
         />
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
 
+      {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 md:px-10 lg:px-40 border-b border-primary/10 bg-background-dark/30 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="text-primary">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <path clipRule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fillRule="evenodd" />
+            <svg
+              className="w-8 h-8"
+              fill="none"
+              viewBox="0 0 48 48"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                clipRule="evenodd"
+                d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z"
+                fill="currentColor"
+                fillRule="evenodd"
+              />
             </svg>
           </div>
-          <h2 className="text-xl font-bold tracking-tight"><Link to="/">AIPromo</Link></h2>
+          <h2 className="text-xl font-bold tracking-tight">
+            <Link to="/">AIPromo</Link>
+          </h2>
         </div>
         <div className="flex items-center gap-4">
-          <span className="hidden sm:inline text-sm text-slate-300">Chưa có tài khoản?</span>
+          <span className="hidden sm:inline text-sm text-slate-300">
+            Chưa có tài khoản?
+          </span>
           <button className="bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2 px-6 rounded-lg transition-all shadow-lg shadow-primary/20">
             <Link to="/register">Đăng ký</Link>
           </button>
         </div>
       </header>
 
+      {/* Main */}
       <main className="flex-1 flex items-center justify-center p-6 relative z-10">
         <div className="glass-card w-full max-w-md p-8 rounded-xl shadow-2xl">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Chào mừng trở lại</h1>
-            <p className="text-slate-300">Đăng nhập để quản lý sự kiện của bạn</p>
+            <p className="text-slate-300">
+              Đăng nhập để quản lý sự kiện của bạn
+            </p>
           </div>
 
-          {/* Custom Google Button */}
-          <div className="mb-6 relative">
-            <button
-              type="button"
-              onClick={handleGoogleButtonClick}
-              disabled={isGoogleLoading || isLoading}
-              className="w-full relative flex items-center justify-center gap-3 h-12 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/30 transition-all duration-200 group disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isGoogleLoading ? (
-                <svg className="animate-spin w-5 h-5 text-white/70" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                </svg>
-              )}
-              <span className="text-sm font-medium text-white/90 group-hover:text-white transition-colors">
-                {isGoogleLoading ? "Đang xử lý..." : "Tiếp tục với Google"}
-              </span>
-            </button>
+          <div className="flex justify-center mb-[20px]">
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                setError("");
+                setIsGoogleLoading(true);
 
-            {/* Hidden GoogleLogin - chỉ dùng để lấy idToken JWT */}
-            <div
-              ref={googleButtonRef}
-              className="absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
-              aria-hidden="true"
-            >
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => {
-                  setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
+                const deviceName =
+                  navigator.userAgent.length > 100
+                    ? navigator.userAgent.substring(0, 100)
+                    : navigator.userAgent;
+
+                dispatch(
+                  fetchLoginGoogle({
+                    idToken: credentialResponse.credential,
+                    deviceName,
+                  })
+                ).then((res) => {
                   setIsGoogleLoading(false);
-                }}
-                useOneTap={false}
-              />
-            </div>
+
+                  if (res.payload?.isSuccess) {
+                    navigate("/");
+                  } else {
+                    setError("Đăng nhập Google thất bại.");
+                  }
+                });
+              }}
+              onError={() => {
+                setError("Đăng nhập Google thất bại.");
+                setIsGoogleLoading(false);
+              }}
+              useOneTap={false}
+              theme="filled_black"
+              size="large"
+              text="continue_with"
+              context="use"
+              logo_alignment="center"
+              shape="rectangular"
+            />
           </div>
 
+          {/* Divider */}
           <div className="relative flex items-center mb-6">
             <div className="flex-grow border-t border-white/20" />
             <span className="flex-shrink mx-4 text-xs uppercase tracking-widest text-slate-400">
@@ -223,15 +207,22 @@ function Login() {
             <div className="flex-grow border-t border-white/20" />
           </div>
 
-          {error && (
-            <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-              {error}
-            </div>
-          )}
+          {/* Error */}
+          {
+            error && (
+              <div className="mb-4 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                {error}
+              </div>
+            )
+          }
 
+          {/* Form */}
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-1.5" htmlFor="email">
+              <label
+                className="block text-sm font-medium text-slate-200 mb-1.5"
+                htmlFor="email"
+              >
                 Địa chỉ Email
               </label>
               <div className="relative">
@@ -244,7 +235,9 @@ function Login() {
                   placeholder="example@aipromo.vn"
                   type="email"
                   value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEmail(e.target.value)
+                  }
                   disabled={isLoading}
                 />
               </div>
@@ -252,12 +245,17 @@ function Login() {
 
             <div>
               <div className="flex justify-between mb-1.5">
-                <label className="block text-sm font-medium text-slate-200" htmlFor="password">
+                <label
+                  className="block text-sm font-medium text-slate-200"
+                  htmlFor="password"
+                >
                   Mật khẩu
                 </label>
-                <Link to="/forgot-password"> <a className="text-xs text-primary hover:text-primary/80 transition-colors font-medium" href="#">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-primary hover:text-primary/80 transition-colors font-medium"
+                >
                   Quên mật khẩu?
-                </a>
                 </Link>
               </div>
               <div className="relative">
@@ -270,7 +268,9 @@ function Login() {
                   placeholder="••••••••"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setPassword(e.target.value)
+                  }
                   disabled={isLoading}
                 />
                 <button
@@ -305,9 +305,24 @@ function Login() {
             >
               {isLoading ? (
                 <>
-                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  <svg
+                    className="animate-spin w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    />
                   </svg>
                   Đang đăng nhập...
                 </>
@@ -320,23 +335,29 @@ function Login() {
           <div className="mt-8 pt-6 border-t border-white/10 text-center">
             <p className="text-sm text-slate-400">
               Bằng cách đăng nhập, bạn đồng ý với{" "}
-              <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
+              <a
+                className="text-slate-200 hover:text-primary transition-colors border-b border-white/20"
+                href="#"
+              >
                 Điều khoản dịch vụ
               </a>{" "}
               và{" "}
-              <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
+              <a
+                className="text-slate-200 hover:text-primary transition-colors border-b border-white/20"
+                href="#"
+              >
                 Chính sách bảo mật
               </a>{" "}
               của chúng tôi.
             </p>
           </div>
-        </div>
-      </main>
+        </div >
+      </main >
 
       <footer className="py-6 px-10 text-center text-slate-400 text-xs backdrop-blur-sm bg-background-dark/20 relative z-10">
         <p>© 2026 AIPromo Event Platform. Mọi quyền được bảo lưu.</p>
       </footer>
-    </div>
+    </div >
   );
 }
 

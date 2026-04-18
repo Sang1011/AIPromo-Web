@@ -206,6 +206,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
         bankName: "",
         amount: 0,
         notes: "",
+        receiverName: ""
     });
     const [amountStr, setAmountStr] = useState("");
     const [errors, setErrors] = useState<Partial<Record<keyof CreateWithdrawal, string>>>({});
@@ -213,6 +214,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     const validate = (): boolean => {
         const errs: Partial<Record<keyof CreateWithdrawal, string>> = {};
         if (!form.bankAccountNumber.trim()) errs.bankAccountNumber = "Vui lòng nhập số tài khoản";
+        if (!form.receiverName.trim()) errs.receiverName = "Vui lòng nhập tên chủ tài khoản";
         if (!form.bankName) errs.bankName = "Vui lòng chọn ngân hàng";
         if (!form.amount || form.amount <= 0) errs.amount = "Vui lòng nhập số tiền hợp lệ";
         else if (form.amount > walletBalance) errs.amount = "Số tiền vượt quá số dư ví";
@@ -335,6 +337,24 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                         ))}
                     </select>
                     {errors.bankName && <FieldError msg={errors.bankName} />}
+                </div>
+
+                {/* Receiver name */}
+                <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">
+                        Tên chủ tài khoản <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Nhập tên chủ tài khoản ngân hàng"
+                        value={form.receiverName}
+                        onChange={(e) => {
+                            setForm((f) => ({ ...f, receiverName: e.target.value }));
+                            setErrors((er) => ({ ...er, receiverName: undefined }));
+                        }}
+                        style={{ ...inputCls("receiverName"), textTransform: "uppercase" }}
+                    />
+                    {errors.receiverName && <FieldError msg={errors.receiverName} />}
                 </div>
 
                 {/* Account number */}
