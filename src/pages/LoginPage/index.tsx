@@ -324,14 +324,7 @@ function Login() {
               Bằng cách đăng nhập, bạn đồng ý với{" "}
               <a
                 className="text-slate-200 hover:text-primary transition-colors border-b border-white/20"
-                href="#"
-              >
-                Điều khoản dịch vụ
-              </a>{" "}
-              và{" "}
-              <a
-                className="text-slate-200 hover:text-primary transition-colors border-b border-white/20"
-                href="#"
+                href="/privacy"
               >
                 Chính sách bảo mật
               </a>{" "}

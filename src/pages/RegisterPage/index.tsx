@@ -339,11 +339,10 @@ function Register() {
                     <div className="mt-6 pt-6 border-t border-white/10 text-center">
                         <p className="text-sm text-slate-400">
                             Bằng cách đăng ký, bạn đồng ý với{" "}
-                            <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
-                                Điều khoản dịch vụ
-                            </a>{" "}
-                            và{" "}
-                            <a className="text-slate-200 hover:text-primary transition-colors border-b border-white/20" href="#">
+                            <a
+                                className="text-slate-200 hover:text-primary transition-colors border-b border-white/20"
+                                href="/privacy"
+                            >
                                 Chính sách bảo mật
                             </a>{" "}
                             của chúng tôi.
