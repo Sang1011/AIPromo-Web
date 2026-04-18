@@ -1,4 +1,5 @@
 import React from 'react';
+import logo from '../../assets/logo.svg'
 
 const Footer: React.FC = () => {
   const footerLinks = {
@@ -34,9 +35,7 @@ const Footer: React.FC = () => {
         {/* Brand & Logo Section */}
         <div className="col-span-2 lg:col-span-2 space-y-8">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined text-white text-2xl">bolt</span>
-            </div>
+            <img src={logo} alt="Logo" className="h-16 w-auto" />
             <h1 className="text-2xl font-bold tracking-tight text-white">AIPromo</h1>
           </div>
           <p className="text-slate-400 text-lg leading-relaxed max-w-sm">

@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 import { Link, useNavigate } from "react-router-dom";
 import { fetchAllEvents } from "../../store/eventSlice";
+import logo from '../../assets/logo.svg'
 
 interface UserInfo {
   userId?: string;
@@ -117,21 +118,7 @@ const Header: React.FC = () => {
             className="flex items-center gap-3 shrink-0"
             onClick={() => setSearchFocused(false)}
           >
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, #7C3AED, #A855F7)",
-                boxShadow: "0 4px 15px rgba(124, 58, 237, 0.4)",
-              }}
-            >
-              <svg viewBox="0 0 32 32" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="16,4 18.5,12 27,12 20.5,17 23,25 16,20 9,25 11.5,17 5,12 13.5,12" fill="white" opacity="0.95" />
-                <line x1="26" y1="5" x2="26" y2="8" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
-                <line x1="24.5" y1="6.5" x2="27.5" y2="6.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
-                <line x1="6" y1="25" x2="6" y2="28" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
-                <line x1="4.5" y1="26.5" x2="7.5" y2="26.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
-              </svg>
-            </div>
+            <img src={logo} alt="Logo" className="h-16 w-auto" />
             <div className="flex flex-col leading-tight">
               <h1 className="text-xl font-bold tracking-wide text-white" style={{ fontFamily: "Georgia, serif" }}>
                 AIPromo

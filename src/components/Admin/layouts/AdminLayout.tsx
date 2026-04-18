@@ -1,26 +1,26 @@
-import { useState, useEffect } from "react";
-import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "../../../store";
-import { clearAuth, fetchMe } from "../../../store/authSlice";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-    MdDashboard,
-    MdGroup,
-    MdGavel,
-    MdPayments,
+    MdAccountBalanceWallet,
     MdAssignmentReturn,
-    MdRocketLaunch,
     MdAutoAwesome,
     MdCategory,
-    MdLocalOffer,
-    MdAccountBalanceWallet,
-    MdLogout,
-    MdKeyboardArrowDown,
     MdChevronLeft,
     MdChevronRight,
+    MdDashboard,
+    MdGavel,
+    MdGroup,
+    MdKeyboardArrowDown,
+    MdLocalOffer,
+    MdLogout,
+    MdPayments,
     MdPolicy
 } from "react-icons/md";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import type { AppDispatch, RootState } from "../../../store";
+import { clearAuth, fetchMe } from "../../../store/authSlice";
+import logo from '../../../assets/logo.svg'
 
 const adminMenuItems = [
     { icon: MdDashboard, label: "Tổng quan", path: "/admin" },
@@ -30,7 +30,7 @@ const adminMenuItems = [
     { icon: MdAccountBalanceWallet, label: "Yêu cầu rút tiền", path: "/admin/withdrawals" },
     { icon: MdAssignmentReturn, label: "Quản lý hoàn tiền", path: "/admin/refunds" },
     { icon: MdPayments, label: "Tài chính & Doanh thu", path: "/admin/finance" },
-     { icon: MdPolicy, label: "Quản Lý Điều Khoản", path: "/admin/policy" },
+    { icon: MdPolicy, label: "Quản Lý Điều Khoản", path: "/admin/policy" },
 ];
 
 const categoryMenuItems = [
@@ -76,19 +76,15 @@ export default function AdminLayout() {
         <div className="flex h-screen overflow-hidden bg-[#0B0B12] text-slate-100">
             {/* Sidebar */}
             <aside
-                className={`${
-                    sidebarCollapsed ? "w-[96px]" : "w-72"
-                } bg-[#120D1D] border-r border-[#302447] flex flex-col justify-between py-6 shrink-0 transition-all duration-300`}
+                className={`${sidebarCollapsed ? "w-[96px]" : "w-72"
+                    } bg-[#120D1D] border-r border-[#302447] flex flex-col justify-between py-6 shrink-0 transition-all duration-300`}
             >
                 <div>
                     <div className={`${sidebarCollapsed ? "px-3" : "px-6"} mb-8 flex items-center gap-3`}>
-                        <div className="bg-primary rounded-lg p-1.5 flex items-center justify-center shadow-[0_0_15px_rgba(124,59,237,0.4)] shrink-0">
-                            <MdRocketLaunch className="text-white text-xl" />
-                        </div>
+                        <img src={logo} alt="Logo" className="h-16 w-auto" />
                         <span
-                            className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
-                                sidebarCollapsed ? "w-0 opacity-0" : "w-40 opacity-100"
-                            }`}
+                            className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${sidebarCollapsed ? "w-0 opacity-0" : "w-40 opacity-100"
+                                }`}
                         >
                             <div className="min-w-0">
                                 <h1 className="text-white text-lg font-bold leading-tight tracking-tight">
@@ -109,17 +105,15 @@ export default function AdminLayout() {
                                 <Link
                                     key={item.path}
                                     to={item.path || "/admin"}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative group ${
-                                        isActive
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors relative group ${isActive
                                             ? "bg-primary/10 text-primary border-r-4 border-primary"
                                             : "text-[#a592c8] hover:bg-white/5"
-                                    }`}
+                                        }`}
                                 >
                                     <Icon className={isActive ? "opacity-100" : ""} size={20} />
                                     <span
-                                        className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
-                                            sidebarCollapsed ? "w-0 opacity-0" : "w-48 opacity-100"
-                                        }`}
+                                        className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${sidebarCollapsed ? "w-0 opacity-0" : "w-48 opacity-100"
+                                            }`}
                                     >
                                         <p className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>
                                             {item.label}
@@ -138,15 +132,13 @@ export default function AdminLayout() {
                         <div>
                             <button
                                 onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-                                className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-lg transition-colors text-[#a592c8] hover:bg-white/5 relative group ${
-                                    sidebarCollapsed ? "justify-center" : ""
-                                }`}
+                                className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-lg transition-colors text-[#a592c8] hover:bg-white/5 relative group ${sidebarCollapsed ? "justify-center" : ""
+                                    }`}
                             >
                                 <MdCategory size={20} className="shrink-0" />
                                 <span
-                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
-                                        sidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-                                    }`}
+                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${sidebarCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                                        }`}
                                 >
                                     <p className="text-sm font-medium">Category & Hashtag</p>
                                 </span>
@@ -168,11 +160,10 @@ export default function AdminLayout() {
                                             <Link
                                                 key={item.path}
                                                 to={item.path}
-                                                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors relative group ${
-                                                    isActive
+                                                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors relative group ${isActive
                                                         ? "bg-primary/10 text-primary border-r-4 border-primary"
                                                         : "text-[#a592c8] hover:bg-white/5"
-                                                }`}
+                                                    }`}
                                             >
                                                 {sidebarCollapsed ? (
                                                     <Icon size={18} className="mx-auto" />
@@ -180,9 +171,8 @@ export default function AdminLayout() {
                                                     <Icon size={18} />
                                                 )}
                                                 <span
-                                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
-                                                        sidebarCollapsed ? "w-0 opacity-0" : "w-48 opacity-100"
-                                                    }`}
+                                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${sidebarCollapsed ? "w-0 opacity-0" : "w-48 opacity-100"
+                                                        }`}
                                                 >
                                                     <p className={`text-sm ${isActive ? "font-semibold" : "font-medium"}`}>
                                                         {item.label}
@@ -215,9 +205,8 @@ export default function AdminLayout() {
                             <>
                                 <MdChevronLeft size={22} />
                                 <span
-                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${
-                                        sidebarCollapsed ? "w-0 opacity-0" : "w-20 opacity-100"
-                                    }`}
+                                    className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out ${sidebarCollapsed ? "w-0 opacity-0" : "w-20 opacity-100"
+                                        }`}
                                 >
                                     <span className="text-sm font-medium">Thu gọn</span>
                                 </span>
