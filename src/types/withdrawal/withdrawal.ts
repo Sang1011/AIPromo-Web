@@ -8,7 +8,7 @@ export interface WithdrawalRequest {
     status: "Pending" | "Approved" | "Rejected" | "Success" | string;
     createdAt: string;
     processedAt: string | null;
-    userName?: string;
+    receiverName?: string;
     email?: string;
     avatar?: string;
 }
@@ -34,6 +34,7 @@ export interface WithdrawalDetail {
     walletTransactionId: string | null;
     createdAt: string;
     processedAt: string | null;
+    receiverName?: string;
 }
 
 export interface WithdrawalActionRequest {

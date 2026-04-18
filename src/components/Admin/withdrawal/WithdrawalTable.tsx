@@ -8,7 +8,7 @@ import type { WithdrawalRequest } from "../../../types/withdrawal/withdrawal";
 import WithdrawalDetailModal from "./WithdrawalDetailModal";
 
 interface WithdrawalItem extends WithdrawalRequest {
-    userName?: string;
+    receiverName?: string;
     email?: string;
     avatar?: string;
 }
@@ -335,7 +335,7 @@ export default function WithdrawalTable() {
                                                         src={request.avatar || "https://ui-avatars.com/api/?name=User&background=7c3bed&color=fff"}
                                                     />
                                                     <div>
-                                                        <p className="font-bold text-white text-sm">{request.userName || "User Name"}</p>
+                                                        <p className="font-bold text-white text-sm">{request.receiverName || "User Name"}</p>
                                                     </div>
                                                 </div>
                                             </td>
