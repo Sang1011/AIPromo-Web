@@ -10,6 +10,10 @@ import {
   fetchPostDetail,
 } from "../../store/postSlice";
 import type { AdminPostItem } from "../../types/post/post";
+import PostBlockRenderer from "../../components/Organizer/post/PostBlockRenderer";
+import { parseBodyToBlocks } from "../../utils/renderPostContent";
+import { injectImageBlock } from "../../utils/injectImageBlock";
+import type { ContentBlock } from "../../types/post/post";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 const formatDateVi = (iso: string) =>
@@ -73,6 +77,14 @@ export default function PostDetail() {
     [adminPosts, id]
   );
 
+  const blocks: ContentBlock[] = postDetail
+    ? injectImageBlock(parseBodyToBlocks(postDetail.body), postDetail.imageUrl ?? null)
+    : [];
+
+  const blocksWithoutTitle = blocks[0]?.type === "heading"
+    ? blocks.slice(1)
+    : blocks;
+
   if (!id)
     return <Shell><StateView icon="?" msg="Thiếu mã bài viết." onBack={() => navigate(-1)} /></Shell>;
   if (loading.fetchDetail)
@@ -103,19 +115,39 @@ export default function PostDetail() {
           </div>
         </div>
 
-        {/* ── Hero ── */}
         <section className="pd-hero">
-          {postDetail.imageUrl ? (
-            <div className="pd-hero-img-wrap">
-              <div className="pd-hero-img" style={{ backgroundImage: `url('${postDetail.imageUrl}')` }} />
-              <div className="pd-hero-overlay-t" />
-              <div className="pd-hero-overlay-b" />
-            </div>
+          {blocks.length > 0 ? (
+            postDetail.imageUrl ? (
+              <div className="pd-hero-img-wrap">
+                <div
+                  className="pd-hero-img"
+                  style={{
+                    backgroundImage: `url('${postDetail.imageUrl}')`,
+                    filter: "blur(2px) brightness(0.4)",
+                  }}
+                />
+                <div className="pd-hero-overlay-t" />
+                <div className="pd-hero-overlay-b" />
+              </div>
+            ) : (
+              <div className="pd-hero-blank">
+                <div className="pd-hero-grid" />
+                <div className="pd-hero-glow" />
+              </div>
+            )
           ) : (
-            <div className="pd-hero-blank">
-              <div className="pd-hero-grid" />
-              <div className="pd-hero-glow" />
-            </div>
+            postDetail.imageUrl ? (
+              <div className="pd-hero-img-wrap">
+                <div className="pd-hero-img" style={{ backgroundImage: `url('${postDetail.imageUrl}')` }} />
+                <div className="pd-hero-overlay-t" />
+                <div className="pd-hero-overlay-b" />
+              </div>
+            ) : (
+              <div className="pd-hero-blank">
+                <div className="pd-hero-grid" />
+                <div className="pd-hero-glow" />
+              </div>
+            )
           )}
 
           {/* Floating title card */}
@@ -153,11 +185,15 @@ export default function PostDetail() {
         <article className="pd-article-wrap">
           <div className="pd-body-card">
             <div className="pd-body-inner">
-              <BodyRenderer text={postDetail.body} />
+              {blocksWithoutTitle.length > 0 ? (
+                <PostBlockRenderer blocks={blocksWithoutTitle} />
+              ) : (
+                <BodyRenderer text={postDetail.body} />
+              )}
             </div>
             <div className="pd-body-footer">
               <div className="pd-stamp-dots">
-                {[0,1,2].map(i => <span key={i} className="pd-stamp-dot" />)}
+                {[0, 1, 2].map(i => <span key={i} className="pd-stamp-dot" />)}
               </div>
               <time className="pd-stamp-date">Đăng ngày {formatDateVi(String(postDetail.createdAt))}</time>
               <div className="pd-stamp-line" />
