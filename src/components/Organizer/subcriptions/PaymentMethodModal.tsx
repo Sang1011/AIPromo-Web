@@ -31,7 +31,7 @@ export default function PaymentMethodModal({ plan, onClose }: PaymentMethodModal
     const handleConfirm = async () => {
         setLoading(true);
         const isVNPay = selected === "VNPAY";
-        const returnUrl = `${window.location.origin}/payment/packages/vnpay-return`;
+        const returnUrl = `${window.location.origin}/organizer/payment/packages/vnpay-return`;
 
         const toastId = toast.loading(
             isVNPay ? "Đang tạo link thanh toán VNPay..." : "Đang xử lý thanh toán từ ví..."

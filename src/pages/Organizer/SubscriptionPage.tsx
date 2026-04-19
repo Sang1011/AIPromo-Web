@@ -209,13 +209,13 @@ export default function SubscriptionPage() {
         );
 
     const SKIP_PATHS = [
-        "organizer/payment/packages/vnpay-return",
-        "organizer/payment/packages/success",
-        "organizer/payment/packages/failed",
-        "organizer/payment/wallet/success",
-        "organizer/payment/wallet/failed",
-        "organizer/subscription",
-        "sandbox.vnpayment.vn"
+        "/organizer/payment/packages/vnpay-return",
+        "/organizer/payment/packages/success",
+        "/organizer/payment/packages/failed",
+        "/organizer/payment/wallet/success",
+        "/organizer/payment/wallet/failed",
+        "/organizer/subscription",
+        "/sandbox.vnpayment.vn"
     ];
 
     const handleBack = () => {
