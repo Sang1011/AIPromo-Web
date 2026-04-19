@@ -212,7 +212,10 @@ export default function SubscriptionPage() {
         "organizer/payment/packages/vnpay-return",
         "organizer/payment/packages/success",
         "organizer/payment/packages/failed",
+        "organizer/payment/wallet/success",
+        "organizer/payment/wallet/failed",
         "organizer/subscription",
+        "sandbox.vnpayment.vn"
     ];
 
     const handleBack = () => {

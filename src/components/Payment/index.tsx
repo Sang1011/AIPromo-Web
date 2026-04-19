@@ -702,6 +702,8 @@ export default function PaymentTicket() {
       })
     );
 
+    localStorage.setItem("vnpay_return_target", "attendee_wallet_payment_page");
+
     if (fetchToUpWallet.fulfilled.match(result)) {
       const payload = (result.payload as any)?.data as ToUpWalletResponse;
       if (redirectIfUrl(payload?.paymentUrl)) return;
