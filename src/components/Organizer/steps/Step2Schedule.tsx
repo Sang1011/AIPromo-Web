@@ -367,7 +367,6 @@ export default function Step2Schedule({
         JSON.stringify(initialTimeForm) !== JSON.stringify(timeForm);
 
     const handleNext = async () => {
-        onNext();
         if (!runTimeValidation()) return;
         if (!hasSessions) { notify.error("Sự kiện phải có ít nhất 1 suất diễn"); return; }
         if (!hasTickets) { notify.error("Sự kiện phải có ít nhất 1 loại vé"); return; }
