@@ -68,6 +68,10 @@ const ProfileLayout: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">receipt_long</span>
                 Lịch sử giao dịch
               </NavLink>
+                <NavLink to="/profile/history-withdraw" className={navClass}>
+               <span className="material-symbols-outlined text-[20px]">payments</span>
+                Lịch sử rút tiền
+              </NavLink>
             </nav>
 
           </div>
