@@ -1,19 +1,31 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { fetchCreateProfileOrganizer, fetchVerifyProfileOrganizer } from "../../store/organizerProfileSlice";
 import type { CreateProfileOrganizerRequest } from "../../types/organizerProfile/organizerProfile";
+import BankSelect from "../../components/Organizer/bank/BankSelect";
+import { BANKS } from "../../constants/bank";
+
+
+// ─── Auth guard ──────────────────────────────────────────────────────────────
+const isAuthenticated = () => !!localStorage.getItem("ACCESS_TOKEN");
 
 export default function VerifyOrganizer() {
   const dispatch = useDispatch<any>();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Auth state
+  const [authed, setAuthed] = useState<boolean | null>(null); // null = checking
+
+  // Form state
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [showAccount, setShowAccount] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const [businessType, setBusinessType] = useState<"Company" | "Individual">("Company");
 
   const [formData, setFormData] = useState({
     type: "Management",
@@ -23,7 +35,6 @@ export default function VerifyOrganizer() {
       description: "",
       address: "",
       socialLink: "",
-      businessType: "Company",
       taxCode: "",
       identityNumber: "",
       companyName: "",
@@ -36,6 +47,12 @@ export default function VerifyOrganizer() {
     },
   });
 
+  // ── Auth check on mount ───────────────────────────────────────────────────
+  useEffect(() => {
+    setAuthed(isAuthenticated());
+  }, []);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const updateBusinessInfo = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -67,58 +84,61 @@ export default function VerifyOrganizer() {
     }
   };
 
+  // ── Validation ────────────────────────────────────────────────────────────
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!logoFile) newErrors["logo"] = "Vui lòng tải lên logo";
     if (!formData.businessInfo.displayName.trim()) newErrors["displayName"] = "Vui lòng nhập tên hiển thị";
     if (!formData.businessInfo.description.trim()) newErrors["description"] = "Vui lòng nhập mô tả tổ chức";
-    if (!formData.businessInfo.companyName.trim()) newErrors["companyName"] = "Vui lòng nhập tên công ty";
-    if (!formData.businessInfo.taxCode.trim()) newErrors["taxCode"] = "Vui lòng nhập mã số thuế";
-    if (!formData.businessInfo.identityNumber.trim()) newErrors["identityNumber"] = "Vui lòng nhập số đăng ký doanh nghiệp";
     if (!formData.businessInfo.address.trim()) newErrors["address"] = "Vui lòng nhập địa chỉ trụ sở";
     if (!formData.businessInfo.socialLink.trim()) newErrors["socialLink"] = "Vui lòng nhập website";
+
+    if (businessType === "Company") {
+      if (!formData.businessInfo.companyName.trim()) newErrors["companyName"] = "Vui lòng nhập tên công ty";
+      if (!formData.businessInfo.taxCode.trim()) newErrors["taxCode"] = "Vui lòng nhập mã số thuế";
+      // identityNumber is optional for Company
+    } else {
+      // Individual
+      if (!formData.businessInfo.identityNumber.trim()) newErrors["identityNumber"] = "Vui lòng nhập số CMND / CCCD";
+      if (!formData.businessInfo.taxCode.trim()) newErrors["taxCode"] = "Vui lòng nhập mã số thuế cá nhân";
+    }
+
     if (!formData.bankInfo.accountName.trim()) newErrors["accountName"] = "Vui lòng nhập chủ tài khoản";
     if (!formData.bankInfo.accountNumber.trim()) newErrors["accountNumber"] = "Vui lòng nhập số tài khoản";
-    if (!formData.bankInfo.bankCode.trim()) newErrors["bankCode"] = "Vui lòng nhập mã ngân hàng";
+    if (!formData.bankInfo.bankCode.trim()) newErrors["bankCode"] = "Vui lòng chọn ngân hàng";
     if (!formData.bankInfo.branch.trim()) newErrors["branch"] = "Vui lòng nhập tên chi nhánh";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const buildPayload = (): CreateProfileOrganizerRequest => {
-    return {
-      logoFile: logoFile ?? undefined,
-      type: formData.type,
-      logo: formData.businessInfo.logo || undefined,
-      displayName: formData.businessInfo.displayName,
-      description: formData.businessInfo.description,
-      address: formData.businessInfo.address,
-      socialLink: formData.businessInfo.socialLink,
-      businessType: "Company",
-      taxCode: formData.businessInfo.taxCode,
-      identityNumber: formData.businessInfo.identityNumber,
-      companyName: formData.businessInfo.companyName,
-      accountName: formData.bankInfo.accountName,
-      accountNumber: formData.bankInfo.accountNumber,
-      bankCode: formData.bankInfo.bankCode,
-      branch: formData.bankInfo.branch,
-    };
-  };
+  const buildPayload = (): CreateProfileOrganizerRequest => ({
+    logoFile: logoFile ?? undefined,
+    type: formData.type,
+    logo: formData.businessInfo.logo || undefined,
+    displayName: formData.businessInfo.displayName,
+    description: formData.businessInfo.description,
+    address: formData.businessInfo.address,
+    socialLink: formData.businessInfo.socialLink,
+    businessType,
+    taxCode: formData.businessInfo.taxCode,
+    identityNumber: formData.businessInfo.identityNumber,
+    companyName: businessType === "Company" ? formData.businessInfo.companyName : "",
+    accountName: formData.bankInfo.accountName,
+    accountNumber: formData.bankInfo.accountNumber,
+    bankCode: formData.bankInfo.bankCode,
+    branch: formData.bankInfo.branch,
+  });
 
   const handleSubmit = async () => {
     if (!validate()) return;
-
     try {
       setIsSubmitting(true);
       const payload = buildPayload();
-
       const createAction = await dispatch(fetchCreateProfileOrganizer(payload));
-
       if (fetchCreateProfileOrganizer.fulfilled.match(createAction)) {
         const verifyAction = await dispatch(fetchVerifyProfileOrganizer());
-
         if (fetchVerifyProfileOrganizer.fulfilled.match(verifyAction)) {
           navigate("/");
         }
@@ -130,12 +150,15 @@ export default function VerifyOrganizer() {
     }
   };
 
-  /* ── shared class strings ── */
+  // ── Shared class strings ──────────────────────────────────────────────────
   const inputCls =
     "w-full bg-[#18122B] border border-[#1E293B] hover:border-[#334155] focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-white text-sm placeholder:text-[#475569] outline-none transition-all duration-200";
 
   const inputErrCls =
     "w-full bg-[#18122B] border border-red-500/60 hover:border-red-400 focus:border-red-400 focus:ring-2 focus:ring-red-500/20 rounded-xl px-4 py-3 text-white text-sm placeholder:text-[#475569] outline-none transition-all duration-200";
+
+  const inputDisabledCls =
+    "w-full bg-[#18122B]/50 border border-[#1E293B] rounded-xl px-4 py-3 text-[#475569] text-sm placeholder:text-[#2D3748] outline-none cursor-not-allowed select-none";
 
   const labelCls =
     "block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#475569] mb-2";
@@ -145,7 +168,19 @@ export default function VerifyOrganizer() {
   const sectionCls =
     "bg-[#18122B] border border-[#1E293B] rounded-2xl p-7 space-y-6";
 
-  const getInputCls = (field: string) => errors[field] ? inputErrCls : inputCls;
+  const getInputCls = (field: string) =>
+    !authed ? inputDisabledCls : errors[field] ? inputErrCls : inputCls;
+
+  const disabled = !authed;
+
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (authed === null) {
+    return (
+      <div className="min-h-screen bg-[#0B0B12] flex items-center justify-center">
+        <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0B0B12] text-white font-['Space_Grotesk',sans-serif] px-4 py-12">
@@ -165,6 +200,29 @@ export default function VerifyOrganizer() {
           </p>
         </div>
 
+        {/* ── Auth banner ── */}
+        {!authed && (
+          <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-5 py-4">
+            <span className="material-symbols-outlined text-amber-400 text-[22px] flex-shrink-0 mt-0.5">
+              lock
+            </span>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-amber-300">
+                VUI LÒNG ĐĂNG KÝ TÀI KHOẢN TRƯỚC
+              </p>
+              <p className="text-[12px] text-[#94A3B8] leading-relaxed">
+                Bạn cần có tài khoản để có thể đăng ký Ban tổ chức.{" "}
+                <Link
+                  to="/login"
+                  className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors font-semibold"
+                >
+                  Bấm vào đây để đăng ký / đăng nhập
+                </Link>
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── 1. Branding ── */}
         <div className={sectionCls}>
           <div className="flex items-center gap-3 pb-5 border-b border-[#1E293B]">
@@ -178,15 +236,19 @@ export default function VerifyOrganizer() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Logo upload */}
             <div>
               <label className={labelCls}>
                 Tải lên logo <span className="text-red-400">*</span>
               </label>
               <div
-                onClick={() => fileRef.current?.click()}
-                className={`aspect-square rounded-xl bg-[#0B0B12] border-2 border-dashed flex flex-col items-center justify-center cursor-pointer overflow-hidden relative transition-colors duration-200 group ${errors["logo"]
-                  ? "border-red-500/60 hover:border-red-400"
-                  : "border-[#1E293B] hover:border-primary/40"
+                onClick={() => !disabled && fileRef.current?.click()}
+                className={`aspect-square rounded-xl bg-[#0B0B12] border-2 border-dashed flex flex-col items-center justify-center overflow-hidden relative transition-colors duration-200 group
+                  ${disabled
+                    ? "opacity-40 cursor-not-allowed border-[#1E293B]"
+                    : errors["logo"]
+                    ? "border-red-500/60 hover:border-red-400 cursor-pointer"
+                    : "border-[#1E293B] hover:border-primary/40 cursor-pointer"
                   }`}
               >
                 {logoPreview ? (
@@ -201,7 +263,7 @@ export default function VerifyOrganizer() {
                     </span>
                   </>
                 )}
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} disabled={disabled} />
               </div>
               {errors["logo"] && (
                 <p className={errMsgCls}>
@@ -223,6 +285,7 @@ export default function VerifyOrganizer() {
                   placeholder="Công ty TNHH Acme"
                   value={formData.businessInfo.displayName}
                   onChange={(e) => updateBusinessInfo("displayName", e.target.value)}
+                  disabled={disabled}
                 />
                 {errors["displayName"] && (
                   <p className={errMsgCls}>
@@ -242,6 +305,7 @@ export default function VerifyOrganizer() {
                   placeholder="Mô tả ngắn về sứ mệnh và lĩnh vực hoạt động..."
                   value={formData.businessInfo.description}
                   onChange={(e) => updateBusinessInfo("description", e.target.value)}
+                  disabled={disabled}
                 />
                 {errors["description"] && (
                   <p className={errMsgCls}>
@@ -266,75 +330,157 @@ export default function VerifyOrganizer() {
             </div>
           </div>
 
+          {/* Business type toggle */}
+          <div>
+            <label className={labelCls}>Loại hình <span className="text-red-400">*</span></label>
+            <div className="grid grid-cols-2 gap-3">
+              {(["Company", "Individual"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    setBusinessType(type);
+                    // clear type-specific errors
+                    setErrors((prev) => {
+                      const next = { ...prev };
+                      delete next["companyName"];
+                      delete next["taxCode"];
+                      delete next["identityNumber"];
+                      return next;
+                    });
+                  }}
+                  className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border text-sm font-semibold transition-all duration-200
+                    ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+                    ${businessType === type
+                      ? "bg-primary/15 border-primary text-primary"
+                      : "bg-[#0B0B12] border-[#1E293B] text-[#475569] hover:border-[#334155]"
+                    }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {type === "Company" ? "apartment" : "person"}
+                  </span>
+                  {type === "Company" ? "Công ty / Doanh nghiệp" : "Cá nhân"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fields vary by type */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className={labelCls} htmlFor="company_name">
-                Tên công ty (pháp lý) <span className="text-red-400">*</span>
-              </label>
-              <input
-                className={getInputCls("companyName")}
-                id="company_name"
-                type="text"
-                placeholder="Acme Global Solutions Ltd."
-                value={formData.businessInfo.companyName}
-                onChange={(e) => updateBusinessInfo("companyName", e.target.value)}
-              />
-              {errors["companyName"] && (
-                <p className={errMsgCls}>
-                  <span className="material-symbols-outlined text-[13px]">error</span>
-                  {errors["companyName"]}
-                </p>
-              )}
-            </div>
+            {businessType === "Company" && (
+              <>
+                <div className="md:col-span-2">
+                  <label className={labelCls} htmlFor="company_name">
+                    Tên công ty (pháp lý) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    className={getInputCls("companyName")}
+                    id="company_name"
+                    type="text"
+                    placeholder="Acme Global Solutions Ltd."
+                    value={formData.businessInfo.companyName}
+                    onChange={(e) => updateBusinessInfo("companyName", e.target.value)}
+                    disabled={disabled}
+                  />
+                  {errors["companyName"] && (
+                    <p className={errMsgCls}>
+                      <span className="material-symbols-outlined text-[13px]">error</span>
+                      {errors["companyName"]}
+                    </p>
+                  )}
+                </div>
 
-            {/* businessType is always "Company" — shown as read-only badge */}
-            <div>
-              <label className={labelCls}>Loại hình doanh nghiệp</label>
-              <div className={`${inputCls} flex items-center gap-2 cursor-default select-none opacity-60`}>
-                <span className="material-symbols-outlined text-primary text-[16px]">apartment</span>
-                <span>Company</span>
-              </div>
-            </div>
+                <div>
+                  <label className={labelCls} htmlFor="tax_code">
+                    Mã số thuế (VAT / MST) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    className={getInputCls("taxCode")}
+                    id="tax_code"
+                    type="text"
+                    placeholder="0123456789"
+                    value={formData.businessInfo.taxCode}
+                    onChange={(e) => updateBusinessInfo("taxCode", e.target.value)}
+                    disabled={disabled}
+                  />
+                  {errors["taxCode"] && (
+                    <p className={errMsgCls}>
+                      <span className="material-symbols-outlined text-[13px]">error</span>
+                      {errors["taxCode"]}
+                    </p>
+                  )}
+                </div>
 
-            <div>
-              <label className={labelCls} htmlFor="tax_code">
-                Mã số thuế (VAT / MST) <span className="text-red-400">*</span>
-              </label>
-              <input
-                className={getInputCls("taxCode")}
-                id="tax_code"
-                type="text"
-                placeholder="0123456789"
-                value={formData.businessInfo.taxCode}
-                onChange={(e) => updateBusinessInfo("taxCode", e.target.value)}
-              />
-              {errors["taxCode"] && (
-                <p className={errMsgCls}>
-                  <span className="material-symbols-outlined text-[13px]">error</span>
-                  {errors["taxCode"]}
-                </p>
-              )}
-            </div>
+                <div>
+                  <label className={labelCls} htmlFor="identity_number">
+                    CMND / CCCD người đại diện
+                    <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-[#334155]">(Không bắt buộc)</span>
+                  </label>
+                  <input
+                    className={getInputCls("identityNumber")}
+                    id="identity_number"
+                    type="text"
+                    placeholder="Số CMND / CCCD của người đại diện pháp luật"
+                    value={formData.businessInfo.identityNumber}
+                    onChange={(e) => updateBusinessInfo("identityNumber", e.target.value)}
+                    disabled={disabled}
+                  />
+                  {errors["identityNumber"] && (
+                    <p className={errMsgCls}>
+                      <span className="material-symbols-outlined text-[13px]">error</span>
+                      {errors["identityNumber"]}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
 
-            <div>
-              <label className={labelCls} htmlFor="identity_number">
-                Số đăng ký doanh nghiệp <span className="text-red-400">*</span>
-              </label>
-              <input
-                className={getInputCls("identityNumber")}
-                id="identity_number"
-                type="text"
-                placeholder="Số GPKD / Mã đăng ký"
-                value={formData.businessInfo.identityNumber}
-                onChange={(e) => updateBusinessInfo("identityNumber", e.target.value)}
-              />
-              {errors["identityNumber"] && (
-                <p className={errMsgCls}>
-                  <span className="material-symbols-outlined text-[13px]">error</span>
-                  {errors["identityNumber"]}
-                </p>
-              )}
-            </div>
+            {businessType === "Individual" && (
+              <>
+                <div>
+                  <label className={labelCls} htmlFor="identity_number_ind">
+                    Số CMND / CCCD <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    className={getInputCls("identityNumber")}
+                    id="identity_number_ind"
+                    type="text"
+                    placeholder="012345678901"
+                    value={formData.businessInfo.identityNumber}
+                    onChange={(e) => updateBusinessInfo("identityNumber", e.target.value)}
+                    disabled={disabled}
+                  />
+                  {errors["identityNumber"] && (
+                    <p className={errMsgCls}>
+                      <span className="material-symbols-outlined text-[13px]">error</span>
+                      {errors["identityNumber"]}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className={labelCls} htmlFor="tax_code_ind">
+                    Mã số thuế cá nhân <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    className={getInputCls("taxCode")}
+                    id="tax_code_ind"
+                    type="text"
+                    placeholder="Mã số thuế thu nhập cá nhân"
+                    value={formData.businessInfo.taxCode}
+                    onChange={(e) => updateBusinessInfo("taxCode", e.target.value)}
+                    disabled={disabled}
+                  />
+                  {errors["taxCode"] && (
+                    <p className={errMsgCls}>
+                      <span className="material-symbols-outlined text-[13px]">error</span>
+                      {errors["taxCode"]}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -362,6 +508,7 @@ export default function VerifyOrganizer() {
                 placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
                 value={formData.businessInfo.address}
                 onChange={(e) => updateBusinessInfo("address", e.target.value)}
+                disabled={disabled}
               />
               {errors["address"] && (
                 <p className={errMsgCls}>
@@ -386,6 +533,7 @@ export default function VerifyOrganizer() {
                   placeholder="https://example.com.vn"
                   value={formData.businessInfo.socialLink}
                   onChange={(e) => updateBusinessInfo("socialLink", e.target.value)}
+                  disabled={disabled}
                 />
               </div>
               {errors["socialLink"] && (
@@ -430,6 +578,7 @@ export default function VerifyOrganizer() {
                 placeholder="CÔNG TY TNHH ACME"
                 value={formData.bankInfo.accountName}
                 onChange={(e) => updateBankInfo("accountName", e.target.value)}
+                disabled={disabled}
               />
               {errors["accountName"] && (
                 <p className={errMsgCls}>
@@ -451,16 +600,19 @@ export default function VerifyOrganizer() {
                   placeholder="•••• •••• •••• ••••"
                   value={formData.bankInfo.accountNumber}
                   onChange={(e) => updateBankInfo("accountNumber", e.target.value)}
+                  disabled={disabled}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowAccount(!showAccount)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-primary transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {showAccount ? "visibility_off" : "visibility"}
-                  </span>
-                </button>
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAccount(!showAccount)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-primary transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showAccount ? "visibility_off" : "visibility"}
+                    </span>
+                  </button>
+                )}
               </div>
               {errors["accountNumber"] && (
                 <p className={errMsgCls}>
@@ -470,17 +622,15 @@ export default function VerifyOrganizer() {
               )}
             </div>
 
-            <div>
-              <label className={labelCls} htmlFor="bank_code">
-                Mã ngân hàng (SWIFT / BIC) <span className="text-red-400">*</span>
-              </label>
-              <input
-                className={getInputCls("bankCode")}
-                id="bank_code"
-                type="text"
-                placeholder="Ví dụ: BIDVVNVX"
+            {/* BankSelect replaces the old bankCode text input */}
+            <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
+              <BankSelect
+                label="Tên ngân hàng"
+                required
+                banks={BANKS}
                 value={formData.bankInfo.bankCode}
-                onChange={(e) => updateBankInfo("bankCode", e.target.value)}
+                onChange={(v: string) => updateBankInfo("bankCode", v)}
+                error={!!errors["bankCode"]}
               />
               {errors["bankCode"] && (
                 <p className={errMsgCls}>
@@ -501,6 +651,7 @@ export default function VerifyOrganizer() {
                 placeholder="Chi nhánh trung tâm Hà Nội"
                 value={formData.bankInfo.branch}
                 onChange={(e) => updateBankInfo("branch", e.target.value)}
+                disabled={disabled}
               />
               {errors["branch"] && (
                 <p className={errMsgCls}>
@@ -534,18 +685,29 @@ export default function VerifyOrganizer() {
 
           <button
             type="button"
-            disabled={isSubmitting}
+            disabled={isSubmitting || disabled}
             onClick={handleSubmit}
-            className={`w-full md:w-auto flex items-center justify-center gap-2.5 px-12 py-4 bg-primary text-white font-bold text-[15px] rounded-xl shadow-lg shadow-primary/20 transition-all duration-200 ${isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-primary/90 active:scale-[0.98]"
-              }`}
+            className={`w-full md:w-auto flex items-center justify-center gap-2.5 px-12 py-4 bg-primary text-white font-bold text-[15px] rounded-xl shadow-lg shadow-primary/20 transition-all duration-200
+              ${isSubmitting || disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/90 active:scale-[0.98]"}`}
           >
             {isSubmitting ? "Đang xử lý hồ sơ..." : "Gửi hồ sơ xác minh"}
             <span className="material-symbols-outlined text-[20px]">verified</span>
           </button>
-          <p className="text-[12px] text-[#475569] text-center">
-            Thời gian xử lý thường mất 2–3 ngày làm việc.
-            Bạn sẽ nhận thông báo qua email sau khi hồ sơ được duyệt.
-          </p>
+
+          {!authed ? (
+            <p className="text-[12px] text-amber-400/80 text-center">
+              Vui lòng{" "}
+              <Link to="/login" className="underline underline-offset-2 font-semibold hover:text-amber-300 transition-colors">
+                đăng nhập
+              </Link>{" "}
+              để có thể gửi hồ sơ.
+            </p>
+          ) : (
+            <p className="text-[12px] text-[#475569] text-center">
+              Thời gian xử lý thường mất 2–3 ngày làm việc.
+              Bạn sẽ nhận thông báo qua email sau khi hồ sơ được duyệt.
+            </p>
+          )}
         </div>
 
       </div>
