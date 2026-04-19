@@ -382,6 +382,7 @@ const ProfileUser: React.FC = () => {
         description: `Nạp ${amount.toLocaleString("vi-VN")}đ vào ví`,
       })
     );
+    localStorage.setItem("vnpay_return_target", "attendee_wallet_account_page");
     if (fetchToUpWallet.fulfilled.match(result)) {
       const payload = (result.payload as unknown as { data: ToUpWalletResponse }).data;
       if (payload?.paymentUrl) {
