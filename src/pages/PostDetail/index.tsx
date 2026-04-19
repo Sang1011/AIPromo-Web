@@ -14,6 +14,7 @@ import PostBlockRenderer from "../../components/Organizer/post/PostBlockRenderer
 import { parseBodyToBlocks } from "../../utils/renderPostContent";
 import { injectImageBlock } from "../../utils/injectImageBlock";
 import type { ContentBlock } from "../../types/post/post";
+import { GrFormPreviousLink } from "react-icons/gr";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 const formatDateVi = (iso: string) =>
@@ -98,23 +99,6 @@ export default function PostDetail() {
       <Header />
 
       <main className="pd-main">
-
-        {/* ── Sticky topbar ── */}
-        <div className="pd-topbar">
-          <div className="pd-topbar-inner">
-            <button type="button" onClick={() => navigate(-1)} className="pd-back-btn">
-              <span className="pd-back-icon">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M8 1.5L3 6.5L8 11.5" stroke="currentColor" strokeWidth="1.6"
-                    strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              Quay lại
-            </button>
-            <Link to="/#blog" className="pd-blog-link">Blog sự kiện</Link>
-          </div>
-        </div>
-
         <section className="pd-hero">
           {blocks.length > 0 ? (
             postDetail.imageUrl ? (
@@ -149,6 +133,15 @@ export default function PostDetail() {
               </div>
             )
           )}
+
+          <div className="pd-hero-nav">
+            <button type="button" onClick={() => navigate(-1)} className="pd-back-btn text-md">
+              <span className="pd-back-icon">
+                <GrFormPreviousLink size={24} />
+              </span>
+              Quay lại
+            </button>
+          </div>
 
           {/* Floating title card */}
           <div className="pd-title-wrap" style={{ marginTop: postDetail.imageUrl ? "-190px" : "-28px" }}>
@@ -314,19 +307,6 @@ const css = `
   overflow-x: hidden;
 }
 .pd-main { flex: 1; padding-top: 72px; }
-
-/* Topbar */
-.pd-topbar {
-  position: sticky; top: 0; z-index: 40;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  background: rgba(7,5,16,0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-.pd-topbar-inner {
-  max-width: 900px; margin: 0 auto; padding: 0 24px;
-  height: 52px; display: flex; align-items: center; justify-content: space-between;
-}
 .pd-back-btn {
   display: flex; align-items: center; gap: 8px;
   background: none; border: none; color: rgba(200,190,255,0.5);
@@ -355,6 +335,12 @@ const css = `
 .pd-hero { position: relative; }
 .pd-hero-img-wrap {
   position: relative; height: clamp(260px, 50vh, 480px); overflow: hidden;
+}
+
+.pd-hero-nav {
+  position: absolute; top: 150px; left: 300px; right: 0; z-index: 20;
+  padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between;
 }
 .pd-hero-img {
   position: absolute; inset: 0;
