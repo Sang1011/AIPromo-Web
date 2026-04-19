@@ -22,7 +22,6 @@ export function buildContextPrompt(
 
     const eventContext = [
         `Event: ${event.title}`,
-        event.description && `Description: ${event.description}`,
         event.location && `Location: ${event.location}`,
         hashtags && `Hashtags: ${hashtags}`,
         categories && `Categories: ${categories}`,
