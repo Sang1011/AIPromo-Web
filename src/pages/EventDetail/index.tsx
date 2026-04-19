@@ -537,7 +537,7 @@ function EventDetail() {
                 </section>
               )}
 
-             
+
 
             </div>
 
@@ -727,7 +727,7 @@ function EventDetail() {
                   <div
                     key={event.id}
                     onClick={() => {
-                      navigate(`/event-detail/${event.id}`)
+                      navigate(`/event-detail/${event.urlPath}`)
                       window.scrollTo(0, 0)
                     }}
                     className="group glass rounded-2xl overflow-hidden hover:neon-border transition-all duration-300 cursor-pointer"
