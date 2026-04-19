@@ -207,47 +207,8 @@ export default function SubscriptionPage() {
                 </div>
             </div>
         );
-
-    const SKIP_PATHS = [
-        "/organizer/payment/packages/vnpay-return",
-        "/organizer/payment/packages/success",
-        "/organizer/payment/packages/failed",
-        "/organizer/payment/wallet/success",
-        "/organizer/payment/wallet/failed",
-        "/organizer/subscription",
-        "/sandbox.vnpayment.vn"
-    ];
-
     const handleBack = () => {
-        const currentIdx: number = (window.history.state?.idx as number) ?? 1;
-        const maxSteps = currentIdx;
-        let stepsBack = 1;
-        if ("navigation" in window) {
-            const nav = (window as any).navigation;
-            const entries: any[] = nav.entries();
-            const currentEntryIdx: number = nav.currentEntry?.index ?? entries.length - 1;
-            for (let i = currentEntryIdx - 1; i >= 0; i--) {
-                try {
-                    const path = new URL(entries[i].url).pathname;
-                    if (SKIP_PATHS.some((p) => path.startsWith(p))) {
-                        stepsBack++;
-                    } else {
-                        break;
-                    }
-                } catch {
-                    break;
-                }
-            }
-        } else {
-            try {
-                const referrerPath = new URL(document.referrer).pathname;
-                if (SKIP_PATHS.some((p) => referrerPath.startsWith(p))) {
-                    stepsBack = 2;
-                }
-            } catch {
-            }
-        }
-        navigate(-Math.min(stepsBack, maxSteps || 1));
+        navigate("/organizer/my-events");
     };
 
     return (
