@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { FiCheck, FiEdit2, FiPlus, FiTrash2, FiX } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
-import { FiX, FiPlus, FiEdit2, FiTrash2, FiCheck } from "react-icons/fi";
 import type { AppDispatch, RootState } from "../../../store";
 import {
     fetchCreateTicketType,
@@ -8,13 +8,13 @@ import {
     fetchGetAllTicketTypes,
     fetchUpdateTicketType,
 } from "../../../store/ticketTypeSlice";
+import type { EventSession } from "../../../types/event/event";
 import type {
     CreateTicketTypeRequest,
     TicketTypeItem,
     UpdateTicketTypeRequest,
 } from "../../../types/ticketType/ticketType";
 import { notify } from "../../../utils/notify";
-import type { EventSession } from "../../../types/event/event";
 
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
@@ -213,6 +213,7 @@ function TicketEditRow({
     onCancel: () => void;
     isAllowUpdate?: boolean;
 }) {
+    const [name, setName] = useState(ticket.name);
     const [isFree, setIsFree] = useState(ticket.price === 0);
     const [price, setPrice] = useState(ticket.price);
     const [quantity, setQuantity] = useState(String(ticket.quantity));
@@ -223,7 +224,7 @@ function TicketEditRow({
         setSaving(true);
         try {
             await onSave({
-                name: ticket.name,
+                name: name.trim(),
                 price: isFree ? 0 : price,
                 quantity: Number(quantity),
             });
@@ -234,6 +235,18 @@ function TicketEditRow({
 
     return (
         <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+            <div className="space-y-1.5">
+                <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    Tên vé
+                </label>
+                <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    readOnly={!isAllowUpdate}
+                    className="w-full rounded-xl bg-black/30 border border-white/8 px-4 py-2.5 text-white text-sm outline-none focus:ring-1 focus:ring-primary/50 transition-all read-only:opacity-40 read-only:cursor-not-allowed"
+                    placeholder="VD: VÉ TIÊU CHUẨN"
+                />
+            </div>
             <PriceField
                 price={price}
                 isFree={isFree}
