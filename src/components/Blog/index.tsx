@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchAdminPosts } from "../../store/postSlice";
 import type { AdminPostItem } from "../../types/post/post";
+import { parseBodyToBlocks } from "../../utils/renderPostContent";
+import type { ContentBlock } from "../../types/post/post";
 
 /* ─── Types ──────────────────────────────────────────────── */
 export interface BlogItem {
@@ -22,7 +24,22 @@ const formatDate = (iso: string) =>
     year: "numeric",
   });
 
-function excerpt(raw: string, max = 110) {
+function extractTextFromBody(raw: string, max = 110): string {
+  const blocks = parseBodyToBlocks(raw);
+
+  if (blocks.length > 0) {
+    const text = blocks
+      .map((b: ContentBlock) => {
+        if (b.type === "paragraph" || b.type === "heading") return b.text ?? "";
+        if (b.type === "list") return (b.items ?? []).join(" ");
+        if (b.type === "highlight") return b.content ?? "";
+        return "";
+      })
+      .filter(Boolean)
+      .join(" ");
+    const plain = text.replace(/\s+/g, " ").trim();
+    return plain.length <= max ? plain : `${plain.slice(0, max)}…`;
+  }
   const plain = raw.replace(/\s+/g, " ").trim();
   return plain.length <= max ? plain : `${plain.slice(0, max)}…`;
 }
@@ -70,7 +87,7 @@ const BlogCard: React.FC<{ item: BlogItem; onClick: () => void }> = ({ item, onC
       </div>
 
       <h3 className="bls-title">{item.title}</h3>
-      <p className="bls-excerpt">{excerpt(item.body)}</p>
+      <p className="bls-excerpt">{extractTextFromBody(item.body)}</p>
 
       <div className="bls-footer">
         <span className="bls-read">
