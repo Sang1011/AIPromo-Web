@@ -1,19 +1,28 @@
+import { useEffect, useState } from "react";
+import { generateQR } from "../../../utils/generateQR";
+
 export default function PromoSidebar() {
+    const [qrUrl, setQrUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        generateQR("https://github.com/Sang1011/AIPromo-mobile/releases/download/v1.0.0/AIPromo.apk")
+            .then(setQrUrl)
+            .catch(console.error);
+    }, []);
     return (
         <div className="glass rounded-3xl p-6 sticky top-28 space-y-8">
             {/* Title section */}
             <div className="space-y-4">
                 <div className="flex items-center gap-2 text-primary">
                     <span className="font-bold text-sm uppercase tracking-widest">
-                        AIPromo Manager
+                        AIPromo Mobile
                     </span>
                 </div>
                 <h2 className="text-2xl font-extrabold leading-tight">
-                    Quản lý sự kiện dễ dàng hơn bao giờ hết
+                    Check-in sự kiện dễ dàng
                 </h2>
                 <p className="text-slate-400 text-sm">
-                    Tất cả thông tin doanh thu, số lượng vé và check-in trong lòng
-                    bàn tay bạn.
+                    Hỗ trợ check-in tại sự kiện cho nhà tổ chức
                 </p>
             </div>
 
@@ -47,21 +56,25 @@ export default function PromoSidebar() {
             </div>
 
             {/* Download section */}
-            <div className="space-y-4 pt-4 border-t border-white/5">
-                <p className="text-center text-xs font-semibold text-slate-500 uppercase tracking-widest">
-                    Tải ứng dụng ngay
-                </p>
-
-                {/* QR Code */}
-                <div className="flex justify-center pt-4">
-                    <div className="p-4 bg-white rounded-2xl">
-                        <img
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAjO1BLv2zieiyM4wpHrD_z-VLpX3NSrPBEuvVbRChwOLskCQ9Rmmdq6Gz5QWb7jj9Bsz7dapUSYlfqjc98-6cqvkwN-B-Bkm9eQGiIQdW9WV8vSk16hV_Xv2WLJgxOlgVMai3sdigN1iRAs7bjaY-z9CTby9if44MlFi9ryDHsYxhqoJ0iEziFnMyCvizUqgXiQJseuJXu-iGu9r4lTam170cPBCbENYKDlQLqTucN-pHpjs-7i8D2Wi9_UFNyzpzyditon0UMDs"
-                            alt="QR Code"
-                            className="w-24 h-24"
-                        />
-                    </div>
+            <div className="flex flex-col items-center gap-3 pt-4">
+                <div className="p-4 bg-white rounded-2xl">
+                    {qrUrl ? (
+                        <img src={qrUrl} alt="QR Code" className="w-56 h-56" />
+                    ) : (
+                        <div className="w-56 h-56 bg-slate-200 animate-pulse rounded" />
+                    )}
                 </div>
+
+                <a
+                    href="https://github.com/Sang1011/AIPromo-mobile/releases/download/v1.0.0/AIPromo.apk"
+                    download
+                    className="flex items-center gap-2 w-full py-3 px-4 bg-primary hover:bg-primary/80 text-white font-semibold rounded-xl transition-colors justify-center"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Tải APK (Android)
+                </a>
             </div>
         </div>
     );

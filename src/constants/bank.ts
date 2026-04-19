@@ -1,0 +1,16 @@
+export const BANKS = [
+    { code: "VCB", name: "Vietcombank" },
+    { code: "VTB", name: "VietinBank" },
+    { code: "BIDV", name: "BIDV" },
+    { code: "AGRIBANK", name: "Agribank" },
+    { code: "TCB", name: "Techcombank" },
+    { code: "ACB", name: "ACB" },
+    { code: "MB", name: "MB Bank" },
+    { code: "VPB", name: "VPBank" },
+    { code: "TPB", name: "TPBank" },
+    { code: "STB", name: "Sacombank" },
+    { code: "VIB", name: "VIB" },
+    { code: "MSB", name: "MSB" },
+    { code: "SHB", name: "SHB" },
+    { code: "OCB", name: "OCB" },
+];

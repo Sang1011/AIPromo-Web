@@ -18,23 +18,7 @@ import type { MeInfo } from "../../types/auth/auth";
 import type { ApiResponse } from "../../types/api";
 import ConfirmModal from "../../components/Organizer/shared/ConfirmModal";
 import { OrganizerStatus, type OrganizerProfileDetail } from "../../types/organizerProfile/organizerProfile";
-
-export const BANKS = [
-    { code: "VCB", name: "Vietcombank" },
-    { code: "VTB", name: "VietinBank" },
-    { code: "BIDV", name: "BIDV" },
-    { code: "AGRIBANK", name: "Agribank" },
-    { code: "TCB", name: "Techcombank" },
-    { code: "ACB", name: "ACB" },
-    { code: "MB", name: "MB Bank" },
-    { code: "VPB", name: "VPBank" },
-    { code: "TPB", name: "TPBank" },
-    { code: "STB", name: "Sacombank" },
-    { code: "VIB", name: "VIB" },
-    { code: "MSB", name: "MSB" },
-    { code: "SHB", name: "SHB" },
-    { code: "OCB", name: "OCB" },
-];
+import { BANKS } from "../../constants/bank";
 
 type Tab = "profileDetail" | "bank";
 type BusinessType = "individual" | "company";
@@ -124,7 +108,13 @@ export default function OrganizerAccountPage() {
             const fields = state.missingFields;
             const newProfileErrors: ProfileErrors = {};
             if (fields.includes("displayName")) newProfileErrors.displayName = "Tên hiển thị không được để trống";
-            if (fields.includes("identityNumber")) newProfileErrors.identityNumber = "Số CMND / CCCD không được để trống";
+            if (fields.includes("identityNumber")) {
+                if (businessType === "company") {
+                    newProfileErrors.identityNumber = "Số đăng ký doanh nghiệp không được để trống"
+                } else {
+                    newProfileErrors.identityNumber = "Số CMND / CCCD không được để trống"
+                }
+            };
             if (fields.includes("taxCode")) newProfileErrors.taxCode = "Mã số thuế không được để trống";
             if (fields.includes("companyName")) newProfileErrors.companyName = "Tên công ty không được để trống";
             setProfileErrors(newProfileErrors);
@@ -558,8 +548,8 @@ export default function OrganizerAccountPage() {
                                 />
                                 <div className="md:col-span-2">
                                     <FieldInput
-                                        label="CMND / CCCD người đại diện"
-                                        placeholder="(Không bắt buộc)"
+                                        label="Số đăng ký doanh nghiệp"
+                                        placeholder="Số GPKD / Mã đăng ký"
                                         onlyNumber
                                         value={identityNumber}
                                         onChange={(v) => { setIdentityNumber(v); setProfileErrors((p) => ({ ...p, identityNumber: undefined })); }}
