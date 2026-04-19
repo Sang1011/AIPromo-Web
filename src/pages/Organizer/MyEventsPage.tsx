@@ -235,7 +235,16 @@ export default function MyEventsPage() {
                 {isLoading ? (
                     [...Array(5)].map((_, i) => <EventCardSkeleton key={i} />)
                 ) : displayList.length === 0 ? (
-                    <p className="text-slate-400 text-center">Không có sự kiện nào</p>
+                    isOrganizer ? (
+                        <p className="text-slate-400 text-center">Không có sự kiện nào</p>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+                            <p className="text-slate-300 font-medium text-lg">Chưa có sự kiện được phân công</p>
+                            <p className="text-slate-500 text-sm max-w-sm">
+                                Bạn cần được ban tổ chức mời tham gia sự kiện với tư cách thành viên mới có thể thấy sự kiện tại đây.
+                            </p>
+                        </div>
+                    )
                 ) : (
                     displayList.map((event) => (
                         <EventCard
