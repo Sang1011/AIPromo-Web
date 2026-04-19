@@ -325,6 +325,7 @@ const SeatMapEditorPage: React.FC = () => {
             width: round2(area.width),
             height: round2(area.height),
             rotation: round2(area.rotation),
+            labelFontSize: area.labelFontSize != null ? Math.round(area.labelFontSize) : undefined,
             seats: seats
                 .filter(seat => seat.sectionId === area.id)
                 .map(seat => ({
@@ -343,6 +344,7 @@ const SeatMapEditorPage: React.FC = () => {
             width: round2(t.width),
             height: round2(t.height),
             rotation: round2(t.rotation),
+            fontSize: Math.round(t.fontSize),
         })),
     });
 
@@ -447,7 +449,7 @@ const SeatMapEditorPage: React.FC = () => {
                             x: round2(node.x()),
                             y: round2(node.y()),
                             rotation: round2(node.rotation()),
-                            labelFontSize: round2(Math.max(10, (s as any).labelFontSize * scale || 14)),
+                            labelFontSize: Math.round(Math.max(10, (s as any).labelFontSize * scale || 14)),
                         }
                         : s
                 )
@@ -984,7 +986,7 @@ const SeatMapEditorPage: React.FC = () => {
 
             setSections(prev => {
                 newSection.name = isArea
-                    ? (ticketTypes[0]?.name ?? `Khu vực ${prev.length + 1}`)
+                    ? (unusedTicketType?.name ?? `Khu vực ${prev.length + 1}`)
                     : `Shape ${prev.length + 1}`;
                 if (isArea) {
                     newSection.points = []
