@@ -109,9 +109,7 @@ export default function OrganizerAccountPage() {
             const newProfileErrors: ProfileErrors = {};
             if (fields.includes("displayName")) newProfileErrors.displayName = "Tên hiển thị không được để trống";
             if (fields.includes("identityNumber")) {
-                if (businessType === "company") {
-                    newProfileErrors.identityNumber = "Số đăng ký doanh nghiệp không được để trống"
-                } else {
+                if (businessType === "individual") {
                     newProfileErrors.identityNumber = "Số CMND / CCCD không được để trống"
                 }
             };
@@ -548,8 +546,8 @@ export default function OrganizerAccountPage() {
                                 />
                                 <div className="md:col-span-2">
                                     <FieldInput
-                                        label="Số đăng ký doanh nghiệp"
-                                        placeholder="Số GPKD / Mã đăng ký"
+                                        label="Số CMND / CCCD người đại diện (Không bắt buộc)"
+                                        placeholder="Số CMND / CCCD"
                                         onlyNumber
                                         value={identityNumber}
                                         onChange={(v) => { setIdentityNumber(v); setProfileErrors((p) => ({ ...p, identityNumber: undefined })); }}
