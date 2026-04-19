@@ -37,7 +37,7 @@ const ProfileLayout: React.FC = () => {
       <div className="flex pt-[72px] min-h-screen">
 
         <aside
-          className="hidden md:flex flex-col w-72 shrink-0 sticky top-[72px] h-[calc(100vh-72px)] border-r border-white/5 bg-[#0B0B12] overflow-y-auto"
+          className="hidden md:flex flex-col w-72 shrink-0 sticky top-[72px] h-[calc(100vh-72px)] border-r border-white/5 bg-[#0B0B12] overflow-y-auto pt-20"
         >
           <div className="flex flex-col h-full px-4 py-6 space-y-6">
 
@@ -78,7 +78,7 @@ const ProfileLayout: React.FC = () => {
         </aside>
 
         {/* ── Main content ─────────────────────────────── */}
-        <main className="flex-1 min-w-0 overflow-y-auto">
+        <main className="flex-1 min-w-0 overflow-y-auto pt-20">
           <Outlet />
         </main>
 
