@@ -48,21 +48,6 @@ function BlockItem({ block }: { block: ContentBlock }) {
                     {block.text}
                 </p>
             );
-
-        case "image":
-            if (!block.src) return null;
-            return (
-                <figure className="rounded-2xl overflow-hidden border border-indigo-950 my-4">
-                    <img src={block.src} alt={block.alt ?? ""}
-                        className="w-full object-cover max-h-80" />
-                    {block.alt && (
-                        <figcaption className="text-xs text-slate-500 px-4 py-2 bg-[#18122B]">
-                            {block.alt}
-                        </figcaption>
-                    )}
-                </figure>
-            );
-
         case "button":
             return (
                 <div className="flex justify-center py-5">

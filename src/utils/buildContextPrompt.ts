@@ -40,7 +40,7 @@ export function buildContextPrompt(
         ? `Writing style: ${toneMap[tone]}.`
         : "";
 
-    return [eventContext, ctaInstruction, toneInstruction, "Do not include any image block."]
+    return [eventContext, ctaInstruction, toneInstruction, "Do not include any image block. The image will be injected separately after generation."]
         .filter(Boolean)
         .join("\n");
 }

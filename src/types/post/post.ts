@@ -135,6 +135,7 @@ export type SendToChatBoxReponse = ApiResponse<string>
 export type BlockType =
     | 'heading'
     | 'paragraph'
+    | 'image'
     | 'button'
     | 'list'
     | 'divider'
@@ -145,6 +146,7 @@ export interface ContentBlock {
     // heading
     level?: 1 | 2 | 3;
     text?: string;
+    // image — src chỉ được set từ AI-generated imageUrl, không nhận URL ngoài
     src?: string;
     alt?: string;
     // button/CTA
