@@ -202,7 +202,7 @@ const Header: React.FC = () => {
                         key={event.id}
                         onMouseDown={(e) => {
                           e.preventDefault();
-                          handleSelectEvent(event.id);
+                          handleSelectEvent(event.urlPath);
                         }}
                         className="w-full flex items-center gap-4 px-5 py-3 hover:bg-white/5 transition-all group text-left"
                       >
