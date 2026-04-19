@@ -278,7 +278,7 @@ function AllEvent() {
       <main className="max-w-[1440px] mx-auto px-6 py-8 mt-10">
 
         {/* ── Hero Title ── */}
-        <div className="mb-10 flex flex-col items-center gap-3 text-center pt-10">
+        <div className="mb-10 flex flex-col items-center gap-3 text-center pt-20">
           <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary text-xs font-bold px-4 py-1.5 rounded-full mb-1 tracking-widest uppercase">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             Khám phá sự kiện
