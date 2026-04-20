@@ -320,6 +320,8 @@ export default function Step2Schedule({
     }, [eventId, sessions]);
 
     useEffect(() => {
+        if (!eventId || eventData?.status !== "Draft") return;
+
         if (sessions.length === 0) {
             setTimeForm(prev => ({ ...prev, eventStartAt: "", eventEndAt: "" }));
             return;
@@ -341,7 +343,6 @@ export default function Step2Schedule({
             eventEndAt: newEndAt,
         }));
 
-        if (!eventId) return;
         dispatch(fetchUpdateEventSettings({
             eventId,
             data: {
