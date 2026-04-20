@@ -28,7 +28,10 @@ interface PostState {
 
     posts: PostListItem[];
     pagination: Omit<PaginatedResponse<PostListItem>, "items"> | null;
-    filters: Partial<GetPostsParams>;
+    tableFilters: Partial<GetPostsParams>;
+    chartFilters: Partial<GetPostsParams>;
+
+
 
     adminPosts: AdminPostItem[];
     adminPostDetail: AdminPostItem | null;
@@ -92,11 +95,19 @@ const initialState: PostState = {
     posts: [],
     pagination: null,
     distributionMetricsMap: {},
-    filters: {
+    tableFilters: {
         pageNumber: 1,
         pageSize: 5,
         sortColumn: "CreatedAt",
         sortOrder: "desc",
+    },
+    chartFilters: {
+        pageNumber: 1,
+        pageSize: 20,
+        sortColumn: "PublishedAt",
+        sortOrder: "desc",
+        status: "Published",
+        hasExternalPostUrl: true,
     },
 
     adminPosts: [],
@@ -440,10 +451,15 @@ const postSlice = createSlice({
         clearGeneratedDraft(state) { state.generatedDraft = null; },
         clearCreatedPostId(state) { state.createdPostId = null; },
         clearPostList(state) { state.posts = []; state.pagination = null; },
-        setPostFilters(state, action: PayloadAction<Partial<GetPostsParams>>) {
-            state.filters = { ...state.filters, ...action.payload };
+        setPostFilters(state, action) {
+            state.tableFilters = { ...state.tableFilters, ...action.payload };
         },
-        resetPostFilters(state) { state.filters = initialState.filters; },
+        setChartFilters(state, action) {
+            state.chartFilters = { ...state.chartFilters, ...action.payload };
+        },
+        resetPostFilters(state) {
+            state.tableFilters = initialState.tableFilters;
+        },
         clearErrors(state) { state.error = initialState.error; },
         clearGeneratedImageUrl(state) { state.generatedImageUrl = null; },
         clearChatBoxReply(state) { state.chatBoxReply = null; },

@@ -35,18 +35,6 @@ const STATUS_STYLE = {
     maxed: "bg-amber-500/20 text-amber-400",
 } as const;
 
-// ─── validate ────────────────────────────────────────────────────────────────
-
-type VoucherFormData = {
-    couponCode: string;
-    type: "Percentage" | "Fixed";
-    value: string;
-    maxUse: string;
-    startDate: string;
-    endDate: string;
-    eventId: string;
-};
-
 type FormErrors = Partial<Record<keyof VoucherFormData, string>>;
 
 const getNowLocal = () => {
@@ -57,6 +45,10 @@ const getNowLocal = () => {
 
 function validateVoucherForm(form: VoucherFormData, isCreate: boolean): FormErrors {
     const errors: FormErrors = {};
+
+    if (!form.name.trim()) {
+        errors.name = "Vui lòng nhập tên voucher";
+    }
 
     if (!form.couponCode.trim()) {
         errors.couponCode = "Vui lòng nhập mã voucher";
@@ -98,17 +90,18 @@ function validateVoucherForm(form: VoucherFormData, isCreate: boolean): FormErro
     return errors;
 }
 
-// ─── empty form ──────────────────────────────────────────────────────────────
-
-const EMPTY_FORM: VoucherFormData = {
-    couponCode: "",
-    type: "Percentage",
-    value: "",
-    maxUse: "1",
-    startDate: getNowLocal(),
-    endDate: "",
-    eventId: "",
+type VoucherFormData = {
+    name: string;
+    description: string;
+    couponCode: string;
+    type: "Percentage" | "Fixed";
+    value: string;
+    maxUse: string;
+    startDate: string;
+    endDate: string;
+    eventId: string;
 };
+
 
 const toLocalDateTime = (isoString: string) => {
     const date = new Date(isoString);
@@ -118,6 +111,8 @@ const toLocalDateTime = (isoString: string) => {
 
 function voucherToForm(v: VoucherItem): VoucherFormData {
     return {
+        name: v.name,
+        description: v.description,
         couponCode: v.couponCode,
         type: v.type,
         value: String(v.value),
@@ -155,6 +150,18 @@ interface VoucherModalProps {
     onClose: () => void;
     onSaved: () => void;
 }
+
+const EMPTY_FORM: VoucherFormData = {
+    name: "",
+    description: "",
+    couponCode: "",
+    type: "Percentage",
+    value: "",
+    maxUse: "1",
+    startDate: getNowLocal(),
+    endDate: "",
+    eventId: "",
+};
 
 
 function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModalProps) {
@@ -214,6 +221,8 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
             if (mode === "create") {
                 if (!eventId) return notify.error("Vui lòng chọn sự kiện");
                 const payload: CreateVoucherRequest = {
+                    name: form.name.trim(),
+                    description: form.description.trim(),
                     couponCode: form.couponCode.trim(),
                     type: form.type,
                     value: Number(form.value),
@@ -227,6 +236,8 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                 notify.success("Tạo voucher thành công");
             } else {
                 const payload: UpdateVoucherRequest = {
+                    name: form.name.trim(),
+                    description: form.description.trim(),
                     couponCode: form.couponCode.trim(),
                     type: form.type,
                     value: Number(form.value),
@@ -276,7 +287,26 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                 {/* Body */}
                 <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
 
+                    {/* name */}
+                    <Field label="Tên voucher *" error={errors.name}>
+                        <input
+                            value={form.name}
+                            onChange={e => update("name", e.target.value)}
+                            placeholder="VD: Voucher giảm hè 2026"
+                            className={inputCls(!!errors.name)}
+                        />
+                    </Field>
 
+                    {/* description */}
+                    <Field label="Mô tả" error={errors.description}>
+                        <textarea
+                            value={form.description}
+                            onChange={e => update("description", e.target.value)}
+                            placeholder="Mô tả ngắn về voucher (tuỳ chọn)"
+                            rows={2}
+                            className={`${inputCls(false)} resize-none`}
+                        />
+                    </Field>
                     {/* couponCode */}
                     <Field label="Mã voucher *" error={errors.couponCode}>
                         <input
@@ -570,8 +600,10 @@ export default function VoucherManagementPage() {
                     )}
                 </div>
 
-                <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1.2fr_100px] px-6 py-3 text-xs font-semibold tracking-widest text-slate-400 uppercase border-t border-white/5">
+                <div className="grid grid-cols-[1.5fr_1.2fr_1.5fr_1fr_1fr_1fr_1fr_1.2fr_100px] px-6 py-3 text-xs font-semibold tracking-widest text-slate-400 uppercase border-t border-white/5">
                     <div>Mã voucher</div>
+                    <div>Tên</div>
+                    <div>Mô tả</div>
                     <div>Loại</div>
                     <div>Giảm giá</div>
                     <div>Số lượng</div>
@@ -601,6 +633,14 @@ export default function VoucherManagementPage() {
                                 key={v.id}
                                 className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1.2fr_100px] px-6 py-4 items-center hover:bg-white/5 transition"
                             >
+                                <span className="text-slate-300 text-sm truncate pr-2" title={v.name}>
+                                    {v.name || "—"}
+                                </span>
+
+                                {/* Mô tả — thêm mới */}
+                                <span className="text-slate-500 text-sm truncate pr-2" title={v.description}>
+                                    {v.description || "—"}
+                                </span>
                                 <div>
                                     <p className="text-primary font-semibold text-sm">{v.couponCode}</p>
                                     <p className="text-xs text-slate-500 mt-0.5">

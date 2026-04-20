@@ -41,7 +41,7 @@ export default function MarketingTable() {
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>();
 
-    const { posts, pagination, loading, filters } = useSelector((s: RootState) => s.POST);
+    const { posts, pagination, loading, tableFilters: filters } = useSelector((s: RootState) => s.POST);
     const [activeTab, setActiveTab] = useState(0);
 
     useEffect(() => {
@@ -58,7 +58,11 @@ export default function MarketingTable() {
 
     const handleTabChange = (idx: number) => {
         setActiveTab(idx);
-        dispatch(setPostFilters({ pageNumber: 1, status: TAB_FILTERS[idx].status }));
+        const selectedStatus = TAB_FILTERS[idx].status;
+        dispatch(setPostFilters({
+            pageNumber: 1,
+            ...(selectedStatus ? { status: selectedStatus } : { status: undefined })
+        }));
     };
 
     return (

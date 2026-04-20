@@ -27,14 +27,15 @@ const eventMemberService = {
     exportExcelMember: (eventId: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().get(
             `/organizer/events/${eventId}/members/export`,
-            {
-                responseType: "blob",
-            }
+            { responseType: "blob" }
         );
     },
     getEventListByMemberAssigned: (): Promise<AxiosResponse<GetEventListByMemberAssignedResponse>> => {
         return interceptorAPI().get(`/events/assigned`);
-    }
+    },
+    confirmMember: (eventId: string, memberId: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().post(`/events/${eventId}/members/${memberId}/confirm`);
+    },
 };
 
 export default eventMemberService;

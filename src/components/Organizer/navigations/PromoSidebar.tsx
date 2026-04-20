@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { generateQR } from "../../../utils/generateQR";
+import { notify } from "../../../utils/notify";
 
 export default function PromoSidebar() {
     const [qrUrl, setQrUrl] = useState<string | null>(null);
-
+    const APK_URL = "https://apkpure.com/p/com.sangnguyen1011.aipromomobile";
     useEffect(() => {
-        generateQR("https://github.com/Sang1011/AIPromo-mobile/releases/download/v1.0.0/AIPromo.apk")
+        generateQR(APK_URL)
             .then(setQrUrl)
             .catch(console.error);
     }, []);
@@ -26,37 +27,9 @@ export default function PromoSidebar() {
                 </p>
             </div>
 
-            {/* Phone mockup */}
-            <div className="relative py-4 flex justify-center">
-                <div className="w-48 h-80 bg-slate-800 rounded-[2.5rem] border-4 border-slate-700 p-2 shadow-2xl relative z-10 overflow-hidden">
-                    <div className="w-full h-full bg-background-dark rounded-[2rem] p-3 flex flex-col gap-4">
-                        {/* Notch */}
-                        <div className="w-12 h-1 bg-slate-700 mx-auto rounded-full mb-2"></div>
-
-                        {/* Header */}
-                        <div className="h-10 bg-primary/20 rounded-lg border border-primary/30 flex items-center px-3">
-                            <div className="w-4 h-4 rounded-full bg-primary/40 mr-2"></div>
-                            <div className="h-2 w-full bg-primary/20 rounded"></div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 bg-slate-900 rounded-xl p-3 space-y-3">
-                            <div className="h-2 w-3/4 bg-slate-700 rounded"></div>
-                            <div className="h-2 w-1/2 bg-slate-700 rounded"></div>
-                            <div className="mt-4 flex gap-2">
-                                <div className="h-12 flex-1 bg-primary/40 rounded-lg"></div>
-                                <div className="h-12 flex-1 bg-primary/40 rounded-lg"></div>
-                            </div>
-                            <div className="h-20 w-full bg-primary/10 border border-primary/20 rounded-xl mt-4"></div>
-                        </div>
-                    </div>
-                </div>
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-primary/20 blur-[60px] rounded-full"></div>
-            </div>
-
             {/* Download section */}
             <div className="flex flex-col items-center gap-3 pt-4">
+                <div className="absolute inset-0 bg-primary/20 blur-[60px] rounded-full"></div>
                 <div className="p-4 bg-white rounded-2xl">
                     {qrUrl ? (
                         <img src={qrUrl} alt="QR Code" className="w-56 h-56" />
@@ -66,8 +39,7 @@ export default function PromoSidebar() {
                 </div>
 
                 <a
-                    href="https://github.com/Sang1011/AIPromo-mobile/releases/download/v1.0.0/AIPromo.apk"
-                    download
+                    href={APK_URL}
                     className="flex items-center gap-2 w-full py-3 px-4 bg-primary hover:bg-primary/80 text-white font-semibold rounded-xl transition-colors justify-center"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -75,6 +47,31 @@ export default function PromoSidebar() {
                     </svg>
                     Tải APK (Android)
                 </a>
+                <div className="w-full space-y-2">
+                    <p className="text-xs text-slate-500 text-center uppercase tracking-widest font-semibold">Chia sẻ link tải</p>
+                    <div className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2">
+                        <span className="text-xs text-slate-400 truncate flex-1 select-all">
+                            https://apkpure.com/p/com.sangnguyen1011.aipromomobile
+                        </span>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await navigator.clipboard.writeText(APK_URL);
+                                    notify.success("Đã copy link!");
+                                } catch {
+                                    notify.error("Không thể copy!");
+                                }
+                            }}
+                            className="shrink-0 p-1.5 rounded-lg bg-slate-700 hover:bg-primary/30 text-slate-400 hover:text-primary transition-colors"
+                            title="Sao chép link"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

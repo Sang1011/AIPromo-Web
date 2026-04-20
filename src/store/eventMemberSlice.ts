@@ -17,6 +17,9 @@ interface EventMemberState {
     addingMember: boolean;
     assignedEvents: EventItemByEventMember[];
     fetchingAssignedEvents: boolean;
+    // ✅ State mới cho confirm
+    confirmStatus: "idle" | "loading" | "success" | "error";
+    confirmError: string | null;
 }
 
 const initialState: EventMemberState = {
@@ -25,6 +28,8 @@ const initialState: EventMemberState = {
     addingMember: false,
     assignedEvents: [],
     fetchingAssignedEvents: false,
+    confirmStatus: "idle",
+    confirmError: null,
 };
 
 export const fetchEventMembers = createAsyncThunk<GetEventMembersResponse, string>(
@@ -118,10 +123,34 @@ export const fetchEventListAssignedForCurrentUser = createAsyncThunk<
     }
 );
 
+// ✅ Thunk mới: xác nhận lời mời
+export const confirmEventMember = createAsyncThunk<
+    any,
+    { eventId: string; memberId: string },
+    { rejectValue: string }
+>(
+    `${name}/confirmEventMember`,
+    async ({ eventId, memberId }, { rejectWithValue }) => {
+        try {
+            const response = await eventMemberService.confirmMember(eventId, memberId);
+            return response.data;
+        } catch (error: any) {
+            return rejectWithValue(
+                error?.response?.data?.message ?? "Không thể xác nhận lời mời"
+            );
+        }
+    }
+);
+
 const eventMemberSlice = createSlice({
     name,
     initialState,
-    reducers: {},
+    reducers: {
+        resetConfirmStatus(state) {
+            state.confirmStatus = "idle";
+            state.confirmError = null;
+        },
+    },
     extraReducers: (builder) => {
         builder
             .addCase(fetchEventMembers.pending, (state) => {
@@ -181,8 +210,22 @@ const eventMemberSlice = createSlice({
             })
             .addCase(fetchEventListAssignedForCurrentUser.rejected, (state) => {
                 state.fetchingAssignedEvents = false;
+            })
+
+            // ✅ confirmEventMember
+            .addCase(confirmEventMember.pending, (state) => {
+                state.confirmStatus = "loading";
+                state.confirmError = null;
+            })
+            .addCase(confirmEventMember.fulfilled, (state) => {
+                state.confirmStatus = "success";
+            })
+            .addCase(confirmEventMember.rejected, (state, action) => {
+                state.confirmStatus = "error";
+                state.confirmError = action.payload ?? "Đã xảy ra lỗi";
             });
     },
 });
 
+export const { resetConfirmStatus } = eventMemberSlice.actions;
 export default eventMemberSlice.reducer;

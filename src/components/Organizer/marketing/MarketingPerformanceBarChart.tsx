@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdFacebook, MdOutlineBarChart, MdOutlineRefresh, MdOutlineTouchApp, MdOutlineVisibility } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
+import { useParams } from "react-router-dom";
 import {
     Bar,
     BarChart,
@@ -12,9 +13,8 @@ import {
 } from "recharts";
 import postService from "../../../services/postService";
 import type { AppDispatch, RootState } from "../../../store";
-import { clearDistributionMetricsMap, fetchAllDistributionMetrics, fetchOrganizerPosts } from "../../../store/postSlice";
-import type { DistributionMetricsFacebook, GetPostsParams, PostListItem } from "../../../types/post/post";
-import { useParams } from "react-router-dom";
+import { clearDistributionMetricsMap, fetchAllDistributionMetrics } from "../../../store/postSlice";
+import type { DistributionMetricsFacebook, PostListItem } from "../../../types/post/post";
 import { EmptyState } from "../shared/EmtyState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ export default function MarketingPerformanceBarChart() {
         dispatch(clearDistributionMetricsMap());
         postService.getOrganizerPosts({
             pageNumber: 1,
-            pageSize: 20,
+            pageSize: 50,
             sortColumn: "PublishedAt",
             sortOrder: "desc",
             status: "Published",
@@ -279,26 +279,21 @@ export default function MarketingPerformanceBarChart() {
         if (targets.length) dispatch(fetchAllDistributionMetrics(targets));
     }, [localPosts]);
 
+    const handleRefresh = useCallback(() => {
+        postService.getOrganizerPosts({
+            pageNumber: 1,
+            pageSize: 20,
+            sortColumn: "PublishedAt",
+            sortOrder: "desc",
+            status: "Published",
+            hasExternalPostUrl: true,
+            eventId: eventId
+        }).then(res => {
+            if (res.data.isSuccess) setLocalPosts(res.data.data.items);
+        });
+    }, [eventId]);
 
     const isLoading = loading.fetchList || loading.fetchAllDistributionMetrics;
-
-    const FETCH_PARAMS: GetPostsParams = {
-        pageNumber: 1,
-        pageSize: 20,
-        sortColumn: "PublishedAt",
-        sortOrder: "desc",
-        status: "Published",
-        hasExternalPostUrl: true,
-        eventId: eventId
-    } as const;
-
-    const handleRefresh = useCallback(() => {
-        dispatch(fetchOrganizerPosts(FETCH_PARAMS));
-    }, [dispatch]);
-
-    useEffect(() => {
-        dispatch(fetchOrganizerPosts(FETCH_PARAMS));
-    }, []);
 
     const chartData = useMemo(() => {
         const postsWithFb = localPosts
