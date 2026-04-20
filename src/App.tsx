@@ -68,6 +68,7 @@ import VnpayReturn from "./pages/VNPayReturn";
 import type { AppDispatch } from "./store";
 import { fetchMe, fetchRefreshToken } from "./store/authSlice";
 import HistoryWithdrawal from "./pages/User/HistoryWithdrawal";
+import VerifyMemberPage from "./pages/VerifyMember";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -107,6 +108,7 @@ function App() {
           <Route path="history-withdraw" element={<HistoryWithdrawal />} />
         </Route>
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/verify-member" element={<VerifyMemberPage />} />
 
         {/* Organizer */}
         <Route element={<RequireRole allowedRoles={["Organizer", "Attendee"]} />}>

@@ -932,7 +932,7 @@ export default function ContentDetail({
                             {canEdit && (
                                 <button onClick={() => setShowEditModal(true)}
                                     className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white transition-all">
-                                    <MdOutlineEdit className="text-base" />Chỉnh sửa tiêu đề
+                                    <MdOutlineEdit className="text-base" />Chỉnh sửa tiêu đề & ảnh
                                 </button>
                             )}
                             {canSubmit && (

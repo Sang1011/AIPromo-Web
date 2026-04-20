@@ -41,7 +41,7 @@ export default function MarketingTable() {
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>();
 
-    const { posts, pagination, loading, filters } = useSelector((s: RootState) => s.POST);
+    const { posts, pagination, loading, tableFilters: filters } = useSelector((s: RootState) => s.POST);
     const [activeTab, setActiveTab] = useState(0);
 
     useEffect(() => {
