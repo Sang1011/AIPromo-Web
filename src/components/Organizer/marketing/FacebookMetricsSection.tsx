@@ -18,6 +18,7 @@ import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetrics, fetchDistributionMetricsFacebook } from "../../../store/postSlice";
 import type { PostDetail } from "../../../types/post/post";
 import { formatDateTime } from "../../../utils/formatDateTime";
+import { EmptyState } from "../shared/EmtyState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ function MetricsSkeleton() {
 
 export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
     const dispatch = useDispatch<AppDispatch>();
-    const { distributionMetrics, loading, error } = useSelector((s: RootState) => s.POST);
+    const { distributionMetrics, loading } = useSelector((s: RootState) => s.POST);
 
     // Find facebook distribution
     const fbDistribution = post.distributions?.find(d => d.platform === "Facebook") ?? null;
@@ -212,13 +213,6 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                     </button>
                 </div>
             </div>
-
-            {/* Error state */}
-            {error.fetchDistributionMetrics && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl px-5 py-4">
-                    <p className="text-red-400 text-sm">{error.fetchDistributionMetrics}</p>
-                </div>
-            )}
 
             {/* Loading state */}
             {loading.fetchDistributionMetrics && !m && <MetricsSkeleton />}
@@ -312,13 +306,8 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                 </div>
             )}
 
-            {/* No metrics yet but distribution exists */}
-            {!m && !loading.fetchDistributionMetrics && !error.fetchDistributionMetrics && (
-                <div className="glass rounded-2xl px-6 py-8 text-center border border-slate-800">
-                    <MdFacebook className="text-blue-400/40 text-4xl mx-auto mb-3" />
-                    <p className="text-slate-500 text-sm">Chưa có dữ liệu metrics từ Facebook.</p>
-                    <p className="text-slate-600 text-xs mt-1">Metrics thường cần vài giờ sau khi đăng để có dữ liệu.</p>
-                </div>
+            {!m && !loading.fetchDistributionMetrics && (
+                <EmptyState />
             )}
         </section>
     );
