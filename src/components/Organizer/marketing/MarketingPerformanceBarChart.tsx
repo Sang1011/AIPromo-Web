@@ -37,7 +37,6 @@ interface ParsedFbMetrics {
     clicks: number;
     likes: number;
     comments: number;
-    shares: number;
 }
 
 function parseFbMetrics(
@@ -57,8 +56,7 @@ function parseFbMetrics(
         reach: m.reach ?? 0,
         clicks: m.clicks ?? 0,
         likes: m.likes ?? 0,
-        comments: m.comments ?? 0,
-        shares: m.shares ?? 0,
+        comments: m.comments ?? 0
     };
 }
 
@@ -101,11 +99,11 @@ const CHART_CONFIGS: ChartConfigType[] = [
         dimColor: "#8b5cf680",
         tooltipUnit: "%",
         getMetric: (m: ParsedFbMetrics) =>
-            m.reach > 0 ? +(((m.likes + m.comments + m.shares) / m.reach) * 100).toFixed(2) : 0,
+            m.reach > 0 ? +(((m.likes + m.comments) / m.reach) * 100).toFixed(2) : 0,
         getSecondary: null,
         secondaryLabel: "",
         primaryLabel: "Engagement Rate",
-        description: "(Likes + Comments + Shares) ÷ Reach × 100. Đo chất lượng nội dung.",
+        description: "(Likes + Comments) ÷ Reach × 100. Đo chất lượng nội dung.",
     },
     {
         id: "clickThrough",
@@ -222,7 +220,7 @@ function SummaryCards({ metricsMap }: { metricsMap: Record<string, DistributionM
 
     const totalReach = all.reduce((s, m) => s + m.reach, 0);
     const totalClicks = all.reduce((s, m) => s + m.clicks, 0);
-    const totalEngagements = all.reduce((s, m) => s + m.likes + m.comments + m.shares, 0);
+    const totalEngagements = all.reduce((s, m) => s + m.likes + m.comments, 0);
     const avgEngRate = totalReach > 0
         ? +((totalEngagements / totalReach) * 100).toFixed(2)
         : 0;
