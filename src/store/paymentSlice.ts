@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { AdminPaymentTransactionsData, AdminPaymentTransactionsResponse, PaymentHistoryParamsRequest, PaymentMyOrderResponse, PaymentOrderPaymentRequest, PaymentOrderPaymentResponse } from "../types/payment/payment";
+import type { AdminPaymentTransactionsData, AdminPaymentTransactionsResponse, PaymentHistoryParamsRequest, PaymentMyOrderResponse, PaymentOrderPaymentRequest, PaymentOrderPaymentResponse, PaymentTransactionDetailResponse, PaymentTransactionDetail } from "../types/payment/payment";
 import paymentService from "../services/paymentService";
 
 
@@ -10,10 +10,12 @@ interface PaymentState {
     paymentOrder: PaymentOrderPaymentResponse | null;
     paymentAllOrder: PaymentMyOrderResponse | null;
     adminTransactions: AdminPaymentTransactionsData | null;
+    paymentDetail: PaymentTransactionDetail | null;
     loading: {
         order: boolean;
         myOrders: boolean;
         adminTransactions: boolean;
+        paymentDetail: boolean;
     };
     error: string | null;
 }
@@ -22,10 +24,12 @@ const initialState: PaymentState = {
     paymentOrder: null,
     paymentAllOrder: null,
     adminTransactions: null,
+    paymentDetail: null,
     loading: {
         order: false,
         myOrders: false,
         adminTransactions: false,
+        paymentDetail: false,
     },
     error: null,
 };
@@ -91,6 +95,21 @@ export const fetchAdminPaymentTransactions = createAsyncThunk<
     }
 );
 
+export const fetchPaymentById = createAsyncThunk<
+    PaymentTransactionDetailResponse,
+    string
+>(
+    `${name}/fetchPaymentById`,
+    async (id, thunkAPI) => {
+        try {
+            const response = await paymentService.getPaymentById(id);
+            return response.data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error.response?.data?.message || "Failed to fetch payment detail");
+        }
+    }
+);
+
 
 const paymentSlice = createSlice({
     name,
@@ -111,6 +130,7 @@ const paymentSlice = createSlice({
       builder
         .addCase(fetchAdminPaymentTransactions.pending, (state) => {
             state.loading.adminTransactions = true;
+            // keep previous `adminTransactions` while loading to avoid empty UI during quick navigation
             state.error = null;
         })
         .addCase(fetchAdminPaymentTransactions.fulfilled, (state, action: PayloadAction<AdminPaymentTransactionsResponse>) => {
@@ -121,6 +141,21 @@ const paymentSlice = createSlice({
         })
         .addCase(fetchAdminPaymentTransactions.rejected, (state, action) => {
             state.loading.adminTransactions = false;
+            state.error = action.payload as string;
+        });
+        builder
+        .addCase(fetchPaymentById.pending, (state) => {
+            state.loading.paymentDetail = true;
+            state.error = null;
+        })
+        .addCase(fetchPaymentById.fulfilled, (state, action: PayloadAction<PaymentTransactionDetailResponse>) => {
+            state.loading.paymentDetail = false;
+            if (action.payload?.isSuccess && action.payload.data) {
+                state.paymentDetail = action.payload.data;
+            }
+        })
+        .addCase(fetchPaymentById.rejected, (state, action) => {
+            state.loading.paymentDetail = false;
             state.error = action.payload as string;
         });
      }
