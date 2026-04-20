@@ -1,18 +1,21 @@
 import { useEffect } from "react";
 import {
     MdFacebook,
-    MdOutlineTouchApp,
-    MdOutlinePeopleAlt,
-    MdOutlineThumbUp,
     MdOutlineChatBubbleOutline,
-    MdOutlineShare,
     MdOutlineOpenInNew,
+    MdOutlinePeopleAlt,
     MdOutlineRefresh,
+    MdOutlineThumbUp,
+    MdOutlineTouchApp
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+    Bar,
+    BarChart,
     Cell,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis, YAxis,
 } from "recharts";
 import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetrics, fetchDistributionMetricsFacebook } from "../../../store/postSlice";
@@ -64,11 +67,10 @@ function StatCard({
 
 // ─── Engagement breakdown bar chart ──────────────────────────────────────────
 
-function EngagementBar({ likes, comments, shares }: { likes: number; comments: number; shares: number }) {
+function EngagementBar({ likes, comments }: { likes: number; comments: number }) {
     const data = [
         { name: "Thích", value: likes, color: "#3b82f6" },
-        { name: "Bình luận", value: comments, color: "#8b5cf6" },
-        { name: "Chia sẻ", value: shares, color: "#ec4899" },
+        { name: "Bình luận", value: comments, color: "#8b5cf6" }
     ];
 
     const CustomTooltip = ({ active, payload }: any) => {
@@ -175,7 +177,7 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
     const m = distributionMetrics;
 
     // Derived metrics
-    const engagementRate = m ? pct(m.likes + m.comments + m.shares, m.reach) : "—";
+    const engagementRate = m ? pct(m.likes + m.comments, m.reach) : "—";
 
     return (
         <section className="space-y-6">
@@ -252,13 +254,6 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                             color="text-purple-400"
                             borderColor="border-purple-500/20"
                         />
-                        <StatCard
-                            icon={<MdOutlineShare />}
-                            label="Chia sẻ"
-                            value={fmt(m.shares)}
-                            color="text-pink-400"
-                            borderColor="border-pink-500/20"
-                        />
                     </div>
 
                     {/* ── Row 2: Engagement breakdown chart ── */}
@@ -271,7 +266,7 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500 inline-block" />Bình luận</span>
                                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-pink-500 inline-block" />Chia sẻ</span>
                             </div>
-                            <EngagementBar likes={m.likes} comments={m.comments} shares={m.shares} />
+                            <EngagementBar likes={m.likes} comments={m.comments} />
                         </div>
                     </div>
 
@@ -280,7 +275,7 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                         <RateCard
                             label="Engagement Rate"
                             rate={engagementRate}
-                            numerator={m.likes + m.comments + m.shares}
+                            numerator={m.likes + m.comments}
                             denominator={m.reach}
                             numeratorLabel="Tổng tương tác"
                             denominatorLabel="Reach"

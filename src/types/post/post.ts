@@ -122,7 +122,6 @@ export interface DistributionMetricsFacebook {
     externalUrl: string;
     likes: number;
     comments: number;
-    shares: number;
     reach: number;
     clicks: number;
     fetchedAt: Date;

@@ -6,10 +6,9 @@ import {
     MdOutlineChatBubbleOutline,
     MdOutlinePeopleAlt,
     MdOutlineRefresh,
-    MdOutlineShare,
     MdOutlineThumbUp,
     MdOutlineTouchApp,
-    MdOutlineVisibility,
+    MdOutlineVisibility
 } from "react-icons/md";
 import { useParams } from "react-router-dom";
 import {
@@ -81,8 +80,7 @@ function SummaryKpis({ data }: { data: PostWithMetrics[] }) {
     const totalClicks = data.reduce((s, d) => s + d.metrics.clicks, 0);
     const totalLikes = data.reduce((s, d) => s + d.metrics.likes, 0);
     const totalComments = data.reduce((s, d) => s + d.metrics.comments, 0);
-    const totalShares = data.reduce((s, d) => s + d.metrics.shares, 0);
-    const totalEngagements = totalLikes + totalComments + totalShares;
+    const totalEngagements = totalLikes + totalComments;
     const avgEngRate = totalReach > 0 ? ((totalEngagements / totalReach) * 100).toFixed(2) : "0";
 
     const cards: KpiCardProps[] = [
@@ -140,15 +138,6 @@ function SummaryKpis({ data }: { data: PostWithMetrics[] }) {
             borderColor: "border-pink-500/20",
             bgColor: "bg-pink-500/5",
         },
-        {
-            icon: <MdOutlineShare />,
-            label: "Tổng Chia sẻ",
-            value: fmt(totalShares),
-            sub: `${pct(totalShares, totalEngagements)} tổng tương tác`,
-            color: "text-orange-400",
-            borderColor: "border-orange-500/20",
-            bgColor: "bg-orange-500/5",
-        }
     ];
 
     return (
@@ -225,7 +214,7 @@ function CtrPerPostChart({ data }: { data: PostWithMetrics[] }) {
         title: d.post.title,
         clicks: d.metrics.clicks,
         engRate: d.metrics.reach > 0
-            ? +(((d.metrics.likes + d.metrics.comments + d.metrics.shares) / d.metrics.reach) * 100).toFixed(2)
+            ? +(((d.metrics.likes + d.metrics.comments) / d.metrics.reach) * 100).toFixed(2)
             : 0,
     }));
 
@@ -316,13 +305,11 @@ function CtrPerPostChart({ data }: { data: PostWithMetrics[] }) {
 function EngagementBreakdown({ data }: { data: PostWithMetrics[] }) {
     const totalLikes = data.reduce((s, d) => s + d.metrics.likes, 0);
     const totalComments = data.reduce((s, d) => s + d.metrics.comments, 0);
-    const totalShares = data.reduce((s, d) => s + d.metrics.shares, 0);
-    const total = totalLikes + totalComments + totalShares;
+    const total = totalLikes + totalComments;
 
     const breakdown = [
         { label: "Lượt thích", value: totalLikes, color: "#3b82f6", icon: <MdOutlineThumbUp /> },
         { label: "Bình luận", value: totalComments, color: "#8b5cf6", icon: <MdOutlineChatBubbleOutline /> },
-        { label: "Chia sẻ", value: totalShares, color: "#ec4899", icon: <MdOutlineShare /> },
     ];
 
     const perPostData = data.map(d => ({
@@ -330,7 +317,6 @@ function EngagementBreakdown({ data }: { data: PostWithMetrics[] }) {
         title: d.post.title,
         likes: d.metrics.likes,
         comments: d.metrics.comments,
-        shares: d.metrics.shares,
     }));
 
     const EngTooltip = ({ active, payload }: any) => {
@@ -422,7 +408,7 @@ function TopPostsTable({ data }: { data: PostWithMetrics[] }) {
                     </thead>
                     <tbody className="divide-y divide-white/5">
                         {top5.map(({ post, metrics }) => {
-                            const engRate = pct(metrics.likes + metrics.comments + metrics.shares, metrics.reach);
+                            const engRate = pct(metrics.likes + metrics.comments, metrics.reach);
                             return (
                                 <tr key={post.id} className="hover:bg-white/2 transition-colors">
                                     <td className="py-3 pr-4">
