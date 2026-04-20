@@ -164,7 +164,6 @@ export default function StaffEventApprovalQueue() {
     }
 
     try {
-      setLoadingId(eventId);
       // Only fetch event details if it's a different event
       if (!isSameEvent) {
         await dispatch(fetchEventById(eventId)).unwrap();
@@ -174,7 +173,7 @@ export default function StaffEventApprovalQueue() {
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? err?.message ?? "Không thể tải chi tiết sự kiện");
     } finally {
-      setLoadingId(null);
+      // leave loadingId unchanged here; loadingId is used for approve/reject actions only
     }
   };
 
