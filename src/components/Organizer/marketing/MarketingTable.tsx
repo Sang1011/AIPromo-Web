@@ -58,7 +58,11 @@ export default function MarketingTable() {
 
     const handleTabChange = (idx: number) => {
         setActiveTab(idx);
-        dispatch(setPostFilters({ pageNumber: 1, status: TAB_FILTERS[idx].status }));
+        const selectedStatus = TAB_FILTERS[idx].status;
+        dispatch(setPostFilters({
+            pageNumber: 1,
+            ...(selectedStatus ? { status: selectedStatus } : { status: undefined })
+        }));
     };
 
     return (
