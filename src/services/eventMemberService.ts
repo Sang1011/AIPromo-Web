@@ -34,7 +34,7 @@ const eventMemberService = {
         return interceptorAPI().get(`/events/assigned`);
     },
     confirmMember: (eventId: string, memberId: string): Promise<AxiosResponse<any>> => {
-        return interceptorAPI().post(`/events/${eventId}/members/${memberId}/confirm`);
+        return interceptorAPI().put(`/events/${eventId}/members/${memberId}/confirm`);
     },
 };
 
