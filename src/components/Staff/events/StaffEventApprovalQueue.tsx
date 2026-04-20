@@ -146,8 +146,6 @@ export default function StaffEventApprovalQueue() {
   const openDetailModal = async (eventId: string) => {
     setSelectedEventId(eventId);
     setShowDetailModal(true);
-    // Reset modal UI state to avoid stale/conflicting state when
-    // reopening the same event's detail view.
     setShowRejectInput(false);
     setShowConfirmApprove(false);
     setShowConfirmReject(false);
@@ -155,7 +153,7 @@ export default function StaffEventApprovalQueue() {
     setRejectReason("");
     setCancelReason("");
     setLoadingId(null);
-    // Check if we already have data for this event
+
     const isSameEvent = currentEvent?.id === eventId;
     const hasSpecForThisEvent = eventSpec !== null && eventSpecEventId === eventId;
 

@@ -23,7 +23,7 @@ export default function StaffEventApprovalStats() {
       fetchPendingEvents({
         PageNumber: 1,
         PageSize: 50,
-        Statuses: "PendingReview,PendingCancelation"
+        Statuses: "PendingReview,PendingCancellation"
       })
     )
 
