@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Calendar, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Zap } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store';
 import API from '../../services/api';
@@ -35,7 +35,7 @@ export default function EventRecommendations() {
   const [events, setEvents] = useState<RecommendationEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const { currentInfor } = useSelector((state: RootState) => state.AUTH);
   const user = currentInfor as UserInfo;
   const userId = user?.userId;
@@ -55,7 +55,7 @@ export default function EventRecommendations() {
       // Sử dụng API.callWithToken() - nó sẽ tự lấy token từ localStorage 
       // hoặc bạn có thể truyền token vào nếu muốn: API.callWithToken(myToken)
       const response = await API.callWithToken().get<ApiResponse>(
-        `/activity/recommendations/${uid}`, 
+        `/activity/recommendations/${uid}`,
         {
           params: {
             topN: 20,
@@ -84,11 +84,11 @@ export default function EventRecommendations() {
 
   // --- Logic Render (Giữ nguyên các phần cũ) ---
   if (loading) return <div className="p-6 animate-pulse text-gray-400 text-center">Đang tìm kiếm sự kiện phù hợp...</div>;
-  
+
   if (error) return (
     <div className="p-6 text-center">
       <p className="text-red-400 mb-2">{error}</p>
-      <button 
+      <button
         onClick={() => userId && fetchRecommendations(userId)}
         className="text-primary hover:underline text-sm"
       >
@@ -126,7 +126,7 @@ export default function EventRecommendations() {
 // Component EventCard giữ nguyên logic format...
 function EventCard({ event }: { event: RecommendationEvent }) {
   const matchPercentage = Math.round(event.finalScore * 100);
-  
+
   return (
     <div className="bg-card-dark border border-border-dark rounded-xl overflow-hidden hover:border-primary transition-all group flex flex-col h-full">
       <div className="relative h-40">
@@ -149,7 +149,7 @@ function EventCard({ event }: { event: RecommendationEvent }) {
               {event.minPrice ? `${event.minPrice.toLocaleString()}đ` : 'Miễn phí'}
             </span>
             <button className="text-white bg-surface-dark p-1.5 rounded-lg group-hover:bg-primary transition-colors">
-               <Zap size={14} />
+              <Zap size={14} />
             </button>
           </div>
         </div>
