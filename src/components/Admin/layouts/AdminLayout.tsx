@@ -280,7 +280,7 @@ export default function AdminLayout() {
                 </header>
 
                 <main className="flex-1 overflow-y-auto p-8 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-[#0B0B12] [&::-webkit-scrollbar-thumb]:bg-[#302447] [&::-webkit-scrollbar-thumb]:rounded-full">
-                    <Outlet />
+                    <Outlet key={location.pathname} />
                 </main>
             </div>
 
