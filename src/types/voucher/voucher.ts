@@ -3,6 +3,8 @@ import type { ApiResponse } from "../api";
 export type VoucherType = "Percentage" | "Fixed";
 
 export type CreateVoucherRequest = {
+    name: string;
+    description: string;
     couponCode: string;
     type: VoucherType;
     value: number;
@@ -13,6 +15,8 @@ export type CreateVoucherRequest = {
 };
 
 export type UpdateVoucherRequest = {
+    name: string;
+    description: string;
     couponCode: string;
     type: VoucherType;
     value: number;
@@ -31,6 +35,8 @@ export type GetVouchersParams = {
 
 export type VoucherItem = {
     id: string;
+    name: string;
+    description: string;
     couponCode: string;
     type: VoucherType;
     value: number;
