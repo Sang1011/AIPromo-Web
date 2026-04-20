@@ -57,6 +57,8 @@ export interface AdminPaymentTransaction {
   userId: string;
   username: string;
   type: string;
+  referenceType?: string | null;
+  referenceId?: string | null;
   internalStatus: string;
   amount: number;
   currency: string;
@@ -87,6 +89,44 @@ export interface AdminPaymentTransactionsData {
 export interface AdminPaymentTransactionsResponse {
   isSuccess: boolean;
   data: AdminPaymentTransactionsData;
+  message: string;
+  timestamp: string;
+}
+
+export interface PaymentTransactionItemDetail {
+  orderTicketId?: string | null;
+  eventSessionId?: string | null;
+  amount: number;
+  internalStatus: "Pending" | "Completed" | "Failed";
+  refundedAt: string | null;
+  createdAt: string;
+}
+
+export interface PaymentTransactionDetail {
+  id: string;
+  userId?: string;
+  username: string;
+  type: string;
+  referenceType?: string | null;
+  referenceId?: string | null;
+  internalStatus: string;
+  amount: number;
+  currency: string;
+  orderId?: string | null;
+  items?: PaymentTransactionItemDetail[];
+  gatewayTxnRef?: string | null;
+  gatewayTransactionNo?: string | null;
+  gatewayResponseCode?: string | null;
+  gatewayBankCode?: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  failedAt: string | null;
+  refundedAt: string | null;
+}
+
+export interface PaymentTransactionDetailResponse {
+  isSuccess: boolean;
+  data: PaymentTransactionDetail;
   message: string;
   timestamp: string;
 }

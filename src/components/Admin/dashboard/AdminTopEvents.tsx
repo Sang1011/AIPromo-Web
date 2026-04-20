@@ -33,6 +33,9 @@ export default function AdminTopEvents() {
     const { topEvents, loading } = useSelector((state: RootState) => state.ADMIN_REPORTS);
     const navigate = useNavigate();
 
+    // Only include events with status === "Completed" in the ranking
+    const completedEvents = (topEvents ?? []).filter((e: any) => e.status === "Completed");
+
     useEffect(() => {
         dispatch(fetchTopEvents(5));
     }, [dispatch]);
@@ -83,7 +86,7 @@ export default function AdminTopEvents() {
                     <div className="w-20 h-20 rounded-full bg-[#302447] flex items-center justify-center mb-4">
                         <MdLocalFireDepartment className="text-4xl text-[#524a6e]" />
                     </div>
-                    <p className="text-[#a592c8] text-sm">Chưa có sự kiện nào có doanh thu</p>
+                    <p className="text-[#a592c8] text-sm">Chưa có sự kiện Completed để xếp hạng</p>
                 </div>
             </div>
         );
@@ -99,7 +102,7 @@ export default function AdminTopEvents() {
                         Bảng Xếp Hạng Sự Kiện
                     </h2>
                     <p className="text-[#a592c8] text-sm mt-1">
-                        Top {topEvents.length} sự kiện có doanh thu cao nhất
+                        Top {completedEvents.length} sự kiện có doanh thu cao nhất
                     </p>
                 </div>
                 <button className="text-xs font-bold text-primary hover:underline transition-all" onClick={() => navigate("/admin/events")}>
@@ -109,7 +112,7 @@ export default function AdminTopEvents() {
 
             {/* Events Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {topEvents.map((event, index) => {
+                {completedEvents.map((event, index) => {
                     const rank = index + 1;
                     const colorGradient = rankColors[index] || rankColors[rankColors.length - 1];
                     const glowClass = rankGlow[index] || rankGlow[rankGlow.length - 1];
@@ -218,7 +221,7 @@ export default function AdminTopEvents() {
                                         <div
                                             className={`h-full bg-gradient-to-r ${colorGradient} rounded-full transition-all duration-700`}
                                             style={{
-                                                width: `${((index + 1) / topEvents.length) * 100}%`,
+                                                width: `${((index + 1) / completedEvents.length) * 100}%`,
                                             }}
                                         />
                                     </div>

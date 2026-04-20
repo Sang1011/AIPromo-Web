@@ -29,6 +29,9 @@ const paymentService = {
     }): Promise<AxiosResponse<AdminPaymentTransactionsResponse>> => {
         return interceptorAPI().get(`/payments`, { params });
     },
+    getPaymentById: (id: string): Promise<AxiosResponse<any>> => {
+        return interceptorAPI().get(`/payments/${id}`);
+    },
 
 }
 export default paymentService;
