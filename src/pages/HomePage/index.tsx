@@ -10,6 +10,7 @@ import ProcessSection from '../../components/ProcessSection';
 import PartnersAndDestinations from '../../components/PartnersAndDestinations';
 import CallToActionSection from '../../components/CallToActionSection';
 import BlogListSection from '../../components/Blog';
+import EventRecommendations from '../../components/Recomend';
 const HomePage: React.FC = () => {
 
   return (
@@ -20,6 +21,7 @@ const HomePage: React.FC = () => {
       <main>
         <HeroSection />
         <StatsSection />
+        <EventRecommendations/>
         <BlogListSection/>
         <CategorySection />
         <EventListSection />
