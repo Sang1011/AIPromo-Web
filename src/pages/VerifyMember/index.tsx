@@ -100,7 +100,7 @@ export default function VerifyMemberPage() {
                                         onClick={() => navigate("/")}
                                         className="btn-primary"
                                     >
-                                        Đến trang quản lý
+                                        Về trang chủ
                                     </button>
                                 }
                             />
