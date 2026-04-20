@@ -9,20 +9,23 @@ import { fetchAdminPaymentTransactions } from "../../../store/paymentSlice";
 export default function AdminFinanceTransactionsTable() {
     const dispatch = useDispatch<AppDispatch>();
     const { adminTransactions } = useSelector((state: RootState) => state.PAYMENT);
+
     const [currentPage, setCurrentPage] = useState(1);
     const [tableLoading, setTableLoading] = useState(true);
+
     const pageSize = 10;
 
-    // Load function theo đúng pattern của AdminHashtagTable
-    const loadTransactions = async (pageNumber: number = currentPage) => {
+    const loadTransactions = async (pageNumber: number) => {
         try {
             setTableLoading(true);
+
             await dispatch(fetchAdminPaymentTransactions({
                 PageNumber: pageNumber,
                 PageSize: pageSize,
                 SortColumn: "CreatedAt",
                 SortOrder: "desc",
             })).unwrap();
+
         } catch (e) {
             console.error("Failed to load admin payment transactions", e);
         } finally {
@@ -30,10 +33,15 @@ export default function AdminFinanceTransactionsTable() {
         }
     };
 
-    // Load khi mount + khi đổi trang (đảm bảo load lại mỗi khi tab được mở)
+    // FIX 1: reset page khi mount lại tab
+    useEffect(() => {
+        setCurrentPage(1);
+    }, []);
+
+    // FIX 2: load theo page
     useEffect(() => {
         loadTransactions(currentPage);
-    }, [dispatch, currentPage]);
+    }, [currentPage]);
 
     const handleRefresh = async () => {
         await loadTransactions(currentPage);
@@ -91,28 +99,30 @@ export default function AdminFinanceTransactionsTable() {
         setDetailOpen(true);
     };
 
-    // ====================== SỬA TRIỆT ĐỂ PHẦN DATA PARSING ======================
-    // Slice đã set adminTransactions = action.payload.data (AdminPaymentTransactionsData)
-    // Nên không cần fallback phức tạp nữa. Nếu API thay đổi, vẫn an toàn.
     const apiData = adminTransactions;
     const displayTransactions: AdminPaymentTransaction[] = apiData?.items ?? [];
 
     const totalCount = apiData?.totalCount ?? 0;
     const totalPages = apiData?.totalPages ?? Math.max(1, Math.ceil(totalCount / pageSize));
 
-    // Tính start/end thông minh hơn: ưu tiên metadata từ API, fallback an toàn với totalCount
     const pageNumberFromApi = apiData?.pageNumber ?? currentPage;
-    const currentStartIndex = apiData?.currentStartIndex ?? 
-                             ((pageNumberFromApi - 1) * pageSize + 1);
-    const currentEndIndex = apiData?.currentEndIndex ?? 
-                           Math.min((pageNumberFromApi - 1) * pageSize + displayTransactions.length, totalCount);
 
-    // Giữ currentPage hợp lệ
+    const currentStartIndex =
+        apiData?.currentStartIndex ??
+        ((pageNumberFromApi - 1) * pageSize + 1);
+
+    const currentEndIndex =
+        apiData?.currentEndIndex ??
+        Math.min(
+            (pageNumberFromApi - 1) * pageSize + displayTransactions.length,
+            totalCount
+        );
+
     useEffect(() => {
         if (totalPages && currentPage > totalPages) {
             setCurrentPage(totalPages);
         }
-    }, [totalPages, currentPage]);
+    }, [totalPages]);
 
     return (
         <>

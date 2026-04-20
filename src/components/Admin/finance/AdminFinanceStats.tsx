@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchGlobalRevenue } from "../../../store/revenueSlice";
 import { fetchAdminPaymentTransactions } from "../../../store/paymentSlice";
+import { fetchAdminReportsOverview } from "../../../store/adminReportsSlice";
 import {
     MdTrendingUp,
     MdAccountBalanceWallet,
@@ -11,23 +11,23 @@ import {
 } from "react-icons/md";
 import AdminStatsCard from "../shared/AdminStatsCard";
 
-const PLATFORM_FEE_PERCENTAGE = 15; // 15% platform fee
+const PLATFORM_FEE_PERCENTAGE = 15; 
 
 export default function AdminFinanceStats() {
     const dispatch = useDispatch<AppDispatch>();
     const { globalRevenue, loading: revenueLoading, error } = useSelector(
         (state: RootState) => state.REVENUE
     );
+    const { data: reportsData } = useSelector((state: RootState) => state.ADMIN_REPORTS);
     const { adminTransactions, loading: transactionLoading } = useSelector(
         (state: RootState) => state.PAYMENT
     );
 
     useEffect(() => {
-        dispatch(fetchGlobalRevenue());
-        // Fetch all transactions to get total count
+        dispatch(fetchAdminReportsOverview());
         dispatch(fetchAdminPaymentTransactions({
             PageNumber: 1,
-            PageSize: 1, // We only need the totalCount, not all items
+            PageSize: 1,
             SortColumn: "CreatedAt",
             SortOrder: "desc",
         }));
@@ -40,9 +40,9 @@ export default function AdminFinanceStats() {
         }).format(value);
     };
 
-    const grossRevenue = globalRevenue?.data?.grossRevenue ?? 0;
+    const grossRevenue = reportsData?.kpis?.totalRevenue?.value ?? globalRevenue?.data?.grossRevenue ?? 0;
     const netRevenue = globalRevenue?.data?.netRevenue ?? 0;
-    const eventCount = globalRevenue?.data?.eventCount ?? 0;
+    const eventCount = reportsData?.kpis?.events?.total ?? globalRevenue?.data?.eventCount ?? 0;
     const totalTransactions = adminTransactions?.totalCount ?? 0;
 
     // Calculate platform fee (15% of gross revenue)
