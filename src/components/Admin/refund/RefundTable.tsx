@@ -194,7 +194,6 @@ export default function RefundTable() {
                                                 />
                                                 <div>
                                                     <p className="text-sm font-semibold text-slate-200 line-clamp-1">{event.title}</p>
-                                                    <p className="text-xs text-slate-500">ID: {event.id.slice(0, 8)}...</p>
                                                 </div>
                                             </div>
                                         </td>

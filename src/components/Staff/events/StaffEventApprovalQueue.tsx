@@ -146,8 +146,6 @@ export default function StaffEventApprovalQueue() {
   const openDetailModal = async (eventId: string) => {
     setSelectedEventId(eventId);
     setShowDetailModal(true);
-    // Reset modal UI state to avoid stale/conflicting state when
-    // reopening the same event's detail view.
     setShowRejectInput(false);
     setShowConfirmApprove(false);
     setShowConfirmReject(false);
@@ -155,7 +153,7 @@ export default function StaffEventApprovalQueue() {
     setRejectReason("");
     setCancelReason("");
     setLoadingId(null);
-    // Check if we already have data for this event
+
     const isSameEvent = currentEvent?.id === eventId;
     const hasSpecForThisEvent = eventSpec !== null && eventSpecEventId === eventId;
 
@@ -164,7 +162,6 @@ export default function StaffEventApprovalQueue() {
     }
 
     try {
-      setLoadingId(eventId);
       // Only fetch event details if it's a different event
       if (!isSameEvent) {
         await dispatch(fetchEventById(eventId)).unwrap();
@@ -174,7 +171,7 @@ export default function StaffEventApprovalQueue() {
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? err?.message ?? "Không thể tải chi tiết sự kiện");
     } finally {
-      setLoadingId(null);
+      // leave loadingId unchanged here; loadingId is used for approve/reject actions only
     }
   };
 
