@@ -33,6 +33,8 @@ export default function AdminCreateAIPackageModal({ isOpen, onClose }: Props) {
         }
     }, [isOpen]);
 
+    const priceLabel = type === "Subscription" ? "Giá gói (VND/tháng)" : "Giá gói (VND)";
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const payload: any = {
@@ -76,7 +78,7 @@ export default function AdminCreateAIPackageModal({ isOpen, onClose }: Props) {
                             <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full bg-slate-900/50 border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 focus:ring-2 focus:ring-violet-500/50 outline-none" placeholder="VD: Gói Business Premium" />
                         </div>
                         <div>
-                            <label className="text-sm font-semibold text-slate-300 block mb-2">Giá gói (VND/tháng)</label>
+                            <label className="text-sm font-semibold text-slate-300 block mb-2">{priceLabel}</label>
                             <div className="relative">
                                 <input value={price ?? ''} onChange={(e) => setPrice(e.target.value ? Number(e.target.value) : undefined)} type="number" className="w-full bg-slate-900/50 border-slate-700 rounded-lg pl-4 pr-16 py-2.5 text-slate-100 focus:ring-2 focus:ring-violet-500/50 outline-none" placeholder="2000000" />
                                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">VND</span>
