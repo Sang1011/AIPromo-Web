@@ -691,6 +691,10 @@ export default function PaymentTicket() {
     setTopUpError(null);
     if (!resolvedOrderId) return;
 
+    if (amount === 0) {
+      redirectIfUrl("/order/success")
+    }
+
     localStorage.setItem("pendingPaymentAfterTopUp", "1");
     localStorage.setItem("pendingPaymentOrderId", resolvedOrderId);
     localStorage.setItem("pendingPaymentMethod", "wallet");
@@ -701,6 +705,8 @@ export default function PaymentTicket() {
         description: `Nạp ${amount.toLocaleString("vi-VN")}đ vào ví để thanh toán đơn ${resolvedOrderId}`,
       })
     );
+
+    localStorage.setItem("vnpay_return_target", "attendee_wallet_payment_page");
 
     if (fetchToUpWallet.fulfilled.match(result)) {
       const payload = (result.payload as any)?.data as ToUpWalletResponse;
@@ -732,6 +738,12 @@ export default function PaymentTicket() {
     }
     if (!isOrderReadyForPayment) {
       setPayError("Đang tải thông tin đơn hàng hoặc dữ liệu thanh toán chưa sẵn sàng.");
+      return;
+    }
+
+    if (total === 0) {
+      await clearOldOrderFromFirebase();
+      navigate("/order/success");
       return;
     }
 

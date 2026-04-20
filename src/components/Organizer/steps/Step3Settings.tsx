@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { FiEdit2, FiEye, FiImage, FiLink, FiMap, FiPlus, FiUpload, FiX } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { FiEdit2, FiEye, FiLink, FiMap, FiPlus } from "react-icons/fi";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch } from "../../../store";
 import { fetchEventById, fetchUpdateEventSettings, fetchUpload } from "../../../store/eventSlice";
-import { fetchAssignAreas, fetchGetSeatMap } from "../../../store/seatMapSlice";
+import { fetchGetSeatMap } from "../../../store/seatMapSlice";
 import type { EventSession, GetEventDetailResponse } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
 import ImageViewer from "../shared/ImagePreview";
@@ -30,7 +30,6 @@ export default function Step3Settings({
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [settingsForm, setSettingsForm] = useState<EventSettingsForm>({
         isEmailReminderEnabled: false,
@@ -102,46 +101,13 @@ export default function Step3Settings({
         return JSON.stringify(initialForm) !== JSON.stringify(settingsForm) || !!pendingFile;
     };
 
-    // Chọn file → chỉ preview, chưa upload
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setPendingFile(file);
-        setPreviewUrl(URL.createObjectURL(file));
-        // Reset input để chọn lại cùng file vẫn trigger
-        e.target.value = "";
-    };
-
-    const removeImage = () => {
-        setPendingFile(null);
-        setPreviewUrl("");
-        updateForm("specImage", "");
-    };
-
-    type mappingAssign = {
-        ticketTypeId: string;
-        areaId: string;
-    }[]
-
     const handleSubmit = async () => {
         if (!validateForm()) return;
         if (!isFormChanged()) { onNext?.(); return; }
         if (!eventId) return;
 
         try {
-            let finalSpecImageUrl = settingsForm.specImage;
-
-            if (pendingFile) {
-                setUploading(true);
-                finalSpecImageUrl = await dispatch(fetchUpload({
-                    folder: "spec-images",
-                    file: pendingFile,
-                })).unwrap();
-                setUploading(false);
-                setPendingFile(null);
-                setPreviewUrl(finalSpecImageUrl);
-                updateForm("specImage", finalSpecImageUrl);
-            }
+            let finalSpecImageUrl = "";
 
             if (isAllowUpdate) {
                 await dispatch(fetchUpdateEventSettings({
@@ -155,17 +121,6 @@ export default function Step3Settings({
                         eventEndAt: eventData?.eventEndAt ?? "",
                     }
                 })).unwrap();
-
-                const ticketTypeIdList = eventData?.ticketTypes.map((type) => type.id);
-                const mappings: mappingAssign = ticketTypeIdList?.map((ticketTypeId) => ({
-                    ticketTypeId,
-                    areaId: crypto.randomUUID(),
-                })) ?? [];
-
-                await dispatch(fetchAssignAreas({
-                    eventId: eventId!,
-                    data: { mappings },
-                }));
             } else {
                 await dispatch(fetchUpdateEventSettings({
                     eventId,
@@ -326,96 +281,6 @@ export default function Step3Settings({
                         </button>
                     </div>
                 )}
-            </section>
-
-            {/* ===== Ảnh sơ đồ ===== */}
-            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-                        <FiImage />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold text-white">Ảnh sơ đồ chỗ ngồi</h2>
-                        <p className="text-xs text-slate-500 mt-0.5">Tải lên ảnh sơ đồ để hiển thị cho người mua vé</p>
-                    </div>
-                </div>
-
-                {displayImage ? (
-                    // ── Đã có ảnh ──────────────────────────────────────────
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.03] border border-white/8">
-                        {/* Thumbnail — click mở viewer */}
-                        <button
-                            type="button"
-                            onClick={() => setViewerOpen(true)}
-                            className="relative w-24 h-16 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 group"
-                        >
-                            <img src={displayImage} alt="Spec" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                                <FiEye size={18} className="text-white" />
-                            </div>
-                        </button>
-
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">
-                                {pendingFile ? pendingFile.name : "Ảnh sơ đồ hiện tại"}
-                            </p>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                                {pendingFile ? "Chưa lưu — sẽ upload khi bấm Lưu" : "Đã lưu"}
-                            </p>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            {/* Đổi ảnh */}
-                            {isAllowUpdate && (
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/8 text-xs text-white transition"
-                                >
-                                    <FiUpload size={12} />
-                                    Đổi ảnh
-                                </button>
-                            )}
-                            {/* Xóa ảnh */}
-                            {isAllowUpdate && (
-                                <button
-                                    type="button"
-                                    onClick={removeImage}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 transition"
-                                >
-                                    <FiX size={13} />
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    // ── Chưa có ảnh ────────────────────────────────────────
-                    <div
-                        onClick={() => isAllowUpdate && fileInputRef.current?.click()}
-                        className={`rounded-xl border border-dashed border-white/10 bg-white/[0.015] p-8 flex flex-col items-center gap-3 text-center transition
-                            ${isAllowUpdate ? 'hover:border-primary/40 hover:bg-primary/5 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
-                    >
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
-                            <FiImage size={22} className="text-slate-500" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-semibold text-slate-300">Chưa có ảnh sơ đồ</p>
-                            <p className="text-xs text-slate-500 mt-1">Nhấn để tải lên ảnh sơ đồ chỗ ngồi</p>
-                        </div>
-                        <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-medium">
-                            <FiUpload size={14} />
-                            Chọn ảnh
-                        </div>
-                    </div>
-                )}
-
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                />
             </section>
 
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">

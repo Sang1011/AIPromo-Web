@@ -16,19 +16,21 @@ export default function VnpayReturn() {
         localStorage.removeItem("vnpay_return_target");
 
         const isOrganizerWallet = target === "organizer_wallet";
+        const isAttendeeWalletHandleOrderPaymentPage = target === "attendee_wallet_payment_page";
+        const isAttendeeTopUpFromWalletPage = target === "attendee_wallet_account_page"
 
         if (data.isSuccess && data.data?.isSuccess) {
           navigate(
             isOrganizerWallet
               ? "/organizer/payment/wallet/success"
-              : "/order/success",
+              : isAttendeeWalletHandleOrderPaymentPage ? "/payment-ticket" : isAttendeeTopUpFromWalletPage ? "/profile/account" : "/order/success",
             { replace: true, state: { transaction: data.data } }
           );
         } else {
           navigate(
             isOrganizerWallet
               ? "/organizer/payment/wallet/failed"
-              : "/order/failed",
+              : isAttendeeWalletHandleOrderPaymentPage ? "/payment-ticket" : isAttendeeTopUpFromWalletPage ? "/profile/account" : "/order/failed",
             { replace: true, state: { message: data.data?.message ?? "Giao dịch thất bại." } }
           );
         }

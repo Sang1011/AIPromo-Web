@@ -42,13 +42,6 @@ function BlockItem({ block }: { block: ContentBlock }) {
             );
         }
 
-        case "paragraph":
-            return (
-                <p className="text-[0.93rem] text-slate-400 leading-[1.85] break-words">
-                    {block.text}
-                </p>
-            );
-
         case "image":
             if (!block.src) return null;
             return (
@@ -63,6 +56,12 @@ function BlockItem({ block }: { block: ContentBlock }) {
                 </figure>
             );
 
+        case "paragraph":
+            return (
+                <p className="text-[0.93rem] text-slate-400 leading-[1.85] break-words">
+                    {block.text}
+                </p>
+            );
         case "button":
             return (
                 <div className="flex justify-center py-5">

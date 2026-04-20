@@ -15,6 +15,7 @@ import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetricsMap, fetchAllDistributionMetrics, fetchOrganizerPosts } from "../../../store/postSlice";
 import type { DistributionMetricsFacebook, GetPostsParams, PostListItem } from "../../../types/post/post";
 import { useParams } from "react-router-dom";
+import { EmptyState } from "../shared/EmtyState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -210,22 +211,6 @@ function SingleChart({ config, data }: { config: ChartConfig; data: any[] }) {
                         )}
                     </BarChart>
                 </ResponsiveContainer>
-            </div>
-        </div>
-    );
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
-
-function EmptyState() {
-    return (
-        <div className="glass rounded-[32px] p-12 border border-slate-800/50 flex flex-col items-center justify-center text-center gap-4">
-            <MdFacebook className="text-blue-400/30 text-5xl" />
-            <div>
-                <p className="text-slate-400 font-semibold">Chưa có dữ liệu Facebook</p>
-                <p className="text-slate-600 text-xs mt-1 max-w-xs">
-                    Hiệu suất sẽ hiển thị khi các bài viết được đăng lên Facebook và có dữ liệu metrics.
-                </p>
             </div>
         </div>
     );

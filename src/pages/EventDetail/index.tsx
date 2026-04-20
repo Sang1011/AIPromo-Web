@@ -210,7 +210,14 @@ function formatDate(isoString: string) {
 function formatTime(isoString: string) {
   if (!isoString) return ""
   const date = new Date(isoString)
-  return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+
+  return date.toLocaleString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
 
 function formatPrice(price: number) {
@@ -311,6 +318,18 @@ function EventDetail() {
       setRelatedPage((p) => p + 1)
     }
   }
+
+  function isSaleOver(saleEndAt: string): boolean {
+    return new Date(saleEndAt) < new Date();
+  }
+
+  function isSaleNotStarted(saleStartAt: string): boolean {
+    return new Date(saleStartAt) > new Date();
+  }
+
+  const saleOver = isSaleOver(eventDetail.ticketSaleEndAt);
+  const saleNotStarted = isSaleNotStarted(eventDetail.ticketSaleStartAt);
+  const canBuy = !saleOver && !saleNotStarted;
 
   // Filter out the current event from related list
   const filteredRelated = relatedEvents.filter((e) => String(e.id) !== String(eventDetail.id))
@@ -530,7 +549,7 @@ function EventDetail() {
                 </section>
               )}
 
-             
+
 
             </div>
 
@@ -565,7 +584,7 @@ function EventDetail() {
                           <span className="text-xl text-primary font-bold">VNĐ</span>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                          Mở bán: {saleStart} — {saleEnd}
+                          Thời gian mở bán: {saleStart} — {saleEnd}
                         </p>
                       </div>
 
@@ -622,12 +641,30 @@ function EventDetail() {
                     </div>
                   )}
 
+                  {saleOver && (
+                    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium">
+                      <span className="material-symbols-outlined text-base">event_busy</span>
+                      Đã hết thời gian mở bán vé
+                    </div>
+                  )}
+                  {saleNotStarted && (
+                    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-medium">
+                      <span className="material-symbols-outlined text-base">schedule</span>
+                      Chưa đến thời gian mở bán · {saleStart}
+                    </div>
+                  )}
+
                   <button
                     onClick={handleBuyTicket}
-                    className="w-full py-5 bg-primary rounded-xl font-bold text-lg neon-glow hover:translate-y-[-2px] hover:shadow-[0_0_25px_rgba(124,63,237,0.7)] transition-all flex items-center justify-center gap-3"
+                    disabled={!canBuy}
+                    className={`w-full py-5 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-3
+        ${canBuy
+                        ? "bg-primary neon-glow hover:translate-y-[-2px] hover:shadow-[0_0_25px_rgba(124,63,237,0.7)]"
+                        : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      }`}
                   >
-                    <span>Mua vé ngay</span>
-                    <span className="material-symbols-outlined">arrow_forward</span>
+                    <span>{saleOver ? "Đã hết hạn mua vé" : saleNotStarted ? "Chưa mở bán" : "Mua vé ngay"}</span>
+                    {canBuy && <span className="material-symbols-outlined">arrow_forward</span>}
                   </button>
 
                   <div className="space-y-4">
@@ -720,7 +757,7 @@ function EventDetail() {
                   <div
                     key={event.id}
                     onClick={() => {
-                      navigate(`/event-detail/${event.id}`)
+                      navigate(`/event-detail/${event.urlPath}`)
                       window.scrollTo(0, 0)
                     }}
                     className="group glass rounded-2xl overflow-hidden hover:neon-border transition-all duration-300 cursor-pointer"

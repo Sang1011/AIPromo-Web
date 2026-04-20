@@ -654,6 +654,7 @@ export default function Step1EventInfo({
                                         + Thêm ảnh
                                     </label>
                                 )}
+
                                 {eventForm.images.map((img, i) => (
                                     <ImagePreviewBox
                                         key={img.id ?? `new-${i}`}
@@ -663,6 +664,19 @@ export default function Step1EventInfo({
                                         onRemove={isAllowUpdate ? () => handleDeleteImage(i) : undefined}
                                     />
                                 ))}
+
+                                {!isAllowUpdate && eventForm.images.length === 0 && (
+                                    <div className="flex items-center gap-2 text-slate-500 text-sm italic py-2">
+                                        <span className="text-xl opacity-30"></span>
+                                        Chưa có ảnh bổ sung
+                                    </div>
+                                )}
+
+                                {isAllowUpdate && eventForm.images.length === 0 && (
+                                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-white/10 text-slate-500 text-xs italic self-center">
+                                        Chưa có ảnh nào được thêm
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

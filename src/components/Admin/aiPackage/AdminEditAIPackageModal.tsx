@@ -167,14 +167,14 @@ export default function AdminEditAIPackageModal({ isOpen, packageId, onClose }: 
                         </div>
 
                         <div>
-                            <label className="text-sm font-semibold text-slate-300 block mb-2">Số lượng nội dung AI tối đa (mỗi tháng)</label>
+                            <label className="text-sm font-semibold text-slate-300 block mb-2">Số Token tối đa (mỗi tháng)</label>
                             <div className="relative">
                                 <input
                                     value={tokenQuota ?? ""}
                                     onChange={(e) => setTokenQuota(e.target.value ? Number(e.target.value) : undefined)}
                                     type="number"
                                     className="w-full bg-slate-900/50 border-slate-700 rounded-lg pl-4 pr-12 py-2.5 text-slate-100 focus:ring-2 focus:ring-violet-500/50 outline-none"
-                                    placeholder="500"
+                                    placeholder="5.000"
                                 />
                             </div>
                         </div>
@@ -203,7 +203,7 @@ export default function AdminEditAIPackageModal({ isOpen, packageId, onClose }: 
                                 </select>
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-slate-400">
-                                        <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                        <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 </div>
                             </div>
@@ -221,11 +221,10 @@ export default function AdminEditAIPackageModal({ isOpen, packageId, onClose }: 
                             <button
                                 type="submit"
                                 disabled={updating || !hasChanges}
-                                className={`px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all ${
-                                    hasChanges
-                                        ? "bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/20"
-                                        : "bg-slate-700 text-slate-500 cursor-not-allowed opacity-50"
-                                }`}
+                                className={`px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all ${hasChanges
+                                    ? "bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/20"
+                                    : "bg-slate-700 text-slate-500 cursor-not-allowed opacity-50"
+                                    }`}
                             >
                                 <MdSave /> {updating ? "Đang lưu..." : "Lưu thay đổi"}
                             </button>

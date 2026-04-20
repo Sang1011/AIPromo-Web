@@ -22,7 +22,6 @@ export function buildContextPrompt(
 
     const eventContext = [
         `Event: ${event.title}`,
-        event.description && `Description: ${event.description}`,
         event.location && `Location: ${event.location}`,
         hashtags && `Hashtags: ${hashtags}`,
         categories && `Categories: ${categories}`,
@@ -30,7 +29,7 @@ export function buildContextPrompt(
         sessions && `Sessions: ${sessions}`,
     ].filter(Boolean).join(". ");
 
-    const eventDetailUrl = `${window.location.origin}/event-detail/${event.urlPath}`;
+    const eventDetailUrl = `https://aipromo.online/event-detail/${event.urlPath}`;
 
     const ctaInstruction = event.id
         ? `The call-to-action button must link directly to: ${eventDetailUrl}. Do not use placeholder text.`
@@ -40,7 +39,7 @@ export function buildContextPrompt(
         ? `Writing style: ${toneMap[tone]}.`
         : "";
 
-    return [eventContext, ctaInstruction, toneInstruction, "Do not include any image block."]
+    return [eventContext, ctaInstruction, toneInstruction, "Do not include any image block. The image will be injected separately after generation."]
         .filter(Boolean)
         .join("\n");
 }

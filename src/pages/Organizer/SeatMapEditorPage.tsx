@@ -198,11 +198,9 @@ const SeatMapEditorPage: React.FC = () => {
     const handleCopy = useCallback(() => {
         const copiedEntities: Entity[] = [
             ...sections.filter(s => selectedIds.includes(s.id)),
-            ...seats.filter(s => selectedIds.includes(s.id)),
             ...textEntities.filter(t => selectedIds.includes(t.id))
         ];
         setClipboard(copiedEntities);
-        console.log(`Đã copy ${copiedEntities.length} phần tử`);
     }, [selectedIds, sections, seats, textEntities]);
 
     const handlePaste = useCallback(() => {
@@ -325,6 +323,7 @@ const SeatMapEditorPage: React.FC = () => {
             width: round2(area.width),
             height: round2(area.height),
             rotation: round2(area.rotation),
+            labelFontSize: area.labelFontSize != null ? Math.round(area.labelFontSize) : undefined,
             seats: seats
                 .filter(seat => seat.sectionId === area.id)
                 .map(seat => ({
@@ -343,6 +342,7 @@ const SeatMapEditorPage: React.FC = () => {
             width: round2(t.width),
             height: round2(t.height),
             rotation: round2(t.rotation),
+            fontSize: Math.round(t.fontSize),
         })),
     });
 
@@ -447,7 +447,7 @@ const SeatMapEditorPage: React.FC = () => {
                             x: round2(node.x()),
                             y: round2(node.y()),
                             rotation: round2(node.rotation()),
-                            labelFontSize: round2(Math.max(10, (s as any).labelFontSize * scale || 14)),
+                            labelFontSize: Math.round(Math.max(10, (s as any).labelFontSize * scale || 14)),
                         }
                         : s
                 )
@@ -660,11 +660,16 @@ const SeatMapEditorPage: React.FC = () => {
         const startY = box ? box.minY : selectedSection.y + 40;
         const newSeatIds: string[] = [];
 
+        const existingSeats = seats.filter(s => s.sectionId === selectedSection.id);
+        const existingRowIndices = existingSeats
+            .map(s => s.row.toUpperCase().charCodeAt(0) - 65)
+            .filter(i => !isNaN(i) && i >= 0);
+        const rowOffset = existingRowIndices.length > 0 ? Math.max(...existingRowIndices) + 1 : 0;
 
         let count = 0;
         for (let rowIndex = 0; rowIndex < gridRows; rowIndex++) {
             if (remaining !== Infinity && count >= remaining) break;
-            const row = String.fromCharCode(65 + (rowIndex % 26));
+            const row = String.fromCharCode(65 + ((rowOffset + rowIndex) % 26));
             for (let i = 0; i < gridColumns; i++) {
                 if (remaining !== Infinity && count >= remaining) break;
                 const newId = crypto.randomUUID();
@@ -789,7 +794,13 @@ const SeatMapEditorPage: React.FC = () => {
 
             let count = 0;
             for (let rowIndex = 0; rowIndex < rows && count < total; rowIndex++) {
-                const row = String.fromCharCode(65 + (rowIndex % 26));
+                const existingSeats = seats.filter(s => s.sectionId === selectedSection.id);
+                const existingRowIndices = existingSeats
+                    .map(s => s.row.toUpperCase().charCodeAt(0) - 65)
+                    .filter(i => !isNaN(i) && i >= 0);
+                const rowOffset = existingRowIndices.length > 0 ? Math.max(...existingRowIndices) + 1 : 0;
+
+                const row = String.fromCharCode(65 + ((rowOffset + rowIndex) % 26));
                 for (let i = 0; i < cols && count < total; i++) {
                     const newId = crypto.randomUUID();
                     newSeatIds.push(newId);
@@ -874,7 +885,13 @@ const SeatMapEditorPage: React.FC = () => {
 
             let count = 0;
             for (let rowIndex = 0; rowIndex < rows && count < total; rowIndex++) {
-                const row = String.fromCharCode(65 + (rowIndex % 26));
+                const existingSeats = seats.filter(s => s.sectionId === selectedSection.id);
+                const existingRowIndices = existingSeats
+                    .map(s => s.row.toUpperCase().charCodeAt(0) - 65)
+                    .filter(i => !isNaN(i) && i >= 0);
+                const rowOffset = existingRowIndices.length > 0 ? Math.max(...existingRowIndices) + 1 : 0;
+
+                const row = String.fromCharCode(65 + ((rowOffset + rowIndex) % 26));
                 for (let i = 0; i < cols && count < total; i++) {
                     const newId = crypto.randomUUID();
                     newSeatIds.push(newId);
@@ -984,7 +1001,7 @@ const SeatMapEditorPage: React.FC = () => {
 
             setSections(prev => {
                 newSection.name = isArea
-                    ? (ticketTypes[0]?.name ?? `Khu vực ${prev.length + 1}`)
+                    ? (unusedTicketType?.name ?? `Khu vực ${prev.length + 1}`)
                     : `Shape ${prev.length + 1}`;
                 if (isArea) {
                     newSection.points = []
@@ -1194,47 +1211,39 @@ const SeatMapEditorPage: React.FC = () => {
         const selected: string[] = [];
         const selectedSeats: string[] = [];
 
-        layerRef.current.find('Rect, Circle, Line, Text').forEach((node) => {
-            if (!node.id()) return;
-
-            const isSeat = seats.some(s => s.id === node.id());
-            const isSection = sections.some(s => s.id === node.id());
-            const isText = textEntities.some(t => t.id === node.id());
-
-            if (!isSeat && !isSection && !isText) return;
-
-            if (activeAreaId || seatMoveMode) {
-                // Edit mode hoặc seat move mode: chỉ select seat
-                if (!isSeat) return;
+        if (activeAreaId || seatMoveMode) {
+            layerRef.current.find('Rect').forEach((node) => {
+                if (!node.id()) return;
                 const seat = seats.find(s => s.id === node.id());
                 if (!seat) return;
-                // Nếu có activeAreaId thì chỉ lấy seat trong area đó
                 if (activeAreaId && seat.sectionId !== activeAreaId) return;
                 const parentSection = sections.find(s => s.id === seat.sectionId);
                 if (parentSection?.locked) return;
                 if (isShapeInSelectionBox(node, box)) {
                     selectedSeats.push(node.id());
                 }
-            } else {
-                // Normal mode: select area + text, bỏ qua seat trong locked area
-                if (isSeat) {
-                    const seat = seats.find(s => s.id === node.id());
-                    const parentSection = sections.find(s => s.id === seat?.sectionId);
-                    if (parentSection?.locked) return;
-                }
-                if (isSection) {
-                    const section = sections.find(s => s.id === node.id());
-                    if (section?.locked) return;
-                }
+            });
+            setSelectedSeatIds(prev => [...new Set([...prev, ...selectedSeats])]);
+        } else {
+            layerRef.current.find('Group').forEach((node) => {
+                if (!node.id()) return;
+                const section = sections.find(s => s.id === node.id());
+                if (!section) return;
+                if (section.locked) return;
                 if (isShapeInSelectionBox(node, box)) {
                     selected.push(node.id());
                 }
-            }
-        });
+            });
 
-        if (activeAreaId || seatMoveMode) {
-            setSelectedSeatIds(prev => [...new Set([...prev, ...selectedSeats])]);
-        } else {
+            layerRef.current.find('Text').forEach((node) => {
+                if (!node.id()) return;
+                const text = textEntities.find(t => t.id === node.id());
+                if (!text) return;
+                if (isShapeInSelectionBox(node, box)) {
+                    selected.push(node.id());
+                }
+            });
+
             setSelectedIds(selected);
         }
 
@@ -2352,6 +2361,15 @@ const SeatMapEditorPage: React.FC = () => {
                                             idsToTrack.forEach(id => {
                                                 const node = layerRef.current?.findOne(`#${id}`);
                                                 if (node) dragStartPosRef.current[id] = { x: node.x(), y: node.y() };
+
+                                                if (!isSeatMode) {
+                                                    const isSection = sections.some(s => s.id === id);
+                                                    if (isSection) {
+                                                        seats.filter(seat => seat.sectionId === id).forEach(seat => {
+                                                            dragStartPosRef.current[`seat-of-${id}-${seat.id}`] = { x: seat.x, y: seat.y };
+                                                        });
+                                                    }
+                                                }
                                             });
                                         }}
                                         onDragMove={(e) => {

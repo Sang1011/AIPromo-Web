@@ -10,6 +10,11 @@ import {
   fetchPostDetail,
 } from "../../store/postSlice";
 import type { AdminPostItem } from "../../types/post/post";
+import PostBlockRenderer from "../../components/Organizer/post/PostBlockRenderer";
+import { parseBodyToBlocks } from "../../utils/renderPostContent";
+import { injectImageBlock } from "../../utils/injectImageBlock";
+import type { ContentBlock } from "../../types/post/post";
+import { GrFormPreviousLink } from "react-icons/gr";
 
 /* ─── Helpers ────────────────────────────────────────────── */
 const formatDateVi = (iso: string) =>
@@ -73,6 +78,14 @@ export default function PostDetail() {
     [adminPosts, id]
   );
 
+  const blocks: ContentBlock[] = postDetail
+    ? injectImageBlock(parseBodyToBlocks(postDetail.body), postDetail.imageUrl ?? null)
+    : [];
+
+  const blocksWithoutTitle = blocks[0]?.type === "heading"
+    ? blocks.slice(1)
+    : blocks;
+
   if (!id)
     return <Shell><StateView icon="?" msg="Thiếu mã bài viết." onBack={() => navigate(-1)} /></Shell>;
   if (loading.fetchDetail)
@@ -86,37 +99,49 @@ export default function PostDetail() {
       <Header />
 
       <main className="pd-main">
+        <section className="pd-hero">
+          {blocks.length > 0 ? (
+            postDetail.imageUrl ? (
+              <div className="pd-hero-img-wrap">
+                <div
+                  className="pd-hero-img"
+                  style={{
+                    backgroundImage: `url('${postDetail.imageUrl}')`,
+                    filter: "blur(2px) brightness(0.4)",
+                  }}
+                />
+                <div className="pd-hero-overlay-t" />
+                <div className="pd-hero-overlay-b" />
+              </div>
+            ) : (
+              <div className="pd-hero-blank">
+                <div className="pd-hero-grid" />
+                <div className="pd-hero-glow" />
+              </div>
+            )
+          ) : (
+            postDetail.imageUrl ? (
+              <div className="pd-hero-img-wrap">
+                <div className="pd-hero-img" style={{ backgroundImage: `url('${postDetail.imageUrl}')` }} />
+                <div className="pd-hero-overlay-t" />
+                <div className="pd-hero-overlay-b" />
+              </div>
+            ) : (
+              <div className="pd-hero-blank">
+                <div className="pd-hero-grid" />
+                <div className="pd-hero-glow" />
+              </div>
+            )
+          )}
 
-        {/* ── Sticky topbar ── */}
-        <div className="pd-topbar">
-          <div className="pd-topbar-inner">
-            <button type="button" onClick={() => navigate(-1)} className="pd-back-btn">
+          <div className="pd-hero-nav">
+            <button type="button" onClick={() => navigate(-1)} className="pd-back-btn text-md">
               <span className="pd-back-icon">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M8 1.5L3 6.5L8 11.5" stroke="currentColor" strokeWidth="1.6"
-                    strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <GrFormPreviousLink size={24} />
               </span>
               Quay lại
             </button>
-            <Link to="/#blog" className="pd-blog-link">Blog sự kiện</Link>
           </div>
-        </div>
-
-        {/* ── Hero ── */}
-        <section className="pd-hero">
-          {postDetail.imageUrl ? (
-            <div className="pd-hero-img-wrap">
-              <div className="pd-hero-img" style={{ backgroundImage: `url('${postDetail.imageUrl}')` }} />
-              <div className="pd-hero-overlay-t" />
-              <div className="pd-hero-overlay-b" />
-            </div>
-          ) : (
-            <div className="pd-hero-blank">
-              <div className="pd-hero-grid" />
-              <div className="pd-hero-glow" />
-            </div>
-          )}
 
           {/* Floating title card */}
           <div className="pd-title-wrap" style={{ marginTop: postDetail.imageUrl ? "-190px" : "-28px" }}>
@@ -153,11 +178,15 @@ export default function PostDetail() {
         <article className="pd-article-wrap">
           <div className="pd-body-card">
             <div className="pd-body-inner">
-              <BodyRenderer text={postDetail.body} />
+              {blocksWithoutTitle.length > 0 ? (
+                <PostBlockRenderer blocks={blocksWithoutTitle} />
+              ) : (
+                <BodyRenderer text={postDetail.body} />
+              )}
             </div>
             <div className="pd-body-footer">
               <div className="pd-stamp-dots">
-                {[0,1,2].map(i => <span key={i} className="pd-stamp-dot" />)}
+                {[0, 1, 2].map(i => <span key={i} className="pd-stamp-dot" />)}
               </div>
               <time className="pd-stamp-date">Đăng ngày {formatDateVi(String(postDetail.createdAt))}</time>
               <div className="pd-stamp-line" />
@@ -278,19 +307,6 @@ const css = `
   overflow-x: hidden;
 }
 .pd-main { flex: 1; padding-top: 72px; }
-
-/* Topbar */
-.pd-topbar {
-  position: sticky; top: 0; z-index: 40;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  background: rgba(7,5,16,0.88);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-.pd-topbar-inner {
-  max-width: 900px; margin: 0 auto; padding: 0 24px;
-  height: 52px; display: flex; align-items: center; justify-content: space-between;
-}
 .pd-back-btn {
   display: flex; align-items: center; gap: 8px;
   background: none; border: none; color: rgba(200,190,255,0.5);
@@ -319,6 +335,12 @@ const css = `
 .pd-hero { position: relative; }
 .pd-hero-img-wrap {
   position: relative; height: clamp(260px, 50vh, 480px); overflow: hidden;
+}
+
+.pd-hero-nav {
+  position: absolute; top: 150px; left: 300px; right: 0; z-index: 20;
+  padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between;
 }
 .pd-hero-img {
   position: absolute; inset: 0;

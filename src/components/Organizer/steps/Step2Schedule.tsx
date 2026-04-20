@@ -3,7 +3,6 @@ import {
     FiAlertTriangle,
     FiCalendar, FiClock,
     FiEdit2,
-    FiInfo,
     FiLayers,
     FiLock,
     FiPlus,
@@ -25,10 +24,7 @@ import TicketTypeModal from "../ticket/TicketTypeModal";
 
 import { isoToLocal, localToIso } from "../../../utils/dateTimeVN";
 import {
-    errorsToFieldMap,
     getInvalidSessions,
-    validateEventTime,
-    type EventTimeWindow,
     type InvalidSessionsResult,
     type SessionWindow,
 } from "../../../utils/eventValidation";
@@ -251,16 +247,18 @@ function ConflictBanner({
         </div>
     );
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 type TimeForm = {
     ticketSaleStartAt: string;
     ticketSaleEndAt: string;
+    // Derived from sessions — not user-editable, but kept in timeForm to pass to API as-is
     eventStartAt: string;
     eventEndAt: string;
 };
 
-type TimeFormErrors = Partial<Record<keyof TimeForm, string>>;
+type TimeFormErrors = Partial<Record<"ticketSaleStartAt" | "ticketSaleEndAt", string>>;
 
 interface Step2ScheduleProps {
     onNext: () => void;
@@ -299,7 +297,6 @@ export default function Step2Schedule({
         (state: RootState) => state.TICKET_TYPE.ticketTypes
     ) ?? [];
 
-
     const [loading, setLoading] = useState(false);
     const [openCreateModal, setOpenCreateModal] = useState(false);
     const [editingSession, setEditingSession] = useState<(EventSession & { id: string }) | null>(null);
@@ -312,6 +309,7 @@ export default function Step2Schedule({
     };
 
     useEffect(() => { loadSessions(); }, [eventId]);
+
     useEffect(() => {
         if (eventId && sessions?.length > 0) {
             dispatch(fetchGetAllTicketTypes({
@@ -320,6 +318,43 @@ export default function Step2Schedule({
             }));
         }
     }, [eventId, sessions]);
+
+    useEffect(() => {
+        if (!eventId || eventData?.status !== "Draft") return;
+
+        if (sessions.length === 0) {
+            setTimeForm(prev => ({ ...prev, eventStartAt: "", eventEndAt: "" }));
+            return;
+        }
+
+        const earliest = sessions.reduce((min, s) =>
+            s.startTime < min.startTime ? s : min
+        );
+        const latest = sessions.reduce((max, s) =>
+            s.endTime > max.endTime ? s : max
+        );
+
+        const newStartAt = isoToLocal(earliest.startTime);
+        const newEndAt = isoToLocal(latest.endTime);
+
+        setTimeForm(prev => ({
+            ...prev,
+            eventStartAt: newStartAt,
+            eventEndAt: newEndAt,
+        }));
+
+        dispatch(fetchUpdateEventSettings({
+            eventId,
+            data: {
+                ticketSaleStartAt: toUTC(timeForm.ticketSaleStartAt),
+                ticketSaleEndAt: toUTC(timeForm.ticketSaleEndAt),
+                eventStartAt: toUTC(newStartAt),
+                eventEndAt: toUTC(newEndAt),
+                isEmailReminderEnabled: eventData?.isEmailReminderEnabled ?? false,
+                urlPath: eventData?.urlPath ?? "",
+            },
+        }));
+    }, [sessions]);
 
     const recomputeConflicts = useCallback(
         (form: TimeForm, currentSessions: typeof sessions) => {
@@ -350,24 +385,79 @@ export default function Step2Schedule({
     }, [timeForm.eventStartAt, timeForm.eventEndAt, sessions, recomputeConflicts]);
 
     const hasSessions = sessions.length > 0;
-
     const hasTickets = ticketTypes.length > 0;
     const conflictIds = new Set(sessionConflicts.conflicts.map((c) => c.id));
 
     const runTimeValidation = (): boolean => {
-        const result = validateEventTime(timeForm as EventTimeWindow);
-        setTimeErrors(errorsToFieldMap(result.errors));
-        return result.valid;
+        const errors: TimeFormErrors = {};
+        if (!timeForm.ticketSaleStartAt) {
+            errors.ticketSaleStartAt = "Vui lòng chọn thời gian bắt đầu bán vé";
+        }
+        if (!timeForm.ticketSaleEndAt) {
+            errors.ticketSaleEndAt = "Vui lòng chọn thời gian kết thúc bán vé";
+        }
+        if (
+            timeForm.ticketSaleStartAt &&
+            timeForm.ticketSaleEndAt &&
+            timeForm.ticketSaleStartAt >= timeForm.ticketSaleEndAt
+        ) {
+            errors.ticketSaleEndAt = "Thời gian kết thúc bán vé phải sau thời gian bắt đầu";
+        }
+        setTimeErrors(errors);
+        return Object.keys(errors).length === 0;
     };
 
-    const toUTC = (local: string) => new Date(local).toISOString();
+    const toUTC = (local: string) => {
+        if (!local) return new Date().toISOString();
+        const d = new Date(local);
+        return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    };
 
     const isTimeFormChanged = () =>
         initialTimeForm === null ||
         JSON.stringify(initialTimeForm) !== JSON.stringify(timeForm);
 
+    // ── Init from eventData ────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!eventData || initialTimeForm) return;
+        const form: TimeForm = {
+            ticketSaleStartAt: eventData.ticketSaleStartAt ? isoToLocal(eventData.ticketSaleStartAt) : "",
+            ticketSaleEndAt: eventData.ticketSaleEndAt ? isoToLocal(eventData.ticketSaleEndAt) : "",
+            // eventStartAt/eventEndAt: seed from eventData, will be overwritten once sessions load
+            eventStartAt: eventData.eventStartAt ? isoToLocal(eventData.eventStartAt) : "",
+            eventEndAt: eventData.eventEndAt ? isoToLocal(eventData.eventEndAt) : "",
+        };
+        setTimeForm(form);
+        setInitialTimeForm(form);
+    }, [eventData]);
+
+    const isDirty =
+        initialTimeForm === null ||
+        initialTimeForm.ticketSaleStartAt !== timeForm.ticketSaleStartAt ||
+        initialTimeForm.ticketSaleEndAt !== timeForm.ticketSaleEndAt;
+
+    useEffect(() => {
+        if (!isDirty) return;
+        const handler = (e: BeforeUnloadEvent) => {
+            e.preventDefault();
+            e.returnValue = "";
+        };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+    }, [isDirty]);
+
+    // ── Shared save payload ────────────────────────────────────────────────────
+    const buildPayload = () => ({
+        ticketSaleStartAt: toUTC(timeForm.ticketSaleStartAt),
+        ticketSaleEndAt: toUTC(timeForm.ticketSaleEndAt),
+        eventStartAt: toUTC(timeForm.eventStartAt),
+        eventEndAt: toUTC(timeForm.eventEndAt),
+        isEmailReminderEnabled: eventData?.isEmailReminderEnabled ?? false,
+        urlPath: eventData?.urlPath ?? "",
+    });
+
+    // ── Handlers ───────────────────────────────────────────────────────────────
     const handleNext = async () => {
-        onNext();
         if (!runTimeValidation()) return;
         if (!hasSessions) { notify.error("Sự kiện phải có ít nhất 1 suất diễn"); return; }
         if (!hasTickets) { notify.error("Sự kiện phải có ít nhất 1 loại vé"); return; }
@@ -380,20 +470,16 @@ export default function Step2Schedule({
             return;
         }
 
+        // Guard: sessions exist but eventWindow not derived yet (race condition)
+        if (hasSessions && (!timeForm.eventStartAt || !timeForm.eventEndAt)) {
+            notify.error("Không thể xác định khung giờ sự kiện. Vui lòng thử lại.");
+            return;
+        }
+
         if (isTimeFormChanged()) {
             if (!eventId) return;
             try {
-                await dispatch(fetchUpdateEventSettings({
-                    eventId,
-                    data: {
-                        ticketSaleStartAt: toUTC(timeForm.ticketSaleStartAt),
-                        ticketSaleEndAt: toUTC(timeForm.ticketSaleEndAt),
-                        eventStartAt: toUTC(timeForm.eventStartAt),
-                        eventEndAt: toUTC(timeForm.eventEndAt),
-                        isEmailReminderEnabled: eventData?.isEmailReminderEnabled ?? false,
-                        urlPath: eventData?.urlPath ?? "",
-                    },
-                })).unwrap();
+                await dispatch(fetchUpdateEventSettings({ eventId, data: buildPayload() })).unwrap();
                 await reloadEvent?.();
                 setInitialTimeForm({ ...timeForm });
                 notify.success("Đã lưu thời gian sự kiện");
@@ -413,17 +499,7 @@ export default function Step2Schedule({
         if (!eventId) return;
         setBannerSaving(true);
         try {
-            await dispatch(fetchUpdateEventSettings({
-                eventId,
-                data: {
-                    ticketSaleStartAt: toUTC(timeForm.ticketSaleStartAt),
-                    ticketSaleEndAt: toUTC(timeForm.ticketSaleEndAt),
-                    eventStartAt: toUTC(timeForm.eventStartAt),
-                    eventEndAt: toUTC(timeForm.eventEndAt),
-                    isEmailReminderEnabled: eventData?.isEmailReminderEnabled ?? false,
-                    urlPath: eventData?.urlPath ?? "",
-                },
-            })).unwrap();
+            await dispatch(fetchUpdateEventSettings({ eventId, data: buildPayload() })).unwrap();
             setInitialTimeForm({ ...timeForm });
             await reloadEvent?.();
             notify.success("Đã lưu thời gian sự kiện");
@@ -439,35 +515,13 @@ export default function Step2Schedule({
         try {
             await dispatch(fetchDeleteSession({ eventId, sessionId })).unwrap();
             notify.success("Đã xoá suất diễn");
+            // sessions selector update → useEffect re-derives eventStartAt/eventEndAt automatically
         } catch {
             notify.error("Không thể xoá suất diễn");
         }
     };
 
-    useEffect(() => {
-        if (!eventData || initialTimeForm) return;
-        const form: TimeForm = {
-            ticketSaleStartAt: eventData.ticketSaleStartAt ? isoToLocal(eventData.ticketSaleStartAt) : "",
-            ticketSaleEndAt: eventData.ticketSaleEndAt ? isoToLocal(eventData.ticketSaleEndAt) : "",
-            eventStartAt: eventData.eventStartAt ? isoToLocal(eventData.eventStartAt) : "",
-            eventEndAt: eventData.eventEndAt ? isoToLocal(eventData.eventEndAt) : "",
-        };
-        setTimeForm(form);
-        setInitialTimeForm(form);
-    }, [eventData]);
-
-    const isDirty = isTimeFormChanged();
-
-    useEffect(() => {
-        if (!isDirty) return;
-        const handler = (e: BeforeUnloadEvent) => {
-            e.preventDefault();
-            e.returnValue = "";
-        };
-        window.addEventListener("beforeunload", handler);
-        return () => window.removeEventListener("beforeunload", handler);
-    }, [isDirty]);
-
+    // ── Render ─────────────────────────────────────────────────────────────────
     return (
         <div className="space-y-8 max-w-3xl mx-auto">
             {isDirty && isAllowUpdate && (
@@ -478,6 +532,7 @@ export default function Step2Schedule({
                 <p className="text-sm text-slate-500 mt-1">Thiết lập các suất diễn và hạng vé cho sự kiện.</p>
             </div>
 
+            {/* Ticket sale time — user configures this */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiLock size={16} />}
@@ -510,37 +565,7 @@ export default function Step2Schedule({
                 </div>
             </section>
 
-            <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-                <SectionHeader
-                    icon={<FiInfo size={16} />}
-                    title="Thời gian sự kiện"
-                    subtitle="Khung giờ chính thức của sự kiện"
-                />
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col">
-                        <DateTimeInput
-                            disabled={!isAllowUpdate}
-                            label="Bắt đầu sự kiện"
-                            value={timeForm.eventStartAt}
-                            onChange={(v) => setTimeForm(p => ({ ...p, eventStartAt: v }))}
-                        />
-                        {timeErrors.eventStartAt && (
-                            <p className="text-red-400 text-xs mt-1">{timeErrors.eventStartAt}</p>
-                        )}
-                    </div>
-                    <div className="flex flex-col">
-                        <DateTimeInput
-                            disabled={!isAllowUpdate}
-                            label="Kết thúc sự kiện"
-                            value={timeForm.eventEndAt}
-                            onChange={(v) => setTimeForm(p => ({ ...p, eventEndAt: v }))}
-                        />
-                        {timeErrors.eventEndAt && (
-                            <p className="text-red-400 text-xs mt-1">{timeErrors.eventEndAt}</p>
-                        )}
-                    </div>
-                </div>
-            </section>
+            {/* eventStartAt / eventEndAt are NOT shown — auto-derived from sessions */}
 
             <Divider />
 
@@ -557,9 +582,7 @@ export default function Step2Schedule({
                             className={`
                                 flex items-center gap-1.5 px-4 py-2 rounded-xl
                                 font-semibold text-xs transition-colors
-                                
                                 bg-primary text-white hover:bg-primary/90
-                                
                                 disabled:opacity-50 disabled:cursor-not-allowed
                             `}
                         >

@@ -35,7 +35,7 @@ const ticketTypeService = {
         eventId: string,
         ticketTypeId: string
     ): Promise<AxiosResponse<void>> => {
-        return interceptorAPI().delete(`/organizer/events/${eventId}/ticket-types/${ticketTypeId}`);
+        return interceptorAPI().delete(`/events/${eventId}/ticket-types/${ticketTypeId}`);
     },
 
     assignArea: (

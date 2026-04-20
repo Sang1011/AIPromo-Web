@@ -21,6 +21,14 @@ export interface CreateWithdrawal {
     receiverName: string;
 }
 
+export interface GetMeWithdrawalParams {
+  PageNumber?: number;
+  PageSize?: number;
+  SortColumn?: string;
+  SortOrder?: "asc" | "desc";
+  Status?: string
+}
+
 export interface WithdrawalDetail {
     id: string;
     userId: string;
