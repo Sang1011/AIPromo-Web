@@ -22,6 +22,50 @@ import { notify } from "../../../utils/notify";
 import ImagePreviewBox from "../shared/ImagePreviewBox";
 import UploadBox from "../shared/UploadBox";
 import { UnsavedBanner } from "../shared/UnsavedBanner";
+import { validateImageFile } from "../../../utils/validateImageFile";
+
+export const SPEAKER_PROFESSIONS: string[] = [
+    "Doanh nhân",
+    "Nhà sáng lập (Founder)",
+    "CEO",
+    "Chuyên gia",
+    "Tư vấn (Consultant)",
+    "Huấn luyện viên (Coach)",
+    "Giảng viên",
+    "Giáo sư",
+    "Nhà nghiên cứu",
+    "Kỹ sư",
+    "Lập trình viên (Developer)",
+    "Chuyên gia IT",
+    "Chuyên gia Marketing",
+    "Chuyên gia Tài chính",
+    "Chuyên gia Nhân sự (HR)",
+    "Content Creator",
+    "Influencer",
+    "KOL",
+    "KOC",
+    "Nhà báo",
+    "Biên tập viên",
+    "Diễn giả truyền cảm hứng",
+    "Tác giả",
+    "Nghệ sĩ",
+    "Ca sĩ",
+    "Diễn viên",
+    "MC",
+    "Host",
+    "Presenter",
+    "Producer",
+    "Quản lý",
+    "Lãnh đạo cấp cao (C-level)",
+    "Đại diện tổ chức (NGO)",
+    "Freelancer",
+    "Sinh viên",
+    "Startup Founder",
+    "Khách mời (Guest Speaker)",
+    "Khác"
+];
+
+const OTHER_VALUE = "Khác";
 
 interface Step1EventInfoProps {
     onNext?: () => void;
@@ -172,8 +216,6 @@ interface DropdownItemProps {
 function DropdownItem({ onClick, isSelected, children, suffix }: DropdownItemProps) {
     return (
         <div
-            // dùng onMouseDown thay vì onClick để fire TRƯỚC onBlur của input,
-            // tránh dropdown đóng trước khi item được click.
             onMouseDown={onClick}
             className={`
                 flex items-center justify-between px-4 py-2.5
@@ -198,7 +240,85 @@ function DropdownLoading() {
         </div>
     );
 }
-// ──────────────────────────────────────────────────────────────────────────
+
+// ── Actor Major Field ──────────────────────────────────────────────────────
+interface ActorMajorFieldProps {
+    value: string;
+    onChange: (value: string) => void;
+    disabled?: boolean;
+    error?: string;
+}
+
+function ActorMajorField({ value, onChange, disabled, error }: ActorMajorFieldProps) {
+    const isPreset = SPEAKER_PROFESSIONS.includes(value);
+    const [isCustomMode, setIsCustomMode] = useState(!isPreset && value !== "" || false);
+
+    const selectValue = isCustomMode ? OTHER_VALUE : (isPreset ? value : "");
+
+    const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selected = e.target.value;
+        if (selected === OTHER_VALUE) {
+            setIsCustomMode(true);
+            onChange("");
+        } else {
+            setIsCustomMode(false);
+            onChange(selected);
+        }
+    };
+
+    return (
+        <div className="space-y-2">
+            <select
+                value={selectValue}
+                onChange={handleSelectChange}
+                disabled={disabled}
+                className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white text-sm
+                    appearance-none cursor-pointer
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                    focus:outline-none focus:ring-1 focus:ring-primary/40
+                    transition-all
+                    ${error ? "border-red-500" : "border-white/10"}
+                `}
+                style={{
+                    backgroundImage: disabled
+                        ? "none"
+                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 14px center",
+                    paddingRight: "2.5rem",
+                }}
+            >
+                <option value="" disabled className="bg-[#1a1530] text-slate-400">
+                    Chọn chuyên môn...
+                </option>
+                {SPEAKER_PROFESSIONS.map((prof) => (
+                    <option key={prof} value={prof} className="bg-[#1a1530] text-white">
+                        {prof}
+                    </option>
+                ))}
+            </select>
+
+            {/* Hiện input khi isCustomMode = true */}
+            {isCustomMode && (
+                <input
+                    autoFocus
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    disabled={disabled}
+                    placeholder="Nhập chuyên môn..."
+                    className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white text-sm
+                        disabled:opacity-40 disabled:cursor-not-allowed
+                        focus:outline-none focus:ring-1 focus:ring-primary/40
+                        transition-all
+                        ${error ? "border-red-500" : "border-white/10"}
+                    `}
+                />
+            )}
+
+            {error && <p className="text-xs text-red-400">{error}</p>}
+        </div>
+    );
+}
 
 export default function Step1EventInfo({
     onNext, mode = "edit", onCreated, eventData, reloadEvent, isAllowUpdate = true,
@@ -268,34 +388,25 @@ export default function Step1EventInfo({
         }
     };
 
-    // ── Prefetch khi mount (để data có sẵn ngay khi mở dropdown) ───────────
     useEffect(() => {
         if (!isAllowUpdate) return;
         fetchHashtags();
         fetchCategories();
     }, [isAllowUpdate]);
 
-    // ── Debounce tìm kiếm hashtag theo input ────────────────────────────────
     useEffect(() => {
         if (!isHashtagOpen) return;
-        if (!hashtagInput.trim()) {
-            // Khi xoá hết text → dùng lại list đã prefetch, không cần fetch lại
-            return;
-        }
+        if (!hashtagInput.trim()) return;
         const timer = setTimeout(() => fetchHashtags(hashtagInput.trim()), 300);
         return () => clearTimeout(timer);
     }, [hashtagInput, isHashtagOpen]);
 
-    // ── Debounce tìm kiếm category theo input ──────────────────────────────
     useEffect(() => {
         if (!isCategoryOpen) return;
         if (!categoryInput.trim()) return;
         const timer = setTimeout(() => fetchCategories(categoryInput.trim()), 300);
         return () => clearTimeout(timer);
     }, [categoryInput, isCategoryOpen]);
-
-    // Dropdown đóng qua onBlur + relatedTarget check trên container div.
-    // Không cần document mousedown listener nữa.
 
     const updateForm = <K extends keyof EventFormState>(key: K, value: EventFormState[K]) => {
         setEventForm((prev) => ({ ...prev, [key]: value }));
@@ -308,13 +419,12 @@ export default function Step1EventInfo({
         else if (eventForm.title.length < 5) newErrors.title = "Tên sự kiện tối thiểu 5 ký tự";
         else if (eventForm.title.length > 150) newErrors.title = "Tên sự kiện tối đa 150 ký tự";
         if (!eventForm.description.trim()) newErrors.description = "Mô tả sự kiện không được để trống";
+        else if (eventForm.description.length > 5000) newErrors.description = "Mô tả tối đa 5000 ký tự";
         if (!eventForm.location.trim()) newErrors.location = "Địa điểm không được để trống";
         else if (eventForm.location.length > 500) newErrors.location = "Địa điểm tối đa 500 ký tự";
         if (eventForm.selectedHashtags.length < 1) newErrors.selectedHashtags = "Phải chọn ít nhất 1 hashtag";
         if (eventForm.selectedCategories.length < 1) newErrors.selectedCategories = "Phải chọn ít nhất 1 thể loại";
-        if (eventForm.actors.length < 1) {
-            newErrors.actors = [{ name: "Phải có ít nhất 1 diễn giả" }];
-        } else {
+        if (eventForm.actors.length !== 0) {
             const actorErrors = eventForm.actors.map((actor, index) => {
                 const err: ActorError = {};
                 if (!actor.name.trim()) err.name = "Tên diễn giả không được để trống";
@@ -336,7 +446,6 @@ export default function Step1EventInfo({
         if (eventForm.selectedHashtags.some((t) => t.id === tag.id)) return;
         updateForm("selectedHashtags", [...eventForm.selectedHashtags, tag]);
         setHashtagInput("");
-        // KHÔNG đóng dropdown → UX tiếp tục chọn nhiều tag
         setErrors((prev) => ({ ...prev, selectedHashtags: undefined }));
     };
 
@@ -387,6 +496,8 @@ export default function Step1EventInfo({
 
     // ── Image handlers ─────────────────────────────────────────────────────
     const handleBannerChange = (file: File) => {
+        const err = validateImageFile(file);
+        if (err) { notify.error(err); return; }
         if (!isAllowUpdate) return;
         const previewUrl = URL.createObjectURL(file);
         setEventForm((prev) => ({ ...prev, bannerUrl: previewUrl, bannerFile: file }));
@@ -394,17 +505,30 @@ export default function Step1EventInfo({
 
     const handleAddImages = (files: FileList | null) => {
         if (!isAllowUpdate || !files) return;
-        const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-        const maxSize = 10 * 1024 * 1024;
+
+        const validFiles: File[] = [];
+
         Array.from(files).forEach((file) => {
-            if (!allowedTypes.includes(file.type)) { alert(`${file.name} không phải định dạng hợp lệ`); return; }
-            if (file.size > maxSize) { alert(`${file.name} vượt quá 10MB`); return; }
-            const previewUrl = URL.createObjectURL(file);
-            setEventForm((prev) => ({
-                ...prev,
-                images: [...prev.images, { id: null, url: previewUrl, file }],
-            }));
+            const err = validateImageFile(file);
+            if (err) {
+                notify.error(err);
+                return;
+            }
+            validFiles.push(file);
         });
+
+        if (validFiles.length === 0) return;
+
+        const newImages = validFiles.map((file) => ({
+            id: null,
+            url: URL.createObjectURL(file),
+            file,
+        }));
+
+        setEventForm((prev) => ({
+            ...prev,
+            images: [...prev.images, ...newImages],
+        }));
     };
 
     const handleDeleteImage = (index: number) => {
@@ -418,6 +542,8 @@ export default function Step1EventInfo({
     };
 
     const handleActorFileChange = (file: File, index: number) => {
+        const err = validateImageFile(file);
+        if (err) { notify.error(err); return; }
         if (!isAllowUpdate) return;
         updateActor(index, "image", file);
         const previewUrl = URL.createObjectURL(file);
@@ -686,7 +812,6 @@ export default function Step1EventInfo({
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
                     <h3 className="font-semibold text-white">* Thông tin cơ bản</h3>
 
-                    {/* Tên sự kiện */}
                     <div>
                         <label className="text-sm text-slate-400">Tên sự kiện</label>
                         <input
@@ -710,11 +835,6 @@ export default function Step1EventInfo({
                                 )}
                             </div>
 
-                            {/*
-                             * Combobox container: tags + input nằm cùng 1 box có border.
-                             * Input không bao giờ nhảy vị trí dù có hay không có tags.
-                             * tabIndex="-1" để onBlur của container có relatedTarget đúng.
-                             */}
                             <div
                                 className={`
                                     flex flex-wrap gap-1.5 items-center
@@ -724,13 +844,11 @@ export default function Step1EventInfo({
                                     ${errors.selectedHashtags ? "border-red-500" : "border-white/10"}
                                 `}
                                 onBlur={(e) => {
-                                    // Chỉ đóng khi focus thực sự rời khỏi cả container lẫn dropdown
                                     if (!hashtagRef.current?.contains(e.relatedTarget as Node)) {
                                         setIsHashtagOpen(false);
                                     }
                                 }}
                             >
-                                {/* Tags nằm inline trong box */}
                                 {eventForm.selectedHashtags.map((tag) => (
                                     <div
                                         key={tag.id}
@@ -749,7 +867,6 @@ export default function Step1EventInfo({
                                     </div>
                                 ))}
 
-                                {/* Input co giãn theo chỗ còn lại */}
                                 <input
                                     value={hashtagInput}
                                     onChange={(e) => {
@@ -769,7 +886,6 @@ export default function Step1EventInfo({
                                 <p className="text-xs text-red-400 mt-1">{errors.selectedHashtags}</p>
                             )}
 
-                            {/* Dropdown */}
                             {isAllowUpdate && isHashtagOpen && (
                                 <DropdownList>
                                     {isHashtagLoading ? (
@@ -816,7 +932,6 @@ export default function Step1EventInfo({
                                 )}
                             </div>
 
-                            {/* Combobox container tương tự hashtag */}
                             <div
                                 className={`
                                     flex flex-wrap gap-1.5 items-center
@@ -868,7 +983,6 @@ export default function Step1EventInfo({
                                 <p className="text-xs text-red-400 mt-1">{errors.selectedCategories}</p>
                             )}
 
-                            {/* Dropdown */}
                             {isAllowUpdate && isCategoryOpen && (
                                 <DropdownList>
                                     {isCategoryLoading ? (
@@ -930,7 +1044,7 @@ export default function Step1EventInfo({
                 {/* ===== Diễn giả ===== */}
                 <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6 space-y-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="font-semibold text-white">* Diễn giả / Khách mời</h3>
+                        <h3 className="font-semibold text-white"> Diễn giả / Khách mời</h3>
                         {isAllowUpdate && (
                             <button
                                 type="button"
@@ -943,12 +1057,28 @@ export default function Step1EventInfo({
                     </div>
 
                     {eventForm.actors.length === 0 && (
-                        <>
-                            <p className="text-sm text-slate-400">Chưa có diễn giả nào</p>
-                            {errors.actors?.[0]?.name && (
-                                <p className="text-xs text-red-400 mt-1">{errors.actors[0].name}</p>
-                            )}
-                        </>
+                        <div
+                            onClick={isAllowUpdate ? addActor : undefined}
+                            className={`
+            flex flex-col items-center justify-center gap-3
+            rounded-xl border-2 border-dashed border-white/10 p-10
+            text-center transition-colors
+            ${isAllowUpdate
+                                    ? "cursor-pointer hover:border-primary/40 hover:bg-primary/5"
+                                    : "opacity-50 cursor-not-allowed"
+                                }
+        `}
+                        >
+                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-slate-400">
+                                <FiPlus size={22} />
+                            </div>
+                            <div>
+                                <p className="text-white text-sm font-medium">Chưa có diễn giả / khách mời</p>
+                                {isAllowUpdate && (
+                                    <p className="text-slate-500 text-xs mt-1">Nhấn để thêm diễn giả đầu tiên</p>
+                                )}
+                            </div>
+                        </div>
                     )}
 
                     <div className="space-y-6">
@@ -987,6 +1117,7 @@ export default function Step1EventInfo({
                                     )}
 
                                     <div className="space-y-3">
+                                        {/* Tên diễn giả */}
                                         <div>
                                             <input
                                                 value={actor.name}
@@ -999,25 +1130,22 @@ export default function Step1EventInfo({
                                                 <p className="text-xs text-red-400 mt-1">{actorErrors.name}</p>
                                             )}
                                         </div>
-                                        <div>
-                                            <input
-                                                value={actor.major}
-                                                disabled={!isAllowUpdate}
-                                                onChange={(e) => updateActor(index, "major", e.target.value)}
-                                                className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white disabled:opacity-40 disabled:cursor-not-allowed ${actorErrors.major ? "border-red-500" : "border-white/10"}`}
-                                                placeholder="Chuyên môn (AI Engineer, CEO, Ca sĩ, Nghệ sĩ...)"
-                                            />
-                                            {actorErrors.major && (
-                                                <p className="text-xs text-red-400 mt-1">{actorErrors.major}</p>
-                                            )}
-                                        </div>
+
+                                        {/* Chuyên môn — select + optional custom input */}
+                                        <ActorMajorField
+                                            value={actor.major}
+                                            onChange={(val) => updateActor(index, "major", val)}
+                                            disabled={!isAllowUpdate}
+                                            error={actorErrors.major}
+                                        />
                                     </div>
 
                                     {isAllowUpdate ? (
                                         <button
                                             onClick={() => removeActor(index)}
-                                            className="text-red-400 text-sm hover:underline"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 hover:border-red-500/50 transition-colors"
                                         >
+                                            <FiX size={13} />
                                             Xóa
                                         </button>
                                     ) : (

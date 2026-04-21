@@ -478,8 +478,13 @@ const postSlice = createSlice({
             .addCase(updatePostContent.fulfilled, (state, action: PayloadAction<UpdatePostContentRequest>) => {
                 state.loading.updateContent = false;
                 if (state.postDetail) {
-                    const { imageUrl: _img, ...rest } = action.payload;
-                    state.postDetail = { ...state.postDetail, ...rest };
+                    state.postDetail = {
+                        ...state.postDetail,
+                        ...action.payload,
+                        imageUrl: action.payload.imageUrl !== undefined
+                            ? action.payload.imageUrl
+                            : state.postDetail.imageUrl,
+                    };
                 }
             })
             .addCase(updatePostContent.rejected, (state, action) => { state.loading.updateContent = false; state.error.updateContent = action.payload as string; });
