@@ -264,7 +264,6 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
                             <div className="flex items-center gap-4 text-xs text-slate-500 pb-1">
                                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />Thích</span>
                                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500 inline-block" />Bình luận</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-pink-500 inline-block" />Chia sẻ</span>
                             </div>
                             <EngagementBar likes={m.likes} comments={m.comments} />
                         </div>
