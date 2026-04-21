@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import { MdOutlineCloudUpload } from "react-icons/md";
+import { validateImageFile } from "../../../utils/validateImageFile";
+import { notify } from "../../../utils/notify";
 
 export default function UploadImageSection({
     selectedImageUrl,
@@ -17,6 +19,8 @@ export default function UploadImageSection({
 
     const handleFile = (file: File) => {
         if (!file.type.startsWith("image/")) return;
+        const err = validateImageFile(file);
+        if (err) { notify.error(err); return; }
         const localUrl = URL.createObjectURL(file);
         onSelectImage(localUrl);
         onFileSelected?.(file);
@@ -76,7 +80,7 @@ export default function UploadImageSection({
                     <p className={`text-xs font-medium ${dragOver ? "text-primary" : "text-slate-500"}`}>
                         Kéo thả hoặc <span className="text-primary underline">chọn file</span>
                     </p>
-                    <p className="text-[10px] text-slate-600 mt-0.5">PNG, JPG, WEBP — Tối đa 10MB</p>
+                    <p className="text-[10px] text-slate-600 mt-0.5">Tối đa 10MB</p>
                 </div>
             )}
         </div>
