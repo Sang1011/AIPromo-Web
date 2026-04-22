@@ -13,6 +13,7 @@ import type { Area, Seat, SeatMapData, TextEntity, TicketType } from '../../type
 import type { CreatePendingOrderRequest, TicketRequest } from '../../types/ticketing/ticketing';
 import { notify } from '../../utils/notify';
 import { clearOldOrderFromFirebase } from '../../utils/orderFirebase';
+import { getOrderErrorMessage } from '../../utils/errorMessage';
 
 type ViewerMode = 'zone' | 'seat';
 
@@ -276,15 +277,22 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
         setZonePopup(null);
     };
 
-    const handleConfirm = () => {
-        if (mode === 'zone' && selectedZone) {
-            onConfirm?.({ mode, zones: [{ ...selectedZone }], totalPrice });
-        }
-        if (mode === 'seat') {
-            onConfirm?.({ mode, seats: selectedSeatsInfo, totalPrice });
+    const [isConfirming, setIsConfirming] = useState(false);
+
+    const handleConfirm = async () => {
+        if (isConfirming) return;
+        setIsConfirming(true);
+        try {
+            if (mode === 'zone' && selectedZone) {
+                await onConfirm?.({ mode, zones: [{ ...selectedZone }], totalPrice });
+            }
+            if (mode === 'seat') {
+                await onConfirm?.({ mode, seats: selectedSeatsInfo, totalPrice });
+            }
+        } finally {
+            setIsConfirming(false);
         }
     };
-
     const renderAreaShape = (area: Area, fillColor: string, strokeColor: string, opacity: number) => {
         const common = { id: area.id, stroke: strokeColor, strokeWidth: 2, fill: fillColor, opacity };
         if (area.type === 'circle') return <Circle radius={area.width / 2} {...common} />;
@@ -650,29 +658,29 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
 
                 {!hideConfirmButton && (
                     <button
-                        disabled={!canConfirm}
+                        disabled={!canConfirm || isConfirming}
                         onClick={handleConfirm}
-                        style={{
-                            marginTop: 'auto',
-                            background: canConfirm ? PRIMARY : '#374151',
-                            border: 'none',
-                            borderRadius: 10,
-                            padding: '14px',
-                            color: canConfirm ? 'white' : '#6b7280',
-                            fontWeight: 700,
-                            fontSize: 14,
-                            cursor: canConfirm ? 'pointer' : 'not-allowed',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                            transition: 'all 0.2s',
-                        }}
+                        className={`mt-auto w-full flex items-center justify-center gap-2 rounded-xl py-4 px-4 font-bold text-sm transition-all
+        ${canConfirm && !isConfirming
+                                ? 'bg-[#7c3bed] text-white cursor-pointer hover:bg-[#6d35d4]'
+                                : 'bg-[#374151] text-[#6b7280] cursor-not-allowed'
+                            }
+        ${isConfirming ? 'opacity-70' : 'opacity-100'}
+    `}
                     >
-                        {canConfirm
-                            ? <>{confirmLabel ?? 'Tiếp tục'} · {fmtVND(totalPrice)} <span style={{ fontSize: 16 }}>»</span></>
-                            : 'Vui lòng chọn vé'
-                        }
+                        {isConfirming ? (
+                            <>
+                                <svg className="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                                    <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                                </svg>
+                                Đang xử lý...
+                            </>
+                        ) : canConfirm ? (
+                            <>{confirmLabel ?? 'Tiếp tục'} · {fmtVND(totalPrice)} <span className="text-base">»</span></>
+                        ) : (
+                            'Vui lòng chọn vé'
+                        )}
                     </button>
                 )}
 
@@ -726,6 +734,181 @@ const SeatMapViewer: React.FC<SeatMapViewerProps> = ({
                     </div>
                 </div>
             )}
+        </div>
+    );
+};
+
+interface SpecImageViewerProps {
+    specImageUrl: string;
+    ticketTypes: TicketType[];
+    eventSessionId: string;
+    onConfirm: (payload: ConfirmPayload) => void;
+}
+
+const SpecImageViewer: React.FC<SpecImageViewerProps> = ({
+    specImageUrl,
+    ticketTypes,
+    onConfirm,
+}) => {
+    const [selectedZones, setSelectedZones] = useState<Record<string, number>>({});
+
+    const totalPrice = useMemo(() =>
+        ticketTypes.reduce((sum, tt) => {
+            const qty = selectedZones[tt.id] ?? 0;
+            return sum + qty * (tt.price ?? 0);
+        }, 0),
+        [selectedZones, ticketTypes]
+    );
+
+    const totalQty = useMemo(() =>
+        Object.values(selectedZones).reduce((s, q) => s + q, 0),
+        [selectedZones]
+    );
+
+    const canConfirm = totalQty > 0;
+
+    const [isConfirming, setIsConfirming] = useState(false);
+
+    const handleConfirm = async () => {
+        if (isConfirming) return;
+        setIsConfirming(true);
+        try {
+            const zones = ticketTypes
+                .filter(tt => (selectedZones[tt.id] ?? 0) > 0)
+                .map(tt => ({
+                    areaId: tt.id,
+                    areaName: tt.name,
+                    ticketTypeId: tt.id,
+                    price: tt.price ?? 0,
+                    quantity: selectedZones[tt.id]!,
+                }));
+            await onConfirm({ mode: 'zone', zones, totalPrice });
+        } finally {
+            setIsConfirming(false);
+        }
+    };
+
+    const adjust = (ttId: string, delta: number, max: number) => {
+        if (isConfirming) return;
+        setSelectedZones(prev => {
+            const cur = prev[ttId] ?? 0;
+            const next = Math.min(Math.max(0, cur + delta), max);
+            if (next === 0) {
+                const { [ttId]: _, ...rest } = prev;
+                return rest;
+            }
+            return { ...prev, [ttId]: next };
+        });
+    };
+
+    return (
+        <div style={{ display: 'flex', width: '100%', height: '100%', background: BG_COLOR, color: 'white' }}>
+            {/* LEFT: ảnh sơ đồ */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'auto', padding: 20 }}>
+                <img
+                    src={specImageUrl}
+                    alt="Seat Map"
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }}
+                />
+            </div>
+
+            {/* RIGHT: panel chọn vé */}
+            <div style={{ width: 300, background: PANEL_BG, borderLeft: `1px solid ${BORDER_COLOR}`, display: 'flex', flexDirection: 'column', padding: '20px 16px', gap: 16, overflowY: 'auto' }}>
+                <div style={{ fontSize: 12, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                    Chọn loại vé
+                </div>
+
+                {ticketTypes.length === 0 && (
+                    <div style={{ fontSize: 13, color: TEXT_MUTED, textAlign: 'center', padding: '16px 0' }}>
+                        Không có loại vé nào
+                    </div>
+                )}
+
+                {ticketTypes.map(tt => {
+                    const remaining = tt.remainingQuantity ?? 0;
+                    const isSoldOut = remaining === 0;
+                    const qty = selectedZones[tt.id] ?? 0;
+                    const atMax = qty >= remaining;
+
+                    return (
+                        <div
+                            key={tt.id}
+                            style={{
+                                background: '#16162a',
+                                border: `1px solid ${qty > 0 ? '#22c55e' : BORDER_COLOR}`,
+                                borderRadius: 10,
+                                padding: '12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 8,
+                                opacity: isSoldOut || isConfirming ? 0.5 : 1,
+                                pointerEvents: isConfirming ? 'none' : 'auto',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, flex: 1 }}>{tt.name}</span>
+                            </div>
+                            <div style={{ fontSize: 13, color: PRIMARY, fontWeight: 600 }}>{fmtVND(tt.price ?? 0)}</div>
+                            <div style={{ fontSize: 12, color: isSoldOut ? '#ef4444' : TEXT_MUTED }}>
+                                {isSoldOut ? 'Hết vé' : `Còn lại: ${remaining} vé`}
+                            </div>
+
+                            {!isSoldOut && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+                                    <button
+                                        disabled={qty <= 0}
+                                        onClick={() => adjust(tt.id, -1, remaining)}
+                                        style={{ ...qtyBtn, opacity: qty <= 0 ? 0.4 : 1, cursor: qty <= 0 ? 'not-allowed' : 'pointer' }}
+                                    >−</button>
+                                    <span style={{ minWidth: 24, textAlign: 'center', fontSize: 15, fontWeight: 700 }}>{qty}</span>
+                                    <button
+                                        disabled={atMax}
+                                        onClick={() => adjust(tt.id, +1, remaining)}
+                                        style={{ ...qtyBtn, opacity: atMax ? 0.4 : 1, cursor: atMax ? 'not-allowed' : 'pointer' }}
+                                    >+</button>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+
+                {/* Tổng tiền */}
+                {totalQty > 0 && (
+                    <div style={{ background: '#16162a', border: `1px solid ${BORDER_COLOR}`, borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, color: TEXT_MUTED }}>x{totalQty} vé</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#22c55e' }}>
+                            {totalPrice === 0 ? 'Miễn phí' : fmtVND(totalPrice)}
+                        </span>
+                    </div>
+                )}
+
+                {/* Nút xác nhận */}
+                <button
+                    disabled={!canConfirm || isConfirming}
+                    onClick={handleConfirm}
+                    className={`mt-auto w-full flex items-center justify-center gap-2 rounded-xl py-4 px-4 font-bold text-sm transition-all
+        ${canConfirm && !isConfirming
+                            ? 'bg-[#7c3bed] text-white cursor-pointer hover:bg-[#6d35d4]'
+                            : 'bg-[#374151] text-[#6b7280] cursor-not-allowed'
+                        }
+        ${isConfirming ? 'opacity-70' : 'opacity-100'}
+    `}
+                >
+                    {isConfirming ? (
+                        <>
+                            <svg className="animate-spin w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                                <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                            </svg>
+                            Đang xử lý...
+                        </>
+                    ) : canConfirm ? (
+                        <>Tiếp tục · {totalPrice === 0 ? 'Miễn phí' : fmtVND(totalPrice)} <span className="text-base">»</span></>
+                    ) : (
+                        'Vui lòng chọn vé'
+                    )}
+                </button>
+            </div>
         </div>
     );
 };
@@ -787,21 +970,33 @@ const SeatMapViewerPage: React.FC = () => {
     }, [spec]);
 
     const ticketTypes = useMemo<TicketType[]>(() => {
-        const seen = new Set<string>();
-        return seatMapData.areas
-            .filter(area => area.isAreaType && area.ticketTypeId && !seen.has(area.ticketTypeId) && seen.add(area.ticketTypeId))
-            .map(area => {
-                const item = ticketTypeItems.find(t => t.id === area.ticketTypeId);
-                return {
-                    id: area.ticketTypeId,
-                    name: item?.name ?? area.ticketTypeId,
-                    color: item?.color ?? area.fill ?? '#6b7280',
-                    price: area.price,
-                    quantity: item?.quantity ?? 0,
-                    soldQuantity: item?.soldQuantity ?? 0,
-                    remainingQuantity: item?.remainingQuantity ?? 0,
-                };
-            });
+        if (seatMapData.areas.length > 0) {
+            const seen = new Set<string>();
+            return seatMapData.areas
+                .filter(area => area.isAreaType && area.ticketTypeId && !seen.has(area.ticketTypeId) && seen.add(area.ticketTypeId))
+                .map(area => {
+                    const item = ticketTypeItems.find(t => t.id === area.ticketTypeId);
+                    return {
+                        id: area.ticketTypeId,
+                        name: item?.name ?? area.ticketTypeId,
+                        color: item?.color ?? area.fill ?? '#6b7280',
+                        price: area.price,
+                        quantity: item?.quantity ?? 0,
+                        soldQuantity: item?.soldQuantity ?? 0,
+                        remainingQuantity: item?.remainingQuantity ?? 0,
+                    };
+                });
+        }
+
+        return ticketTypeItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            color: item.color ?? '#6b7280',
+            price: item.price ?? 0,
+            quantity: item.quantity ?? 0,
+            soldQuantity: item.soldQuantity ?? 0,
+            remainingQuantity: item.remainingQuantity ?? 0,
+        }));
     }, [seatMapData, ticketTypeItems]);
 
     const mode = useMemo<ViewerMode>(() =>
@@ -830,7 +1025,7 @@ const SeatMapViewerPage: React.FC = () => {
             navigate('/payment-ticket');
             notify.success('Tạo order thành công');
         } else {
-            notify.error('Tạo order thất bại, vé đã không còn');
+            notify.error(getOrderErrorMessage(result.payload));
         }
     };
 
@@ -880,13 +1075,12 @@ const SeatMapViewerPage: React.FC = () => {
                         onConfirm={handleConfirm}
                     />
                 ) : specImageUrl ? (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, overflow: 'auto' }}>
-                        <img
-                            src={specImageUrl}
-                            alt="Seat Map"
-                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                        />
-                    </div>
+                    <SpecImageViewer
+                        specImageUrl={specImageUrl}
+                        ticketTypes={ticketTypes}
+                        eventSessionId={eventSessionId}
+                        onConfirm={handleConfirm}
+                    />
                 ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0B12', color: 'white', fontSize: 16 }}>
                         Không có sơ đồ ghế

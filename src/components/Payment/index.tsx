@@ -1106,14 +1106,37 @@ export default function PaymentTicket() {
                 <button
                   onClick={handlePayment}
                   disabled={isPaying || !isOrderReadyForPayment || (selectedMethod === "wallet" && walletLoading)}
-                  className="w-full bg-[#793bed] text-white py-5 rounded-xl font-bold text-lg tracking-wider hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-[#793bed]/30"
-                  style={{ boxShadow: "0 0 15px rgba(121,59,237,0.4)" }}
+                  className="w-full text-white py-5 rounded-xl font-bold text-lg tracking-wider transition-all shadow-xl relative overflow-hidden"
+                  style={{
+                    background: isPaying
+                      ? "rgba(121,59,237,0.5)"
+                      : !isOrderReadyForPayment
+                        ? "rgba(121,59,237,0.3)"
+                        : "#793bed",
+                    boxShadow: isPaying ? "none" : "0 0 15px rgba(121,59,237,0.4)",
+                    cursor: isPaying ? "not-allowed" : "pointer",
+                    transform: "none",
+                  }}
                 >
-                  {isPaying
-                    ? "Đang xử lý..."
-                    : !isOrderReadyForPayment
-                      ? "Đang tải thông tin đơn..."
-                      : "TIẾN HÀNH THANH TOÁN"}
+                  {isPaying ? (
+                    <span className="flex items-center justify-center gap-3">
+                      <svg className="animate-spin w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                      </svg>
+                      Đang xử lý, vui lòng chờ...
+                    </span>
+                  ) : !isOrderReadyForPayment ? (
+                    <span className="flex items-center justify-center gap-2 opacity-60">
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                      </svg>
+                      Đang tải thông tin đơn...
+                    </span>
+                  ) : (
+                    "TIẾN HÀNH THANH TOÁN"
+                  )}
                 </button>
                 <p className="text-center text-slate-400 text-xs mt-6 px-4">
                   Bằng cách nhấn "Tiến hành thanh toán", bạn đồng ý với Điều khoản Dịch vụ và Chính sách Bảo mật của chúng tôi.

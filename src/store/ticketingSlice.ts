@@ -56,13 +56,13 @@ const initialState: TicketingState = {
 export const fetchCreatePendingOrder = createAsyncThunk<
     ApiResponse<string>,
     CreatePendingOrderRequest,
-    { rejectValue: string }
+    { rejectValue: any }
 >("TICKETING/createPendingOrder", async (data, { rejectWithValue }) => {
     try {
         const res = await ticketingService.createPendingOrder(data);
         return res.data;
     } catch (err: any) {
-        return rejectWithValue(err?.response?.data?.message ?? "Không thể tạo order");
+        return rejectWithValue(err?.response?.data ?? "Không thể tạo order");
     }
 });
 
@@ -164,7 +164,7 @@ const ticketingSlice = createSlice({
             })
             .addCase(fetchCreatePendingOrder.rejected, (state, action) => {
                 state.loading = false;
-                state.error = action.payload ?? "Có lỗi xảy ra";
+                state.error = action.payload?.detail ?? action.payload?.message ?? "Có lỗi xảy ra";
             })
 
             // fetchOrdersByOrganizer
