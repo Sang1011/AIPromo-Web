@@ -162,12 +162,18 @@ export default function Header({
                                 <span>Trở về</span>
                             </button>
                         )}
-                        <div className="flex flex-col justify-center">
-                            <h1 className="text-2xl font-bold text-white max-w-[870px] truncate">
+                        <div className="group relative flex flex-col justify-center">
+                            <h1 className="text-2xl font-bold text-white max-w-[700px] truncate">
                                 {haveTitle && isEventHeader
                                     ? "Sự kiện " + (currentEvent?.title ?? "Đang tải...")
                                     : title}
                             </h1>
+
+                            <div className="absolute left-0 top-full mt-2 hidden group-hover:block bg-black text-white text-sm px-2 py-1 rounded whitespace-nowrap z-50">
+                                {haveTitle && isEventHeader
+                                    ? "Sự kiện " + (currentEvent?.title ?? "")
+                                    : title}
+                            </div>
                         </div>
                     </div>
 

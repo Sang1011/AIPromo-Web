@@ -423,7 +423,6 @@ export default function Step2Schedule({
         const form: TimeForm = {
             ticketSaleStartAt: eventData.ticketSaleStartAt ? isoToLocal(eventData.ticketSaleStartAt) : "",
             ticketSaleEndAt: eventData.ticketSaleEndAt ? isoToLocal(eventData.ticketSaleEndAt) : "",
-            // eventStartAt/eventEndAt: seed from eventData, will be overwritten once sessions load
             eventStartAt: eventData.eventStartAt ? isoToLocal(eventData.eventStartAt) : "",
             eventEndAt: eventData.eventEndAt ? isoToLocal(eventData.eventEndAt) : "",
         };
