@@ -419,7 +419,7 @@ export default function Step1EventInfo({
         else if (eventForm.title.length < 5) newErrors.title = "Tên sự kiện tối thiểu 5 ký tự";
         else if (eventForm.title.length > 150) newErrors.title = "Tên sự kiện tối đa 150 ký tự";
         if (!eventForm.description.trim()) newErrors.description = "Mô tả sự kiện không được để trống";
-        else if (eventForm.description.length > 5000) newErrors.description = "Mô tả tối đa 5000 ký tự";
+        else if (eventForm.description.length > 500) newErrors.description = "Mô tả tối đa 500 ký tự";
         if (!eventForm.location.trim()) newErrors.location = "Địa điểm không được để trống";
         else if (eventForm.location.length > 500) newErrors.location = "Địa điểm tối đa 500 ký tự";
         if (eventForm.selectedHashtags.length < 1) newErrors.selectedHashtags = "Phải chọn ít nhất 1 hashtag";
@@ -655,19 +655,15 @@ export default function Step1EventInfo({
                 }
                 onNext?.();
             }
-        } catch {
+        } catch (e) {
+            console.log(e);
             notify.error(mode === "create" ? "Không thể tạo sự kiện" : "Không thể cập nhật sự kiện");
         }
     };
 
     // ── Init form data ─────────────────────────────────────────────────────
     useEffect(() => {
-        if (mode === "create") {
-            setEventForm((prev) => ({
-                ...prev,
-                actors: prev.actors.length ? prev.actors : [{ name: "", major: "", image: null }],
-            }));
-        } else if (mode === "edit" && eventData) {
+        if (mode === "edit" && eventData) {
             const form: EventFormState = {
                 title: eventData.title ?? "",
                 description: eventData.description ?? "",
@@ -1073,9 +1069,11 @@ export default function Step1EventInfo({
                                 <FiPlus size={22} />
                             </div>
                             <div>
-                                <p className="text-white text-sm font-medium">Chưa có diễn giả / khách mời</p>
+                                <p className="text-white text-sm font-medium">
+                                    {isAllowUpdate ? "Chưa có diễn giả / khách mời" : "Không có diễn giả / khách mời"}
+                                </p>
                                 {isAllowUpdate && (
-                                    <p className="text-slate-500 text-xs mt-1">Nhấn để thêm diễn giả đầu tiên</p>
+                                    <p className="text-slate-500 text-xs mt-1">Bạn có thể nhấn để thêm diễn giả / khách mời</p>
                                 )}
                             </div>
                         </div>

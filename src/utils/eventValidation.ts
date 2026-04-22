@@ -86,54 +86,25 @@ export function validateEventTime(
 
 export function validateSession(
     session: Partial<SessionWindow>,
-    event: Pick<Partial<EventTimeWindow>, "eventStartAt" | "eventEndAt"> = {}
+    _event: Pick<Partial<EventTimeWindow>, "eventStartAt" | "eventEndAt"> = {}
 ): SessionValidationResult {
     const errors: FieldError<"title" | "startTime" | "endTime">[] = [];
-
     const { title, startTime, endTime } = session;
-    const { eventStartAt, eventEndAt } = event;
 
     if (!title?.trim())
         errors.push({ field: "title", message: "Tiêu đề không được để trống" });
 
-    // ── startTime validation ──────────────────────────────────────────────────
     if (!startTime) {
         errors.push({ field: "startTime", message: "Vui lòng chọn thời gian bắt đầu" });
-    } else {
-        // startTime phải >= eventStartAt
-        if (eventStartAt && d(startTime) < d(eventStartAt))
-            errors.push({
-                field: "startTime",
-                message: `Suất diễn phải bắt đầu từ ${formatVN(eventStartAt)} trở đi`,
-            });
-
-        // startTime phải < eventEndAt (bug cũ: thiếu check này)
-        if (eventEndAt && d(startTime) >= d(eventEndAt))
-            errors.push({
-                field: "startTime",
-                message: `Thời gian bắt đầu phải trước khi sự kiện kết thúc (${formatVN(eventEndAt)})`,
-            });
     }
 
-    // ── endTime validation ────────────────────────────────────────────────────
     if (!endTime) {
         errors.push({ field: "endTime", message: "Vui lòng chọn thời gian kết thúc" });
-    } else {
-        // Chỉ check endTime <= startTime khi startTime không có lỗi boundary
-        // Tránh double-error gây rối người dùng
-        const startHasBoundaryError = errors.some(e => e.field === "startTime");
-
-        if (!startHasBoundaryError && startTime && d(endTime) <= d(startTime))
-            errors.push({
-                field: "endTime",
-                message: "Thời gian kết thúc phải sau thời gian bắt đầu",
-            });
-
-        if (eventEndAt && d(endTime) > d(eventEndAt))
-            errors.push({
-                field: "endTime",
-                message: `Suất diễn phải kết thúc trước hoặc đúng lúc ${formatVN(eventEndAt)}`,
-            });
+    } else if (startTime && new Date(endTime) <= new Date(startTime)) {
+        errors.push({
+            field: "endTime",
+            message: "Thời gian kết thúc phải sau thời gian bắt đầu",
+        });
     }
 
     return { valid: errors.length === 0, errors };
@@ -181,4 +152,24 @@ export function errorsToFieldMap<T extends string>(
         map[field] = message;
         return map;
     }, {} as Partial<Record<T, string>>);
+}
+
+export function checkSessionOverlap(
+    newSession: Pick<SessionWindow, "id" | "startTime" | "endTime">,
+    existingSessions: SessionWindow[]
+): SessionWindow | null {
+    const newStart = d(newSession.startTime);
+    const newEnd = d(newSession.endTime);
+
+    for (const s of existingSessions) {
+        if (s.id === newSession.id) continue;
+
+        const existStart = d(s.startTime);
+        const existEnd = d(s.endTime);
+
+        if (newStart < existEnd && newEnd > existStart) {
+            return s;
+        }
+    }
+    return null;
 }
