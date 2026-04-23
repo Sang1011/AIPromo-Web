@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     FiAlertTriangle,
     FiCalendar, FiClock,
@@ -22,18 +22,23 @@ import EditSessionModal from "../sessions/EditSessionModal";
 import DateTimeInput from "../shared/DateTimeInput";
 import TicketTypeModal from "../ticket/TicketTypeModal";
 
-import { isoToLocal, localToIso } from "../../../utils/dateTimeVN";
-import {
-    getInvalidSessions,
-    type InvalidSessionsResult,
-    type SessionWindow,
-} from "../../../utils/eventValidation";
+import { isoToLocal } from "../../../utils/dateTimeVN";
 import { formatDateTime } from "../../../utils/formatDateTime";
 import ConfirmModal from "../shared/ConfirmModal";
 import { UnsavedBanner } from "../shared/UnsavedBanner";
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 const formatPrice = (price: number) =>
     price === 0 ? "FREE" : price.toLocaleString("vi-VN") + "đ";
+
+const toUTC = (local: string) => {
+    if (!local) return "";
+    const d = new Date(local);
+    return isNaN(d.getTime()) ? "" : d.toISOString();
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionHeader({
     icon, title, subtitle, count, action,
@@ -68,34 +73,35 @@ function SectionHeader({
 }
 
 function SessionCard({
-    session, onEdit, onDelete, hasConflict, isAllowUpdate
+    session, onEdit, onDelete, hasTicketConflict, isAllowUpdate,
 }: {
     session: EventSession & { id: string };
     onEdit: () => void;
     onDelete: () => void;
-    hasConflict?: boolean;
+    hasTicketConflict?: boolean;
     isAllowUpdate: boolean;
 }) {
     const [deleting, setDeleting] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+
     const handleDelete = async () => {
         setDeleting(true);
         try { onDelete(); } finally { setDeleting(false); }
     };
 
     return (
-        <div className={`group relative flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border transition-all duration-200 ${hasConflict
-            ? "bg-red-950/30 border-red-500/30 hover:border-red-500/50"
-            : "bg-[#18122B] border-white/5 hover:border-primary/25 hover:bg-[#1e1638]"
+        <div className={`group relative flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border transition-all duration-200 ${hasTicketConflict
+                ? "bg-amber-950/20 border-amber-500/25 hover:border-amber-500/40"
+                : "bg-[#18122B] border-white/5 hover:border-primary/25 hover:bg-[#1e1638]"
             }`}>
-            <div className={`absolute left-0 top-3 bottom-3 w-0.5 rounded-full transition-colors ${hasConflict ? "bg-red-500/60" : "bg-primary/30 group-hover:bg-primary/60"
+            <div className={`absolute left-0 top-3 bottom-3 w-0.5 rounded-full transition-colors ${hasTicketConflict ? "bg-amber-500/50" : "bg-primary/30 group-hover:bg-primary/60"
                 }`} />
             <div className="flex-1 min-w-0 pl-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-bold text-white text-sm truncate">{session.title}</p>
-                    {hasConflict && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 shrink-0">
-                            <FiAlertTriangle size={9} /> Ngoài giờ sự kiện
+                    {hasTicketConflict && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 shrink-0">
+                            <FiAlertTriangle size={9} /> Trước giờ bán vé
                         </span>
                     )}
                 </div>
@@ -122,7 +128,6 @@ function SessionCard({
                     >
                         <FiEdit2 size={12} /> Sửa
                     </button>
-
                     <button
                         onClick={() => setShowConfirm(true)}
                         disabled={deleting}
@@ -134,8 +139,8 @@ function SessionCard({
             )}
             <ConfirmModal
                 open={showConfirm}
-                title="Xóa xuất diễn"
-                description="Bạn có chắc muốn xóa suất diễn này? Hành động này có thể không hoàn tác."
+                title="Xóa suất diễn"
+                description="Bạn có chắc muốn xóa suất diễn này? Hành động này không thể hoàn tác."
                 confirmText="Xóa"
                 onCancel={() => setShowConfirm(false)}
                 onConfirm={handleDelete}
@@ -208,52 +213,12 @@ function Divider() {
     );
 }
 
-function ConflictBanner({
-    result,
-    onDismiss,
-}: {
-    result: InvalidSessionsResult;
-    onDismiss: () => void;
-}) {
-    if (!result.hasConflicts) return null;
-    return (
-        <div className="rounded-xl border border-red-500/25 bg-red-950/30 p-4 space-y-2">
-            <div className="flex items-start gap-2">
-                <FiAlertTriangle className="text-red-400 mt-0.5 shrink-0" size={14} />
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-red-300">
-                        {result.conflicts.length} suất diễn nằm ngoài khung giờ sự kiện
-                    </p>
-                    <p className="text-xs text-red-400/80 mt-0.5">
-                        Bạn cần chỉnh sửa hoặc xoá các suất diễn này trước khi tiếp tục.
-                    </p>
-                </div>
-                <button
-                    onClick={onDismiss}
-                    className="text-red-400/50 hover:text-red-300 transition-colors text-xs shrink-0"
-                >
-                    ✕
-                </button>
-            </div>
-            <ul className="space-y-1 pl-5">
-                {result.conflicts.map((c) => (
-                    <li key={c.id} className="text-xs text-red-400/70">
-                        <span className="font-semibold text-red-300">{c.title}</span>
-                        {" — "}
-                        {c.reasons.join(" · ")}
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type TimeForm = {
     ticketSaleStartAt: string;
     ticketSaleEndAt: string;
-    // Derived from sessions — not user-editable, but kept in timeForm to pass to API as-is
+    // Auto-derived from sessions, not user-editable
     eventStartAt: string;
     eventEndAt: string;
 };
@@ -267,6 +232,8 @@ interface Step2ScheduleProps {
     reloadEvent?: () => Promise<void>;
     isAllowUpdate?: boolean;
 }
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Step2Schedule({
     onNext, onBack, eventData, reloadEvent, isAllowUpdate = true,
@@ -283,12 +250,6 @@ export default function Step2Schedule({
     const [initialTimeForm, setInitialTimeForm] = useState<TimeForm | null>(null);
     const [timeErrors, setTimeErrors] = useState<TimeFormErrors>({});
 
-    const [sessionConflicts, setSessionConflicts] = useState<InvalidSessionsResult>({
-        hasConflicts: false,
-        conflicts: [],
-    });
-    const [conflictDismissed, setConflictDismissed] = useState(false);
-
     const sessions = (useSelector(
         (state: RootState) => state.EVENT.sessions
     ) ?? []) as (EventSession & { id: string })[];
@@ -301,7 +262,19 @@ export default function Step2Schedule({
     const [openCreateModal, setOpenCreateModal] = useState(false);
     const [editingSession, setEditingSession] = useState<(EventSession & { id: string }) | null>(null);
     const [openTicketModal, setOpenTicketModal] = useState(false);
+    const [bannerSaving, setBannerSaving] = useState(false);
 
+    // ── Derived ────────────────────────────────────────────────────────────────
+    const hasSessions = sessions.length > 0;
+    const hasTickets = ticketTypes.length > 0;
+
+    const sessionsBeforeTicketEnd = timeForm.ticketSaleEndAt
+        ? sessions.filter(s => s.startTime < toUTC(timeForm.ticketSaleEndAt))
+        : [];
+    const hasTicketSaleConflict = sessionsBeforeTicketEnd.length > 0;
+    const ticketConflictIds = new Set(sessionsBeforeTicketEnd.map(s => s.id));
+
+    // ── Loaders ────────────────────────────────────────────────────────────────
     const loadSessions = () => {
         if (!eventId) return;
         setLoading(true);
@@ -314,11 +287,12 @@ export default function Step2Schedule({
         if (eventId && sessions?.length > 0) {
             dispatch(fetchGetAllTicketTypes({
                 eventId,
-                eventSessionId: sessions[0].id
+                eventSessionId: sessions[0].id,
             }));
         }
     }, [eventId, sessions]);
 
+    // ── Auto-derive eventStartAt/eventEndAt from sessions ─────────────────────
     useEffect(() => {
         if (!eventId || eventData?.status !== "Draft") return;
 
@@ -327,21 +301,13 @@ export default function Step2Schedule({
             return;
         }
 
-        const earliest = sessions.reduce((min, s) =>
-            s.startTime < min.startTime ? s : min
-        );
-        const latest = sessions.reduce((max, s) =>
-            s.endTime > max.endTime ? s : max
-        );
+        const earliest = sessions.reduce((min, s) => s.startTime < min.startTime ? s : min);
+        const latest = sessions.reduce((max, s) => s.endTime > max.endTime ? s : max);
 
         const newStartAt = isoToLocal(earliest.startTime);
         const newEndAt = isoToLocal(latest.endTime);
 
-        setTimeForm(prev => ({
-            ...prev,
-            eventStartAt: newStartAt,
-            eventEndAt: newEndAt,
-        }));
+        setTimeForm(prev => ({ ...prev, eventStartAt: newStartAt, eventEndAt: newEndAt }));
 
         dispatch(fetchUpdateEventSettings({
             eventId,
@@ -356,67 +322,6 @@ export default function Step2Schedule({
         }));
     }, [sessions]);
 
-    const recomputeConflicts = useCallback(
-        (form: TimeForm, currentSessions: typeof sessions) => {
-            if (!form.eventStartAt || !form.eventEndAt || currentSessions.length === 0) {
-                setSessionConflicts({ hasConflicts: false, conflicts: [] });
-                return;
-            }
-            const result = getInvalidSessions(
-                currentSessions.map((s) => ({
-                    id: s.id,
-                    title: s.title,
-                    startTime: s.startTime,
-                    endTime: s.endTime,
-                })) satisfies SessionWindow[],
-                {
-                    eventStartAt: localToIso(form.eventStartAt),
-                    eventEndAt: localToIso(form.eventEndAt),
-                }
-            );
-            setSessionConflicts(result);
-            if (result.hasConflicts) setConflictDismissed(false);
-        },
-        []
-    );
-
-    useEffect(() => {
-        recomputeConflicts(timeForm, sessions);
-    }, [timeForm.eventStartAt, timeForm.eventEndAt, sessions, recomputeConflicts]);
-
-    const hasSessions = sessions.length > 0;
-    const hasTickets = ticketTypes.length > 0;
-    const conflictIds = new Set(sessionConflicts.conflicts.map((c) => c.id));
-
-    const runTimeValidation = (): boolean => {
-        const errors: TimeFormErrors = {};
-        if (!timeForm.ticketSaleStartAt) {
-            errors.ticketSaleStartAt = "Vui lòng chọn thời gian bắt đầu bán vé";
-        }
-        if (!timeForm.ticketSaleEndAt) {
-            errors.ticketSaleEndAt = "Vui lòng chọn thời gian kết thúc bán vé";
-        }
-        if (
-            timeForm.ticketSaleStartAt &&
-            timeForm.ticketSaleEndAt &&
-            timeForm.ticketSaleStartAt >= timeForm.ticketSaleEndAt
-        ) {
-            errors.ticketSaleEndAt = "Thời gian kết thúc bán vé phải sau thời gian bắt đầu";
-        }
-        setTimeErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    const toUTC = (local: string) => {
-        if (!local) return new Date().toISOString();
-        const d = new Date(local);
-        return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-    };
-
-    const isTimeFormChanged = () =>
-        initialTimeForm === null ||
-        JSON.stringify(initialTimeForm) !== JSON.stringify(timeForm);
-
     // ── Init from eventData ────────────────────────────────────────────────────
     useEffect(() => {
         if (!eventData || initialTimeForm) return;
@@ -430,6 +335,7 @@ export default function Step2Schedule({
         setInitialTimeForm(form);
     }, [eventData]);
 
+    // ── Dirty tracking ─────────────────────────────────────────────────────────
     const isDirty =
         initialTimeForm === null ||
         initialTimeForm.ticketSaleStartAt !== timeForm.ticketSaleStartAt ||
@@ -437,15 +343,16 @@ export default function Step2Schedule({
 
     useEffect(() => {
         if (!isDirty) return;
-        const handler = (e: BeforeUnloadEvent) => {
-            e.preventDefault();
-            e.returnValue = "";
-        };
+        const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
         window.addEventListener("beforeunload", handler);
         return () => window.removeEventListener("beforeunload", handler);
     }, [isDirty]);
 
-    // ── Shared save payload ────────────────────────────────────────────────────
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    const isTimeFormChanged = () =>
+        initialTimeForm === null ||
+        JSON.stringify(initialTimeForm) !== JSON.stringify(timeForm);
+
     const buildPayload = () => ({
         ticketSaleStartAt: toUTC(timeForm.ticketSaleStartAt),
         ticketSaleEndAt: toUTC(timeForm.ticketSaleEndAt),
@@ -455,28 +362,42 @@ export default function Step2Schedule({
         urlPath: eventData?.urlPath ?? "",
     });
 
+    const runTimeValidation = (): boolean => {
+        const errors: TimeFormErrors = {};
+        if (!timeForm.ticketSaleStartAt)
+            errors.ticketSaleStartAt = "Vui lòng chọn thời gian bắt đầu bán vé";
+        if (!timeForm.ticketSaleEndAt)
+            errors.ticketSaleEndAt = "Vui lòng chọn thời gian kết thúc bán vé";
+        if (
+            timeForm.ticketSaleStartAt &&
+            timeForm.ticketSaleEndAt &&
+            timeForm.ticketSaleStartAt >= timeForm.ticketSaleEndAt
+        ) {
+            errors.ticketSaleEndAt = "Thời gian kết thúc bán vé phải sau thời gian bắt đầu";
+        }
+        setTimeErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     // ── Handlers ───────────────────────────────────────────────────────────────
     const handleNext = async () => {
         if (!runTimeValidation()) return;
         if (!hasSessions) { notify.error("Sự kiện phải có ít nhất 1 suất diễn"); return; }
         if (!hasTickets) { notify.error("Sự kiện phải có ít nhất 1 loại vé"); return; }
-
-        if (sessionConflicts.hasConflicts) {
-            notify.error(
-                `${sessionConflicts.conflicts.length} suất diễn nằm ngoài khung giờ sự kiện. Vui lòng chỉnh sửa trước khi tiếp tục.`
-            );
-            setConflictDismissed(false);
+        if (hasTicketSaleConflict) {
+            notify.error("Có suất diễn bắt đầu trước khi kết thúc bán vé. Vui lòng điều chỉnh lại.");
             return;
         }
-
-        // Guard: sessions exist but eventWindow not derived yet (race condition)
         if (hasSessions && (!timeForm.eventStartAt || !timeForm.eventEndAt)) {
             notify.error("Không thể xác định khung giờ sự kiện. Vui lòng thử lại.");
             return;
         }
-
         if (isTimeFormChanged()) {
             if (!eventId) return;
+            if (!timeForm.eventStartAt || !timeForm.eventEndAt) {
+                notify.error("Vui lòng thêm ít nhất 1 suất diễn trước khi lưu");
+                return;
+            }
             try {
                 await dispatch(fetchUpdateEventSettings({ eventId, data: buildPayload() })).unwrap();
                 await reloadEvent?.();
@@ -487,15 +408,16 @@ export default function Step2Schedule({
                 return;
             }
         }
-
         onNext();
     };
-
-    const [bannerSaving, setBannerSaving] = useState(false);
 
     const handleBannerSave = async () => {
         if (!runTimeValidation()) return;
         if (!eventId) return;
+        if (!timeForm.eventStartAt || !timeForm.eventEndAt) {
+            notify.error("Vui lòng thêm ít nhất 1 suất diễn trước khi lưu");
+            return;
+        }
         setBannerSaving(true);
         try {
             await dispatch(fetchUpdateEventSettings({ eventId, data: buildPayload() })).unwrap();
@@ -514,7 +436,6 @@ export default function Step2Schedule({
         try {
             await dispatch(fetchDeleteSession({ eventId, sessionId })).unwrap();
             notify.success("Đã xoá suất diễn");
-            // sessions selector update → useEffect re-derives eventStartAt/eventEndAt automatically
         } catch {
             notify.error("Không thể xoá suất diễn");
         }
@@ -526,12 +447,13 @@ export default function Step2Schedule({
             {isDirty && isAllowUpdate && (
                 <UnsavedBanner onSave={handleBannerSave} saving={bannerSaving} />
             )}
+
             <div>
                 <h2 className="text-xl font-extrabold text-white tracking-tight">Thời gian biểu & Loại vé</h2>
                 <p className="text-sm text-slate-500 mt-1">Thiết lập các suất diễn và hạng vé cho sự kiện.</p>
             </div>
 
-            {/* Ticket sale time — user configures this */}
+            {/* ── Thời gian bán vé ── */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiLock size={16} />}
@@ -564,10 +486,9 @@ export default function Step2Schedule({
                 </div>
             </section>
 
-            {/* eventStartAt / eventEndAt are NOT shown — auto-derived from sessions */}
-
             <Divider />
 
+            {/* ── Suất diễn ── */}
             <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiLayers size={16} />}
@@ -578,24 +499,38 @@ export default function Step2Schedule({
                         <button
                             disabled={!isAllowUpdate}
                             onClick={() => setOpenCreateModal(true)}
-                            className={`
-                                flex items-center gap-1.5 px-4 py-2 rounded-xl
-                                font-semibold text-xs transition-colors
-                                bg-primary text-white hover:bg-primary/90
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                            `}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-xs transition-colors bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <FiPlus size={13} /> Tạo suất diễn
                         </button>
                     }
                 />
 
-                {!conflictDismissed && (
-                    <div className="mb-4">
-                        <ConflictBanner
-                            result={sessionConflicts}
-                            onDismiss={() => setConflictDismissed(true)}
-                        />
+                {/* Ticket sale conflict banner */}
+                {hasTicketSaleConflict && (
+                    <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-950/20 p-4">
+                        <div className="flex items-start gap-2">
+                            <FiAlertTriangle className="text-amber-400 mt-0.5 shrink-0" size={14} />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-amber-300">
+                                    {sessionsBeforeTicketEnd.length > 1
+                                        ? `${sessionsBeforeTicketEnd.length} suất diễn bắt đầu trước khi kết thúc bán vé`
+                                        : "Có suất diễn bắt đầu trước khi kết thúc bán vé"
+                                    }
+                                </p>
+                                <p className="text-xs text-amber-400/70 mt-0.5">
+                                    Bán vé kết thúc lúc {formatDateTime(toUTC(timeForm.ticketSaleEndAt))} — vui lòng điều chỉnh lại thời gian bán vé hoặc các suất diễn.
+                                </p>
+                            </div>
+                        </div>
+                        <ul className="space-y-1 pl-5 mt-2">
+                            {sessionsBeforeTicketEnd.map(s => (
+                                <li key={s.id} className="text-xs text-amber-400/60">
+                                    <span className="font-semibold text-amber-300">{s.title}</span>
+                                    {" — bắt đầu lúc "}{formatDateTime(s.startTime)}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )}
 
@@ -609,7 +544,7 @@ export default function Step2Schedule({
                             <SessionCard
                                 key={s.id}
                                 session={s}
-                                hasConflict={conflictIds.has(s.id)}
+                                hasTicketConflict={ticketConflictIds.has(s.id)}
                                 onEdit={() => setEditingSession(s)}
                                 onDelete={() => handleDelete(s.id)}
                                 isAllowUpdate={isAllowUpdate}
@@ -623,6 +558,7 @@ export default function Step2Schedule({
 
             <Divider />
 
+            {/* ── Loại vé ── */}
             <div className="rounded-2xl bg-[#100d1f] border border-white/5 p-6">
                 <SectionHeader
                     icon={<FiTag size={16} />}
@@ -655,6 +591,7 @@ export default function Step2Schedule({
                 )}
             </div>
 
+            {/* ── Footer ── */}
             <div className="flex items-center justify-between pt-2">
                 <button
                     onClick={onBack}
@@ -670,17 +607,16 @@ export default function Step2Schedule({
                 </button>
             </div>
 
+            {/* ── Modals ── */}
             {eventId && (
                 <CreateSessionModal
                     open={openCreateModal}
                     onClose={() => setOpenCreateModal(false)}
                     eventId={eventId}
-                    eventStartAt={timeForm.eventStartAt}
-                    eventEndAt={timeForm.eventEndAt}
+                    sessions={sessions}
+                    ticketSaleEndAt={toUTC(timeForm.ticketSaleEndAt)}
                     isAllowUpdate={isAllowUpdate}
-                    onCreated={async () => {
-                        loadSessions();
-                    }}
+                    onCreated={() => loadSessions()}
                 />
             )}
             {eventId && editingSession && (
@@ -690,11 +626,9 @@ export default function Step2Schedule({
                     eventId={eventId}
                     session={editingSession}
                     isAllowUpdate={isAllowUpdate}
-                    eventStartAt={timeForm.eventStartAt}
-                    eventEndAt={timeForm.eventEndAt}
-                    onUpdated={async () => {
-                        loadSessions();
-                    }}
+                    ticketSaleEndAt={toUTC(timeForm.ticketSaleEndAt)}
+                    sessions={sessions}
+                    onUpdated={() => loadSessions()}
                 />
             )}
             {eventId && (
@@ -702,9 +636,7 @@ export default function Step2Schedule({
                     sessions={sessions}
                     open={openTicketModal}
                     isAllowUpdate={isAllowUpdate}
-                    onClose={async () => {
-                        setOpenTicketModal(false);
-                    }}
+                    onClose={() => setOpenTicketModal(false)}
                     eventId={eventId}
                 />
             )}

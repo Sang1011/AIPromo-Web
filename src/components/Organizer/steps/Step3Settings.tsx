@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { FiEdit2, FiEye, FiLink, FiMap, FiPlus } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
+import { FiEdit2, FiEye, FiImage, FiLink, FiMap, FiPlus, FiUpload, FiX } from "react-icons/fi";
 import { useDispatch } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import type { AppDispatch } from "../../../store";
@@ -9,6 +9,8 @@ import type { EventSession, GetEventDetailResponse } from "../../../types/event/
 import { notify } from "../../../utils/notify";
 import ImageViewer from "../shared/ImagePreview";
 import { UnsavedBanner } from "../shared/UnsavedBanner";
+import type { SeatMapData } from "../../../types/config/seatmap";
+import SeatMapReadOnly from "../seatmap/SeatMapReadOnly";
 
 interface Step3SettingsProps {
     onNext?: () => void;
@@ -30,6 +32,7 @@ export default function Step3Settings({
     const { eventId } = useParams<{ eventId: string }>();
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [settingsForm, setSettingsForm] = useState<EventSettingsForm>({
         isEmailReminderEnabled: false,
@@ -47,6 +50,7 @@ export default function Step3Settings({
 
     // Seatmap
     const [seatMapSpec, setSeatMapSpec] = useState<string | null>(null);
+    const [parsedSeatMap, setParsedSeatMap] = useState<SeatMapData | null>(null);
     const [seatMapLoading, setSeatMapLoading] = useState(false);
 
     useEffect(() => {
@@ -60,7 +64,12 @@ export default function Step3Settings({
                 if (!firstSession) { setSeatMapSpec(null); setSeatMapLoading(false); return; }
                 dispatch(fetchGetSeatMap({ eventId, sessionId: firstSession.id }))
                     .unwrap()
-                    .then((spec) => setSeatMapSpec(spec ?? null))
+                    .then((spec) => {
+                        setSeatMapSpec(spec ?? null);
+                        if (spec) {
+                            try { setParsedSeatMap(JSON.parse(spec)); } catch { setParsedSeatMap(null); }
+                        }
+                    })
                     .catch(() => setSeatMapSpec(null))
                     .finally(() => setSeatMapLoading(false));
             })
@@ -101,13 +110,48 @@ export default function Step3Settings({
         return JSON.stringify(initialForm) !== JSON.stringify(settingsForm) || !!pendingFile;
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate 10MB
+        if (file.size > 10 * 1024 * 1024) {
+            notify.error("Ảnh không được vượt quá 10MB");
+            e.target.value = "";
+            return;
+        }
+
+        setPendingFile(file);
+        setPreviewUrl(URL.createObjectURL(file));
+        e.target.value = "";
+    };
+
+    const removeImage = () => {
+        setPendingFile(null);
+        setPreviewUrl("");
+        updateForm("specImage", "");
+    };
+
     const handleSubmit = async () => {
         if (!validateForm()) return;
         if (!isFormChanged()) { onNext?.(); return; }
         if (!eventId) return;
 
         try {
-            let finalSpecImageUrl = "";
+            let finalSpecImageUrl = settingsForm.specImage;
+
+            // Upload ảnh mới nếu có
+            if (pendingFile) {
+                setUploading(true);
+                finalSpecImageUrl = await dispatch(fetchUpload({
+                    folder: "spec-images",
+                    file: pendingFile,
+                })).unwrap();
+                setUploading(false);
+                setPendingFile(null);
+                setPreviewUrl(finalSpecImageUrl);
+                updateForm("specImage", finalSpecImageUrl);
+            }
 
             if (isAllowUpdate) {
                 await dispatch(fetchUpdateEventSettings({
@@ -121,6 +165,7 @@ export default function Step3Settings({
                         eventEndAt: eventData?.eventEndAt ?? "",
                     }
                 })).unwrap();
+
             } else {
                 await dispatch(fetchUpdateEventSettings({
                     eventId,
@@ -223,65 +268,186 @@ export default function Step3Settings({
                 <UnsavedBanner onSave={handleBannerSave} saving={bannerSaving} />
             )}
 
-            {/* ===== Sơ đồ chỗ ngồi ===== */}
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                         <FiMap />
                     </div>
                     <div>
-                        <h2 className="text-lg font-semibold text-white">Sơ đồ chỗ ngồi trực quan</h2>
-                        <p className="text-xs text-slate-500 mt-0.5">Thiết lập sơ đồ ghế cho sự kiện của bạn</p>
+                        <h2 className="text-lg font-semibold text-white">Sơ đồ chỗ ngồi</h2>
+                        <p className="text-xs text-slate-500 mt-0.5">Chọn một trong hai hình thức để hiển thị sơ đồ cho người mua vé</p>
                     </div>
                 </div>
 
-                {seatMapLoading ? (
-                    <div className="flex items-center gap-2 text-slate-500 text-sm py-2">
-                        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                        Đang tải...
-                    </div>
-                ) : hasSeatMap ? (
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/8">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                                <FiMap size={15} className="text-emerald-400" />
+                {/* Divider + label */}
+                <div className="flex items-center gap-3 my-5">
+                    <div className="flex-1 h-px bg-white/5" />
+                    <span className="text-xs text-slate-500 uppercase tracking-widest">Chọn hình thức</span>
+                    <div className="flex-1 h-px bg-white/5" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={`relative rounded-xl border p-5 flex flex-col gap-4 transition-all
+            ${hasSeatMap
+                            ? "border-emerald-500/40 bg-emerald-500/5"
+                            : "border-white/8 bg-white/[0.02]"}
+            ${!hasSeatMap && isAllowUpdate ? "hover:border-white/15" : ""}
+        `}>
+                        {hasSeatMap && (
+                            <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-[10px] font-semibold uppercase tracking-wide">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                Đang dùng
+                            </div>
+                        )}
+
+                        <div className="flex items-start gap-3">
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
+                    ${hasSeatMap ? "bg-emerald-500/15" : "bg-white/5"}`}>
+                                <FiMap size={16} className={hasSeatMap ? "text-emerald-400" : "text-slate-400"} />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-white">Sơ đồ trực quan đã được thiết lập</p>
-                                <p className="text-xs text-slate-500 mt-0.5">Nhấn để chỉnh sửa cấu hình ghế ngồi</p>
+                                <p className="text-sm font-semibold text-white">Sơ đồ trực quan</p>
+                                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                                    Tạo sơ đồ ghế tương tác, người mua vé chọn ghế trực tiếp
+                                </p>
                             </div>
                         </div>
-                        <button
-                            type="button"
-                            disabled={!isAllowUpdate}
-                            onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map/edit`, { state: { from: "edit" } })}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 text-sm text-white font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <FiEdit2 size={14} />
-                            Chỉnh sửa
-                        </button>
+
+                        {seatMapLoading ? (
+                            <div className="flex items-center gap-2 text-slate-500 text-xs">
+                                <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                Đang tải...
+                            </div>
+                        ) : hasSeatMap ? (
+                            <>
+                                {parsedSeatMap && (
+                                    <div className="w-full h-80 rounded-xl overflow-hidden border border-white/8">
+                                        <SeatMapReadOnly
+                                            seatMapData={parsedSeatMap}
+                                            ticketTypes={eventData?.ticketTypes ?? []}
+                                        />
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    disabled={!isAllowUpdate}
+                                    onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map/edit`, { state: { from: "edit" } })}
+                                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 text-xs text-white font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <FiEdit2 size={13} />
+                                    Chỉnh sửa sơ đồ
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                type="button"
+                                disabled={!isAllowUpdate}
+                                onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map/edit`, { state: { from: "edit" } })}
+                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/25 text-primary text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <FiPlus size={13} />
+                                Tạo sơ đồ
+                            </button>
+                        )}
                     </div>
-                ) : (
-                    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.015] p-6 flex flex-col items-center gap-4 text-center">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center">
-                            <FiMap size={22} className="text-slate-500" />
+
+                    <div className={`relative rounded-xl border p-5 flex flex-col gap-4 transition-all
+            ${displayImage && !hasSeatMap
+                            ? "border-primary/40 bg-primary/5"
+                            : "border-white/8 bg-white/[0.02]"}
+            ${!displayImage && isAllowUpdate ? "hover:border-white/15" : ""}
+        `}>
+                        {displayImage && !hasSeatMap && (
+                            <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/15 border border-primary/25 text-primary text-[10px] font-semibold uppercase tracking-wide">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                Đang dùng
+                            </div>
+                        )}
+
+                        <div className="flex items-start gap-3">
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
+                    ${displayImage && !hasSeatMap ? "bg-primary/15" : "bg-white/5"}`}>
+                                <FiImage size={16} className={displayImage && !hasSeatMap ? "text-primary" : "text-slate-400"} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-semibold text-white">Ảnh sơ đồ</p>
+                                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                                    Tải lên ảnh sơ đồ tĩnh để hiển thị cho người mua vé
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm font-semibold text-slate-300">Chưa có sơ đồ chỗ ngồi</p>
-                            <p className="text-xs text-slate-500 mt-1">Bạn có muốn tạo sơ đồ ghế ngồi cho sự kiện này không?</p>
-                        </div>
-                        <button
-                            type="button"
-                            disabled={!isAllowUpdate}
-                            onClick={() => navigate(`/organizer/my-events/${eventId}/seat-map/edit`, { state: { from: "edit" } })}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <FiPlus size={15} />
-                            Thêm sơ đồ chỗ ngồi
-                        </button>
+
+                        {displayImage ? (
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-black/20 border border-white/8">
+                                {/* Thumbnail */}
+                                <button
+                                    type="button"
+                                    onClick={() => setViewerOpen(true)}
+                                    className="relative w-14 h-10 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 group"
+                                >
+                                    <img src={displayImage} alt="Spec" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                        <FiEye size={13} className="text-white" />
+                                    </div>
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-white truncate">
+                                        {pendingFile ? pendingFile.name : "Ảnh sơ đồ"}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">
+                                        {pendingFile ? "Chưa lưu" : "Đã lưu"}
+                                    </p>
+                                </div>
+                                {isAllowUpdate && (
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/8 text-slate-400 hover:text-white transition"
+                                            title="Đổi ảnh"
+                                        >
+                                            <FiUpload size={12} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={removeImage}
+                                            className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 transition"
+                                            title="Xóa ảnh"
+                                        >
+                                            <FiX size={12} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div
+                                onClick={() => isAllowUpdate && fileInputRef.current?.click()}
+                                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl border text-xs font-semibold transition-all
+                        ${isAllowUpdate
+                                        ? "bg-white/5 hover:bg-white/10 border-white/10 text-white cursor-pointer"
+                                        : "border-white/5 text-slate-600 cursor-not-allowed opacity-50"}
+                    `}
+                            >
+                                <FiUpload size={13} />
+                                Tải lên ảnh sơ đồ
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
+
+                {/* Note: chỉ cần 1 trong 2 */}
+                <p className="text-xs text-slate-600 mt-4 text-center">
+                    Chỉ cần thiết lập một trong hai hình thức — sơ đồ trực quan sẽ được ưu tiên nếu cả hai đều có
+                </p>
             </section>
+
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+            />
 
             <section className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                 <div className="flex items-center gap-3 mb-6">
