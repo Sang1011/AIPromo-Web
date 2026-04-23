@@ -87,6 +87,60 @@ export default function AdminAIPackages() {
 
     return (
         <div className="space-y-8">
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="lg:col-span-3 glass-card rounded-2xl p-6 flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <div className="w-14 h-14 bg-violet-600/20 rounded-2xl flex items-center justify-center">
+                            <MdTrendingUp className="text-violet-400 text-3xl" />
+                        </div>
+                        <div>
+                            <h4 className="text-slate-400 text-sm uppercase tracking-wider font-bold">Tổng doanh thu gói AI</h4>
+                            <p className="text-2xl font-black text-white">
+                                {loading.overview ? (
+                                    <span className="inline-block w-32 h-8 bg-slate-700/50 rounded animate-pulse" />
+                                ) : overview ? (
+                                    `${new Intl.NumberFormat('vi-VN').format(overview.totalRevenue.value)} VND`
+                                ) : (
+                                    '0 VND'
+                                )}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs text-slate-500">Tăng trưởng tháng này</p>
+                        <p className={`font-bold ${
+                            overview?.totalRevenue.isPositiveGrowth ? 'text-emerald-400' : 'text-red-400'
+                        }`}>
+                            {loading.overview ? (
+                                <span className="inline-block w-12 h-6 bg-slate-700/50 rounded animate-pulse" />
+                            ) : overview ? (
+                                `${overview.totalRevenue.isPositiveGrowth ? '+' : ''}${overview.totalRevenue.monthlyGrowthRate}%`
+                            ) : (
+                                '+0%'
+                            )}
+                        </p>
+                    </div>
+                </div>
+                
+                <div className="glass-card rounded-2xl p-6 flex flex-col justify-center text-center">
+                    <h4 className="text-slate-400 text-xs uppercase tracking-wider font-bold mb-1">Gói hoạt động nhất</h4>
+                    {loading.overview ? (
+                        <>
+                            <span className="inline-block w-32 h-7 bg-slate-700/50 rounded animate-pulse mx-auto mt-1" />
+                            <span className="inline-block w-24 h-4 bg-slate-700/50 rounded animate-pulse mx-auto mt-2" />
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-xl font-bold text-violet-400">
+                                {overview?.mostActivePackage.packageName || 'N/A'}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-2">
+                                {overview?.mostActivePackage.organizationsUsing || 0} tổ chức đang dùng
+                            </p>
+                        </>
+                    )}
+                </div>
+            </div>
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">Quản lý gói AI</h1>
@@ -149,59 +203,7 @@ export default function AdminAIPackages() {
             />
             <AdminCreateAIPackageModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
 
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="lg:col-span-3 glass-card rounded-2xl p-6 flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-violet-600/20 rounded-2xl flex items-center justify-center">
-                            <MdTrendingUp className="text-violet-400 text-3xl" />
-                        </div>
-                        <div>
-                            <h4 className="text-slate-400 text-sm uppercase tracking-wider font-bold">Tổng doanh thu gói AI</h4>
-                            <p className="text-2xl font-black text-white">
-                                {loading.overview ? (
-                                    <span className="inline-block w-32 h-8 bg-slate-700/50 rounded animate-pulse" />
-                                ) : overview ? (
-                                    `${new Intl.NumberFormat('vi-VN').format(overview.totalRevenue.value)} VND`
-                                ) : (
-                                    '0 VND'
-                                )}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-xs text-slate-500">Tăng trưởng tháng này</p>
-                        <p className={`font-bold ${
-                            overview?.totalRevenue.isPositiveGrowth ? 'text-emerald-400' : 'text-red-400'
-                        }`}>
-                            {loading.overview ? (
-                                <span className="inline-block w-12 h-6 bg-slate-700/50 rounded animate-pulse" />
-                            ) : overview ? (
-                                `${overview.totalRevenue.isPositiveGrowth ? '+' : ''}${overview.totalRevenue.monthlyGrowthRate}%`
-                            ) : (
-                                '+0%'
-                            )}
-                        </p>
-                    </div>
-                </div>
-                <div className="glass-card rounded-2xl p-6 flex flex-col justify-center text-center">
-                    <h4 className="text-slate-400 text-xs uppercase tracking-wider font-bold mb-1">Gói hoạt động nhất</h4>
-                    {loading.overview ? (
-                        <>
-                            <span className="inline-block w-32 h-7 bg-slate-700/50 rounded animate-pulse mx-auto mt-1" />
-                            <span className="inline-block w-24 h-4 bg-slate-700/50 rounded animate-pulse mx-auto mt-2" />
-                        </>
-                    ) : (
-                        <>
-                            <p className="text-xl font-bold text-violet-400">
-                                {overview?.mostActivePackage.packageName || 'N/A'}
-                            </p>
-                            <p className="text-xs text-slate-500 mt-2">
-                                {overview?.mostActivePackage.organizationsUsing || 0} tổ chức đang dùng
-                            </p>
-                        </>
-                    )}
-                </div>
-            </div>
+            
         </div>
     );
 }
