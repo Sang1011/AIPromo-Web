@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchAdminPaymentTransactions } from "../../../store/paymentSlice";
+import paymentService from "../../../services/paymentService";
 import { fetchAdminReportsOverview } from "../../../store/adminReportsSlice";
 import {
     MdTrendingUp,
@@ -19,18 +19,25 @@ export default function AdminFinanceStats() {
         (state: RootState) => state.REVENUE
     );
     const { data: reportsData } = useSelector((state: RootState) => state.ADMIN_REPORTS);
-    const { adminTransactions, loading: transactionLoading } = useSelector(
-        (state: RootState) => state.PAYMENT
-    );
+    const [localTotalTransactions, setLocalTotalTransactions] = useState<number | null>(null);
+    const [localLoadingTransactions, setLocalLoadingTransactions] = useState(false);
 
     useEffect(() => {
         dispatch(fetchAdminReportsOverview());
-        dispatch(fetchAdminPaymentTransactions({
-            PageNumber: 1,
-            PageSize: 1,
-            SortColumn: "CreatedAt",
-            SortOrder: "desc",
-        }));
+        // fetch only a small summary for transactions count without touching global PAYMENT state
+        (async () => {
+            try {
+                setLocalLoadingTransactions(true);
+                // fetch only completed transactions count to avoid overwriting global payment list
+                const res = await paymentService.getAdminPaymentTransactions({ PageNumber: 1, PageSize: 1, SortColumn: "CreatedAt", SortOrder: "desc", Status: "Completed" });
+                const data = res.data?.data ?? res.data;
+                setLocalTotalTransactions(data?.totalCount ?? null);
+            } catch (err) {
+                setLocalTotalTransactions(null);
+            } finally {
+                setLocalLoadingTransactions(false);
+            }
+        })();
     }, [dispatch]);
 
     const formatCurrency = (value: number): string => {
@@ -43,7 +50,7 @@ export default function AdminFinanceStats() {
     const grossRevenue = reportsData?.kpis?.totalRevenue?.value ?? globalRevenue?.data?.grossRevenue ?? 0;
     const netRevenue = globalRevenue?.data?.netRevenue ?? 0;
     const eventCount = reportsData?.kpis?.events?.total ?? globalRevenue?.data?.eventCount ?? 0;
-    const totalTransactions = adminTransactions?.totalCount ?? 0;
+    const totalTransactions = localTotalTransactions ?? 0;
 
     // Calculate platform fee (15% of gross revenue)
     const platformFee = useMemo(() => {
@@ -79,8 +86,8 @@ export default function AdminFinanceStats() {
                 iconColor="text-blue-400"
             />
             <AdminStatsCard
-                label="Giao dịch"
-                value={transactionLoading.adminTransactions ? "Đang tải..." : totalTransactions.toLocaleString("vi-VN")}
+                label="Giao dịch hoàn thành"
+                value={localLoadingTransactions ? "Đang tải..." : totalTransactions.toLocaleString("vi-VN")}
                 icon={<MdReceiptLong className="text-sm" />}
                 iconBg="bg-purple-500/10"
                 iconColor="text-purple-400"
