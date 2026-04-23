@@ -255,43 +255,54 @@ export interface GetPendingEventsRequest extends GetAllRequest {
     Statuses?: string;
 }
 
-export const SPEAKER_PROFESSIONS: string[] = [
-    "Doanh nhân",
-    "Nhà sáng lập (Founder)",
-    "CEO",
-    "Chuyên gia",
-    "Tư vấn (Consultant)",
-    "Huấn luyện viên (Coach)",
-    "Giảng viên",
-    "Giáo sư",
-    "Nhà nghiên cứu",
-    "Kỹ sư",
-    "Lập trình viên (Developer)",
-    "Chuyên gia IT",
-    "Chuyên gia Marketing",
-    "Chuyên gia Tài chính",
-    "Chuyên gia Nhân sự (HR)",
-    "Content Creator",
-    "Influencer",
-    "KOL",
-    "KOC",
-    "Nhà báo",
-    "Biên tập viên",
-    "Diễn giả truyền cảm hứng",
-    "Tác giả",
-    "Nghệ sĩ",
-    "Ca sĩ",
-    "Diễn viên",
-    "MC",
-    "Host",
-    "Presenter",
-    "Producer",
-    "Quản lý",
-    "Lãnh đạo cấp cao (C-level)",
-    "Đại diện tổ chức (NGO)",
-    "Freelancer",
-    "Sinh viên",
-    "Startup Founder",
-    "Khách mời (Guest Speaker)",
-    "Khác"
+export const SPEAKER_PROFESSION_GROUPS: { label: string; items: string[] }[] = [
+    {
+        label: "Kinh doanh & Lãnh đạo",
+        items: ["Doanh nhân", "Nhà sáng lập (Founder)", "Lãnh đạo cấp cao (C-level)", "Quản lý", "CEO"],
+    },
+    {
+        label: "Chuyên gia & Tư vấn",
+        items: ["Chuyên gia", "Tư vấn (Consultant)", "Huấn luyện viên (Coach)"],
+    },
+    {
+        label: "Giáo dục & Nghiên cứu",
+        items: ["Giảng viên", "Giáo sư", "Nhà nghiên cứu"],
+    },
+    {
+        label: "Công nghệ",
+        items: ["Kỹ sư", "Lập trình viên (Developer)", "Chuyên gia IT"],
+    },
+    {
+        label: "Nghiệp vụ",
+        items: ["Chuyên gia Marketing", "Chuyên gia Tài chính", "Chuyên gia Nhân sự (HR)"],
+    },
+    {
+        label: "Nội dung & Truyền thông",
+        items: [
+            "Nhà sáng tạo nội dung (Content Creator)",
+            "Influencer / KOL / KOC",
+            "YouTuber",
+            "TikToker",
+            "Streamer",
+            "Podcaster",
+            "Nhà báo",
+            "Biên tập viên",
+            "Tác giả",
+        ],
+    },
+    {
+        label: "Giải trí & Sự kiện",
+        items: [
+            "Nghệ sĩ",
+            "Ca sĩ",
+            "Diễn viên",
+            "MC / Host / Presenter",
+            "Producer",
+            "Diễn giả truyền cảm hứng",
+        ],
+    },
+    {
+        label: "Khác",
+        items: ["Đại diện tổ chức (NGO)", "Freelancer", "Sinh viên", "Khách mời (Guest Speaker)", "Khác"],
+    },
 ];

@@ -44,6 +44,22 @@ interface BlockEditorProps {
     onChange?: (blocks: ContentBlock[]) => void;
     editorRef?: React.MutableRefObject<{ getBlocks: () => ContentBlock[] } | null>;
     postId?: string;
+
+    /**
+     * disableImageBlock: true → ẩn nút "Ảnh" trong toolbar và không cho thêm image block.
+     * Dùng cho AI Content tab vì ảnh được quản lý bởi UploadImageSection bên ngoài.
+     * Default: false (Manual tab có thể thêm image block bình thường)
+     */
+    disableImageBlock?: boolean;
+
+    /**
+     * onImageChange: callback khi image block thay đổi (upload file hoặc clear).
+     * Chỉ có ý nghĩa khi disableImageBlock = false (Manual tab).
+     * Parent dùng callback này để track pendingFile + imageUrl mà không cần UploadImageSection riêng.
+     * @param file - File object nếu user upload từ máy, null nếu xóa
+     * @param url  - blob URL hoặc http URL, null nếu xóa
+     */
+    onImageChange?: (file: File | null, url: string | null) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -314,7 +330,8 @@ function BlockFieldEditor({
                                        rounded-xl text-slate-500 hover:text-slate-300 transition-all"
                         >
                             <MdOutlineImage className="text-2xl" />
-                            <p className="text-[10px] text-slate-600 mt-0.5">Tối đa 10MB</p>
+                            <p className="text-xs">Nhấn để chọn ảnh</p>
+                            <p className="text-[10px] text-slate-600">Tối đa 10MB</p>
                         </button>
                     )}
                     <input
@@ -352,13 +369,21 @@ const TOOLBAR_ITEMS: {
 
 // ─── Main BlockEditor ─────────────────────────────────────────────────────────
 
-export default function BlockEditor({ initialBlocks = [], onChange, editorRef, postId }: BlockEditorProps) {
+export default function BlockEditor({
+    initialBlocks = [],
+    onChange,
+    editorRef,
+    postId,
+    disableImageBlock = false,
+    onImageChange,
+}: BlockEditorProps) {
     const [blocks, setBlocks] = useState<BlockWithId[]>(() =>
         initialBlocks.length > 0
             ? initialBlocks.map(withId)
             : [withId({ type: "heading", level: 1, text: "" }), withId({ type: "paragraph", text: "" })]
     );
 
+    // Chỉ block image nếu đã có 1 rồi (dù disableImageBlock = false)
     const hasImageBlock = blocks.some((b) => b.type === "image");
 
     const sensors = useSensors(
@@ -379,6 +404,7 @@ export default function BlockEditor({ initialBlocks = [], onChange, editorRef, p
         const newIndex = blocks.findIndex((b) => b._id === over.id);
         const newBlocks = arrayMove(blocks, oldIndex, newIndex);
         update(newBlocks);
+
         const draggedBlock = blocks[oldIndex];
         if (draggedBlock?.type === "image" && postId) {
             saveImagePosition(postId, newIndex).catch(console.error);
@@ -394,14 +420,25 @@ export default function BlockEditor({ initialBlocks = [], onChange, editorRef, p
     };
 
     const handleRemove = (id: string) => {
-        update(blocks.filter((b) => b._id !== id));
+        const removedBlock = blocks.find(b => b._id === id);
+        const newBlocks = blocks.filter((b) => b._id !== id);
+        update(newBlocks);
+
+        // Nếu xóa image block → notify parent image cleared
+        if (removedBlock?.type === "image") {
+            onImageChange?.(null, null);
+        }
     };
 
     const handleUploadImage = (id: string, file: File) => {
         const err = validateImageFile(file);
         if (err) { notify.error(err); return; }
+
         const src = URL.createObjectURL(file);
         update(blocks.map((b) => (b._id === id ? { ...b, src, _pendingFile: file } as any : b)));
+
+        // Notify parent image changed (dùng cho ManualSection)
+        onImageChange?.(file, src);
     };
 
     // Expose getBlocks cho parent
@@ -416,7 +453,12 @@ export default function BlockEditor({ initialBlocks = [], onChange, editorRef, p
             {/* Toolbar */}
             <div className="flex flex-wrap gap-2 pb-3 border-b border-slate-800">
                 {TOOLBAR_ITEMS.map((item) => {
+                    // Ẩn nút Ảnh nếu disableImageBlock = true
+                    if (item.type === "image" && disableImageBlock) return null;
+
+                    // Disable nút Ảnh nếu đã có 1 image block
                     const isDisabled = item.type === "image" && hasImageBlock;
+
                     return (
                         <button
                             key={item.type}

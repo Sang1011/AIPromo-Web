@@ -19,53 +19,12 @@ import type {
     GetEventDetailResponse
 } from "../../../types/event/event";
 import { notify } from "../../../utils/notify";
-import ImagePreviewBox from "../shared/ImagePreviewBox";
-import UploadBox from "../shared/UploadBox";
-import { UnsavedBanner } from "../shared/UnsavedBanner";
 import { validateImageFile } from "../../../utils/validateImageFile";
-
-export const SPEAKER_PROFESSIONS: string[] = [
-    "Doanh nhân",
-    "Nhà sáng lập (Founder)",
-    "CEO",
-    "Chuyên gia",
-    "Tư vấn (Consultant)",
-    "Huấn luyện viên (Coach)",
-    "Giảng viên",
-    "Giáo sư",
-    "Nhà nghiên cứu",
-    "Kỹ sư",
-    "Lập trình viên (Developer)",
-    "Chuyên gia IT",
-    "Chuyên gia Marketing",
-    "Chuyên gia Tài chính",
-    "Chuyên gia Nhân sự (HR)",
-    "Content Creator",
-    "Influencer",
-    "KOL",
-    "KOC",
-    "Nhà báo",
-    "Biên tập viên",
-    "Diễn giả truyền cảm hứng",
-    "Tác giả",
-    "Nghệ sĩ",
-    "Ca sĩ",
-    "Diễn viên",
-    "MC",
-    "Host",
-    "Presenter",
-    "Producer",
-    "Quản lý",
-    "Lãnh đạo cấp cao (C-level)",
-    "Đại diện tổ chức (NGO)",
-    "Freelancer",
-    "Sinh viên",
-    "Startup Founder",
-    "Khách mời (Guest Speaker)",
-    "Khác"
-];
-
-const OTHER_VALUE = "Khác";
+import { ActorMajorField } from "../actors/ActorMajorField";
+import { DropdownItem, DropdownLoading } from "../shared/DropdownItem";
+import ImagePreviewBox from "../shared/ImagePreviewBox";
+import { UnsavedBanner } from "../shared/UnsavedBanner";
+import UploadBox from "../shared/UploadBox";
 
 interface Step1EventInfoProps {
     onNext?: () => void;
@@ -207,118 +166,7 @@ function DropdownList({ children }: DropdownListProps) {
     );
 }
 
-interface DropdownItemProps {
-    onClick?: (e: React.MouseEvent) => void;
-    isSelected?: boolean;
-    children: React.ReactNode;
-    suffix?: React.ReactNode;
-}
-function DropdownItem({ onClick, isSelected, children, suffix }: DropdownItemProps) {
-    return (
-        <div
-            onMouseDown={onClick}
-            className={`
-                flex items-center justify-between px-4 py-2.5
-                text-sm border-b border-white/5 last:border-b-0
-                cursor-pointer select-none transition-colors
-                ${isSelected
-                    ? "bg-primary/15 text-primary"
-                    : "text-white hover:bg-white/8"
-                }
-            `}
-        >
-            <span className="truncate">{children}</span>
-            {suffix && <span className="ml-3 flex-shrink-0 text-xs text-slate-400">{suffix}</span>}
-        </div>
-    );
-}
 
-function DropdownLoading() {
-    return (
-        <div className="px-4 py-4 text-sm text-slate-500 text-center animate-pulse">
-            Đang tải...
-        </div>
-    );
-}
-
-// ── Actor Major Field ──────────────────────────────────────────────────────
-interface ActorMajorFieldProps {
-    value: string;
-    onChange: (value: string) => void;
-    disabled?: boolean;
-    error?: string;
-}
-
-function ActorMajorField({ value, onChange, disabled, error }: ActorMajorFieldProps) {
-    const isPreset = SPEAKER_PROFESSIONS.includes(value);
-    const [isCustomMode, setIsCustomMode] = useState(!isPreset && value !== "" || false);
-
-    const selectValue = isCustomMode ? OTHER_VALUE : (isPreset ? value : "");
-
-    const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selected = e.target.value;
-        if (selected === OTHER_VALUE) {
-            setIsCustomMode(true);
-            onChange("");
-        } else {
-            setIsCustomMode(false);
-            onChange(selected);
-        }
-    };
-
-    return (
-        <div className="space-y-2">
-            <select
-                value={selectValue}
-                onChange={handleSelectChange}
-                disabled={disabled}
-                className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white text-sm
-                    appearance-none cursor-pointer
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                    focus:outline-none focus:ring-1 focus:ring-primary/40
-                    transition-all
-                    ${error ? "border-red-500" : "border-white/10"}
-                `}
-                style={{
-                    backgroundImage: disabled
-                        ? "none"
-                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 14px center",
-                    paddingRight: "2.5rem",
-                }}
-            >
-                <option value="" disabled className="bg-[#1a1530] text-slate-400">
-                    Chọn chuyên môn...
-                </option>
-                {SPEAKER_PROFESSIONS.map((prof) => (
-                    <option key={prof} value={prof} className="bg-[#1a1530] text-white">
-                        {prof}
-                    </option>
-                ))}
-            </select>
-
-            {/* Hiện input khi isCustomMode = true */}
-            {isCustomMode && (
-                <input
-                    autoFocus
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    disabled={disabled}
-                    placeholder="Nhập chuyên môn..."
-                    className={`w-full rounded-xl bg-black/30 border px-4 py-3 text-white text-sm
-                        disabled:opacity-40 disabled:cursor-not-allowed
-                        focus:outline-none focus:ring-1 focus:ring-primary/40
-                        transition-all
-                        ${error ? "border-red-500" : "border-white/10"}
-                    `}
-                />
-            )}
-
-            {error && <p className="text-xs text-red-400">{error}</p>}
-        </div>
-    );
-}
 
 export default function Step1EventInfo({
     onNext, mode = "edit", onCreated, eventData, reloadEvent, isAllowUpdate = true,

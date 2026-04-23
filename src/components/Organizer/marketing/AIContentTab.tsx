@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MdOutlineBolt, MdOutlineSmartToy } from "react-icons/md";
+import { MdOutlineBolt, MdOutlineClose, MdOutlineSmartToy } from "react-icons/md";
 import type { ContentBlock } from "../../../types/post/post";
 import UploadImageSection from "./UploadImageSection";
 
@@ -27,7 +27,6 @@ interface AIContentTabProps {
     loading: { generateAI?: boolean; createDraft?: boolean; updateContent?: boolean; uploadImage?: boolean };
     error: { generateAI?: string | null };
     selectedImageUrl: string | null;
-    showUploadSection?: boolean;
 
     onGenerate: (tone: string, userPrompt: string) => void;
     onPreview: (blocks: ContentBlock[], title: string) => void;
@@ -42,7 +41,6 @@ export default function AIContentTab({
     loading,
     error,
     selectedImageUrl,
-    showUploadSection = false,
     onGenerate,
     onPreview,
     onSelectImage,
@@ -66,49 +64,45 @@ export default function AIContentTab({
 
     return (
         <div className="space-y-5">
-            {showUploadSection && (
-                <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl px-4 py-3.5 space-y-3">
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                        <span className="text-primary font-semibold">💡 Gợi ý:</span>{" "}
-                        Bạn có thể{" "}
-                        <span className="text-slate-200 font-medium">tạo ảnh AI</span> ở tab bên cạnh rồi gắn vào bài post,
-                        hoặc <span className="text-slate-200 font-medium">tải ảnh trực tiếp</span> từ máy.
-                    </p>
-                    <UploadImageSection
-                        selectedImageUrl={selectedImageUrl}
-                        onSelectImage={onSelectImage}
-                        onClearImage={onClearImage}
-                        onFileSelected={onFileSelected}
-                    />
-                </div>
-            )}
+            {/* Hint + Upload image — luôn hiển thị trong tab này */}
+            <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl px-4 py-3.5 space-y-3">
+                <p className="text-xs text-slate-400 leading-relaxed">
+                    <span className="text-primary font-semibold">💡 Gợi ý:</span>{" "}
+                    Bạn có thể{" "}
+                    <span className="text-slate-200 font-medium">tạo ảnh AI</span> ở tab bên cạnh rồi gắn vào bài post,
+                    hoặc <span className="text-slate-200 font-medium">tải ảnh trực tiếp</span> từ máy.
+                </p>
+                <UploadImageSection
+                    selectedImageUrl={selectedImageUrl}
+                    onSelectImage={onSelectImage}
+                    onClearImage={onClearImage}
+                    onFileSelected={onFileSelected}
+                />
+            </div>
 
-            {/* Hint khi không có upload section (PromptFormMarketing) */}
-            {!showUploadSection && (
-                <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl px-4 py-3.5">
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                        <span className="text-primary font-semibold">💡 Gợi ý:</span>{" "}
-                        Bạn có thể{" "}
-                        <span className="text-slate-200 font-medium">tạo ảnh AI</span> ở tab bên cạnh rồi chọn dùng cho bài post.
-                        Ảnh sẽ được lưu kèm theo bản nháp khi bạn bấm lưu.
-                    </p>
-                </div>
-            )}
-
-            {/* Selected image indicator */}
+            {/* Selected image indicator — nút X để bỏ ảnh */}
             {selectedImageUrl && (
                 <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20
                                 rounded-xl px-4 py-2.5 text-xs text-green-400">
                     <img src={selectedImageUrl} alt="selected"
-                        className="w-10 h-10 rounded-lg object-cover border border-green-500/30" />
-                    <div>
+                        className="w-10 h-10 rounded-lg object-cover border border-green-500/30 shrink-0" />
+                    <div className="flex-1 min-w-0">
                         <p className="font-semibold">Đã chọn ảnh</p>
-                        <p className="text-green-500/70">
+                        <p className="text-green-500/70 truncate">
                             {selectedImageUrl.startsWith("blob:")
                                 ? "Ảnh từ máy — sẽ được upload khi áp dụng"
                                 : "Ảnh AI — sẽ được đưa vào bài viết"}
                         </p>
                     </div>
+                    <button
+                        type="button"
+                        onClick={onClearImage}
+                        className="shrink-0 p-1 rounded-lg text-green-500/60 hover:text-red-400
+                                   hover:bg-red-500/10 transition-all"
+                        title="Bỏ ảnh đã chọn"
+                    >
+                        <MdOutlineClose className="text-base" />
+                    </button>
                 </div>
             )}
 

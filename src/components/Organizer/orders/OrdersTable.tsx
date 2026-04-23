@@ -1,5 +1,6 @@
 import type { OrderItemOrganizer } from "../../../types/ticketing/ticketing";
 import { BiSolidCoupon } from "react-icons/bi";
+import { HiOutlineEye } from "react-icons/hi2";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -22,9 +23,10 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 // ── Component ─────────────────────────────────────────────────────────────────
 interface Props {
     orders: OrderItemOrganizer[];
+    onViewDetail: (orderId: string) => void;
 }
 
-export default function OrdersTable({ orders }: Props) {
+export default function OrdersTable({ orders, onViewDetail }: Props) {
     return (
         <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 overflow-hidden">
             {/* Count */}
@@ -32,8 +34,8 @@ export default function OrdersTable({ orders }: Props) {
                 Có <span className="text-violet-400 font-semibold">{orders.length}</span> đơn hàng
             </div>
 
-            {/* Header — 7 cols (bỏ checkbox + actions) */}
-            <div className="grid grid-cols-[1fr_1.1fr_1.5fr_1fr_1fr_1fr_1fr] px-6 py-3 text-[11px] font-semibold tracking-widest text-slate-500 uppercase border-t border-white/5">
+            {/* Header — 8 cols (thêm cột Actions) */}
+            <div className="grid grid-cols-[1fr_1.1fr_1.5fr_1fr_1fr_1fr_1fr_auto] px-6 py-3 text-[11px] font-semibold tracking-widest text-slate-500 uppercase border-t border-white/5">
                 <div>Order ID</div>
                 <div>Ngày tạo</div>
                 <div>Người mua</div>
@@ -41,6 +43,7 @@ export default function OrdersTable({ orders }: Props) {
                 <div>Giảm giá</div>
                 <div>Thành tiền</div>
                 <div>Trạng thái</div>
+                <div className="w-16 text-center">Chi tiết</div>
             </div>
 
             {/* Rows */}
@@ -60,7 +63,7 @@ export default function OrdersTable({ orders }: Props) {
                     return (
                         <div
                             key={o.orderId}
-                            className="grid grid-cols-[1fr_1.1fr_1.5fr_1fr_1fr_1fr_1fr] px-6 py-4 items-center hover:bg-white/[0.03] transition"
+                            className="grid grid-cols-[1fr_1.1fr_1.5fr_1fr_1fr_1fr_1fr_auto] px-6 py-4 items-center hover:bg-white/[0.03] transition"
                         >
                             {/* Order ID */}
                             <span
@@ -94,7 +97,7 @@ export default function OrdersTable({ orders }: Props) {
                                 <span className="text-slate-600 text-sm">—</span>
                             )}
 
-                            {/* Final price (totalPrice = sau giảm) */}
+                            {/* Final price */}
                             <div>
                                 <p className="text-white font-semibold text-sm">{fmt(o.totalPrice)}</p>
                                 {o.discountAmount > 0 && (
@@ -108,6 +111,17 @@ export default function OrdersTable({ orders }: Props) {
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-medium w-fit ${st.cls}`}>
                                 {st.label}
                             </span>
+
+                            {/* Detail button */}
+                            <div className="w-16 flex justify-center">
+                                <button
+                                    onClick={() => onViewDetail(o.orderId)}
+                                    title="Xem chi tiết"
+                                    className="group flex items-center justify-center w-8 h-8 rounded-lg border border-white/10 bg-white/5 hover:bg-violet-500/20 hover:border-violet-500/40 text-slate-500 hover:text-violet-300 transition-all duration-200"
+                                >
+                                    <HiOutlineEye className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     );
                 })}

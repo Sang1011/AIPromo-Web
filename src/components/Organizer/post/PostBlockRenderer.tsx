@@ -82,11 +82,13 @@ function BlockItem({ block }: { block: ContentBlock }) {
                         <div key={i}
                             className="relative pl-9 pr-3 py-2 text-[0.92rem] text-slate-400
                                         leading-[1.7] bg-[#13112a] rounded-lg">
-                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2
-                                             w-1.5 h-1.5 rounded-full bg-primary" />
-                            {block.ordered && (
-                                <span className="absolute left-3 top-2 text-primary
+
+                            {block.ordered ? (
+                                <span className="absolute left-3 top-2 text-primary w-2 h-2
                                                  font-bold text-xs">{i + 1}.</span>
+                            ) : (
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2
+                                             w-1.5 h-1.5 rounded-full bg-primary" />
                             )}
                             {item}
                         </div>
