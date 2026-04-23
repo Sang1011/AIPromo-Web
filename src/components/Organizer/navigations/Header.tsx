@@ -163,7 +163,7 @@ export default function Header({
                             </button>
                         )}
                         <div className="group relative flex flex-col justify-center">
-                            <h1 className="text-2xl font-bold text-white max-w-[700px] truncate">
+                            <h1 className="text-2xl font-bold text-white max-w-[600px] truncate">
                                 {haveTitle && isEventHeader
                                     ? "Sự kiện " + (currentEvent?.title ?? "Đang tải...")
                                     : title}
