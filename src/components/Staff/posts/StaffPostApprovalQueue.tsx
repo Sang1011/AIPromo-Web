@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
-import { fetchAdminPosts, approveAdminPost, rejectAdminPost } from "../../../store/postSlice";
+import { fetchAdminPosts, approveAdminPost, rejectAdminPost, fetchPostDetail, clearPostDetail } from "../../../store/postSlice";
 import { FaArrowsRotate } from "react-icons/fa6";
 import { interceptorAPI } from "../../../utils/attachInterceptors";
 import toast from "react-hot-toast";
@@ -29,31 +29,18 @@ function PostDetailModal({
     postId: string;
     onClose: () => void;
 }) {
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const dispatch = useDispatch<AppDispatch>();
+    const data = useSelector((state: RootState) => state.POST.postDetail);
+    const loading = useSelector((state: RootState) => state.POST.loading.fetchDetail);
+    const error = useSelector((state: RootState) => state.POST.error.fetchDetail);
 
     useEffect(() => {
-        let cancelled = false;
-        setLoading(true);
-        interceptorAPI()
-            .get(`/posts/${postId}`)
-            .then((res) => {
-                if (!cancelled) {
-                    setData(res.data.data);
-                    setLoading(false);
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setError("Không thể tải chi tiết bài đăng");
-                    setLoading(false);
-                }
-            });
+        if (!postId) return;
+        dispatch(fetchPostDetail(postId));
         return () => {
-            cancelled = true;
+            dispatch(clearPostDetail());
         };
-    }, [postId]);
+    }, [dispatch, postId]);
 
     const statusColors: Record<string, string> = {
         Pending: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
@@ -604,9 +591,9 @@ function formatDate(iso: string): string {
     return `${hh}:${mm}, ${dd}/${mo}/${yyyy}`;
 }
 
-function formatDateDisplay(iso: string): string {
+function formatDateDisplay(iso?: string | Date | null): string {
     if (!iso) return "";
-    const d = new Date(iso);
+    const d = iso instanceof Date ? iso : new Date(iso);
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
