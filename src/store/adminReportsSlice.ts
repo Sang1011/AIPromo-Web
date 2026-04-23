@@ -7,6 +7,9 @@ import type {
     SalesTrendDataPoint,
     TopEventsResponse,
     TopEventItem,
+    FundFlowResponse,
+    FundFlowData,
+    FundFlowPeriod,
 } from "../types/adminReports/adminReports";
 
 const name = "adminReports";
@@ -15,6 +18,8 @@ interface AdminReportsState {
     data: AdminReportsData | null;
     salesTrend: SalesTrendDataPoint[];
     topEvents: TopEventItem[];
+    fundFlow: FundFlowData | null;
+    fundFlowLoading: boolean;
     loading: boolean;
     error: string | null;
 }
@@ -23,6 +28,8 @@ const initialState: AdminReportsState = {
     data: null,
     salesTrend: [],
     topEvents: [],
+    fundFlow: null,
+    fundFlowLoading: false,
     loading: false,
     error: null,
 };
@@ -54,6 +61,17 @@ export const fetchTopEvents = createAsyncThunk<TopEventsResponse, number>(
     async (top, thunkAPI) => {
         try {
             return (await adminReportsService.getTopEvents(top)).data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error?.response?.data ?? error?.message);
+        }
+    }
+);
+
+export const fetchFundFlow = createAsyncThunk<FundFlowResponse, FundFlowPeriod>(
+    `${name}/fetchFundFlow`,
+    async (period, thunkAPI) => {
+        try {
+            return (await adminReportsService.getFundFlow(period)).data;
         } catch (error: any) {
             return thunkAPI.rejectWithValue(error?.response?.data ?? error?.message);
         }
@@ -107,6 +125,21 @@ const adminReportsSlice = createSlice({
             .addCase(fetchTopEvents.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.error.message ?? "Failed to fetch top events";
+            })
+            // ── Fund Flow ──────────────────────────────────────────────────
+            .addCase(fetchFundFlow.pending, (state) => {
+                state.fundFlowLoading = true;
+                state.error = null;
+            })
+            .addCase(fetchFundFlow.fulfilled, (state, action) => {
+                state.fundFlowLoading = false;
+                if (action.payload?.isSuccess && action.payload.data) {
+                    state.fundFlow = action.payload.data;
+                }
+            })
+            .addCase(fetchFundFlow.rejected, (state, action) => {
+                state.fundFlowLoading = false;
+                state.error = action.error.message ?? "Failed to fetch fund flow";
             });
     },
 });
