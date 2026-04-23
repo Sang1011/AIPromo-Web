@@ -152,7 +152,10 @@ export default function AdminFinanceStats() {
     return (
       <>
         {trendContent}
-        <div className="text-xs text-slate-500 font-bold tracking-wider">
+        <div
+          className="text-xs font-bold tracking-wider"
+          style={rate === 0 && diff === 0 ? { color: "#64748b" } : isPositive ? neonTextGreen : neonTextOrange}
+        >
           {rate === 0 && diff === 0
             ? "0 VND"
             : `${isPositive ? "+" : "-"}${Math.abs(diff).toLocaleString("vi-VN")} VND`

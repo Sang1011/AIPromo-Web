@@ -33,12 +33,6 @@ export default function AdminFinanceTransactionsTable() {
         }
     };
 
-    // FIX 1: reset page khi mount lại tab
-    useEffect(() => {
-        setCurrentPage(1);
-    }, []);
-
-    // FIX 2: load theo page
     useEffect(() => {
         loadTransactions(currentPage);
     }, [currentPage]);
@@ -71,6 +65,9 @@ export default function AdminFinanceTransactionsTable() {
                 return { bg: "bg-blue-500/10", text: "text-blue-400", label: "Chuyển khoản" };
             case "BatchWalletPay":
                 return { bg: "bg-violet-500/10", text: "text-violet-400", label: "Ví" };
+            case "WalletTopUp":
+            case "WALLETTOPUP":
+                return { bg: "bg-teal-500/10", text: "text-teal-400", label: "Nạp ví" };
             default:
                 return { bg: "bg-slate-500/10", text: "text-slate-400", label: type };
         }
