@@ -1,23 +1,21 @@
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { FiDownload } from "react-icons/fi";
+import { HiOutlineAdjustmentsHorizontal, HiOutlineXMark } from "react-icons/hi2";
 import { useDispatch, useSelector } from "react-redux";
-import OrdersTable from "./OrdersTable";
-import OrderDetailDrawer from "./OrderDetailDrawer";
-import Pagination from "../shared/Pagination";
+import { useEventTitle } from "../../../hooks/useEventTitle";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchExportExcelOrder } from "../../../store/orderSlice";
-import { notify } from "../../../utils/notify";
-import { downloadFileExcel } from "../../../utils/downloadFileExcel";
 import { fetchOrdersByOrganizer } from "../../../store/ticketingSlice";
-import { FiDownload } from "react-icons/fi";
-import { saveReportToFirebase } from "../../../utils/saveReportToFirebase";
-import { fetchMe } from "../../../store/authSlice";
-import type { ApiResponse } from "../../../types/api";
 import type { MeInfo } from "../../../types/auth/auth";
-import { useEventTitle } from "../../../hooks/useEventTitle";
-import { getCurrentDateTime } from "../../../utils/getCurrentDateTime";
-import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 import type { OrderItemOrganizer } from "../../../types/ticketing/ticketing";
-import { HiOutlineAdjustmentsHorizontal, HiOutlineXMark } from "react-icons/hi2";
+import { downloadFileExcel } from "../../../utils/downloadFileExcel";
+import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
+import { getCurrentDateTime } from "../../../utils/getCurrentDateTime";
+import { notify } from "../../../utils/notify";
+import { saveReportToFirebase } from "../../../utils/saveReportToFirebase";
+import Pagination from "../shared/Pagination";
+import OrderDetailDrawer from "./OrderDetailDrawer";
+import OrdersTable from "./OrdersTable";
 
 // ── Icons (inline svg) ────────────────────────────────────────────────────────
 const IconBox = () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0v10l-8 4m-8-4V7m16 0L12 11M4 7l8 4" /></svg>;
@@ -79,7 +77,7 @@ export default function OrderList({ eventId }: OrderListProps) {
 
     const { orders, pagination, loading } = useSelector((state: RootState) => state.TICKETING);
     const eventName = useEventTitle();
-
+    const { currentInfor } = useSelector((s: RootState) => s.AUTH);
     // ── Search & filter state ─────────────────────────────────────────────
     const [search, setSearch] = useState("");
     const [tab, setTab] = useState<TabKey>("all");
@@ -217,6 +215,7 @@ export default function OrderList({ eventId }: OrderListProps) {
         setPriceMaxDisplay("");
     };
 
+    const email = (currentInfor as MeInfo)?.email;
     const handleExportExcel = async () => {
         if (!eventId) return notify.error("Không tìm thấy eventId");
         try {
@@ -224,8 +223,7 @@ export default function OrderList({ eventId }: OrderListProps) {
             const { iso, formatted } = getCurrentDateTime();
             const fileName = `orders_${eventName}_${formatted}.xlsx`;
             downloadFileExcel(blob, fileName);
-            const meResult = await dispatch(fetchMe()).unwrap();
-            const email = (meResult as ApiResponse<MeInfo>)?.data?.email;
+
             await saveReportToFirebase({
                 eventId,
                 eventName: eventName ?? eventId,

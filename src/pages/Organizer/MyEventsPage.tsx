@@ -13,7 +13,6 @@ import type { DashboardLayoutConfig } from "../../types/config/dashboard.config"
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchAllEventsByMe } from "../../store/eventSlice";
-import { fetchMe } from "../../store/authSlice";
 import { fetchEventListAssignedForCurrentUser } from "../../store/eventMemberSlice";
 import { convertFilterToApiStatus, mapStatus } from "../../utils/mapStatus";
 import type { EventItemByMe } from "../../types/event/event";
@@ -125,39 +124,27 @@ export default function MyEventsPage() {
     const { assignedEvents, fetchingAssignedEvents } = useSelector((state: RootState) => state.EVENT_MEMBER);
 
     const [loadingOrganizer, setLoadingOrganizer] = useState(false);
-    const [roleResolved, setRoleResolved] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [activeFilter, setActiveFilter] = useState<FilterStatus>("Draft");
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Roles — đọc từ currentInfor sau khi fetchMe xong
     const roles: string[] = (currentInfor as any)?.roles ?? [];
     const isOrganizer = roles.includes("Organizer");
 
-    // 1. Luôn fetchMe để đảm bảo role mới nhất
     useEffect(() => {
-        dispatch(fetchMe()).finally(() => setRoleResolved(true));
-    }, [dispatch]);
-
-    // 2. Sau khi biết role, fetch data tương ứng
-    useEffect(() => {
-        if (!roleResolved) return;
-
         if (isOrganizer) {
             setLoadingOrganizer(true);
-            dispatch(
-                fetchAllEventsByMe({
-                    PageNumber: currentPage,
-                    PageSize: 5,
-                    Statuses: convertFilterToApiStatus(activeFilter),
-                })
-            ).finally(() => setLoadingOrganizer(false));
+            dispatch(fetchAllEventsByMe({
+                PageNumber: currentPage,
+                PageSize: 5,
+                Statuses: convertFilterToApiStatus(activeFilter),
+            })).finally(() => setLoadingOrganizer(false));
         } else {
             dispatch(fetchEventListAssignedForCurrentUser());
         }
-    }, [dispatch, roleResolved, isOrganizer, currentPage, activeFilter]);
+    }, [dispatch, isOrganizer, currentPage, activeFilter]);
 
     // Debounce search
     useEffect(() => {
@@ -201,15 +188,6 @@ export default function MyEventsPage() {
             </div>
         </div>
     );
-
-    // Chưa resolve role thì show loading toàn trang
-    if (!roleResolved) {
-        return (
-            <div className="space-y-6">
-                {[...Array(3)].map((_, i) => <EventCardSkeleton key={i} />)}
-            </div>
-        );
-    }
 
     return (
         <div className="space-y-8">

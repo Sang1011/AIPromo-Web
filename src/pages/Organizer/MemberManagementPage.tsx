@@ -6,9 +6,7 @@ import MembersTable from "../../components/Organizer/members/MembersTable";
 import Pagination from "../../components/Organizer/shared/Pagination";
 import { useEventTitle } from "../../hooks/useEventTitle";
 import type { AppDispatch, RootState } from "../../store";
-import { fetchMe } from "../../store/authSlice";
 import { fetchAddEventMember, fetchEventMembers, fetchExportExcelMember } from "../../store/eventMemberSlice";
-import type { ApiResponse } from "../../types/api";
 import type { MeInfo } from "../../types/auth/auth";
 import { downloadFileExcel } from "../../utils/downloadFileExcel";
 import { getCurrentDateTime } from "../../utils/getCurrentDateTime";
@@ -29,7 +27,7 @@ export default function MemberManagementPage() {
     const members = useSelector((state: RootState) => state.EVENT_MEMBER.members);
     const addingMember = useSelector((state: RootState) => state.EVENT_MEMBER.addingMember);
     const { eventId } = useParams<{ eventId: string }>();
-
+    const { currentInfor } = useSelector((s: RootState) => s.AUTH);
     const [search, setSearch] = useState("");
     const [showAddModal, setShowAddModal] = useState(false);
     const [newEmail, setNewEmail] = useState("");
@@ -117,6 +115,8 @@ export default function MemberManagementPage() {
         setAddError("");
     };
 
+    const email = (currentInfor as MeInfo)?.email;
+
     const handleExportExcel = async () => {
         if (!eventId) return notify.error("Không tìm thấy eventId");
         try {
@@ -124,8 +124,7 @@ export default function MemberManagementPage() {
             const { iso, formatted } = getCurrentDateTime();
             const fileName = `members_${eventName}_${formatted}.xlsx`;
             downloadFileExcel(blob, fileName);
-            const meResult = await dispatch(fetchMe()).unwrap();
-            const email = (meResult as ApiResponse<MeInfo>)?.data?.email;
+
             await saveReportToFirebase({
                 eventId,
                 eventName: eventName ?? eventId,

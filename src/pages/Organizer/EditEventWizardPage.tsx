@@ -6,8 +6,6 @@ import Step1EventInfo from "../../components/Organizer/steps/Step1EventInfo";
 import Step2Schedule from "../../components/Organizer/steps/Step2Schedule";
 import Step3Settings from "../../components/Organizer/steps/Step3Settings";
 import Step4Policy from "../../components/Organizer/steps/Step4Policy";
-
-import { fetchMe } from "../../store/authSlice";
 import { useParams } from "react-router-dom";
 import type { GetEventDetailResponse } from "../../types/event/event";
 import { fetchEventById } from "../../store/eventSlice";
@@ -53,11 +51,6 @@ export default function EditEventWizardPage() {
             console.error("Failed to fetch event data:", err);
         }
     };
-
-    // Fetch user
-    useEffect(() => {
-        dispatch(fetchMe());
-    }, [dispatch]);
 
     // Fetch event
     useEffect(() => {

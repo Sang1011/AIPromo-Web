@@ -6,9 +6,7 @@ import DateTimeInput from "../../components/Organizer/shared/DateTimeInput";
 import Pagination from "../../components/Organizer/shared/Pagination";
 import { useEventTitle } from "../../hooks/useEventTitle";
 import type { AppDispatch, RootState } from "../../store";
-import { fetchMe } from "../../store/authSlice";
 import { fetchCreateVoucher, fetchDeleteVoucher, fetchExportExcelVoucher, fetchGetVouchers, fetchUpdateVoucher } from "../../store/voucherSlice";
-import type { ApiResponse } from "../../types/api";
 import type { MeInfo } from "../../types/auth/auth";
 import type { CreateVoucherRequest, UpdateVoucherRequest, VoucherItem } from "../../types/voucher/voucher";
 import { downloadFileExcel } from "../../utils/downloadFileExcel";
@@ -472,6 +470,7 @@ function DeleteConfirm({ voucher, onClose, onDeleted }: {
 export default function VoucherManagementPage() {
     const dispatch = useDispatch<AppDispatch>();
     const { vouchers, loading } = useSelector((s: RootState) => s.VOUCHER);
+    const { currentInfor } = useSelector((s: RootState) => s.AUTH);
     const [currentPage, setCurrentPage] = useState(1);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<"all" | "running" | "expired" | "maxed">("all");
@@ -501,6 +500,8 @@ export default function VoucherManagementPage() {
         return matchSearch && matchFilter;
     });
 
+    const email = (currentInfor as MeInfo)?.email;
+
     const handleExportExcel = async () => {
         if (!eventId) return notify.error("Không tìm thấy eventId");
         try {
@@ -508,8 +509,7 @@ export default function VoucherManagementPage() {
             const { iso, formatted } = getCurrentDateTime();
             const fileName = `vouchers_${eventName}_${formatted}.xlsx`;
             downloadFileExcel(blob, fileName);
-            const meResult = await dispatch(fetchMe()).unwrap();
-            const email = (meResult as ApiResponse<MeInfo>)?.data?.email;
+
             await saveReportToFirebase({
                 eventId,
                 eventName: eventName ?? eventId,
@@ -521,7 +521,7 @@ export default function VoucherManagementPage() {
         } catch (err) {
             notify.error("Xuất Excel thất bại");
         }
-    }
+    };
 
     return (
         <div className="space-y-6">
