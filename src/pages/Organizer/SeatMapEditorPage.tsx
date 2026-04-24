@@ -8,7 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../store';
 import { fetchEventById } from '../../store/eventSlice';
-import { fetchAssignAreas, fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
+import { fetchAssignAreas, fetchGetListSeatMapByCurrentOrganizer, fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
 import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
 import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity } from '../../types/config/seatmap';
 import type { EventSession } from '../../types/event/event';
@@ -17,6 +17,8 @@ import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
 import { getWorldPointer } from '../../utils/getWorldPointer';
 import { notify } from '../../utils/notify';
 import { validateSeatMap } from '../../utils/validateSeatMap';
+import type { GetListSeatMapByCurrentOrganizerItem } from '../../types/seatmap/seatmap';
+import SeatMapReadOnly from '../../components/Organizer/seatmap/SeatMapReadOnly';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -99,6 +101,10 @@ const SeatMapEditorPage: React.FC = () => {
     const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
     const [seatMoveMode, setSeatMoveMode] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
+    const [showOldMapsModal, setShowOldMapsModal] = useState(false);
+    const [oldMaps, setOldMaps] = useState<GetListSeatMapByCurrentOrganizerItem[]>([]);
+    const [oldMapsLoading, setOldMapsLoading] = useState(false);
+    const [selectedOldMap, setSelectedOldMap] = useState<string | null>(null);
     const [contextMenu, setContextMenu] = useState<{
         x: number;
         y: number;
@@ -539,9 +545,15 @@ const SeatMapEditorPage: React.FC = () => {
         if (!isSingleSectionSelected || !selectedSection) return;
 
         if (property === 'ticketTypeId') {
-            setSeats(prev => prev.filter(s => s.sectionId !== selectedSection.id));
-
             const newTicketType = ticketTypes.find(t => t.id === value);
+            const existingSeats = seats.filter(s => s.sectionId === selectedSection.id);
+
+            if (existingSeats.length > 0 && newTicketType?.quantity != null && existingSeats.length === newTicketType.quantity) {
+                setKeepSeatsConfirm({ areaId: selectedSection.id, ticketTypeId: value as string });
+                return;
+            }
+
+            setSeats(prev => prev.filter(s => s.sectionId !== selectedSection.id));
             setSections(prev => prev.map(s =>
                 s.id === selectedSection.id
                     ? { ...s, ticketTypeId: value, fill: newTicketType?.color ?? s.fill, name: newTicketType?.name ?? s.name, price: newTicketType?.price ?? s.price }
@@ -555,7 +567,7 @@ const SeatMapEditorPage: React.FC = () => {
             s.id === selectedSection.id ? { ...s, [property]: value } : s
         ));
         saveToHistory();
-    }, [isSingleSectionSelected, selectedSection, ticketTypes, saveToHistory]);
+    }, [isSingleSectionSelected, selectedSection, ticketTypes, seats, saveToHistory]);
 
     const updateSeatProperty = useCallback((property: keyof Seat, value: any) => {
         if (!isSingleSeatSelected || !selectedSeat) return;
@@ -1333,11 +1345,17 @@ const SeatMapEditorPage: React.FC = () => {
         return Konva.Util.haveIntersection(selectionBox, clientRect);
     };
 
+    const [keepSeatsConfirm, setKeepSeatsConfirm] = useState<{
+        areaId: string;
+        ticketTypeId: string;
+    } | null>(null);
+
     const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
         if (e.target === e.target.getStage()) {
             setSelectedIds([]);
             setActiveAreaId(null);
             setSelectedSeatIds([]);
+            setTicketPickerAreaId(null);
         }
     }, []);
 
@@ -1505,6 +1523,7 @@ const SeatMapEditorPage: React.FC = () => {
 
         setSections(prev => prev.map(s => {
             if (!s.isAreaType) return s;
+            if (!s.ticketTypeId) return s;
             const matched = updatedTicketTypes.find(t => t.id === s.ticketTypeId);
             if (!matched) {
                 return { ...s, ticketTypeId: updatedTicketTypes[0].id, fill: updatedTicketTypes[0].color };
@@ -1571,12 +1590,22 @@ const SeatMapEditorPage: React.FC = () => {
         }
     }, [reduxTicketTypes, isTicketTypesReady]);
 
+    const [ticketPickerAreaId, setTicketPickerAreaId] = useState<string | null>(null);
+    const [ticketPickerPos, setTicketPickerPos] = useState({ x: 0, y: 0 });
+
     const renderSection = (area: Area) => {
+        const isUnassigned = area.isAreaType && !area.ticketTypeId;
         const ticketType = ticketTypes.find(t => t.id === area.ticketTypeId);
         const isActiveArea = area.id === activeAreaId;
-        const fillColor = area.isAreaType
-            ? ticketType?.color ?? area.fill ?? '#6b7280'
-            : area.fill ?? '#374151';
+        const fillColor = isUnassigned
+            ? '#2a2a3e'
+            : area.isAreaType
+                ? ticketType?.color ?? area.fill ?? '#6b7280'
+                : area.fill ?? '#374151';
+
+        const color = area.isAreaType
+            ? (ticketType?.color ?? area.fill ?? '#6b7280')
+            : (area.fill ?? '#374151');
         return (
             <Group
                 id={area.id}
@@ -1613,7 +1642,20 @@ const SeatMapEditorPage: React.FC = () => {
                     }
                     if (editorMode !== 'SELECT' || area.locked) return;
                     setCursor('move');
+                    if (isUnassigned) {
+                        const stage = stageRef.current;
+                        if (stage) {
+                            const tooltip = document.getElementById('seatmap-tooltip');
+                            if (tooltip) {
+                                tooltip.style.display = 'block';
+                                tooltip.style.left = e.evt.clientX + 12 + 'px';
+                                tooltip.style.top = e.evt.clientY + 'px';
+                                tooltip.innerText = 'Chưa gán loại vé — chọn khu vực và gán ở sidebar';
+                            }
+                        }
+                    }
                 }}
+
                 onDblClick={() => {
                     if (area.locked) return;
                     setActiveAreaId(area.id);
@@ -1624,6 +1666,8 @@ const SeatMapEditorPage: React.FC = () => {
                     e.target.opacity(1);
                     layerRef.current?.batchDraw();
                     setCursor('default');
+                    const tooltip = document.getElementById('seatmap-tooltip');
+                    if (tooltip) tooltip.style.display = 'none';
                 }}
                 onDragMove={(e) => {
                     if (!isGroupDragging || !multiDragStartRef.current) return;
@@ -1649,6 +1693,14 @@ const SeatMapEditorPage: React.FC = () => {
                     if (editorMode !== 'SELECT') return;
                     e.cancelBubble = true;
                     if (area.locked) return;
+
+                    if (isUnassigned) {
+                        handleSelect(area.id, false);
+                        setTicketPickerAreaId(area.id);
+                        setTicketPickerPos({ x: e.evt.clientX, y: e.evt.clientY });
+                        return;
+                    }
+
                     handleSelect(area.id, e.evt.shiftKey);
                 }}
                 onTransformEnd={(e) => {
@@ -1714,7 +1766,7 @@ const SeatMapEditorPage: React.FC = () => {
                         stroke={area.stroke}
                         fill={fillColor}
                     />
-                ) : area.type === 'polygon' && area.points ? (
+                ) : area.type === 'polygon' && Array.isArray(area.points) && area.points.length > 0 ? (
                     <Line
                         points={area.points}
                         closed
@@ -1726,9 +1778,19 @@ const SeatMapEditorPage: React.FC = () => {
                     <Rect
                         width={area.width}
                         height={area.height}
-                        stroke={area.stroke}
-                        fill={fillColor}
+                        stroke={isUnassigned ? '#a78bfa' : area.stroke}
+                        strokeWidth={isUnassigned ? 2 : 1}
                         dash={area.locked ? [6, 4] : []}
+                        {...(isUnassigned
+                            ? {
+                                fillLinearGradientStartPoint: { x: 0, y: 0 },
+                                fillLinearGradientEndPoint: { x: area.width, y: area.height },
+                                fillLinearGradientColorStops: [0, '#9055FF', 1, '#13E2DA'],
+                            }
+                            : {
+                                fill: color,
+                            }
+                        )}
                     />
                 )}
             </Group>
@@ -1797,7 +1859,20 @@ const SeatMapEditorPage: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-
+                    <button
+                        onClick={async () => {
+                            setShowOldMapsModal(true);
+                            setOldMapsLoading(true);
+                            const result = await dispatch(fetchGetListSeatMapByCurrentOrganizer());
+                            if (fetchGetListSeatMapByCurrentOrganizer.fulfilled.match(result)) {
+                                setOldMaps(result.payload as GetListSeatMapByCurrentOrganizerItem[]);
+                            }
+                            setOldMapsLoading(false);
+                        }}
+                        className={baseBtn}
+                    >
+                        Tham khảo sơ đồ
+                    </button>
                     <button
                         onClick={() => setShowHelpModal(true)}
                         className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-violet-500/15 hover:border-violet-400 transition-all duration-200"
@@ -1919,6 +1994,12 @@ const SeatMapEditorPage: React.FC = () => {
 
                     <button
                         onClick={async () => {
+                            const unassignedAreas = sections.filter(s => s.isAreaType && !s.ticketTypeId);
+                            if (unassignedAreas.length > 0) {
+                                notify.error(`Còn "${unassignedAreas.length}" khu vực chưa được gán loại vé`);
+                                return;
+
+                            }
                             const validation = validateSeatMap(sections, seats);
                             if (!validation.valid) {
                                 validation.errors.forEach(err => notify.error(err.message));
@@ -3163,9 +3244,7 @@ const SeatMapEditorPage: React.FC = () => {
                                                     LOẠI VÉ ÁP DỤNG
                                                 </label>
                                                 <div style={{ position: 'relative' }}>
-                                                    <select
-                                                        value={selectedSection.ticketTypeId}
-                                                        onChange={(e) => updateSectionProperty('ticketTypeId', e.target.value)}
+                                                    <select value={selectedSection.ticketTypeId} onChange={(e) => updateSectionProperty('ticketTypeId', e.target.value)}
                                                         style={{
                                                             width: '100%',
                                                             background: '#16162a',
@@ -3181,11 +3260,15 @@ const SeatMapEditorPage: React.FC = () => {
                                                             MozAppearance: 'none',
                                                         }}
                                                     >
-                                                        {ticketTypes.map(t => (
-                                                            <option key={t.id} value={t.id} style={{ background: '#16162a', color: '#e5e7eb' }}>
-                                                                {t.name}
-                                                            </option>
-                                                        ))}
+                                                        {ticketTypes
+                                                            .filter(t => {
+                                                                if (t.id === selectedSection.ticketTypeId) return true;
+                                                                return !sections.some(s => s.isAreaType && s.ticketTypeId === t.id && s.id !== selectedSection.id);
+                                                            })
+                                                            .map(t => (
+                                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                                            ))
+                                                        }
                                                     </select>
                                                     <span style={{
                                                         position: 'absolute',
@@ -3725,6 +3808,8 @@ const SeatMapEditorPage: React.FC = () => {
                                                     </div>
                                                     <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>
                                                         {t.price?.toLocaleString('vi-VN')} ₫
+                                                        <span style={{ margin: '0 6px', opacity: 0.4 }}>·</span>
+                                                        {t.quantity} vé
                                                     </div>
                                                 </div>
 
@@ -4108,6 +4193,401 @@ const SeatMapEditorPage: React.FC = () => {
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+            {showOldMapsModal && (
+                <div
+                    style={{
+                        position: 'fixed', inset: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        zIndex: 9999,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                    onClick={() => setShowOldMapsModal(false)}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            width: '800px', maxHeight: '80vh',
+                            background: '#1a1a2e',
+                            borderRadius: '16px',
+                            border: '1px solid #2a2a3e',
+                            display: 'flex', flexDirection: 'column',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {/* Header */}
+                        <div style={{
+                            padding: '20px 24px',
+                            borderBottom: '1px solid #2a2a3e',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        }}>
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#e5e7eb' }}>
+                                Chọn sơ đồ cũ
+                            </h3>
+                            <button
+                                onClick={() => setShowOldMapsModal(false)}
+                                style={{ background: 'transparent', border: 'none', color: '#9ca3af', fontSize: '20px', cursor: 'pointer' }}
+                            >✕</button>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+                            {oldMapsLoading ? (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                                    Đang tải...
+                                </div>
+                            ) : oldMaps.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                                    Chưa có sơ đồ nào
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    {oldMaps.map(map => {
+                                        let parsed: SeatMapData | null = null;
+                                        try { parsed = JSON.parse(map.spec); } catch { }
+                                        const isSelected = selectedOldMap === map.eventId;
+
+                                        return (
+                                            <div
+                                                key={map.eventId}
+                                                onClick={() => setSelectedOldMap(isSelected ? null : map.eventId)}
+                                                style={{
+                                                    border: `2px solid ${isSelected ? '#8B5CF6' : '#2a2a3e'}`,
+                                                    borderRadius: '12px',
+                                                    overflow: 'hidden',
+                                                    cursor: 'pointer',
+                                                    background: isSelected ? 'rgba(139,92,246,0.08)' : '#16162a',
+                                                    transition: 'all 0.2s',
+                                                }}
+                                            >
+                                                {/* Title */}
+                                                <div style={{
+                                                    padding: '10px 14px',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                }}>
+                                                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#e5e7eb' }}>
+                                                        {map.title}
+                                                    </span>
+                                                    {isSelected && (
+                                                        <span style={{
+                                                            fontSize: '11px', fontWeight: 600,
+                                                            color: '#8B5CF6',
+                                                            background: 'rgba(139,92,246,0.15)',
+                                                            padding: '2px 10px', borderRadius: '20px',
+                                                        }}>
+                                                            Đang chọn
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Preview */}
+                                                {parsed && (
+                                                    <div style={{ height: '220px', background: '#0f0f1e' }}>
+                                                        <SeatMapReadOnly
+                                                            seatMapData={parsed}
+                                                            ticketTypes={[]}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{
+                            padding: '16px 24px',
+                            borderTop: '1px solid #2a2a3e',
+                            display: 'flex', justifyContent: 'flex-end', gap: '12px',
+                        }}>
+                            <button
+                                onClick={() => setShowOldMapsModal(false)}
+                                style={{
+                                    background: 'transparent', border: '1px solid #4b5563',
+                                    borderRadius: '8px', padding: '10px 20px',
+                                    color: '#9ca3af', cursor: 'pointer', fontSize: '14px',
+                                }}
+                            >
+                                Huỷ
+                            </button>
+                            <button
+                                disabled={!selectedOldMap}
+                                onClick={() => {
+                                    const map = oldMaps.find(m => m.eventId === selectedOldMap);
+                                    if (!map) return;
+                                    try {
+                                        const data: SeatMapData = JSON.parse(map.spec);
+                                        const importedSections: Area[] = [];
+                                        const importedSeats: Seat[] = [];
+
+                                        data.areas.forEach(area => {
+                                            const { seats: areaSeats, ...section } = area;
+
+                                            const newAreaId = crypto.randomUUID();
+
+                                            importedSections.push({
+                                                ...section,
+                                                id: newAreaId,
+                                                ticketTypeId: section.isAreaType ? '' : section.ticketTypeId,
+                                                fill: section.isAreaType ? '#2a2a3e' : section.fill,
+                                                name: section.isAreaType ? '' : section.name,
+                                                price: section.isAreaType ? 0 : section.price,
+                                                draggable: true,
+                                            });
+
+                                            areaSeats.forEach(seat => {
+                                                importedSeats.push({
+                                                    ...seat,
+                                                    id: crypto.randomUUID(),
+                                                    sectionId: newAreaId,
+                                                });
+                                            });
+                                        });
+
+                                        const importedTexts = (data.texts || []).map(t => ({
+                                            ...t,
+                                            id: `text-${Date.now()}-${crypto.randomUUID()}`,
+                                        }));
+
+                                        setSections(importedSections);
+                                        setSeats(importedSeats);
+                                        setTextEntities(importedTexts);
+                                        setSelectedIds([]);
+                                        saveToHistory();
+                                        setShowOldMapsModal(false);
+                                        setSelectedOldMap(null);
+                                    } catch {
+                                        notify.error('Không thể import sơ đồ này');
+                                    }
+                                }}
+                                style={{
+                                    background: selectedOldMap ? '#8B5CF6' : '#374151',
+                                    border: 'none', borderRadius: '8px',
+                                    padding: '10px 24px',
+                                    color: selectedOldMap ? 'white' : '#6b7280',
+                                    cursor: selectedOldMap ? 'pointer' : 'not-allowed',
+                                    fontSize: '14px', fontWeight: 600,
+                                    transition: 'all 0.2s',
+                                }}
+                            >
+                                Dùng sơ đồ này
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div
+                id="seatmap-tooltip"
+                style={{
+                    display: 'none',
+                    position: 'fixed',
+                    zIndex: 9998,
+                    background: '#1e1b4b',
+                    border: '1px solid #4c1d95',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    color: '#c4b5fd',
+                    pointerEvents: 'none',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                }}
+            />
+            {keepSeatsConfirm && (() => {
+                const tt = ticketTypes.find(t => t.id === keepSeatsConfirm.ticketTypeId);
+                const seatCount = seats.filter(s => s.sectionId === keepSeatsConfirm.areaId).length;
+                return (
+                    <div
+                        style={{
+                            position: 'fixed', inset: 0,
+                            background: 'rgba(0,0,0,0.6)',
+                            zIndex: 9999,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                        onClick={() => setKeepSeatsConfirm(null)}
+                    >
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                width: '420px',
+                                background: '#1a1a2e',
+                                borderRadius: '16px',
+                                border: '1px solid #2a2a3e',
+                                padding: '24px',
+                                display: 'flex', flexDirection: 'column', gap: '16px',
+                            }}
+                        >
+                            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#e5e7eb' }}>
+                                Khu vực đã có {seatCount} ghế
+                            </h3>
+                            <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af', lineHeight: 1.6 }}>
+                                Bạn muốn <b style={{ color: '#e5e7eb' }}>giữ lại {seatCount} ghế cũ</b> và chỉ đổi loại vé,
+                                hay <b style={{ color: '#ef4444' }}>xóa toàn bộ ghế</b> và bắt đầu lại?
+                            </p>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => {
+                                        // Giữ ghế, chỉ đổi ticketTypeId và màu
+                                        setSections(prev => prev.map(s =>
+                                            s.id === keepSeatsConfirm.areaId
+                                                ? { ...s, ticketTypeId: keepSeatsConfirm.ticketTypeId, fill: tt?.color ?? s.fill, name: tt?.name ?? s.name, price: tt?.price ?? s.price }
+                                                : s
+                                        ));
+                                        saveToHistory();
+                                        setKeepSeatsConfirm(null);
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px',
+                                        background: '#1d4ed8',
+                                        border: '1px solid #3b82f6',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        fontSize: '13px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    ✓ Giữ {seatCount} ghế cũ
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        // Xóa ghế và đổi ticketTypeId
+                                        setSeats(prev => prev.filter(s => s.sectionId !== keepSeatsConfirm.areaId));
+                                        setSections(prev => prev.map(s =>
+                                            s.id === keepSeatsConfirm.areaId
+                                                ? { ...s, ticketTypeId: keepSeatsConfirm.ticketTypeId, fill: tt?.color ?? s.fill, name: tt?.name ?? s.name, price: tt?.price ?? s.price }
+                                                : s
+                                        ));
+                                        saveToHistory();
+                                        setKeepSeatsConfirm(null);
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px',
+                                        background: '#7f1d1d',
+                                        border: '1px solid #ef4444',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        fontSize: '13px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    ✕ Xóa ghế, gán mới
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => setKeepSeatsConfirm(null)}
+                                style={{
+                                    padding: '8px',
+                                    background: 'transparent',
+                                    border: '1px solid #374151',
+                                    borderRadius: '8px',
+                                    color: '#6b7280',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Huỷ
+                            </button>
+                        </div>
+                    </div>
+                );
+            })()}
+            {ticketPickerAreaId && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: ticketPickerPos.y,
+                        left: ticketPickerPos.x,
+                        zIndex: 9999,
+                        background: '#1a1a2e',
+                        border: '1px solid #4c1d95',
+                        borderRadius: '12px',
+                        padding: '8px',
+                        minWidth: '220px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                    }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div style={{ fontSize: '11px', color: '#9ca3af', padding: '4px 8px 8px', fontWeight: 600, textTransform: 'uppercase' }}>
+                        Chọn loại vé để gán
+                    </div>
+                    {ticketTypes
+                        .filter(t => {
+                            const currentSection = sections.find(s => s.id === ticketPickerAreaId);
+                            if (currentSection?.ticketTypeId === t.id) return true;
+                            return !sections.some(s => s.isAreaType && s.ticketTypeId === t.id && s.id !== ticketPickerAreaId);
+                        })
+                        .map(t => (
+                            <button
+                                key={t.id}
+                                onClick={() => {
+                                    setSelectedIds([ticketPickerAreaId]);
+                                    setTimeout(() => {
+                                        const existingSeats = seats.filter(s => s.sectionId === ticketPickerAreaId);
+
+                                        if (existingSeats.length > 0 && t.quantity != null && existingSeats.length === t.quantity) {
+                                            setKeepSeatsConfirm({ areaId: ticketPickerAreaId, ticketTypeId: t.id });
+                                        } else {
+                                            setSections(prev => prev.map(s =>
+                                                s.id === ticketPickerAreaId
+                                                    ? { ...s, ticketTypeId: t.id, fill: t.color ?? s.fill, name: s.name || t.name, price: t.price }
+                                                    : s
+                                            ));
+                                            setSeats(prev => prev.filter(s => s.sectionId !== ticketPickerAreaId));
+                                            saveToHistory();
+                                        }
+                                        setTicketPickerAreaId(null);
+                                    }, 0);
+                                }}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    padding: '8px 10px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    color: '#e5e7eb',
+                                    fontSize: '13px',
+                                    textAlign: 'left',
+                                    transition: 'background 0.15s',
+                                }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(139,92,246,0.15)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            >
+                                <div style={{
+                                    width: '12px', height: '12px',
+                                    borderRadius: '50%',
+                                    background: t.color ?? '#6b7280',
+                                    flexShrink: 0,
+                                }} />
+                                <span style={{ flex: 1 }}>{t.name}</span>
+                                <span style={{ fontSize: '11px', color: '#6b7280' }}>{t.quantity} vé</span>
+                            </button>
+                        ))}
+                    <button
+                        onClick={() => setTicketPickerAreaId(null)}
+                        style={{
+                            width: '100%', marginTop: '4px',
+                            padding: '6px',
+                            background: 'transparent',
+                            border: '1px solid #374151',
+                            borderRadius: '6px',
+                            color: '#6b7280',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Huỷ
+                    </button>
                 </div>
             )}
         </div>

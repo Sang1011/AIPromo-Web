@@ -1,3 +1,5 @@
+import type { ApiResponse } from "../api";
+
 export interface AssignAreaMapping {
     ticketTypeId: string;
     areaId: string;
@@ -12,3 +14,11 @@ export type GetSeatMapResponse = {
     spec: string;
     eventSessionId: string;
 }
+
+export interface GetListSeatMapByCurrentOrganizerItem {
+    eventId: string;
+    title: string;
+    spec: string;
+}
+
+export type GetListSeatMapByCurrentOrganizer = ApiResponse<GetListSeatMapByCurrentOrganizerItem[]>
