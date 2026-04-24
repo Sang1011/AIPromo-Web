@@ -36,6 +36,24 @@ const DIST_STATUS: Record<string, { label: string; className: string }> = {
     Failed: { label: "Lỗi", className: "bg-red-500/10 text-red-400 border-red-500/30" },
 };
 
+function extractPlainText(body: string): string {
+    try {
+        const blocks = JSON.parse(body);
+        if (!Array.isArray(blocks)) return body;
+        return blocks
+            .map((b: any) => {
+                if (b.type === "paragraph" || b.type === "heading") return b.text ?? "";
+                if (b.type === "highlight") return b.content ?? "";
+                if (b.type === "list") return (b.items ?? []).join(" ");
+                return "";
+            })
+            .filter(Boolean)
+            .join(" ");
+    } catch {
+        return body;
+    }
+}
+
 export default function MarketingTable() {
     const { eventId } = useParams<{ eventId: string }>();
     const navigate = useNavigate();
@@ -123,7 +141,7 @@ export default function MarketingTable() {
                                     <td className="px-8 py-6 font-bold text-white max-w-xs">
                                         <p className="truncate">{post.title}</p>
                                         <p className="text-xs text-slate-500 mt-1 font-normal truncate">
-                                            {post.body.slice(0, 60)}...
+                                            {extractPlainText(post.body).slice(0, 80)}
                                         </p>
                                     </td>
                                     <td className="px-8 py-6">
