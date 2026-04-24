@@ -149,10 +149,11 @@ export default function Header({
         dispatch(fetchEventById(eventId));
     }, [eventId, dispatch]);
 
-    // Đảm bảo currentInfor luôn mới nhất để check role
     useEffect(() => {
-        dispatch(fetchMe());
-    }, [dispatch]);
+        if (!(currentInfor as MeInfo)?.userId) {
+            dispatch(fetchMe());
+        }
+    }, []);
 
     return (
         <>
