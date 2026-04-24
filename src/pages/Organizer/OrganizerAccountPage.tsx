@@ -1,24 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { FiCheck, FiCreditCard, FiGlobe, FiMapPin, FiFileText, FiUser, FiCamera } from "react-icons/fi";
+import { FiCamera, FiCheck, FiCreditCard, FiFileText, FiGlobe, FiMapPin, FiUser } from "react-icons/fi";
 import { MdOutlineBusiness, MdOutlinePerson } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useOutletContext } from "react-router-dom";
+import BankSelect from "../../components/Organizer/bank/BankSelect";
+import ConfirmModal from "../../components/Organizer/shared/ConfirmModal";
+import ImageViewer from "../../components/Organizer/shared/ImagePreview";
+import { BANKS } from "../../constants/bank";
 import type { AppDispatch, RootState } from "../../store";
 import {
-    fetchGetOrganizerProfileDetailById,
     fetchCreateProfileOrganizer,
+    fetchGetOrganizerProfileDetailById,
     fetchVerifyProfileOrganizer,
 } from "../../store/organizerProfileSlice";
-import { fetchMe } from "../../store/authSlice";
-import { notify } from "../../utils/notify";
-import BankSelect from "../../components/Organizer/bank/BankSelect";
-import type { DashboardLayoutConfig } from "../../types/config/dashboard.config";
-import ImageViewer from "../../components/Organizer/shared/ImagePreview";
-import type { MeInfo } from "../../types/auth/auth";
 import type { ApiResponse } from "../../types/api";
-import ConfirmModal from "../../components/Organizer/shared/ConfirmModal";
+import type { MeInfo } from "../../types/auth/auth";
+import type { DashboardLayoutConfig } from "../../types/config/dashboard.config";
 import { OrganizerStatus, type OrganizerProfileDetail } from "../../types/organizerProfile/organizerProfile";
-import { BANKS } from "../../constants/bank";
+import { notify } from "../../utils/notify";
 
 type Tab = "profileDetail" | "bank";
 type BusinessType = "individual" | "company";
@@ -44,6 +43,7 @@ type DashboardContext = {
 export default function OrganizerAccountPage() {
     const dispatch = useDispatch<AppDispatch>();
     const profileDetail = useSelector((state: RootState) => state.ORGANIZER_PROFILE.profileDetail);
+    const { currentInfor } = useSelector((s: RootState) => s.AUTH);
     const { setConfig } = useOutletContext<DashboardContext>();
 
     const [pageLoading, setPageLoading] = useState(!profileDetail);
@@ -89,11 +89,7 @@ export default function OrganizerAccountPage() {
     };
 
     const refetchProfile = async () => {
-        const meResult = await dispatch(fetchMe());
-        if (fetchMe.fulfilled.match(meResult)) {
-            const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
-            if (userId) await dispatch(fetchGetOrganizerProfileDetailById(userId));
-        }
+        if (userId) await dispatch(fetchGetOrganizerProfileDetailById(userId));
     };
 
     useEffect(() => {
@@ -142,33 +138,25 @@ export default function OrganizerAccountPage() {
         setLogoPreview(data.logo ?? "");
     };
 
+    const userId = (currentInfor as MeInfo)?.userId;
+
     useEffect(() => {
         const init = async () => {
-            if (!profileDetail) setPageLoading(true);
-
-            const meResult = await dispatch(fetchMe());
-            if (!fetchMe.fulfilled.match(meResult)) {
-                setPageLoading(false);
-                return;
-            }
-
-            const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
             if (!userId) {
                 setPageLoading(false);
                 return;
             }
+            if (!profileDetail) setPageLoading(true);
 
             const detailResult = await dispatch(fetchGetOrganizerProfileDetailById(userId));
-
             if (fetchGetOrganizerProfileDetailById.fulfilled.match(detailResult)) {
                 const data = (detailResult.payload as ApiResponse<OrganizerProfileDetail>)?.data;
                 if (data) fillForm(data);
             }
-
             setPageLoading(false);
         };
         init();
-    }, [dispatch]);
+    }, [dispatch, userId]);
 
     const statusBannerInfo = (status: OrganizerStatus | undefined) => {
         switch (status) {

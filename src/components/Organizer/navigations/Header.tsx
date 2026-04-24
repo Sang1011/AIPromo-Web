@@ -92,10 +92,18 @@ export default function Header({
         const current = window.location.pathname === "/organizer/create-event";
         if (current) return;
 
-        const meResult = await dispatch(fetchMe());
-        if (!fetchMe.fulfilled.match(meResult)) return;
+        let userId: string | undefined;
 
-        const userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
+        const infor = currentInfor as ApiResponse<MeInfo>["data"] | Record<string, never>;
+
+        if (infor && "userId" in infor && infor.userId) {
+            userId = infor.userId;
+        } else {
+            const meResult = await dispatch(fetchMe());
+            if (!fetchMe.fulfilled.match(meResult)) return;
+            userId = (meResult.payload as ApiResponse<MeInfo>)?.data?.userId;
+        }
+
         if (!userId) return;
 
         const detailResult = await dispatch(fetchGetOrganizerProfileDetailById(userId));
@@ -113,7 +121,6 @@ export default function Header({
 
         navigate("/organizer/create-event");
     };
-
     const handleCancelEvent = async () => {
         if (!eventId || !cancelReason.trim()) return;
 
