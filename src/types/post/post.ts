@@ -127,7 +127,19 @@ export interface DistributionMetricsFacebook {
     fetchedAt: Date;
 }
 
-export type GetDistributionMetricsResponse = ApiResponse<DistributionMetricsFacebook>
+export interface DistributionMetricsInstagram {
+    externalPostId: string;
+    externalUrl: string;
+    likes: number;
+    comments: number;
+    reach: number;
+    saves: number,
+    shares: number,
+    fetchedAt: Date;
+}
+
+export type GetDistributionMetricsInstagramResponse = ApiResponse<DistributionMetricsInstagram>
+export type GetDistributionMetricsFacebookResponse = ApiResponse<DistributionMetricsFacebook>
 export type GenerateImageResponse = ApiResponse<{ imageUrl: string }>
 export type SendToChatBoxReponse = ApiResponse<string>
 

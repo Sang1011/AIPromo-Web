@@ -21,7 +21,7 @@ import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetrics, fetchDistributionMetricsFacebook } from "../../../store/postSlice";
 import type { PostDetail } from "../../../types/post/post";
 import { formatDateTime } from "../../../utils/formatDateTime";
-import { EmptyState } from "../shared/EmtyState";
+import { EmptyStateFacebook } from "../shared/EmtyState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -301,7 +301,7 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
             )}
 
             {!m && !loading.fetchDistributionMetrics && (
-                <EmptyState />
+                <EmptyStateFacebook />
             )}
         </section>
     );

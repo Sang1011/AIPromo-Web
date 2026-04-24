@@ -16,6 +16,7 @@ import type {
     UploadImageResponseItem,
     GetTotalMetricsItem,
     PeriodOptionMetrics,
+    DistributionMetricsInstagram,
 } from "../types/post/post";
 import type { PaginatedResponse } from "../types/api";
 
@@ -31,7 +32,8 @@ interface PostState {
     tableFilters: Partial<GetPostsParams>;
     chartFilters: Partial<GetPostsParams>;
 
-
+    distributionMetricsInstagram: DistributionMetricsInstagram | null;
+    distributionMetricsInstagramMap: Record<string, DistributionMetricsInstagram>;
 
     adminPosts: AdminPostItem[];
     adminPostDetail: AdminPostItem | null;
@@ -60,6 +62,8 @@ interface PostState {
         approvePost: boolean;
         rejectPost: boolean;
         publishAdminPost: boolean;
+        fetchDistributionMetricsInstagram: boolean;
+        fetchAllDistributionMetricsInstagram: boolean;
     };
 
     error: {
@@ -83,6 +87,8 @@ interface PostState {
         approvePost: string | null;
         rejectPost: string | null;
         publishAdminPost: string | null;
+        fetchDistributionMetricsInstagram: string | null;
+        fetchAllDistributionMetricsInstagram: string | null;
     };
 }
 
@@ -95,6 +101,8 @@ const initialState: PostState = {
     posts: [],
     pagination: null,
     distributionMetricsMap: {},
+    distributionMetricsInstagram: null,
+    distributionMetricsInstagramMap: {},
     tableFilters: {
         pageNumber: 1,
         pageSize: 5,
@@ -136,6 +144,8 @@ const initialState: PostState = {
         approvePost: false,
         rejectPost: false,
         publishAdminPost: false,
+        fetchAllDistributionMetricsInstagram: false,
+        fetchDistributionMetricsInstagram: false
     },
     error: {
         fetchDetail: null,
@@ -158,8 +168,49 @@ const initialState: PostState = {
         approvePost: null,
         rejectPost: null,
         publishAdminPost: null,
+        fetchAllDistributionMetricsInstagram: null,
+        fetchDistributionMetricsInstagram: null
     },
 };
+
+export const fetchDistributionMetricsInstagram = createAsyncThunk(
+    "post/fetchDistributionMetricsInstagram",
+    async ({ postId, distributionId }: { postId: string; distributionId: string }, { rejectWithValue }) => {
+        try {
+            const res = await postService.getDistributionMetricsInstagram(postId, distributionId);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi fetch Instagram metrics");
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi fetch Instagram metrics");
+        }
+    }
+);
+
+export const fetchAllDistributionMetricsInstagram = createAsyncThunk(
+    "post/fetchAllDistributionMetricsInstagram",
+    async (
+        targets: { postId: string; distributionId: string }[],
+        { rejectWithValue }
+    ) => {
+        try {
+            const results = await Promise.allSettled(
+                targets.map(({ postId, distributionId }) =>
+                    postService.getDistributionMetricsInstagram(postId, distributionId)
+                        .then(res => ({ distributionId, data: res.data.data }))
+                )
+            );
+            const map: Record<string, DistributionMetricsInstagram> = {};
+            results.forEach(r => {
+                if (r.status === "fulfilled") {
+                    map[r.value.distributionId] = r.value.data;
+                }
+            });
+            return map;
+        } catch (error: any) {
+            return rejectWithValue("Lỗi khi fetch Instagram metrics");
+        }
+    }
+);
 
 export const fetchPostDetail = createAsyncThunk(
     "post/fetchPostDetail",
@@ -466,6 +517,8 @@ const postSlice = createSlice({
         clearDistributionMetrics(state) { state.distributionMetrics = null; },
         clearDistributionMetricsMap(state) { state.distributionMetricsMap = {}; },
         clearFacebookTotalMetrics(state) { state.facebookTotalMetrics = null; },
+        clearDistributionMetricsInstagram(state) { state.distributionMetricsInstagram = null; },
+        clearDistributionMetricsInstagramMap(state) { state.distributionMetricsInstagramMap = {}; },
     },
     extraReducers: (builder) => {
         builder
@@ -643,6 +696,34 @@ const postSlice = createSlice({
             .addCase(publishAdminPost.pending, (state) => { state.loading.publishAdminPost = true; state.error.publishAdminPost = null; })
             .addCase(publishAdminPost.fulfilled, (state) => { state.loading.publishAdminPost = false; })
             .addCase(publishAdminPost.rejected, (state, action) => { state.loading.publishAdminPost = false; state.error.publishAdminPost = action.payload as string; });
+
+        builder
+            .addCase(fetchDistributionMetricsInstagram.pending, (state) => {
+                state.loading.fetchDistributionMetricsInstagram = true;
+                state.error.fetchDistributionMetricsInstagram = null;
+            })
+            .addCase(fetchDistributionMetricsInstagram.fulfilled, (state, action: PayloadAction<DistributionMetricsInstagram>) => {
+                state.loading.fetchDistributionMetricsInstagram = false;
+                state.distributionMetricsInstagram = action.payload;
+            })
+            .addCase(fetchDistributionMetricsInstagram.rejected, (state, action) => {
+                state.loading.fetchDistributionMetricsInstagram = false;
+                state.error.fetchDistributionMetricsInstagram = action.payload as string;
+            });
+
+        builder
+            .addCase(fetchAllDistributionMetricsInstagram.pending, (state) => {
+                state.loading.fetchAllDistributionMetricsInstagram = true;
+                state.error.fetchAllDistributionMetricsInstagram = null;
+            })
+            .addCase(fetchAllDistributionMetricsInstagram.fulfilled, (state, action) => {
+                state.loading.fetchAllDistributionMetricsInstagram = false;
+                state.distributionMetricsInstagramMap = { ...state.distributionMetricsInstagramMap, ...action.payload };
+            })
+            .addCase(fetchAllDistributionMetricsInstagram.rejected, (state, action) => {
+                state.loading.fetchAllDistributionMetricsInstagram = false;
+                state.error.fetchAllDistributionMetricsInstagram = action.payload as string;
+            });
     },
 });
 
@@ -659,5 +740,7 @@ export const {
     clearDistributionMetrics,
     clearDistributionMetricsMap,
     clearFacebookTotalMetrics,
+    clearDistributionMetricsInstagram,
+    clearDistributionMetricsInstagramMap
 } = postSlice.actions;
 export default postSlice.reducer;
