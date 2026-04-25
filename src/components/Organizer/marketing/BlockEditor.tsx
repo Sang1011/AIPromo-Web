@@ -25,13 +25,13 @@ import {
     MdOutlineFormatQuote,
     MdOutlineHorizontalRule,
     MdOutlineImage,
-    MdOutlineTitle,
     MdOutlineTextFields,
+    MdOutlineTitle
 } from "react-icons/md";
 import type { ContentBlock } from "../../../types/post/post";
+import { notify } from "../../../utils/notify";
 import { saveImagePosition } from "../../../utils/postImagePosition";
 import { validateImageFile } from "../../../utils/validateImageFile";
-import { notify } from "../../../utils/notify";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -364,7 +364,7 @@ const TOOLBAR_ITEMS: {
         { type: "list", icon: <MdOutlineFormatListBulleted />, label: "Danh sách" },
         { type: "highlight", icon: <MdOutlineFormatQuote />, label: "Quote" },
         { type: "divider", icon: <MdOutlineHorizontalRule />, label: "Divider" },
-        { type: "image", icon: <MdOutlineImage />, label: "Ảnh" },
+        { type: "image", icon: <MdOutlineImage />, label: "Ảnh" }
     ];
 
 // ─── Main BlockEditor ─────────────────────────────────────────────────────────

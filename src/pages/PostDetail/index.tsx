@@ -9,10 +9,12 @@ import {
   fetchAdminPosts,
   fetchPostDetail,
 } from "../../store/postSlice";
+import { fetchEventById } from "../../store/eventSlice";
 import type { AdminPostItem } from "../../types/post/post";
 import PostBlockRenderer from "../../components/Organizer/post/PostBlockRenderer";
 import { parseBodyToBlocks } from "../../utils/renderPostContent";
 import { injectImageBlock } from "../../utils/injectImageBlock";
+import { injectButtonBlock } from "../../utils/injectButtonBlock";
 import type { ContentBlock } from "../../types/post/post";
 import { GrFormPreviousLink } from "react-icons/gr";
 
@@ -36,7 +38,6 @@ function BodyRenderer({ text }: { text: string }) {
     .map((p) => p.replace(/\n/g, " ").trim())
     .filter(Boolean);
 
-  // If no double newlines, split by sentence groups of ~2
   const chunks = paras.length > 1 ? paras : [text.trim()];
 
   return (
@@ -57,6 +58,7 @@ export default function PostDetail() {
   const dispatch = useDispatch<AppDispatch>();
 
   const { postDetail, loading, error } = useSelector((s: RootState) => s.POST);
+  const { currentEvent } = useSelector((s: RootState) => s.EVENT);
   const adminPosts = useSelector((s: RootState) => s.POST?.adminPosts) ?? [];
 
   useEffect(() => {
@@ -64,6 +66,12 @@ export default function PostDetail() {
     dispatch(fetchPostDetail(id));
     return () => { dispatch(clearPostDetail()); };
   }, [id, dispatch]);
+
+  // Fetch event once we know which event this post belongs to
+  useEffect(() => {
+    if (!postDetail?.eventId) return;
+    dispatch(fetchEventById(postDetail.eventId));
+  }, [postDetail?.eventId, dispatch]);
 
   useEffect(() => {
     if (adminPosts.length > 0) return;
@@ -78,9 +86,22 @@ export default function PostDetail() {
     [adminPosts, id]
   );
 
-  const blocks: ContentBlock[] = postDetail
-    ? injectImageBlock(parseBodyToBlocks(postDetail.body), postDetail.imageUrl ?? null)
-    : [];
+  // Build event URL from currentEvent urlPath
+  const eventHref = useMemo(() => {
+    if (!currentEvent) return null;
+    const urlPath = (currentEvent as any)?.urlPath ?? (currentEvent as any)?.data?.urlPath ?? null;
+    if (!urlPath) return null;
+    return `/events/${urlPath}`;
+  }, [currentEvent]);
+
+  const blocks: ContentBlock[] = useMemo(() => {
+    if (!postDetail) return [];
+    const withImage = injectImageBlock(
+      parseBodyToBlocks(postDetail.body),
+      postDetail.imageUrl ?? null,
+    );
+    return injectButtonBlock(withImage, eventHref);
+  }, [postDetail, eventHref]);
 
   const blocksWithoutTitle = blocks[0]?.type === "heading"
     ? blocks.slice(1)
@@ -134,15 +155,6 @@ export default function PostDetail() {
             )
           )}
 
-          <div className="pd-hero-nav">
-            <button type="button" onClick={() => navigate(-1)} className="pd-back-btn text-md">
-              <span className="pd-back-icon">
-                <GrFormPreviousLink size={24} />
-              </span>
-              Quay lại
-            </button>
-          </div>
-
           {/* Floating title card */}
           <div className="pd-title-wrap" style={{ marginTop: postDetail.imageUrl ? "-190px" : "-28px" }}>
             <div className="pd-title-card">
@@ -175,6 +187,15 @@ export default function PostDetail() {
         </section>
 
         {/* ── Article ── */}
+        <div className="pd-hero-nav">
+          <button type="button" onClick={() => navigate(-1)} className="pd-back-btn">
+            <span className="pd-back-icon">
+              <GrFormPreviousLink size={24} />
+            </span>
+            Quay lại
+          </button>
+        </div>
+
         <article className="pd-article-wrap">
           <div className="pd-body-card">
             <div className="pd-body-inner">
@@ -338,9 +359,9 @@ const css = `
 }
 
 .pd-hero-nav {
-  position: absolute; top: 150px; left: 300px; right: 0; z-index: 20;
-  padding: 18px 24px;
-  display: flex; align-items: center; justify-content: space-between;
+  max-width: 900px; margin: 16px auto 0;
+  padding: 4px 24px;
+  display: flex; align-items: center;
 }
 .pd-hero-img {
   position: absolute; inset: 0;

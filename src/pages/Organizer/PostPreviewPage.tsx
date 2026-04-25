@@ -619,7 +619,7 @@ export default function PostPreviewPage() {
                             rounded-xl px-4 py-3 text-xs text-blue-400">
                                                     <MdOutlineImage className="shrink-0" />
                                                     <div>
-                                                        <p className="font-semibold">Ảnh AI đang được áp dụng</p>
+                                                        <p className="font-semibold">Ảnh đang được áp dụng</p>
                                                         <p className="text-blue-400/60 mt-0.5">
                                                             Xem trong block Ảnh bên dưới. Kéo để đổi vị trí, xóa block để bỏ ảnh.
                                                         </p>

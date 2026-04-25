@@ -11,6 +11,7 @@ import {
     MdOutlineRefresh,
     MdOutlineSmartToy,
     MdOutlineTag,
+    MdOutlineWarningAmber,
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -37,6 +38,7 @@ import { TONE_OPTIONS } from "./AIContentTab";
 import AIImageTab from "./AIImageTab";
 import BlockEditor from "./BlockEditor";
 import UploadImageSection from "./UploadImageSection";
+import PostBlockRenderer from "../post/PostBlockRenderer";
 
 // ─── Reusable display helpers ─────────────────────────────────────────────────
 
@@ -128,8 +130,7 @@ function Spinner() {
     );
 }
 
-// ─── Image Hint Banner ────────────────────────────────────────────────────────
-// Dùng chung cho AIContentTab và ManualTab để gợi ý user về ảnh
+// ─── ImageHintBanner ──────────────────────────────────────────────────────────
 
 function ImageHintBanner({
     selectedImageUrl,
@@ -155,8 +156,6 @@ function ImageHintBanner({
                 onClearImage={onClearImage}
                 onFileSelected={onFileSelected}
             />
-
-            {/* Selected image preview chip */}
             {selectedImageUrl && (
                 <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20
                                 rounded-xl px-3 py-2 text-xs text-green-400">
@@ -188,9 +187,89 @@ function ImageHintBanner({
     );
 }
 
-// ─── AI Content Tab (gộp generate + edit, không có steps) ────────────────────
-// Layout: ImageHint → Tone → Prompt → Generate button
-//         Khi có kết quả → Title + BlockEditor (text-only) animate vào bên dưới
+// ─── GeneratePreviewModal (giống PostPreviewPage) ─────────────────────────────
+
+function GeneratePreviewModal({
+    blocks,
+    title,
+    onConfirm,
+    onCancel,
+    loading,
+}: {
+    blocks: ContentBlock[];
+    title: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    loading: boolean;
+}) {
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+            <div className="bg-[#0B0B12] border border-slate-800 rounded-[32px] p-8 w-full max-w-2xl shadow-2xl space-y-6 max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between shrink-0">
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <MdOutlineSmartToy className="text-primary" /> Xem trước nội dung AI
+                    </h3>
+                    <button onClick={onCancel} className="text-slate-500 hover:text-slate-300 text-2xl leading-none">
+                        <MdOutlineClose />
+                    </button>
+                </div>
+
+                {/* Token warning */}
+                <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3 shrink-0">
+                    <MdOutlineWarningAmber className="text-amber-400 text-lg mt-0.5 shrink-0" />
+                    <div className="space-y-0.5">
+                        <p className="text-xs font-semibold text-amber-400">Lưu ý quan trọng</p>
+                        <p className="text-xs text-amber-400/70 leading-relaxed">
+                            Mỗi lần tạo nội dung đều <span className="text-amber-300 font-semibold">tiêu tốn token AI</span>.
+                            Nếu không lưu bản nháp, nội dung và lịch sử sẽ <span className="text-amber-300 font-semibold">mất khi thoát trang</span>.
+                            Hãy lưu ngay để chỉnh sửa sau!
+                        </p>
+                    </div>
+                </div>
+
+                <p className="text-xs text-slate-500 shrink-0">
+                    Xem lại nội dung vừa tạo. Nhấn{" "}
+                    <span className="text-primary font-semibold">Lưu bản nháp</span> để tạo bài đăng và có thể chỉnh sửa sau.
+                </p>
+
+                <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+                    <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tiêu đề</p>
+                        <p className="text-slate-100 font-semibold text-sm bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-3">
+                            {title || <span className="text-slate-600 italic">Chưa có tiêu đề</span>}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nội dung</p>
+                        <div className="bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-4">
+                            {blocks.length > 0
+                                ? <PostBlockRenderer blocks={blocks} />
+                                : <p className="text-slate-400 text-sm">Không có nội dung để hiển thị.</p>}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2 shrink-0">
+                    <button
+                        onClick={onCancel}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-400 border border-slate-700 hover:border-slate-500 transition-all"
+                    >
+                        Chỉnh sửa thêm
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={loading}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/30 transition-all flex items-center gap-2"
+                    >
+                        {loading ? <><Spinner /> Đang lưu...</> : "✓ Lưu bản nháp"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── AIContentSection (redesigned — giống PostPreviewPage flow) ───────────────
 
 function AIContentSection({
     generatedDraft,
@@ -216,20 +295,14 @@ function AIContentSection({
     onClearImage: () => void;
     onFileSelected: (f: File) => void;
 }) {
-    const editorRef = useRef<{ getBlocks: () => ContentBlock[] } | null>(null);
     const [tone, setTone] = useState("");
     const [userPrompt, setUserPrompt] = useState("");
-    const [title, setTitle] = useState("");
 
-    // Khi draft mới được generate → seed title
-    useEffect(() => {
-        if (generatedDraft?.title) {
-            setTitle(generatedDraft.title);
-        }
-    }, [generatedDraft?.title]);
+    // Preview modal state
+    const [previewData, setPreviewData] = useState<{ blocks: ContentBlock[]; title: string } | null>(null);
 
-    // Parse blocks từ generatedDraft (text only, không có image block)
-    const initialBlocks: ContentBlock[] = (() => {
+    // Parse blocks từ generatedDraft (text only)
+    const generatedBlocks: ContentBlock[] = (() => {
         if (!generatedDraft?.body) return [];
         try {
             const parsed = JSON.parse(generatedDraft.body);
@@ -239,23 +312,42 @@ function AIContentSection({
         } catch { return []; }
     })();
 
-    const handleSave = () => {
-        const blocks = editorRef.current?.getBlocks() ?? [];
-        onSaveDraft(blocks, title);
+    const hasResult = generatedBlocks.length > 0;
+    const isGenerating = !!loading.generateAI;
+
+    const handleOpenPreview = () => {
+        setPreviewData({
+            blocks: generatedBlocks,
+            title: generatedDraft?.title ?? "",
+        });
     };
 
-    const hasResult = !!generatedDraft;
-    const isGenerating = !!loading.generateAI;
+    const handleConfirmSave = () => {
+        if (!previewData) return;
+        onSaveDraft(previewData.blocks, previewData.title);
+        // Modal sẽ tự đóng sau khi save xong (parent navigate đi)
+    };
 
     return (
         <div className="space-y-5">
-            {/* ── Ảnh: ImageHintBanner owns image cho tab này ── */}
+            {/* ── Image ── */}
             <ImageHintBanner
                 selectedImageUrl={selectedImageUrl}
                 onSelectImage={onSelectImage}
                 onClearImage={onClearImage}
                 onFileSelected={onFileSelected}
             />
+
+            {/* ── Token warning banner (always visible) ── */}
+            <div className="flex items-start gap-3 bg-amber-500/8 border border-amber-500/15 rounded-2xl px-4 py-3">
+                <MdOutlineWarningAmber className="text-amber-500/70 text-base mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-500/70 leading-relaxed">
+                    Mỗi lần tạo nội dung tiêu tốn <span className="text-amber-400 font-semibold">token AI</span>.
+                    Sau khi tạo, hãy{" "}
+                    <span className="text-amber-400 font-semibold">lưu bản nháp ngay</span> — bạn có thể chỉnh sửa
+                    thoải mái sau đó mà không tốn thêm token.
+                </p>
+            </div>
 
             {/* ── Tone ── */}
             <div>
@@ -280,7 +372,7 @@ function AIContentSection({
                 </div>
             </div>
 
-            {/* ── Yêu cầu thêm ── */}
+            {/* ── Prompt ── */}
             <div>
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Yêu cầu thêm{" "}
@@ -320,101 +412,88 @@ function AIContentSection({
                         : <><MdOutlineBolt /><span>Tạo nội dung với AI</span></>}
             </button>
 
-            {/* ── Kết quả: animate vào khi có draft ── */}
+            {/* ── Kết quả — giống PostPreviewPage: block list nhỏ + nút Xem preview ── */}
             {hasResult && (
-                <div className="space-y-5 animate-fadeIn">
-                    {/* Success banner */}
+                <div className="space-y-4 animate-fadeIn">
+                    {/* Success + meta */}
                     <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-3">
                         <MdOutlineCheckCircle className="text-green-400 text-xl shrink-0" />
                         <div className="flex-1 min-w-0">
                             <p className="text-green-400 text-sm font-semibold">AI đã tạo xong!</p>
                             <p className="text-green-500/70 text-xs mt-0.5">
-                                Chỉnh sửa bên dưới rồi lưu bản nháp.
+                                Xem preview rồi lưu bản nháp — chỉnh sửa thoải mái sau.
                             </p>
                         </div>
-                        {/* AI meta */}
                         <div className="flex flex-col items-end gap-0.5 shrink-0">
-                            {generatedDraft.aiModel && (
-                                <span className="text-[10px] text-slate-600">
-                                    {generatedDraft.aiModel}
-                                </span>
+                            {generatedDraft?.aiModel && (
+                                <span className="text-[10px] text-slate-600">{generatedDraft.aiModel}</span>
                             )}
-                            {generatedDraft.aiTokensUsed && (
-                                <span className="text-[10px] text-slate-600">
-                                    {generatedDraft.aiTokensUsed} tokens
-                                </span>
+                            {generatedDraft?.aiTokensUsed && (
+                                <span className="text-[10px] text-slate-600">{generatedDraft.aiTokensUsed} tokens</span>
                             )}
                         </div>
                     </div>
 
-                    {/* Divider */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex-1 h-px bg-slate-800" />
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
-                            Chỉnh sửa trước khi lưu
-                        </span>
-                        <div className="flex-1 h-px bg-slate-800" />
-                    </div>
-
-                    {/* Title input */}
-                    <div>
-                        <label className="block text-sm font-semibold text-slate-400 mb-2">
-                            Tiêu đề bài đăng <span className="text-red-400">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Nhập tiêu đề..."
-                            className="w-full bg-background-dark border border-slate-800 rounded-xl
-                                       text-slate-100 placeholder:text-slate-600 px-4 py-3 text-sm font-semibold
-                                       focus:outline-none focus:border-primary transition-colors"
-                        />
-                    </div>
-
-                    {/* BlockEditor — text only, image được quản lý bởi ImageHintBanner bên trên */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <MdOutlineEdit className="text-slate-500 text-sm" />
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                                Nội dung (text blocks only)
-                            </span>
-                            <span className="ml-auto text-[10px] text-slate-600">
-                                Ảnh được gắn qua phần upload bên trên
-                            </span>
+                    {/* Title preview */}
+                    {generatedDraft?.title && (
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tiêu đề</p>
+                            <p className="text-slate-100 font-semibold text-sm bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-3 truncate">
+                                {generatedDraft.title}
+                            </p>
                         </div>
-                        {/*
-                            key = generatedDraft để re-mount khi generate lại
-                            disableImageBlock = true → ẩn nút thêm image block trong toolbar
-                            vì ảnh được quản lý bởi UploadImageSection (Single Source of Truth)
-                        */}
-                        <BlockEditor
-                            key={generatedDraft?.promptUsed ?? "ai-draft"}
-                            editorRef={editorRef}
-                            initialBlocks={initialBlocks}
-                            disableImageBlock
-                        />
+                    )}
+
+                    {/* Block list (compact — giống PostPreviewPage) */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <MdOutlineSmartToy className="text-primary text-sm" />
+                            <span className="text-xs font-bold text-primary uppercase tracking-widest">Nội dung</span>
+                            <span className="ml-auto text-xs text-slate-600">{generatedBlocks.length} blocks</span>
+                        </div>
+                        <div className="bg-background-dark border border-slate-800 rounded-xl px-4 py-3 space-y-1.5 max-h-40 overflow-y-auto">
+                            {generatedBlocks.map((b, i) => (
+                                <div key={i} className="flex items-center gap-2 text-xs text-slate-400">
+                                    <span className="text-slate-600 w-4 text-right shrink-0">{i + 1}.</span>
+                                    <span className="bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono shrink-0">
+                                        {b.type}{(b as any).level ? ` h${(b as any).level}` : ""}
+                                    </span>
+                                    <span className="truncate text-slate-500">
+                                        {(b as any).text ?? (b as any).content ?? (b as any).label ?? ""}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Save button */}
+                    {/* CTA: Xem preview → modal */}
                     <button
                         type="button"
-                        onClick={handleSave}
-                        disabled={isSaving || !title.trim()}
-                        className="w-full border border-primary text-primary hover:bg-primary hover:text-white
-                                   disabled:opacity-50 disabled:cursor-not-allowed
-                                   py-3.5 rounded-2xl font-bold text-sm
+                        onClick={handleOpenPreview}
+                        className="w-full border border-slate-700 text-slate-300 hover:border-primary/50
+                                   hover:text-white py-3.5 rounded-2xl font-semibold text-sm
                                    flex items-center justify-center gap-2 transition-all"
                     >
-                        {isSaving
-                            ? <><Spinner /><span>Đang lưu...</span></>
-                            : "Lưu bản nháp"}
+                        Xem preview & Lưu bản nháp →
                     </button>
                 </div>
+            )}
+
+            {/* ── Preview Modal ── */}
+            {previewData && (
+                <GeneratePreviewModal
+                    blocks={previewData.blocks}
+                    title={previewData.title}
+                    onConfirm={handleConfirmSave}
+                    onCancel={() => setPreviewData(null)}
+                    loading={isSaving}
+                />
             )}
         </div>
     );
 }
+
+// ─── ManualSection ────────────────────────────────────────────────────────────
 
 function ManualSection({
     isSaving,
@@ -433,7 +512,6 @@ function ManualSection({
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-    // Seed từ shared (AI image tab) — chỉ chạy 1 lần khi mount hoặc khi shared thay đổi
     useEffect(() => {
         setImageUrl(sharedImageUrl);
         setPendingFile(sharedImageFile);
@@ -489,10 +567,6 @@ function ManualSection({
                 />
             </div>
 
-            {/*
-                key thay đổi khi imageUrl đổi → re-mount để inject image block đúng vị trí
-                injectImageBlock với blocks rỗng → sẽ dùng default [h1, paragraph] trong BlockEditor
-            */}
             <BlockEditor
                 key={imageUrl ?? "no-img"}
                 editorRef={editorRef}
@@ -528,11 +602,8 @@ export default function PromptFormMarketing() {
     const { generatedDraft, generatedImageUrl, loading, error } = useSelector((s: RootState) => s.POST);
 
     const [activeTab, setActiveTab] = useState<ActiveTab>("content");
-
-    // ── Image state cho AI Content tab (owned by UploadImageSection) ──────────
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
     const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-
     const [isSavingWithImage, setIsSavingWithImage] = useState(false);
 
     useEffect(() => {
@@ -542,9 +613,6 @@ export default function PromptFormMarketing() {
             dispatch(clearGeneratedImageUrl());
         };
     }, [eventId, dispatch]);
-
-
-    // ── Handlers ─────────────────────────────────────────────────────────────
 
     const handleGenerate = (tone: string, userPrompt: string) => {
         if (!eventId || !currentEvent) return;
@@ -557,7 +625,6 @@ export default function PromptFormMarketing() {
 
     const handleSelectImage = (url: string) => {
         setSelectedImageUrl(url);
-        // Nếu chọn ảnh AI (không phải blob) → clear pending file
         if (!url.startsWith("blob:")) setPendingImageFile(null);
     };
 
@@ -570,8 +637,6 @@ export default function PromptFormMarketing() {
         setPendingImageFile(file);
         setSelectedImageUrl(URL.createObjectURL(file));
     };
-
-    // ── Core save logic ────────────────────────────────────────────────────────
 
     const saveDraftCore = async (
         draftPayload: CreatePostDraftRequest,
@@ -613,7 +678,6 @@ export default function PromptFormMarketing() {
                 };
                 await dispatch(updatePostContent({ postId, data: updateData })).unwrap();
 
-                // Lưu image position: sau heading đầu tiên
                 const headingIdx = blocks.findIndex(b => b.type === "heading");
                 const insertAt = headingIdx !== -1 ? headingIdx + 1 : 0;
                 saveImagePosition(postId, insertAt).catch(console.error);
@@ -628,7 +692,6 @@ export default function PromptFormMarketing() {
         }
     };
 
-    // ── Save từ AI Content tab ─────────────────────────────────────────────────
     const handleSaveDraftFromAI = async (blocks: ContentBlock[], title: string) => {
         if (!generatedDraft || !eventId) return;
         const textBlocks = blocks.filter(b => b.type !== "image");
@@ -645,8 +708,6 @@ export default function PromptFormMarketing() {
         await saveDraftCore(payload, textBlocks, selectedImageUrl, pendingImageFile);
     };
 
-    // ── Save từ Manual tab ────────────────────────────────────────────────────
-    // imageFile và imageUrl được truyền từ ManualSection (owned by BlockEditor)
     const handleSaveDraftFromManual = async (
         blocks: ContentBlock[],
         title: string,
@@ -669,8 +730,6 @@ export default function PromptFormMarketing() {
 
     const event = currentEvent as any;
     const isSaving = isSavingWithImage || loading.createDraft || loading.uploadImage || loading.updateContent;
-
-    // Dot indicator: ảnh đã chọn từ AI Image tab
     const isAIImageSelected = !!generatedImageUrl && selectedImageUrl === generatedImageUrl;
 
     const TABS: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
@@ -725,15 +784,12 @@ export default function PromptFormMarketing() {
                                 {tab.icon}
                                 <span className="hidden sm:inline">{tab.label}</span>
 
-                                {/* Dot: AI image đang được dùng */}
                                 {tab.id === "image" && isAIImageSelected && (
                                     <span className="w-2 h-2 rounded-full bg-green-400 ml-0.5" />
                                 )}
-                                {/* Dot: ảnh đã upload/chọn cho content tab */}
                                 {tab.id === "content" && selectedImageUrl && (
                                     <span className="w-2 h-2 rounded-full bg-green-400 ml-0.5" />
                                 )}
-                                {/* Dot: AI đã generate */}
                                 {tab.id === "content" && generatedDraft && (
                                     <span className="w-2 h-2 rounded-full bg-primary ml-0.5" />
                                 )}
@@ -750,7 +806,6 @@ export default function PromptFormMarketing() {
                         </span>
                     </div>
 
-                    {/* ── Tab: AI Content (1 flow liền mạch) ── */}
                     {activeTab === "content" && (
                         <AIContentSection
                             generatedDraft={generatedDraft}
@@ -767,7 +822,6 @@ export default function PromptFormMarketing() {
                         />
                     )}
 
-                    {/* ── Tab: AI Image ── */}
                     {activeTab === "image" && (
                         <AIImageTab
                             generatedImageUrl={generatedImageUrl}
@@ -777,15 +831,11 @@ export default function PromptFormMarketing() {
                             onGenerate={(p, a, s) =>
                                 dispatch(generateImage({ prompt: p, aspectRatio: a, imageSize: s }))
                             }
-                            onSelectImage={(url) => {
-                                handleSelectImage(url);
-                                // Sau khi chọn ảnh AI → gợi ý user quay về tab content
-                            }}
+                            onSelectImage={handleSelectImage}
                             onClearImage={handleClearImage}
                         />
                     )}
 
-                    {/* ── Tab: Tự soạn ── */}
                     {activeTab === "manual" && (
                         <ManualSection
                             loading={loading}

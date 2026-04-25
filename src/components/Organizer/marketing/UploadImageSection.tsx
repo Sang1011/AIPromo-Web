@@ -1,12 +1,11 @@
 import { useRef, useState } from "react";
 import { MdOutlineCloudUpload } from "react-icons/md";
-import { validateImageFile } from "../../../utils/validateImageFile";
 import { notify } from "../../../utils/notify";
+import { validateImageFile } from "../../../utils/validateImageFile";
 
 export default function UploadImageSection({
     selectedImageUrl,
     onSelectImage,
-    onClearImage,
     onFileSelected,
 }: {
     selectedImageUrl: string | null;
@@ -40,19 +39,7 @@ export default function UploadImageSection({
             </p>
 
             {selectedImageUrl && !selectedImageUrl.startsWith("http") ? (
-                <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20
-                                rounded-xl px-3 py-2.5">
-                    <img src={selectedImageUrl} alt="uploaded"
-                        className="w-12 h-12 rounded-lg object-cover border border-green-500/30 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-green-400">Ảnh đã tải lên</p>
-                        <p className="text-[10px] text-green-500/60 truncate">{selectedImageUrl.slice(0, 40)}...</p>
-                    </div>
-                    <button type="button" onClick={onClearImage}
-                        className="text-slate-500 hover:text-red-400 transition-colors text-lg leading-none shrink-0">
-                        ×
-                    </button>
-                </div>
+                <></>
             ) : (
                 <div
                     onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
