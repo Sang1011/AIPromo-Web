@@ -6,11 +6,14 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchAdminPaymentTransactions } from "../../../store/paymentSlice";
 
+// Lưu page ngoài component để không bị reset khi unmount/remount (chuyển tab)
+let _persistedPage = 1;
+
 export default function AdminFinanceTransactionsTable() {
     const dispatch = useDispatch<AppDispatch>();
     const { adminTransactions } = useSelector((state: RootState) => state.PAYMENT);
 
-    const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(_persistedPage);
     const [tableLoading, setTableLoading] = useState(true);
 
     const pageSize = 10;
@@ -18,14 +21,12 @@ export default function AdminFinanceTransactionsTable() {
     const loadTransactions = async (pageNumber: number) => {
         try {
             setTableLoading(true);
-
             await dispatch(fetchAdminPaymentTransactions({
                 PageNumber: pageNumber,
                 PageSize: pageSize,
                 SortColumn: "CreatedAt",
                 SortOrder: "desc",
             })).unwrap();
-
         } catch (e) {
             console.error("Failed to load admin payment transactions", e);
         } finally {
@@ -33,7 +34,9 @@ export default function AdminFinanceTransactionsTable() {
         }
     };
 
+    // Sync currentPage ra ngoài mỗi khi thay đổi để persist qua remount
     useEffect(() => {
+        _persistedPage = currentPage;
         loadTransactions(currentPage);
     }, [currentPage]);
 
