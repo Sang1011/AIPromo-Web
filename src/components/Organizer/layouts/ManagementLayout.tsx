@@ -24,7 +24,6 @@ export default function ManagementLayout() {
 
     const menuGroups = [
         {
-            headerTitle: "Quản trị",
             headerGroup: [
                 {
                     icon: <FiArrowLeft />,

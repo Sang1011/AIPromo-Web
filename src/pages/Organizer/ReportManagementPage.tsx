@@ -12,7 +12,7 @@ export default function ReportManagementPage() {
 
     useEffect(() => {
         setConfig({
-            title: "Quản lý báo cáo",
+            title: "Lịch sử xuất báo cáo",
         });
 
         return () => setConfig({});

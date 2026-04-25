@@ -7,31 +7,27 @@ interface SaveReportOptions {
     fileName: string;
     createdBy: string;
     createdAt: string;
+    userId: string;
 }
-
-const sanitizeEmail = (email: string) => email.replace(/\./g, ",");
 
 export const saveReportToFirebase = async ({
     eventId,
     eventName,
     fileName,
     createdBy,
-    createdAt
+    createdAt,
+    userId,
 }: SaveReportOptions): Promise<void> => {
     try {
-        const safeEmail = sanitizeEmail(createdBy);
-
-        const reportsRef = ref(db, `email/reports/${safeEmail}/${eventId}`);
+        const reportsRef = ref(db, `users/reports/${userId}/${eventId}`);
         const newReportRef = push(reportsRef);
 
         await set(newReportRef, {
             eventName,
             fileName,
             createdAt,
-            createdBy
+            createdBy,
         });
-
-        console.log("Saved to Firebase");
     } catch (err) {
         console.error("Firebase error:", err);
         throw err;

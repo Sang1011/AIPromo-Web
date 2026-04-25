@@ -31,8 +31,8 @@ export function MenuItem({
                     : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/10 hover:text-primary"
                 }`}
         >
-            <span className="text-xl shrink-0">{icon}</span>
-            {!collapsed && <span className="font-medium">{label}</span>}
+            <span className="text-md shrink-0">{icon}</span>
+            {!collapsed && <span className="font-medium text-sm">{label}</span>}
         </div>
     );
 }

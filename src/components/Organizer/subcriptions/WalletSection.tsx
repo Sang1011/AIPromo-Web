@@ -1,6 +1,6 @@
+import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, Loader2, Plus, Wallet, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Wallet, Plus, X, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import type { AppDispatch, RootState } from "../../../store";
 import { fetchToUpWallet } from "../../../store/walletSlice";
 import type { WalletTransaction } from "../../../types/wallet/wallet";
@@ -9,6 +9,17 @@ const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000, 1_000_000, 2_000_000, 
 
 function formatVND(amount: number) {
     return amount.toLocaleString("vi-VN") + " ₫";
+}
+
+function TxStatusLabel({ status }: { status: string }) {
+    const map: Record<string, { label: string; color: string }> = {
+        SUCCESS: { label: "Thành công", color: "text-emerald-400" },
+        COMPLETED: { label: "Hoàn thành", color: "text-emerald-400" },
+        FAILED: { label: "Thất bại", color: "text-red-400" },
+        PENDING: { label: "Đang xử lý", color: "text-amber-400" },
+    };
+    const s = map[status.toUpperCase()] ?? { label: status, color: "text-slate-400" };
+    return <span className={`text-[12px] font-medium ${s.color}`}>{s.label}</span>;
 }
 
 function formatCompactVND(amount: number): string {
@@ -36,16 +47,6 @@ function txStatusIcon(status: string) {
     if (status === "FAILED")
         return <XCircle size={11} className="text-red-400" />;
     return <Clock size={11} className="text-amber-400" />;
-}
-
-function txStatusLabel(status: string) {
-    const map: Record<string, string> = {
-        SUCCESS: "Thành công",
-        COMPLETED: "Hoàn thành",
-        FAILED: "Thất bại",
-        PENDING: "Đang xử lý",
-    };
-    return map[status] ?? status;
 }
 
 // ─── Top-up Modal ─────────────────────────────────────────────────────────────
@@ -194,10 +195,10 @@ function TxRow({ tx }: { tx: WalletTransaction }) {
                 <div>
                     <p className="text-xs text-slate-300 font-medium leading-tight">{tx.note || "Giao dịch"}</p>
                     <div className="flex items-center gap-1 mt-0.5">
-                        {txStatusIcon(tx.status)}
-                        <span className="text-[10px] text-slate-600">{txStatusLabel(tx.status)}</span>
-                        <span className="text-[10px] text-slate-700">·</span>
-                        <span className="text-[10px] text-slate-600">
+                        {txStatusIcon(tx.status.toUpperCase())}
+                        <TxStatusLabel status={tx.status} />
+                        <span className="text-[12px] text-slate-500">·</span>
+                        <span className="text-[12px] text-slate-400">
                             {new Date(tx.createdAt).toLocaleDateString("vi-VN")}
                         </span>
                     </div>

@@ -190,7 +190,7 @@ export default function MyEventsPage() {
     );
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 mx-auto">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <SearchBar
                     value={searchQuery}
