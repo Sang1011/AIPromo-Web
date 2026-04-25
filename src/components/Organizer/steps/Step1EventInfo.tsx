@@ -25,6 +25,7 @@ import { DropdownItem, DropdownLoading } from "../shared/DropdownItem";
 import ImagePreviewBox from "../shared/ImagePreviewBox";
 import { UnsavedBanner } from "../shared/UnsavedBanner";
 import UploadBox from "../shared/UploadBox";
+import { Step1Skeleton } from "../Step1Skeleton";
 
 interface Step1EventInfoProps {
     onNext?: () => void;
@@ -571,6 +572,10 @@ export default function Step1EventInfo({
             setBannerSaving(false);
         }
     };
+
+    if (mode === "edit" && !eventData) {
+        return <Step1Skeleton />
+    }
 
     return (
         <>

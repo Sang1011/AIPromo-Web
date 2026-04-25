@@ -147,7 +147,7 @@ export default function OrganizerOverviewAllPage() {
     const { allEventSalesTrend, allEventSalesTrendLoading } = useSelector(
         (state: RootState) => state.TICKETING
     );
-
+    const [areaSeries, setAreaSeries] = useState<"net" | "gross">("net");
     const [showGross, setShowGross] = useState(true);
     const [showNet, setShowNet] = useState(true);
     const [trendRange, setTrendRange] = useState<TrendRange>(3);
@@ -197,11 +197,6 @@ export default function OrganizerOverviewAllPage() {
         value: totalGross > 0 ? Math.round((x.grossRevenue / totalGross) * 100) : 0,
     }));
 
-    // ─── Derived: stacked area ────────────────────────────────────────────────
-    /**
-     * Gộp theo ngày khi range = 1 tháng, gộp theo tuần khi range > 1 tháng.
-     * Output: [{ label, [eventTitle]: revenue, ... }]
-     */
     const { areaData, eventTitles } = useMemo(() => {
         if (!allEventSalesTrend?.events?.length) return { areaData: [], eventTitles: [] };
 
@@ -222,7 +217,9 @@ export default function OrganizerOverviewAllPage() {
                     keyToDate.set(key, d);
                 }
                 const row = map.get(key)!;
-                row[title] = (row[title] ?? 0) + point.netRevenue;
+                // ← Switch field theo areaSeries
+                const val = areaSeries === "net" ? point.netRevenue : point.grossRevenue;
+                row[title] = (row[title] ?? 0) + val;
             }
         }
 
@@ -240,7 +237,7 @@ export default function OrganizerOverviewAllPage() {
         }));
 
         return { areaData: data, eventTitles: titles };
-    }, [allEventSalesTrend, trendRange]);
+    }, [allEventSalesTrend, trendRange, areaSeries]);
 
     const areaMaxValue = useMemo(() =>
         areaData.length === 0 ? 0 : Math.max(
@@ -431,24 +428,51 @@ export default function OrganizerOverviewAllPage() {
 
                 {/* Stacked area */}
                 <SectionCard
-                    title="Xu hướng doanh thu ròng theo sự kiện"
-                    sub={trendRange === 1
-                        ? `Theo ngày — 1 tháng gần nhất (${areaScale.unit}đ)`
-                        : `Theo tuần — ${trendRange} tháng gần nhất (${areaScale.unit}đ)`}
+                    title="Xu hướng doanh thu theo sự kiện"
+                    sub={
+                        trendRange === 1
+                            ? `Theo ngày — 1 tháng gần nhất (${areaScale.unit}đ) · ${areaSeries === "net" ? "Doanh thu ròng" : "Doanh thu gộp"}`
+                            : `Theo tuần — ${trendRange} tháng gần nhất (${areaScale.unit}đ) · ${areaSeries === "net" ? "Doanh thu ròng" : "Doanh thu gộp"}`
+                    }
                     headerRight={
-                        <div className="flex items-center gap-1 -mt-0.5 flex-shrink-0">
-                            {RANGE_OPTIONS.map((opt) => (
+                        <div className="flex items-center gap-2 -mt-0.5 flex-shrink-0 flex-wrap justify-end">
+                            {/* Toggle gross/net */}
+                            <div className="flex items-center gap-1 border border-slate-800 rounded-lg p-0.5">
                                 <button
-                                    key={opt.value}
-                                    onClick={() => setTrendRange(opt.value)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${trendRange === opt.value
-                                        ? "bg-primary text-white"
-                                        : "bg-surface-dark text-text-muted hover:text-white"
+                                    onClick={() => setAreaSeries("net")}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${areaSeries === "net"
+                                            ? "bg-primary text-white"
+                                            : "text-text-muted hover:text-white"
                                         }`}
                                 >
-                                    {opt.label}
+                                    Ròng
                                 </button>
-                            ))}
+                                <button
+                                    onClick={() => setAreaSeries("gross")}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${areaSeries === "gross"
+                                            ? "bg-primary text-white"
+                                            : "text-text-muted hover:text-white"
+                                        }`}
+                                >
+                                    Gộp
+                                </button>
+                            </div>
+
+                            {/* Range selector — same as before */}
+                            <div className="flex items-center gap-1">
+                                {RANGE_OPTIONS.map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => setTrendRange(opt.value)}
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${trendRange === opt.value
+                                                ? "bg-primary text-white"
+                                                : "bg-surface-dark text-text-muted hover:text-white"
+                                            }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     }
                 >

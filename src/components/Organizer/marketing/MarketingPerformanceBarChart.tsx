@@ -15,7 +15,7 @@ import postService from "../../../services/postService";
 import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetricsMap, fetchAllDistributionMetrics } from "../../../store/postSlice";
 import type { DistributionMetricsFacebook, PostListItem } from "../../../types/post/post";
-import { EmptyState } from "../shared/EmtyState";
+import { EmptyStateFacebook } from "../shared/EmtyState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -362,7 +362,7 @@ export default function MarketingPerformanceBarChart() {
                 </div>
             )}
 
-            {!isLoading && !hasData && <EmptyState />}
+            {!isLoading && !hasData && <EmptyStateFacebook />}
 
             {/* Legend */}
             {hasData && (

@@ -19,10 +19,16 @@ const RequireRole = ({ allowedRoles }: RequireRoleProps) => {
 
     useEffect(() => {
         const fetchData = async () => {
+            if ((currentInfor as MeInfo)?.userId) {
+                setIsChecking(false);
+                return;
+            }
+
             if (refreshToken) {
                 await dispatch(fetchRefreshToken());
+            } else {
+                await dispatch(fetchMe());
             }
-            await dispatch(fetchMe());
             setIsChecking(false);
         };
 

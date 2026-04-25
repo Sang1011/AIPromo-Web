@@ -51,6 +51,18 @@ export const fetchAssignAreas = createAsyncThunk(
     }
 );
 
+export const fetchGetListSeatMapByCurrentOrganizer = createAsyncThunk(
+    "SEAT_MAP/getListByOrganizer",
+    async (_, { rejectWithValue }) => {
+        try {
+            const res = await seatmapService.getListSeatMapByCurrentOrganizer();
+            return res.data.data;
+        } catch (err: any) {
+            return rejectWithValue(err?.response?.data?.message ?? "Không thể tải danh sách sơ đồ");
+        }
+    }
+);
+
 const seatMapSlice = createSlice({
     name: "SEAT_MAP",
     initialState,

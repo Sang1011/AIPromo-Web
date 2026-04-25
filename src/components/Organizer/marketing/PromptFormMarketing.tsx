@@ -4,13 +4,13 @@ import {
     MdOutlineBolt,
     MdOutlineCategory,
     MdOutlineCheckCircle,
+    MdOutlineClose,
     MdOutlineEdit,
     MdOutlineImage,
     MdOutlinePerson,
+    MdOutlineRefresh,
     MdOutlineSmartToy,
     MdOutlineTag,
-    MdOutlineClose,
-    MdOutlineRefresh,
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -29,6 +29,7 @@ import type { GetEventDetailResponse } from "../../../types/event/event";
 import type { ContentBlock, CreatePostDraftRequest, UpdatePostContentRequest } from "../../../types/post/post";
 import { buildContextPrompt } from "../../../utils/buildContextPrompt";
 import { formatDateTime } from "../../../utils/formatDateTime";
+import { injectImageBlock } from "../../../utils/injectImageBlock";
 import { notify } from "../../../utils/notify";
 import { saveImagePosition } from "../../../utils/postImagePosition";
 import { serializeBlocksToBody } from "../../../utils/renderPostContent";
@@ -415,24 +416,28 @@ function AIContentSection({
     );
 }
 
-// ─── Manual Tab ───────────────────────────────────────────────────────────────
-// BlockEditor owns image (via onImageChange callback)
-// KHÔNG có UploadImageSection riêng — image block trong editor là primary
-
 function ManualSection({
     isSaving,
     onSaveDraft,
+    sharedImageUrl,
+    sharedImageFile,
 }: {
     loading: any;
     isSaving: boolean;
+    sharedImageUrl: string | null;
+    sharedImageFile: File | null;
     onSaveDraft: (blocks: ContentBlock[], title: string, imageFile: File | null, imageUrl: string | null) => void;
 }) {
     const editorRef = useRef<{ getBlocks: () => ContentBlock[] } | null>(null);
     const [title, setTitle] = useState("");
-
-    // Image state — owned by BlockEditor via callback
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+    // Seed từ shared (AI image tab) — chỉ chạy 1 lần khi mount hoặc khi shared thay đổi
+    useEffect(() => {
+        setImageUrl(sharedImageUrl);
+        setPendingFile(sharedImageFile);
+    }, [sharedImageUrl, sharedImageFile]);
 
     const handleImageChange = (file: File | null, url: string | null) => {
         setPendingFile(file);
@@ -441,26 +446,34 @@ function ManualSection({
 
     const handleSave = () => {
         const blocks = editorRef.current?.getBlocks() ?? [];
-        // Strip image blocks trước khi serialize body
-        // Image được lưu riêng qua imageUrl/pendingFile
         const textBlocks = blocks.filter(b => b.type !== "image");
         onSaveDraft(textBlocks, title, pendingFile, imageUrl);
     };
 
     return (
         <div className="space-y-5">
-            {/* Hint: image do BlockEditor quản lý */}
+            {sharedImageUrl && !imageUrl?.startsWith("blob:") && (
+                <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/20
+                                rounded-xl px-4 py-3 text-xs text-blue-400">
+                    <MdOutlineImage className="text-blue-400 shrink-0" />
+                    <div className="flex-1">
+                        <p className="font-semibold">Ảnh AI đã được gắn vào bài</p>
+                        <p className="text-blue-400/60 mt-0.5">
+                            Ảnh hiển thị trong editor bên dưới. Kéo thả để đổi vị trí, hoặc xóa block Ảnh để bỏ.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center gap-2.5 bg-slate-900/40 border border-slate-700/40
                             rounded-xl px-4 py-3 text-xs text-slate-500">
                 <MdOutlineImage className="text-slate-600 text-base shrink-0" />
                 <span>
-                    Thêm ảnh bằng cách chọn block{" "}
-                    <span className="text-slate-300 font-semibold">Ảnh</span>{" "}
-                    trong toolbar editor bên dưới. Kéo thả để đổi vị trí.
+                    Thêm ảnh bằng block <span className="text-slate-300 font-semibold">Ảnh</span> trong toolbar,
+                    hoặc ảnh AI từ tab bên cạnh sẽ tự động được gắn vào đây.
                 </span>
             </div>
 
-            {/* Title */}
             <div>
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Tiêu đề bài đăng <span className="text-red-400">*</span>
@@ -477,12 +490,13 @@ function ManualSection({
             </div>
 
             {/*
-                BlockEditor với onImageChange callback
-                Image block is the source of truth trong tab này
-                disableImageBlock = false (default) → toolbar có nút Ảnh
+                key thay đổi khi imageUrl đổi → re-mount để inject image block đúng vị trí
+                injectImageBlock với blocks rỗng → sẽ dùng default [h1, paragraph] trong BlockEditor
             */}
             <BlockEditor
+                key={imageUrl ?? "no-img"}
                 editorRef={editorRef}
+                initialBlocks={injectImageBlock([], imageUrl)}
                 onImageChange={handleImageChange}
             />
 
@@ -776,6 +790,8 @@ export default function PromptFormMarketing() {
                         <ManualSection
                             loading={loading}
                             isSaving={isSaving}
+                            sharedImageUrl={selectedImageUrl}
+                            sharedImageFile={pendingImageFile}
                             onSaveDraft={handleSaveDraftFromManual}
                         />
                     )}

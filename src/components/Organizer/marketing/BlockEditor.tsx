@@ -67,7 +67,7 @@ interface BlockEditorProps {
 let _uid = 0;
 function uid() { return `b_${++_uid}_${Date.now()}`; }
 
-function withId(block: ContentBlock): BlockWithId {
+export function withId(block: ContentBlock): BlockWithId {
     return { ...block, _id: uid() };
 }
 

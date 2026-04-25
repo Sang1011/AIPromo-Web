@@ -252,26 +252,90 @@ export default function PostPreviewPage() {
         dispatch(generateContentPostUsingAI({ eventId: postDetail.eventId, userPromptRequirement: finalPrompt }));
     };
 
-    // ── AI Content tab image handlers (UploadImageSection owns) ──────────────
     const handleAiSelectImage = (url: string) => {
         setAiSelectedImageUrl(url);
-        if (!url.startsWith("blob:")) setAiPendingImageFile(null);
-        // Tính vị trí insert mặc định nếu chưa có
+        setManualImageUrl(url);                          // ← sync ngay, không qua effect
+        if (!url.startsWith("blob:")) {
+            setAiPendingImageFile(null);
+            setManualImageFile(null);                    // ← clear file nếu chọn AI URL
+        }
         if (imageInsertAt === undefined) {
             const headingIdx = liveBlocks.findIndex(b => b.type === "heading");
             setImageInsertAt(headingIdx !== -1 ? headingIdx + 1 : 0);
         }
     };
 
+    // ── handleAiClearImage — clear cả manual ─────────────────────────────────────
     const handleAiClearImage = () => {
         setAiSelectedImageUrl(null);
         setAiPendingImageFile(null);
+        setManualImageUrl(null);                         // ← sync clear
+        setManualImageFile(null);
     };
 
+    // ── handleAiFileSelected — sync manualImageUrl ────────────────────────────────
     const handleAiFileSelected = (file: File) => {
         setAiPendingImageFile(file);
         const blobUrl = URL.createObjectURL(file);
-        handleAiSelectImage(blobUrl);
+        setAiSelectedImageUrl(blobUrl);
+        setManualImageUrl(blobUrl);                      // ← sync ngay
+        setManualImageFile(file);                        // ← manual tab cũng biết file này
+        if (imageInsertAt === undefined) {
+            const headingIdx = liveBlocks.findIndex(b => b.type === "heading");
+            setImageInsertAt(headingIdx !== -1 ? headingIdx + 1 : 0);
+        }
+    };
+
+    // ── handleConfirmApply — set manualImageUrl cùng transaction ─────────────────
+    const handleConfirmApply = async () => {
+        if (!previewData || !postDetail || !postId) return;
+        setIsSaving(true);
+        try {
+            let resolvedImageUrl: string | undefined;
+            if (aiPendingImageFile) {
+                const res = await dispatch(uploadImagePost({
+                    postId,
+                    imageFile: aiPendingImageFile,
+                    folder: "post-images",
+                })).unwrap();
+                resolvedImageUrl = res.imageUrl;
+                setAiSelectedImageUrl(res.imageUrl);
+                setManualImageUrl(res.imageUrl);         // ← sync cùng lúc
+                setAiPendingImageFile(null);
+                setManualImageFile(null);
+            } else if (aiSelectedImageUrl?.startsWith("http")) {
+                resolvedImageUrl = aiSelectedImageUrl;
+                setManualImageUrl(aiSelectedImageUrl);   // ← đảm bảo manual tab nhận đúng URL
+            }
+
+            const blocksToSave = previewData.blocks.filter(b => b.type !== "image");
+
+            const data: UpdatePostContentRequest = {
+                title: previewData.title || postDetail.title,
+                body: serializeBlocksToBody(blocksToSave),
+                imageUrl: resolvedImageUrl,
+                promptUsed: generatedDraft?.promptUsed ?? postDetail.promptUsed,
+                aiModel: generatedDraft?.aiModel ?? postDetail.aiModel,
+                aiTokensUsed: generatedDraft?.aiTokensUsed ?? postDetail.aiTokensUsed,
+                trackingToken: postDetail.trackingToken,
+            };
+
+            await dispatch(updatePostContent({ postId, data })).unwrap();
+
+            setManualTitle(previewData.title || postDetail.title);
+            setLiveBlocks(blocksToSave);                 // ← liveBlocks update cùng render với manualImageUrl
+
+            notify.success("Đã cập nhật nội dung bài đăng!");
+            setPreviewData(null);
+            dispatch(clearGeneratedDraft());
+            dispatch(clearGeneratedImageUrl());
+            setSavedRecently(true);
+            setTimeout(() => setSavedRecently(false), 3000);
+        } catch (err: any) {
+            notify.error(err?.message || "Cập nhật thất bại");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     // ── Manual tab image handler (BlockEditor owns via onImageChange) ─────────
@@ -340,55 +404,6 @@ export default function PostPreviewPage() {
             setTimeout(() => setSavedRecently(false), 3000);
         } catch (err: any) {
             notify.error(err?.message || "Lưu thất bại");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    // ── Confirm apply từ AI modal ─────────────────────────────────────────────
-    const handleConfirmApply = async () => {
-        if (!previewData || !postDetail || !postId) return;
-        setIsSaving(true);
-        try {
-            let resolvedImageUrl: string | undefined;
-            if (aiPendingImageFile) {
-                const res = await dispatch(uploadImagePost({
-                    postId,
-                    imageFile: aiPendingImageFile,
-                    folder: "post-images",
-                })).unwrap();
-                resolvedImageUrl = res.imageUrl;
-                setAiSelectedImageUrl(res.imageUrl);
-                setAiPendingImageFile(null);
-            } else if (aiSelectedImageUrl?.startsWith("http")) {
-                resolvedImageUrl = aiSelectedImageUrl;
-            }
-
-            const blocksToSave = previewData.blocks.filter(b => b.type !== "image");
-
-            const data: UpdatePostContentRequest = {
-                title: previewData.title || postDetail.title,
-                body: serializeBlocksToBody(blocksToSave),
-                imageUrl: resolvedImageUrl,
-                promptUsed: generatedDraft?.promptUsed ?? postDetail.promptUsed,
-                aiModel: generatedDraft?.aiModel ?? postDetail.aiModel,
-                aiTokensUsed: generatedDraft?.aiTokensUsed ?? postDetail.aiTokensUsed,
-                trackingToken: postDetail.trackingToken,
-            };
-
-            await dispatch(updatePostContent({ postId, data })).unwrap();
-
-            setManualTitle(previewData.title || postDetail.title);
-            setLiveBlocks(blocksToSave);
-
-            notify.success("Đã cập nhật nội dung bài đăng!");
-            setPreviewData(null);
-            dispatch(clearGeneratedDraft());
-            dispatch(clearGeneratedImageUrl());
-            setSavedRecently(true);
-            setTimeout(() => setSavedRecently(false), 3000);
-        } catch (err: any) {
-            notify.error(err?.message || "Cập nhật thất bại");
         } finally {
             setIsSaving(false);
         }
@@ -599,16 +614,18 @@ export default function PostPreviewPage() {
                                     {/* ── Tab: Tự soạn ── */}
                                     {activeTab === "manual" && (
                                         <div className="space-y-5">
-                                            {/* Hint: image owned by BlockEditor */}
-                                            <div className="flex items-center gap-2.5 bg-slate-900/40 border border-slate-700/40
-                                                            rounded-xl px-4 py-3 text-xs text-slate-500">
-                                                <MdOutlineImage className="text-slate-600 text-base shrink-0" />
-                                                <span>
-                                                    Thêm ảnh bằng block{" "}
-                                                    <span className="text-slate-300 font-semibold">Ảnh</span>{" "}
-                                                    trong toolbar. Kéo thả để đổi vị trí.
-                                                </span>
-                                            </div>
+                                            {manualImageUrl && aiSelectedImageUrl === manualImageUrl && (
+                                                <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/20
+                            rounded-xl px-4 py-3 text-xs text-blue-400">
+                                                    <MdOutlineImage className="shrink-0" />
+                                                    <div>
+                                                        <p className="font-semibold">Ảnh AI đang được áp dụng</p>
+                                                        <p className="text-blue-400/60 mt-0.5">
+                                                            Xem trong block Ảnh bên dưới. Kéo để đổi vị trí, xóa block để bỏ ảnh.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* Title input */}
                                             <div>
@@ -627,17 +644,8 @@ export default function PostPreviewPage() {
                                                                focus:outline-none focus:border-primary transition-colors"
                                                 />
                                             </div>
-
-                                            {/*
-                                                BlockEditor owns image cho tab này:
-                                                - disableImageBlock = false → toolbar có nút Ảnh
-                                                - onImageChange → cập nhật manualImageFile + manualImageUrl
-                                                - onChange → strip image blocks, chỉ giữ text blocks
-                                                - initialBlocks inject image theo đúng vị trí để user drag được
-                                                - key thay đổi khi manualImageUrl/imageInsertAt đổi → re-mount
-                                            */}
                                             <BlockEditor
-                                                key={`${manualImageUrl ?? "no-img"}-${imageInsertAt ?? "auto"}`}
+                                                key={`${manualImageUrl ?? "no-img"}-${imageInsertAt ?? "auto"}-${liveBlocks.length}`}
                                                 editorRef={manualEditorRef}
                                                 initialBlocks={injectImageBlock(liveBlocks, manualImageUrl, imageInsertAt)}
                                                 postId={postId}

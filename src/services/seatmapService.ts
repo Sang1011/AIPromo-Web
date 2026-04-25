@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { AssignAreasRequest, GetSeatMapResponse } from "../types/seatmap/seatmap";
+import type { AssignAreasRequest, GetListSeatMapByCurrentOrganizer, GetSeatMapResponse } from "../types/seatmap/seatmap";
 import type { ApiResponse } from "../types/api";
 
 const seatmapService = {
@@ -19,6 +19,9 @@ const seatmapService = {
             { headers: { 'Content-Type': 'application/json' } }
         );
     },
+    getListSeatMapByCurrentOrganizer: (): Promise<AxiosResponse<GetListSeatMapByCurrentOrganizer>> => {
+        return interceptorAPI().get(`/organizer/events/me/seatmaps`);
+    }
 };
 
 export default seatmapService;

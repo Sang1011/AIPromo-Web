@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams, GetDistributionMetricsResponse, UploadImageResponse, GetTotalMetricsResponse, PeriodOptionMetrics } from "../types/post/post";
+import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams, GetDistributionMetricsFacebookResponse, UploadImageResponse, GetTotalMetricsResponse, PeriodOptionMetrics, GetDistributionMetricsInstagramResponse } from "../types/post/post";
 import type { ApiResponse, ApiResponseNoData } from "../types/api";
 
 const postService = {
@@ -86,12 +86,15 @@ const postService = {
     publishAdminPost: (id: string): Promise<AxiosResponse<any>> => {
         return interceptorAPI().post(`/admin/posts/${id}/publish`);
     },
-    getDistributionMetricsFacebook: (postId: string, distributionId: string): Promise<AxiosResponse<GetDistributionMetricsResponse>> => {
+    getDistributionMetricsFacebook: (postId: string, distributionId: string): Promise<AxiosResponse<GetDistributionMetricsFacebookResponse>> => {
         return interceptorAPI().get(`/posts/${postId}/distributions/${distributionId}/metrics/facebook`);
     },
     pushPostToOtherPlatform: (postId: string, platform: string, isRetry: boolean): Promise<AxiosResponse<ApiResponseNoData>> => {
         return interceptorAPI().post(`/posts/${postId}/distribute`, { platform, isRetry });
-    }
+    },
+    getDistributionMetricsInstagram: (postId: string, distributionId: string): Promise<AxiosResponse<GetDistributionMetricsInstagramResponse>> => {
+        return interceptorAPI().get(`/posts/${postId}/distributions/${distributionId}/instagram-metrics`);
+    },
 }
 
 export default postService;
