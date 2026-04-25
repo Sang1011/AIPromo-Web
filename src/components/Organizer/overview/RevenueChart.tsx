@@ -9,7 +9,6 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import type { SalesTrendData, SalesTrendPeriod } from "../../../types/ticketing/ticketing";
-import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 
 interface RevenueChartProps {
     trendData: SalesTrendData | null;
