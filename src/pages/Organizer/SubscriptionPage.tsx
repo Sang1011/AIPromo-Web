@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import ActiveSubscriptionBanner, { getSubscriptionStatus } from "../../components/Organizer/subcriptions/ActiveSubscriptionBanner";
 import PaymentMethodModal from "../../components/Organizer/subcriptions/PaymentMethodModal";
-import PlanCard, { type PlanFeature } from "../../components/Organizer/subcriptions/PlanCard";
+import PlanCard from "../../components/Organizer/subcriptions/PlanCard";
 import WalletSection from "../../components/Organizer/subcriptions/WalletSection";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchAIPackages, fetchMyQuota, fetchPurchasedPackages } from "../../store/aiPackageSlice";
@@ -14,38 +14,11 @@ import type { AIPackage } from "../../types/aiPackage/aiPackage";
 
 // ─── Feature lists ────────────────────────────────────────────────────────────
 
-const SUBSCRIPTION_FEATURES: Record<string, PlanFeature[]> = {
-    free: [
-        { label: "3 sự kiện / tháng", included: true },
-        { label: "Dashboard cơ bản", included: true },
-        { label: "Marketing tools", included: false },
-        { label: "Xuất báo cáo PDF/Excel", included: false },
-        { label: "Hỗ trợ ưu tiên 24/7", included: false },
-    ],
-    pro: [
-        { label: "50 sự kiện / tháng", included: true },
-        { label: "Dashboard nâng cao", included: true },
-        { label: "Marketing tools", included: true },
-        { label: "Xuất báo cáo PDF/Excel", included: true },
-        { label: "Hỗ trợ ưu tiên 24/7", included: false },
-    ],
-    business: [
-        { label: "Không giới hạn sự kiện", included: true },
-        { label: "Dashboard nâng cao", included: true },
-        { label: "Marketing tools + API", included: true },
-        { label: "Xuất báo cáo PDF/Excel", included: true },
-        { label: "Hỗ trợ ưu tiên 24/7", included: true },
-    ],
-};
 
 const SUBSCRIPTION_ACCENT: Record<string, "slate" | "amber" | "purple"> = {
     free: "slate",
     pro: "amber",
     business: "purple",
-};
-
-const SUBSCRIPTION_FEATURED: Record<string, string | undefined> = {
-    pro: "Phổ biến nhất",
 };
 
 const planTierStyle: Record<string, string> = {
@@ -250,7 +223,7 @@ export default function SubscriptionPage() {
                         <div className="grid grid-cols-3 gap-4">
                             <QuotaCard
                                 icon={<Zap size={15} className="text-amber-400" />}
-                                label="Token subscription"
+                                label="Token còn lại từ gói"
                                 value={quota.subscriptionTokens.toLocaleString("vi-VN")}
                                 sub="Từ gói đăng ký hiện tại"
                                 accent="text-amber-400"
@@ -314,12 +287,10 @@ export default function SubscriptionPage() {
                                         <PlanCard
                                             key={plan.id}
                                             plan={plan}
-                                            features={SUBSCRIPTION_FEATURES[plan.name.toLowerCase()] ?? []}
                                             isCurrentPlan={isCurrentSubscription(plan)}
-                                            isFeatured={!!SUBSCRIPTION_FEATURED[plan.name.toLowerCase()]}
-                                            featuredLabel={SUBSCRIPTION_FEATURED[plan.name.toLowerCase()]}
                                             accentColor={SUBSCRIPTION_ACCENT[plan.name.toLowerCase()] ?? "slate"}
                                             onSelect={handleSelectPlan}
+                                            isLocked={activeSubscriptionPkg !== null && !isCurrentSubscription(plan)}
                                         />
                                     ))
                                 )}
@@ -334,14 +305,14 @@ export default function SubscriptionPage() {
                             <div className="rounded-2xl border border-border-dark overflow-hidden bg-card-dark">
                                 <div className="px-6 py-4 border-b border-border-dark flex items-center justify-between">
                                     <p className="text-sm font-semibold text-white">Lịch sử</p>
-                                    <span className="text-xs text-text-muted">{purchasedPackages.length} gói đã mua</span>
+                                    <span className="text-xs text-slate-400">{purchasedPackages.length} gói đã mua</span>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
                                             <tr className="border-b border-border-dark bg-surface-dark">
                                                 {["Gói", "Loại", "Số lần mua", "Tổng token", "Token / gói", "Lần mua gần nhất"].map((h) => (
-                                                    <th key={h} className="text-left px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted whitespace-nowrap">
+                                                    <th key={h} className="text-left px-5 py-3 text-xs font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
                                                         {h}
                                                     </th>
                                                 ))}
@@ -351,7 +322,7 @@ export default function SubscriptionPage() {
                                             {purchasedPackages.map((pkg) => (
                                                 <tr key={pkg.packageId} className="hover:bg-surface-dark/50 transition-colors">
                                                     <td className="px-5 py-3.5">
-                                                        <span className={`text-sm font-semibold ${planTierStyle[pkg.type?.toLowerCase()] ?? "text-slate-300"}`}>
+                                                        <span className={`text-sm font-semibold ${planTierStyle[pkg.type?.toLowerCase()] ?? "text-white"}`}>
                                                             {pkg.name}
                                                         </span>
                                                     </td>
@@ -364,16 +335,16 @@ export default function SubscriptionPage() {
                                                             {pkg.type === "TopUp" ? "Token lẻ" : "Subscription"}
                                                         </span>
                                                     </td>
-                                                    <td className="px-5 py-3.5 text-sm text-slate-300 tabular-nums">
+                                                    <td className="px-5 py-3.5 text-sm text-white tabular-nums">
                                                         {pkg.purchaseCount}
                                                     </td>
-                                                    <td className="px-5 py-3.5 text-sm text-slate-300 tabular-nums">
+                                                    <td className="px-5 py-3.5 text-sm text-white tabular-nums">
                                                         {pkg.totalPurchasedTokens.toLocaleString("vi-VN")}
                                                     </td>
-                                                    <td className="px-5 py-3.5 text-sm text-slate-400 tabular-nums">
+                                                    <td className="px-5 py-3.5 text-sm text-slate-300 tabular-nums">
                                                         {pkg.tokenQuota.toLocaleString("vi-VN")}
                                                     </td>
-                                                    <td className="px-5 py-3.5 text-xs text-slate-400">
+                                                    <td className="px-5 py-3.5 text-xs text-slate-300">
                                                         {pkg.lastPurchasedAt
                                                             ? new Date(pkg.lastPurchasedAt).toLocaleString("vi-VN", {
                                                                 timeZone: "Asia/Ho_Chi_Minh",

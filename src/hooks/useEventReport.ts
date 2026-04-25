@@ -11,21 +11,18 @@ export interface ReportItem {
     createdBy: string;
 }
 
-const sanitizeEmail = (email: string) => email.replace(/\./g, ",");
-
-export const useEventReports = (email?: string) => {
+export const useEventReports = (userId?: string) => {
     const [reports, setReports] = useState<ReportItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!email) {
+        if (!userId) {
             setReports([]);
             setLoading(false);
             return;
         }
 
-        const safeEmail = sanitizeEmail(email);
-        const reportsRef = ref(db, `email/reports/${safeEmail}`);
+        const reportsRef = ref(db, `users/reports/${userId}`);
 
         onValue(reportsRef, (snapshot) => {
             const data = snapshot.val();
@@ -55,7 +52,7 @@ export const useEventReports = (email?: string) => {
         });
 
         return () => off(reportsRef);
-    }, [email]);
+    }, [userId]);
 
     return { reports, loading };
 };

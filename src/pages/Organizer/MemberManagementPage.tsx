@@ -115,8 +115,6 @@ export default function MemberManagementPage() {
         setAddError("");
     };
 
-    const email = (currentInfor as MeInfo)?.email;
-
     const handleExportExcel = async () => {
         if (!eventId) return notify.error("Không tìm thấy eventId");
         try {
@@ -124,13 +122,15 @@ export default function MemberManagementPage() {
             const { iso, formatted } = getCurrentDateTime();
             const fileName = `members_${eventName}_${formatted}.xlsx`;
             downloadFileExcel(blob, fileName);
-
+            const userId = (currentInfor as MeInfo)?.userId;
+            const userName = (currentInfor as MeInfo)?.name;
             await saveReportToFirebase({
                 eventId,
                 eventName: eventName ?? eventId,
                 fileName,
-                createdBy: email ?? "",
-                createdAt: iso
+                createdBy: userName ?? "",
+                createdAt: iso,
+                userId: userId ?? "",
             });
             notify.success("Xuất Excel thành công");
         } catch (err) {

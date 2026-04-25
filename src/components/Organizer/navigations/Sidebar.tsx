@@ -36,12 +36,12 @@ export default function Sidebar({
         bg-white dark:bg-gradient-to-b dark:from-[#0B0B12] dark:to-[#18122B]
         border-r border-slate-200 dark:border-slate-800`}
         >
-            <div className="p-6 flex items-center gap-3">
+            <div className="p-4 flex items-center gap-3">
                 <Link
                     to="/"
                     className="group relative flex items-center gap-3 cursor-pointer"
                 >
-                    <img src={logo} alt="Logo" className="h-16 w-auto" />
+                    <img src={logo} alt="Logo" className="h-10 w-auto" />
 
                     {!collapsed && (
                         <span className="text-xl font-bold text-primary">
@@ -67,9 +67,9 @@ export default function Sidebar({
                 </Link>
             </div>
 
-            <nav className="px-3 space-y-6 flex-1">
+            <nav className="px-2 space-y-4 flex-1 overflow-y-auto">
                 {menuGroups.map((group, index) => (
-                    <div key={index} className="space-y-2">
+                    <div key={index} className="space-y-1">
                         {!collapsed && group.headerTitle && (
                             <div
                                 className="
@@ -78,7 +78,7 @@ export default function Sidebar({
                   font-bold
                   tracking-[0.2em]
                   leading-[15px]
-                  text-slate-400
+                  text-[#EDEDED]
                   uppercase
                 "
                             >
@@ -115,7 +115,7 @@ export default function Sidebar({
                 ))}
             </nav>
 
-            <div className="p-4">
+            <div className="p-2">
                 <button
                     onClick={() => setCollapsed(!collapsed)}
                     className="

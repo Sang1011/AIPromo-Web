@@ -60,24 +60,27 @@ export default function DashboardLayout() {
             )}
 
             <div
-                className={`flex-1 transition-all duration-300 ${ifCreateEvent ? "" : collapsed ? "ml-20" : "ml-64"
-                    }`}
+                style={{
+                    marginLeft: ifCreateEvent ? 0 : collapsed ? 80 : 256,
+                    width: ifCreateEvent ? "100%" : collapsed ? "calc(100% - 80px)" : "calc(100% - 256px)",
+                }}
+                className="transition-all duration-300"
             >
                 <Header canGoBack={ifCreateEvent} urlBack="/organizer/my-events" title={config.title ?? ""} />
 
                 {config.havePromoSidebar ? (
-                    <main className="p-8 flex gap-8">
-                        <div className="basis-full xl:basis-[70%]">
+                    <main className="p-8 flex gap-8 items-start">
+                        <div className="flex-1 min-w-0">
                             <Outlet context={{ setConfig }} />
                         </div>
 
-                        <div className="hidden xl:block xl:basis-[30%]">
+                        <div className="hidden xl:block w-64 flex-shrink-0">
                             <PromoSidebar />
                         </div>
                     </main>
                 ) : (
-                    <main className="p-8 flex gap-8">
-                        <div className="flex-1">
+                    <main className="p-8 overflow-hidden">
+                        <div className="min-w-0 overflow-hidden">
                             <Outlet context={{ setConfig }} />
                         </div>
                     </main>

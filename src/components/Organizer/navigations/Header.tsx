@@ -173,13 +173,13 @@ export default function Header({
                         <div className="group relative flex flex-col justify-center">
                             <h1 className="text-2xl font-bold text-white max-w-[600px] truncate">
                                 {haveTitle && isEventHeader
-                                    ? "Sự kiện " + (currentEvent?.title ?? "Đang tải...")
+                                    ? (currentEvent?.title ?? "Đang tải...")
                                     : title}
                             </h1>
 
                             <div className="absolute left-0 top-full mt-2 hidden group-hover:block bg-black text-white text-sm px-2 py-1 rounded whitespace-nowrap z-50">
                                 {haveTitle && isEventHeader
-                                    ? "Sự kiện " + (currentEvent?.title ?? "")
+                                    ? (currentEvent?.title ?? "")
                                     : title}
                             </div>
                         </div>

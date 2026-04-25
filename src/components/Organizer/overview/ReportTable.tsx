@@ -1,26 +1,31 @@
 import { useState } from "react";
 import { FiChevronRight, FiChevronLeft } from "react-icons/fi";
 import { useEventReports } from "../../../hooks/useEventReport";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../store";
+import type { MeInfo } from "../../../types/auth/auth";
 
 const PAGE_SIZE = 10;
 
 function SkeletonRow() {
     return (
-        <div className="grid grid-cols-[1.5fr_2fr_1fr_1fr] px-6 py-5 items-center gap-4">
+        <div className="grid grid-cols-[1.5fr_2fr_1fr] px-6 py-5 items-center gap-4">
             <div className="h-4 w-32 rounded bg-white/5 animate-pulse" />
             <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-white/5 animate-pulse" />
                 <div className="h-4 w-48 rounded bg-white/5 animate-pulse" />
             </div>
             <div className="h-4 w-28 rounded bg-white/5 animate-pulse" />
-            <div className="h-4 w-36 rounded bg-white/5 animate-pulse" />
         </div>
     );
 }
 
 export default function ReportTable() {
-    const { reports, loading } = useEventReports();
     const [page, setPage] = useState(1);
+    const { currentInfor } = useSelector((s: RootState) => s.AUTH);
+    const userId = (currentInfor as MeInfo)?.userId;
+
+    const { reports, loading } = useEventReports(userId);
 
     const totalPages = Math.max(1, Math.ceil(reports.length / PAGE_SIZE));
     const paginated = reports.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -38,11 +43,10 @@ export default function ReportTable() {
 
     return (
         <div className="rounded-2xl border border-white/5 bg-gradient-to-b from-[#0f0b1f] to-[#0b0816] overflow-hidden">
-            <div className="grid grid-cols-[1.5fr_2fr_1fr_1fr] px-6 py-4 text-xs font-semibold tracking-widest text-slate-400 uppercase gap-4">
+            <div className="grid grid-cols-[1.5fr_2fr_1fr] px-6 py-4 text-xs font-semibold tracking-widest text-slate-400 uppercase gap-4">
                 <div>Sự kiện</div>
                 <div>File</div>
                 <div>Ngày tạo</div>
-                <div>Người tạo</div>
             </div>
 
             <div className="divide-y divide-white/5">
@@ -56,7 +60,7 @@ export default function ReportTable() {
                     paginated.map((item) => (
                         <div
                             key={item.id}
-                            className="grid grid-cols-[1.5fr_2fr_1fr_1fr] px-6 py-5 items-center gap-4 hover:bg-white/5 transition"
+                            className="grid grid-cols-[1.5fr_2fr_1fr] px-6 py-5 items-center gap-4 hover:bg-white/5 transition"
                         >
                             <div className="text-sm text-slate-300 truncate">
                                 {item.eventName}
@@ -73,10 +77,6 @@ export default function ReportTable() {
 
                             <div className="text-sm text-slate-300">
                                 {formatDate(item.createdAt)}
-                            </div>
-
-                            <div className="text-sm text-slate-300 truncate">
-                                {item.createdBy}
                             </div>
                         </div>
                     ))
