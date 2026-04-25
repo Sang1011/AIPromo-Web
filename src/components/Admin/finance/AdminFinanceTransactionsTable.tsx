@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
 import { MdStore, MdVisibility, MdChevronLeft, MdChevronRight, MdRefresh } from "react-icons/md";
 import AdminFinanceTransactionDetailModal from "./AdminFinanceTransactionDetailModal";
-import type { AdminPaymentTransaction } from "../../../types/payment/payment";
-import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "../../../store";
+import type { AdminPaymentTransaction, AdminPaymentTransactionsResponse } from "../../../types/payment/payment";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../../store";
 import { fetchAdminPaymentTransactions } from "../../../store/paymentSlice";
 
-// Lưu page ngoài component để không bị reset khi unmount/remount (chuyển tab)
 let _persistedPage = 1;
 
 export default function AdminFinanceTransactionsTable() {
     const dispatch = useDispatch<AppDispatch>();
-    const { adminTransactions } = useSelector((state: RootState) => state.PAYMENT);
+    const [snapshot, setSnapshot] = useState<{
+        items: AdminPaymentTransaction[];
+        totalCount: number;
+        totalPages: number;
+    }>({ items: [], totalCount: 0, totalPages: 1 });
 
     const [currentPage, setCurrentPage] = useState(_persistedPage);
     const [tableLoading, setTableLoading] = useState(true);
@@ -21,12 +24,20 @@ export default function AdminFinanceTransactionsTable() {
     const loadTransactions = async (pageNumber: number) => {
         try {
             setTableLoading(true);
-            await dispatch(fetchAdminPaymentTransactions({
+            const result = await dispatch(fetchAdminPaymentTransactions({
                 PageNumber: pageNumber,
                 PageSize: pageSize,
                 SortColumn: "CreatedAt",
                 SortOrder: "desc",
             })).unwrap();
+            if (result) {
+                const data = (result as AdminPaymentTransactionsResponse).data;
+                setSnapshot({
+                    items: data.items ?? [],
+                    totalCount: data.totalCount ?? 0,
+                    totalPages: data.totalPages ?? Math.max(1, Math.ceil((data.totalCount ?? 0) / pageSize)),
+                });
+            }
         } catch (e) {
             console.error("Failed to load admin payment transactions", e);
         } finally {
@@ -34,7 +45,6 @@ export default function AdminFinanceTransactionsTable() {
         }
     };
 
-    // Sync currentPage ra ngoài mỗi khi thay đổi để persist qua remount
     useEffect(() => {
         _persistedPage = currentPage;
         loadTransactions(currentPage);
@@ -43,6 +53,10 @@ export default function AdminFinanceTransactionsTable() {
     const handleRefresh = async () => {
         await loadTransactions(currentPage);
     };
+
+    const { items: displayTransactions, totalCount, totalPages } = snapshot;
+    const currentStartIndex = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    const currentEndIndex = Math.min(currentPage * pageSize, totalCount);
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -98,25 +112,6 @@ export default function AdminFinanceTransactionsTable() {
         setSelectedTxnId(transactionId);
         setDetailOpen(true);
     };
-
-    const apiData = adminTransactions;
-    const displayTransactions: AdminPaymentTransaction[] = apiData?.items ?? [];
-
-    const totalCount = apiData?.totalCount ?? 0;
-    const totalPages = apiData?.totalPages ?? Math.max(1, Math.ceil(totalCount / pageSize));
-
-    const pageNumberFromApi = apiData?.pageNumber ?? currentPage;
-
-    const currentStartIndex =
-        apiData?.currentStartIndex ??
-        ((pageNumberFromApi - 1) * pageSize + 1);
-
-    const currentEndIndex =
-        apiData?.currentEndIndex ??
-        Math.min(
-            (pageNumberFromApi - 1) * pageSize + displayTransactions.length,
-            totalCount
-        );
 
     useEffect(() => {
         if (totalPages && currentPage > totalPages) {
