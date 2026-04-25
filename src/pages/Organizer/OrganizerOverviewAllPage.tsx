@@ -310,7 +310,7 @@ export default function OrganizerOverviewAllPage() {
                         iconBg="#7c3bed" icon={<RiMoneyDollarCircleLine size={20} color="#FFFFFF" />}
                         label="Doanh thu ròng"
                         value={`${fmtMoneyVND(summary.netRevenue)} đồng`}
-                        sub="Sau hoàn vé & khuyến mãi"
+                        sub="Sau khi trừ tiền hoàn vé, khuyến mãi & phí nền tảng"
                     />
                     <MetricCard
                         iconBg="#7c3bed" icon={<RiCalendarEventLine size={20} color="#FFFFFF" />}

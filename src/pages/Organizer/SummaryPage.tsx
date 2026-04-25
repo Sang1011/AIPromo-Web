@@ -160,6 +160,7 @@ export default function SummaryPage() {
     const [mockLoading, setMockLoading] = useState(false);
     const [mockTrendLoading, setMockTrendLoading] = useState(false);
 
+
     // ── Active data source ───────────────────────────────────────────────────
     const overviewStats = USE_MOCK ? mockOverview : reduxOverview;
     const salesTrend = USE_MOCK ? mockTrend : reduxTrend;
@@ -216,6 +217,7 @@ export default function SummaryPage() {
             </div>
         );
     }
+
 
     return (
         <div className="space-y-8">
