@@ -9,6 +9,7 @@ import type {
     GetOrdersRequest,
     GetSalesTrendRequest,
     OrderItemOrganizer,
+    OrderSummary,
     OverviewStatistic,
     PaginatedOrders,
     SalesTrendData,
@@ -26,13 +27,11 @@ interface TicketingState {
     salesTrend: SalesTrendData | null;
     salesTrendLoading: boolean;
     orders: OrderItemOrganizer[];
+
+    orderSummary: OrderSummary | null;
     allEventSalesTrend: AllEventSalesTrendResponseItem | null;
     allEventSalesTrendLoading: boolean;
-    pagination: {
-        pageNumber: number;
-        totalPages: number;
-        totalCount: number;
-    };
+    pagination: { pageNumber: number; totalPages: number; totalCount: number; };
 }
 
 const initialState: TicketingState = {
@@ -46,11 +45,8 @@ const initialState: TicketingState = {
     allEventSalesTrend: null,
     allEventSalesTrendLoading: false,
     orders: [],
-    pagination: {
-        pageNumber: 1,
-        totalPages: 0,
-        totalCount: 0,
-    },
+    orderSummary: null,
+    pagination: { pageNumber: 1, totalPages: 0, totalCount: 0 },
 };
 
 export const fetchCreatePendingOrder = createAsyncThunk<
@@ -174,12 +170,13 @@ const ticketingSlice = createSlice({
             })
             .addCase(fetchOrdersByOrganizer.fulfilled, (state, action) => {
                 state.loading = false;
-                const data = action.payload.data;
-                state.orders = data.items;
+                const { orders, summary } = action.payload.data;
+                state.orders = orders?.items ?? [];
+                state.orderSummary = summary ?? null;
                 state.pagination = {
-                    pageNumber: data.pageNumber,
-                    totalPages: data.totalPages,
-                    totalCount: data.totalCount,
+                    pageNumber: orders?.pageNumber ?? 1,
+                    totalPages: orders?.totalPages ?? 1,
+                    totalCount: orders?.totalCount ?? 0,
                 };
             })
             .addCase(fetchOrdersByOrganizer.rejected, (state, action) => {

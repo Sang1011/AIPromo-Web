@@ -75,7 +75,7 @@ interface OrderListProps {
 export default function OrderList({ eventId }: OrderListProps) {
     const dispatch = useDispatch<AppDispatch>();
 
-    const { orders, pagination, loading } = useSelector((state: RootState) => state.TICKETING);
+    const { orders, pagination, loading, orderSummary } = useSelector((state: RootState) => state.TICKETING);
     const eventName = useEventTitle();
     const { currentInfor } = useSelector((s: RootState) => s.AUTH);
     // ── Search & filter state ─────────────────────────────────────────────
@@ -167,32 +167,23 @@ export default function OrderList({ eventId }: OrderListProps) {
         return result;
     }, [orders, search, dateFrom, dateTo, priceMin, priceMax]);
 
-    // ── Summary ───────────────────────────────────────────────────────────
     const summary = useMemo(() => {
-        const totalOrders = pagination.totalCount;
-        const paidOrders = orders.filter(o => o.status.toLowerCase() === "paid");
-        const cancelledOrders = orders.filter(o => o.status.toLowerCase() === "cancelled");
-        const totalRevenue = paidOrders.reduce((s, o) => s + o.totalPrice, 0);
-        const totalDiscount = orders.reduce((s, o) => s + o.discountAmount, 0);
-        const completionRate = totalOrders > 0
-            ? Math.round((paidOrders.length / orders.length) * 100)
-            : 0;
-        const avgOrderValue = paidOrders.length > 0
-            ? Math.round(totalRevenue / paidOrders.length)
-            : 0;
-        const cancelRate = totalOrders > 0
-            ? Math.round((cancelledOrders.length / orders.length) * 100)
-            : 0;
+        const total = orderSummary?.totalOrders ?? 0;
+        const cancelled = orderSummary?.cancelledOrders ?? 0;
+        const netRevenue = orderSummary?.netRevenue ?? 0;
+        const paidCount = total - cancelled;
+
         return {
-            totalOrders,
-            totalRevenue,
-            totalDiscount,
-            cancelledOrders: cancelledOrders.length,
-            completionRate,
-            avgOrderValue,
-            cancelRate,
+            totalOrders: total,
+            totalRevenue: netRevenue,
+            grossRevenue: orderSummary?.grossRevenue ?? 0,
+            totalDiscount: orderSummary?.totalDiscount ?? 0,
+            cancelledOrders: cancelled,
+            avgOrderValue: paidCount > 0 ? Math.round(netRevenue / paidCount) : 0,
+            completionRate: total > 0 ? Math.round(paidCount / total * 100) : 0,
+            cancelRate: total > 0 ? Math.round(cancelled / total * 100) : 0,
         };
-    }, [orders, pagination.totalCount]);
+    }, [orderSummary]);
 
     // ── Handlers ──────────────────────────────────────────────────────────
     const handleViewDetail = (orderId: string) => {
@@ -271,14 +262,14 @@ export default function OrderList({ eventId }: OrderListProps) {
                         label="Tổng đơn hàng"
                         value={summary.totalOrders.toString()}
                         accent="border-white/5"
-                        sub={`Trang này: ${orders.length} đơn`}
+                        sub={`Hoàn thành: ${summary.totalOrders - summary.cancelledOrders} đơn`}
                     />
                     <SummaryCard
                         icon={<IconMoney />}
-                        label="Doanh thu (hoàn thành)"
+                        label="Doanh thu ròng"
                         value={fmtMoneyVND(summary.totalRevenue)}
                         accent="border-emerald-500/10"
-                        sub={`Trung bình trang này: ${fmtMoneyVND(summary.avgOrderValue)}/đơn`}
+                        sub={`Doanh thu gốc: ${fmtMoneyVND(summary.grossRevenue)}`}
                         badge={
                             summary.completionRate > 0
                                 ? { text: `${summary.completionRate}% hoàn thành`, cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" }
@@ -290,14 +281,14 @@ export default function OrderList({ eventId }: OrderListProps) {
                         label="Tổng giảm giá"
                         value={fmtMoneyVND(summary.totalDiscount)}
                         accent="border-violet-500/10"
-                        sub="Tính trên trang hiện tại"
+                        sub={`TB: ${fmtMoneyVND(summary.avgOrderValue)}/đơn hoàn thành`}
                     />
                     <SummaryCard
                         icon={<IconBan />}
                         label="Đơn đã huỷ"
                         value={summary.cancelledOrders.toString()}
                         accent="border-rose-500/10"
-                        sub={`Trang này: ${orders.length} đơn`}
+                        sub={`Trên tổng ${summary.totalOrders} đơn`}
                         badge={
                             summary.cancelRate > 0
                                 ? { text: `${summary.cancelRate}% tỉ lệ huỷ`, cls: "bg-rose-500/10 text-rose-400 border-rose-500/20" }

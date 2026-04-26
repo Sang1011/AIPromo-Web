@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 interface Partner {
   name: string;
@@ -17,8 +17,7 @@ interface Destination {
 }
 
 const PartnersAndDestinations: React.FC = () => {
-  const [hoveredPartner, setHoveredPartner] = useState<string | null>(null);
-  const [hoveredDest, setHoveredDest] = useState<string | null>(null);
+  const [_hoveredPartner, setHoveredPartner] = useState<string | null>(null);
 
   const partners: Partner[] = [
     {

@@ -43,6 +43,14 @@ function Spinner() {
     );
 }
 
+function ThreadsIcon({ className = "" }: { className?: string }) {
+    return (
+        <svg className={className} viewBox="0 0 192 192" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M141.537 88.988a66.667 66.667 0 0 0-2.518-1.143c-1.482-27.307-16.403-42.94-41.457-43.1h-.34c-14.986 0-27.449 6.396-35.12 18.036l13.779 9.452c5.73-8.695 14.724-10.548 21.347-10.548h.23c8.249.053 14.474 2.452 18.502 7.13 2.932 3.405 4.893 8.11 5.864 14.05-7.314-1.244-15.224-1.626-23.68-1.14-23.82 1.372-39.134 15.265-38.105 34.569.522 9.792 5.4 18.216 13.735 23.719 7.047 4.652 16.124 6.927 25.557 6.412 12.458-.683 22.231-5.436 29.049-14.127 5.178-6.6 8.453-15.153 9.899-25.93 5.937 3.583 10.337 8.298 12.767 13.966 4.132 9.635 4.373 25.468-8.546 38.318-11.319 11.259-24.929 16.1-45.488 16.243-22.788-.163-40.05-7.497-51.316-21.803C33.598 127.02 28.35 110.05 28.13 89.24c.22-20.812 5.468-37.783 15.594-50.454C55.003 24.676 72.266 17.34 95.054 17.18c22.95.162 40.56 7.52 52.346 21.86 5.765 7.016 10.098 15.82 12.928 26.067l16.214-4.326c-3.43-12.588-8.853-23.565-16.242-32.767C145.036 10.8 123.088 1.2 95.1 1L94.9 1C67.02 1.2 45.39 10.8 30.336 28.014 17.046 43.378 10.21 64.576 10 89.18v.08c.21 24.603 7.046 45.801 20.336 61.165C45.39 167.638 67.02 177.2 94.9 177.4h.2c24.986-.176 42.653-6.73 57.16-21.166 19.515-19.425 18.968-43.705 12.526-58.601-4.547-10.594-13.278-19.232-23.25-24.645Zm-40.23 37.97c-10.426.583-21.24-4.1-21.82-14.18-.427-7.557 5.377-15.99 22.645-17.01 1.98-.114 3.921-.169 5.827-.169 6.14 0 11.8.598 16.82 1.733-1.913 23.786-13.017 28.86-23.471 29.626Z" />
+        </svg>
+    );
+}
+
 // ─── MetaItem ─────────────────────────────────────────────────────────────────
 
 function MetaItem({ label, children }: { label: string; children: React.ReactNode }) {
@@ -78,7 +86,9 @@ function LatestDistributionCard({ distribution }: { distribution: PostDistributi
         ? <MdFacebook className="text-blue-400 text-xl" />
         : distribution.platform === "Instagram"
             ? <RiInstagramLine className="text-pink-400 text-xl" />
-            : <MdAutoAwesome className="text-slate-400 text-xl" />;
+            : distribution.platform === "Threads"
+                ? <ThreadsIcon className="text-white text-xl w-5 h-5" />
+                : <MdAutoAwesome className="text-slate-400 text-xl" />;
 
     return (
         <div className="bg-slate-900/40 border border-slate-800 rounded-2xl px-5 py-4 space-y-3">
@@ -197,22 +207,28 @@ function PlatformPushCard({
     pushError,
     onPush,
 }: {
-    platform: "Facebook" | "Instagram";
+    platform: "Facebook" | "Instagram" | "Threads";
     distribution: PostDistribution | null;
     isPushing: boolean;
     pushError: string | null;
     onPush: () => void;
 }) {
     const isFacebook = platform === "Facebook";
+    const isInstagram = platform === "Instagram";
+
     const icon = isFacebook
         ? <MdFacebook className="text-blue-400 text-xl" />
-        : <RiInstagramLine className="text-pink-400 text-xl" />;
+        : isInstagram
+            ? <RiInstagramLine className="text-pink-400 text-xl" />
+            : <ThreadsIcon className="text-white w-5 h-5" />;
 
     const brandColor = isFacebook
         ? { border: "border-blue-500/20", bg: "bg-blue-500/15", btn: "bg-blue-600 hover:bg-blue-500 shadow-blue-500/20", link: "text-blue-400", hoverBorder: "hover:border-blue-500/40 hover:text-blue-400" }
-        : { border: "border-pink-500/20", bg: "bg-pink-500/15", btn: "bg-gradient-to-r from-[#e1306c] to-[#833ab4] hover:opacity-90 shadow-pink-500/20", link: "text-pink-400", hoverBorder: "hover:border-pink-500/40 hover:text-pink-400" };
+        : isInstagram
+            ? { border: "border-pink-500/20", bg: "bg-pink-500/15", btn: "bg-gradient-to-r from-[#e1306c] to-[#833ab4] hover:opacity-90 shadow-pink-500/20", link: "text-pink-400", hoverBorder: "hover:border-pink-500/40 hover:text-pink-400" }
+            : { border: "border-slate-600/30", bg: "bg-slate-700/30", btn: "bg-slate-800 hover:bg-slate-700 shadow-slate-700/20 border border-slate-600", link: "text-slate-300", hoverBorder: "hover:border-slate-500/40 hover:text-slate-300" };
 
-    const label = isFacebook ? "Facebook" : "Instagram";
+    const label = isFacebook ? "Facebook" : isInstagram ? "Instagram" : "Threads";
     const hasDistribution = !!distribution;
 
     return (
@@ -293,6 +309,7 @@ export default function ContentDetail({
     const [showConfirm, setShowConfirm] = useState(false);
     const [showPushFBConfirm, setShowPushFBConfirm] = useState(false);
     const [showPushIGConfirm, setShowPushIGConfirm] = useState(false);
+    const [showPushThreadsConfirm, setShowPushThreadsConfirm] = useState(false);
 
     const navigate = useNavigate();
     const { eventId, marketingId } = useParams<{ eventId: string; marketingId: string }>();
@@ -316,6 +333,7 @@ export default function ContentDetail({
     const latestDistribution = post ? getLatestDistribution(post.distributions ?? []) : null;
     const facebookDistribution = post ? getLatestByPlatform(post.distributions ?? [], "Facebook") : null;
     const instagramDistribution = post ? getLatestByPlatform(post.distributions ?? [], "Instagram") : null;
+    const threadsDistribution = post ? getLatestByPlatform(post.distributions ?? [], "Threads") : null;
 
     const navigateToEditor = () => {
         if (!post) return;
@@ -358,6 +376,23 @@ export default function ContentDetail({
         } catch (err: any) {
             notify.error(err?.message || "Đẩy bài lên Instagram thất bại");
             setShowPushIGConfirm(false);
+        }
+    };
+
+    const handlePushThreads = async () => {
+        if (!post) return;
+        try {
+            await dispatch(pushPostToOtherPlatform({
+                postId: post.postId,
+                platform: "Threads",
+                isRetry: true,
+            })).unwrap();
+            notify.success("Đã đẩy bài lên Threads thành công!");
+            setTimeout(() => onReload?.(), 1000);
+            setShowPushThreadsConfirm(false);
+        } catch (err: any) {
+            notify.error(err?.message || "Đẩy bài lên Threads thất bại");
+            setShowPushThreadsConfirm(false);
         }
     };
 
@@ -464,7 +499,7 @@ export default function ContentDetail({
 
                     {/* Platform push cards */}
                     {canPush && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <PlatformPushCard
                                 platform="Facebook"
                                 distribution={facebookDistribution}
@@ -478,6 +513,13 @@ export default function ContentDetail({
                                 isPushing={postLoading.pushPost}
                                 pushError={postError.pushPost}
                                 onPush={() => setShowPushIGConfirm(true)}
+                            />
+                            <PlatformPushCard
+                                platform="Threads"
+                                distribution={threadsDistribution}
+                                isPushing={postLoading.pushPost}
+                                pushError={postError.pushPost}
+                                onPush={() => setShowPushThreadsConfirm(true)}
                             />
                         </div>
                     )}
@@ -604,6 +646,17 @@ export default function ContentDetail({
                         loading={postLoading.pushPost}
                         onCancel={() => setShowPushIGConfirm(false)}
                         onConfirm={handlePushInstagram}
+                    />
+                    <ConfirmModal
+                        open={showPushThreadsConfirm}
+                        title="Đăng bài lên Threads"
+                        description={threadsDistribution
+                            ? "Bài đã được đăng lên Threads trước đó. Bạn có chắc muốn đăng lại không?"
+                            : "Xác nhận đăng bài viết này lên Threads của sự kiện?"}
+                        confirmText={threadsDistribution ? "Đăng lại" : "Đăng bài"}
+                        loading={postLoading.pushPost}
+                        onCancel={() => setShowPushThreadsConfirm(false)}
+                        onConfirm={handlePushThreads}
                     />
                 </div>
             )}

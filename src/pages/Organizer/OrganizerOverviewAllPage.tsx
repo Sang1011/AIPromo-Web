@@ -189,12 +189,12 @@ export default function OrganizerOverviewAllPage() {
 
     useEffect(() => {
         if (!profile?.userId) return;
-        dispatch(fetchRevenueSummaryOrganizer(profile.userId));
+        dispatch(fetchRevenueSummaryOrganizer());
     }, [dispatch, profile?.userId]);
 
     useEffect(() => {
         if (!profile?.userId) return;
-        dispatch(fetchRevenueBreakdownOrganizer({ organizerId: profile.userId, byNet: false }));
+        dispatch(fetchRevenueBreakdownOrganizer({ byNet: true }));
     }, [dispatch, profile?.userId]);
 
     useEffect(() => {
@@ -217,10 +217,6 @@ export default function OrganizerOverviewAllPage() {
     const isLoadingSummary = loading?.organizerSummary;
     const isLoadingBreakdown = loading?.organizerBreakdown;
 
-    // ── Summary cards
-    // totalNetBeforeFee  = BE's netRevenue summed (after promos & refunds, before platform fee)
-    // totalPlatformFee   = 15% of totalNetBeforeFee
-    // totalActualNet     = organizer's take-home (85%)
     const { totalNetBeforeFee, totalActualNet, totalPlatformFee } = useMemo(() => {
         if (!breakdown.length) return { totalNetBeforeFee: 0, totalActualNet: 0, totalPlatformFee: 0 };
         const netBeforeFee = breakdown.reduce((s, x) => s + x.netRevenue, 0);
@@ -358,7 +354,7 @@ export default function OrganizerOverviewAllPage() {
                         sub={
                             <span className="flex flex-col gap-0.5">
                                 <span className="text-slate-400">
-                                    Trước phí:&nbsp;
+                                    Trước khi trừ phí:&nbsp;
                                     <span className="text-slate-200 font-medium">{fmtMoneyVND(totalNetBeforeFee)} đ</span>
                                 </span>
                                 <span className="text-orange-400">
@@ -604,129 +600,6 @@ export default function OrganizerOverviewAllPage() {
                 )}
             </SectionCard>
 
-            {/* ── Donut hoàn vé + Bảng chi tiết ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                <SectionCard className="lg:col-span-2" title="Phân bổ hoàn vé" sub="Tỉ trọng hoàn vé từng sự kiện">
-                    {isLoadingBreakdown ? (
-                        <div className="h-52 bg-surface-dark rounded-lg animate-pulse" />
-                    ) : (() => {
-                        const totalRefund = breakdown.reduce((s, x) => s + x.refundAmount, 0);
-                        if (totalRefund === 0) {
-                            return (
-                                <div className="flex flex-col items-center justify-center py-10 gap-3">
-                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center">
-                                        <span className="text-2xl">✓</span>
-                                    </div>
-                                    <p className="text-sm font-semibold text-emerald-400">Không có hoàn vé</p>
-                                    <p className="text-xs text-slate-500 text-center max-w-[160px]">
-                                        Tất cả sự kiện đều không có giao dịch hoàn vé
-                                    </p>
-                                </div>
-                            );
-                        }
-                        const donutRefundData = breakdown
-                            .filter((x) => x.refundAmount > 0)
-                            .map((x) => ({
-                                name: x.eventName ?? x.eventId,
-                                value: x.refundAmount,
-                                pct: Math.round((x.refundAmount / totalRefund) * 100),
-                            }));
-                        return (
-                            <>
-                                <div className="relative">
-                                    <ResponsiveContainer width="100%" height={200}>
-                                        <PieChart>
-                                            <Pie data={donutRefundData} cx="50%" cy="50%"
-                                                innerRadius={60} outerRadius={85} paddingAngle={3} dataKey="value">
-                                                {donutRefundData.map((d, i) => (
-                                                    <Cell key={i} fill={colorMap[d.name]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip
-                                                contentStyle={TooltipStyle.contentStyle}
-                                                itemStyle={TooltipStyle.itemStyle}
-                                                formatter={(val: number | undefined) => [`${fmtMoneyVND(val ?? 0)} đồng`, "Hoàn vé"]}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Tổng hoàn</p>
-                                        <p className="text-sm font-bold text-white">{fmtMoneyVND(totalRefund)}</p>
-                                        <p className="text-[10px] text-slate-500">đồng</p>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-2 mt-2">
-                                    {donutRefundData.map((d, i) => (
-                                        <div key={i} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-2.5 h-2.5 rounded-sm inline-block shrink-0" style={{ background: colorMap[d.name] }} />
-                                                <span className="text-xs text-slate-400 truncate max-w-[120px]">{d.name}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <span className="text-xs text-slate-500">{fmtMoneyVND(d.value)}đ</span>
-                                                <span className="text-xs font-semibold text-white w-8 text-right">{d.pct}%</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        );
-                    })()}
-                </SectionCard>
-
-                <SectionCard className="lg:col-span-3" title="Tỉ lệ hoàn vé theo sự kiện" sub="% hoàn · tiền hoàn · phân loại rủi ro">
-                    {isLoadingBreakdown ? (
-                        <div className="h-40 bg-surface-dark rounded-lg animate-pulse" />
-                    ) : breakdown.length === 0 ? (
-                        <EmptyChart message="Chưa có dữ liệu hoàn vé" />
-                    ) : (
-                        <div className="flex flex-col gap-5 mt-1">
-                            {breakdown.map((r) => {
-                                const riskBadge = r.refundRate < 4
-                                    ? { label: "Tốt", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-400/25" }
-                                    : r.refundRate < 8
-                                        ? { label: "Trung bình", cls: "bg-amber-500/10 text-amber-400 border-amber-400/25" }
-                                        : { label: "Cao", cls: "bg-red-500/10 text-red-400 border-red-400/25" };
-                                return (
-                                    <div key={r.eventId}>
-                                        <div className="flex items-center justify-between mb-1.5 gap-2">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorMap[r.eventName ?? r.eventId] }} />
-                                                <span className="text-sm text-slate-300 truncate">{r.eventName ?? r.eventId}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <span className="text-xs text-slate-500 tabular-nums">{fmtMoneyVND(r.refundAmount)}đ</span>
-                                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${riskBadge.cls}`}>
-                                                    {riskBadge.label}
-                                                </span>
-                                                <span className="text-sm font-bold tabular-nums w-12 text-right" style={{ color: refundColor(r.refundRate) }}>
-                                                    {r.refundRate.toFixed(1)}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="h-2 rounded-full bg-slate-800">
-                                            <div className="h-2 rounded-full transition-all duration-500"
-                                                style={{ width: `${Math.min(r.refundRate * 8, 100)}%`, background: refundColor(r.refundRate) }} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            {breakdown.some(r => r.refundAmount > 0) && (
-                                <div className="mt-1 pt-3 border-t border-border-dark flex items-center justify-between">
-                                    <span className="text-xs text-slate-500">Tổng hoàn vé</span>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-sm font-semibold text-white">
-                                            {fmtMoneyVND(breakdown.reduce((s, r) => s + r.refundAmount, 0))} đồng
-                                        </span>
-                                        <span className="text-xs text-slate-500">/ {breakdown.length} sự kiện</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </SectionCard>
-            </div>
-
             {/* ── Event table ── */}
             <div className="bg-card-dark rounded-xl border border-border-dark overflow-hidden">
                 <div className="px-5 py-4 border-b border-border-dark">
@@ -809,7 +682,7 @@ export default function OrganizerOverviewAllPage() {
                                                             style={{ width: `${Math.min(row.refundRate * 8, 100)}%`, background: refundColor(row.refundRate) }} />
                                                     </div>
                                                     <span className="text-sm font-medium tabular-nums" style={{ color: refundColor(row.refundRate) }}>
-                                                        {row.refundRate.toFixed(1)}%
+                                                        {row.refundRate && row.refundRate.toFixed(1)}%
                                                     </span>
                                                 </div>
                                             </td>
