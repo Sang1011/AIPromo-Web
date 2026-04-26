@@ -7,6 +7,7 @@ import { fetchPostDetail } from "../../store/postSlice";
 import ContentDetail from "../../components/Organizer/marketing/ContentDetail";
 import FacebookMetricsSection from "../../components/Organizer/marketing/FacebookMetricsSection";
 import InstagramMetricsSection from "../../components/Organizer/marketing/InstagramMetricsSection";
+import PlatformMetricsComparison from "../../components/Organizer/marketing/PlatformMetricsComparison";
 
 export default function MarketingDetailPage() {
     const { marketingId } = useParams<{ marketingId: string }>();
@@ -23,9 +24,10 @@ export default function MarketingDetailPage() {
 
     return (
         <div className="bg-background-dark text-slate-100 min-h-screen overflow-y-auto custom-scrollbar">
-            <div className="p-8 space-y-8 max-w-7xl mx-auto w-full">
+            <div className="p-8 space-y-10 max-w-7xl mx-auto w-full">
                 {postDetail && <FacebookMetricsSection post={postDetail} />}
                 {postDetail && <InstagramMetricsSection post={postDetail} />}
+                {postDetail && <PlatformMetricsComparison post={postDetail} />}
 
                 <ContentDetail
                     post={postDetail}

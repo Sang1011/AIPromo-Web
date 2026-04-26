@@ -122,8 +122,14 @@ export interface DistributionMetricsFacebook {
     externalUrl: string;
     likes: number;
     comments: number;
+    shares: number;
     reach: number;
     clicks: number;
+    ticketsSold: number;
+    conversionRate: number;
+    conversionRateFormatted: string;
+    engagementRate: number;
+    engagementRateFormatted: string;
     fetchedAt: Date;
 }
 
@@ -133,8 +139,13 @@ export interface DistributionMetricsInstagram {
     likes: number;
     comments: number;
     reach: number;
-    saves: number,
-    shares: number,
+    saves: number;
+    shares: number;
+    ticketsSold: number;
+    conversionRate: number;
+    conversionRateFormatted: string;
+    engagementRate: number;
+    engagementRateFormatted: string;
     fetchedAt: Date;
 }
 
