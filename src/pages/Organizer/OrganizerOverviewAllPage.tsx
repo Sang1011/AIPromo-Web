@@ -217,12 +217,16 @@ export default function OrganizerOverviewAllPage() {
     const isLoadingSummary = loading?.organizerSummary;
     const isLoadingBreakdown = loading?.organizerBreakdown;
 
-    // ── Summary cards: net revenue derived from breakdown for consistency
-    const { totalActualNet, totalPlatformFee } = useMemo(() => {
-        if (!breakdown.length) return { totalActualNet: 0, totalPlatformFee: 0 };
-        const fee = breakdown.reduce((s, x) => s + x.netRevenue * PLATFORM_FEE_RATE, 0);
-        const net = breakdown.reduce((s, x) => s + x.netRevenue, 0) - fee;
-        return { totalActualNet: net, totalPlatformFee: fee };
+    // ── Summary cards
+    // totalNetBeforeFee  = BE's netRevenue summed (after promos & refunds, before platform fee)
+    // totalPlatformFee   = 15% of totalNetBeforeFee
+    // totalActualNet     = organizer's take-home (85%)
+    const { totalNetBeforeFee, totalActualNet, totalPlatformFee } = useMemo(() => {
+        if (!breakdown.length) return { totalNetBeforeFee: 0, totalActualNet: 0, totalPlatformFee: 0 };
+        const netBeforeFee = breakdown.reduce((s, x) => s + x.netRevenue, 0);
+        const fee = netBeforeFee * PLATFORM_FEE_RATE;
+        const net = netBeforeFee - fee;
+        return { totalNetBeforeFee: netBeforeFee, totalActualNet: net, totalPlatformFee: fee };
     }, [breakdown]);
 
     // ── Bar chart: net column = BE netRevenue × 0.85
@@ -241,7 +245,7 @@ export default function OrganizerOverviewAllPage() {
         value: totalGross > 0 ? Math.round((x.grossRevenue / totalGross) * 100) : 0,
     }));
 
-    // ── Area chart: when series is "net", multiply each point by NET_MULTIPLIER
+    // ── Area chart
     const { areaData, eventTitles } = useMemo(() => {
         if (!allEventSalesTrend?.events?.length) return { areaData: [], eventTitles: [] };
 
@@ -263,7 +267,6 @@ export default function OrganizerOverviewAllPage() {
                 }
                 const row = map.get(key)!;
 
-                // Apply NET_MULTIPLIER when showing net so chart = organizer's actual income
                 const rawVal = areaSeries === "net" ? point.netRevenue : point.grossRevenue;
                 const val = areaSeries === "net" ? rawVal * NET_MULTIPLIER : rawVal;
 
@@ -314,7 +317,7 @@ export default function OrganizerOverviewAllPage() {
     }, [breakdown, eventTitles]);
 
     const areaSubLabel = areaSeries === "net"
-        ? "Doanh thu ròng (sau phí nền tảng)"
+        ? "Doanh thu ròng thực nhận (sau khuyến mãi, hoàn tiền & phí nền tảng)"
         : "Doanh thu gộp";
 
     return (
@@ -326,7 +329,7 @@ export default function OrganizerOverviewAllPage() {
                 <p className="text-sm text-orange-300/90 leading-relaxed">
                     <span className="font-semibold text-orange-300">Phí nền tảng 15%&nbsp;—&nbsp;</span>
                     Nền tảng sẽ khấu trừ 15% phí dịch vụ trên doanh thu ròng của từng sự kiện (sau khi đã trừ khuyến mãi &amp; hoàn vé).
-                    Tất cả số liệu doanh thu ròng hiển thị bên dưới đã phản ánh khoản khấu trừ này.
+                    Tất cả số liệu <strong className="text-orange-200">Ròng thực nhận</strong> hiển thị bên dưới đã phản ánh khoản khấu trừ này.
                 </p>
             </div>
 
@@ -344,20 +347,23 @@ export default function OrganizerOverviewAllPage() {
                         icon={<RiLineChartLine size={20} color="#FFFFFF" />}
                         label="Tổng doanh thu gộp"
                         value={`${fmtMoneyVND(summary.grossRevenue)} đồng`}
-                        sub="Tất cả sự kiện · chưa trừ phí"
+                        sub="Tất cả sự kiện · chưa trừ bất kỳ khoản nào"
                     />
                     <MetricCard
                         iconBg="#059669"
                         icon={<RiMoneyDollarCircleLine size={20} color="#FFFFFF" />}
-                        label="Doanh thu ròng"
+                        label="Ròng thực nhận"
                         loading={!!isLoadingBreakdown}
                         value={`${fmtMoneyVND(totalActualNet)} đồng`}
                         sub={
-                            <span>
-                                Sau khi trừ khuyến mãi, hoàn vé &amp; phí nền tảng
-                                <br />
+                            <span className="flex flex-col gap-0.5">
+                                <span className="text-slate-400">
+                                    Trước phí:&nbsp;
+                                    <span className="text-slate-200 font-medium">{fmtMoneyVND(totalNetBeforeFee)} đ</span>
+                                </span>
                                 <span className="text-orange-400">
-                                    − {fmtMoneyVND(totalPlatformFee)} đ phí nền tảng
+                                    − Phí nền tảng:&nbsp;
+                                    <span className="font-medium">{fmtMoneyVND(totalPlatformFee)} đ</span>
                                 </span>
                             </span>
                         }
@@ -393,7 +399,7 @@ export default function OrganizerOverviewAllPage() {
                 <SectionCard
                     className="lg:col-span-3"
                     title="Doanh thu theo sự kiện"
-                    sub={`Doanh thu gộp và ròng (sau phí nền tảng) từng sự kiện (${barScale.unit}đ)`}
+                    sub={`Doanh thu gộp và ròng thực nhận từng sự kiện (${barScale.unit} đồng)`}
                 >
                     <div className="flex items-center gap-2 mb-4">
                         <button
@@ -406,14 +412,16 @@ export default function OrganizerOverviewAllPage() {
                             onClick={() => { if (showGross) setShowNet(v => !v); }}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${showNet ? "bg-primary text-white" : "bg-surface-dark text-text-muted hover:text-white"}`}
                         >
-                            Doanh thu ròng
+                            Ròng thực nhận
                         </button>
                     </div>
 
                     {isLoadingBreakdown ? (
                         <div className="h-52 bg-surface-dark rounded-lg animate-pulse" />
                     ) : barData.length === 0 ? (
-                        <EmptyChart message="Chưa có dữ liệu doanh thu" />
+                        <div className="h-52">
+                            <EmptyChart message="Chưa có dữ liệu doanh thu" />
+                        </div>
                     ) : (
                         <>
                             <ResponsiveContainer width="100%" height={220}>
@@ -429,7 +437,7 @@ export default function OrganizerOverviewAllPage() {
                                         {...TooltipStyle}
                                         formatter={(val: number | undefined, name: string | undefined) => [
                                             `${fmtMoneyVND(val ?? 0)} đồng`,
-                                            name === "gross" ? "Doanh thu gộp" : "Doanh thu ròng (sau phí nền tảng)",
+                                            name === "gross" ? "Doanh thu gộp" : "Ròng thực nhận",
                                         ]}
                                     />
                                     {showGross && <Bar dataKey="gross" name="gross" fill="#7c3bed" radius={[4, 4, 0, 0]} />}
@@ -446,7 +454,7 @@ export default function OrganizerOverviewAllPage() {
                                 {showNet && (
                                     <div className="flex items-center gap-2">
                                         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "#2dd4bf" }} />
-                                        <span className="text-sm text-slate-400">Doanh thu ròng (sau phí nền tảng)</span>
+                                        <span className="text-sm text-slate-400">Ròng thực nhận</span>
                                     </div>
                                 )}
                             </div>
@@ -458,7 +466,9 @@ export default function OrganizerOverviewAllPage() {
                     {isLoadingBreakdown ? (
                         <div className="h-52 bg-surface-dark rounded-lg animate-pulse" />
                     ) : totalGross === 0 ? (
-                        <EmptyChart message="Chưa có doanh thu để phân bổ" />
+                        <div className="h-52">
+                            <EmptyChart message="Chưa có doanh thu để phân bổ" />
+                        </div>
                     ) : (
                         <>
                             <ResponsiveContainer width="100%" height={200}>
@@ -506,7 +516,7 @@ export default function OrganizerOverviewAllPage() {
                         <div className="flex items-center gap-1 border border-slate-800 rounded-lg p-0.5">
                             <button onClick={() => setAreaSeries("net")}
                                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${areaSeries === "net" ? "bg-primary text-white" : "text-text-muted hover:text-white"}`}>
-                                Ròng
+                                Ròng thực nhận
                             </button>
                             <button onClick={() => setAreaSeries("gross")}
                                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${areaSeries === "gross" ? "bg-primary text-white" : "text-text-muted hover:text-white"}`}>
@@ -573,7 +583,7 @@ export default function OrganizerOverviewAllPage() {
                                     {...TooltipStyle}
                                     formatter={(val: number | undefined, name: string | undefined) => [
                                         `${fmtMoneyVND(val ?? 0)} đồng`,
-                                        areaSeries === "net" ? `${name} (sau phí nền tảng)` : name,
+                                        areaSeries === "net" ? `${name} (ròng thực nhận)` : name,
                                     ]}
                                 />
                                 {eventTitles.map((title, i) => (
@@ -721,13 +731,24 @@ export default function OrganizerOverviewAllPage() {
             <div className="bg-card-dark rounded-xl border border-border-dark overflow-hidden">
                 <div className="px-5 py-4 border-b border-border-dark">
                     <p className="text-base font-semibold text-white">Tổng quan tất cả sự kiện</p>
-                    <p className="text-sm text-text-muted mt-0.5">Doanh thu gộp · ròng (sau phí nền tảng) · hoàn vé · trạng thái</p>
+                    <p className="text-sm text-text-muted mt-0.5">
+                        Doanh thu gộp · hoàn vé · ròng trước phí · phí nền tảng · ròng thực nhận · trạng thái
+                    </p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-surface-dark">
-                                {["Sự kiện", "Doanh thu gộp", "Hoàn vé", "Phí nền tảng (15%)", "Doanh thu ròng", "Tỉ lệ hoàn", "Trạng thái"].map((h) => (
+                                {[
+                                    "Sự kiện",
+                                    "Doanh thu gộp",
+                                    "Hoàn vé",
+                                    "Ròng trước phí",
+                                    "Phí nền tảng (15%)",
+                                    "Ròng thực nhận",
+                                    "Tỉ lệ hoàn",
+                                    "Trạng thái",
+                                ].map((h) => (
                                     <th key={h} className="text-left px-5 py-3 text-sm font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
                                         {h}
                                     </th>
@@ -738,36 +759,47 @@ export default function OrganizerOverviewAllPage() {
                             {isLoadingBreakdown ? (
                                 [...Array(3)].map((_, i) => (
                                     <tr key={i}>
-                                        <td colSpan={7} className="px-5 py-4">
+                                        <td colSpan={8} className="px-5 py-4">
                                             <div className="h-4 bg-surface-dark rounded animate-pulse" />
                                         </td>
                                     </tr>
                                 ))
                             ) : breakdown.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-12 text-center">
+                                    <td colSpan={8} className="px-5 py-12 text-center">
                                         <p className="text-sm text-text-muted">Chưa có dữ liệu sự kiện</p>
                                     </td>
                                 </tr>
                             ) : (
                                 breakdown.map((row) => {
+                                    const netBeforeFee = row.netRevenue;
                                     const fee = row.netRevenue * PLATFORM_FEE_RATE;
                                     const actualNet = row.netRevenue * NET_MULTIPLIER;
                                     return (
                                         <tr key={row.eventId} className="hover:bg-surface-dark/50 transition-colors">
-                                            <td className="px-5 py-3.5 font-medium text-white whitespace-nowrap">
-                                                {row.eventName ?? row.eventId}
+                                            <td className="px-5 py-3.5 font-medium text-white whitespace-nowrap max-w-[200px] relative group">
+                                                <span className="block truncate">
+                                                    {row.eventName ?? row.eventId}
+                                                </span>
+
+                                                <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded shadow-lg z-50 whitespace-normal">
+                                                    {row.eventName ?? row.eventId}
+                                                </div>
                                             </td>
                                             <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
                                                 {fmtMoneyVND(row.grossRevenue)} đ
                                             </td>
-                                            <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
-                                                {fmtMoneyVND(row.refundAmount)} đ
+                                            <td className="px-5 py-3.5 text-rose-400 whitespace-nowrap tabular-nums">
+                                                − {fmtMoneyVND(row.refundAmount)} đ
+                                            </td>
+                                            {/* NEW: net before platform fee */}
+                                            <td className="px-5 py-3.5 text-slate-200 whitespace-nowrap tabular-nums">
+                                                {fmtMoneyVND(netBeforeFee)} đ
                                             </td>
                                             <td className="px-5 py-3.5 whitespace-nowrap tabular-nums text-orange-400">
                                                 − {fmtMoneyVND(fee)} đ
                                             </td>
-                                            <td className="px-5 py-3.5 text-emerald-400 font-medium whitespace-nowrap tabular-nums">
+                                            <td className="px-5 py-3.5 text-emerald-400 font-semibold whitespace-nowrap tabular-nums">
                                                 {fmtMoneyVND(actualNet)} đ
                                             </td>
                                             <td className="px-5 py-3.5">
@@ -794,8 +826,12 @@ export default function OrganizerOverviewAllPage() {
                                     <td className="px-5 py-3 text-sm font-semibold text-slate-200 tabular-nums">
                                         {fmtMoneyVND(breakdown.reduce((s, r) => s + r.grossRevenue, 0))} đ
                                     </td>
+                                    <td className="px-5 py-3 text-sm font-semibold text-rose-400 tabular-nums">
+                                        − {fmtMoneyVND(breakdown.reduce((s, r) => s + r.refundAmount, 0))} đ
+                                    </td>
+                                    {/* NEW tfoot: sum of netRevenue before fee */}
                                     <td className="px-5 py-3 text-sm font-semibold text-slate-200 tabular-nums">
-                                        {fmtMoneyVND(breakdown.reduce((s, r) => s + r.refundAmount, 0))} đ
+                                        {fmtMoneyVND(totalNetBeforeFee)} đ
                                     </td>
                                     <td className="px-5 py-3 text-sm font-semibold text-orange-400 tabular-nums">
                                         − {fmtMoneyVND(totalPlatformFee)} đ

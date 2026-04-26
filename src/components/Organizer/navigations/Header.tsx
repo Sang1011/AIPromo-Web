@@ -39,7 +39,7 @@ export default function Header({
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancelReason, setCancelReason] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+    const [cancelRequested, setCancelRequested] = useState(false);
     const MAX_REASON = 500;
 
     // Resolve role từ currentInfor
@@ -132,6 +132,7 @@ export default function Header({
 
         if (fetchRequestCancelEvent.fulfilled.match(result)) {
             notify.success("Yêu cầu huỷ sự kiện thành công");
+            setCancelRequested(true);
             setShowCancelModal(false);
             setCancelReason("");
         } else {
@@ -191,7 +192,19 @@ export default function Header({
                         {isOrganizer &&
                             isEventHeader &&
                             currentEvent &&
-                            (currentEvent.status === "Published" || currentEvent.status === "Suspended") && (
+                            !cancelRequested &&
+                            (() => {
+                                const now = new Date();
+                                const hasNotStarted = currentEvent.eventStartAt
+                                    ? new Date(currentEvent.eventStartAt) > now
+                                    : true;
+
+                                const canCancel =
+                                    (currentEvent.status === "Published" && hasNotStarted) ||
+                                    currentEvent.status === "Suspended";
+
+                                return canCancel;
+                            })() && (
                                 <button
                                     onClick={() => setShowCancelModal(true)}
                                     className="px-5 py-2.5 rounded-full font-semibold border border-red-400/30 text-red-400 hover:bg-red-500/10 transition text-sm"
