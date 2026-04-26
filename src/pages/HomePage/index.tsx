@@ -11,6 +11,7 @@ import PartnersAndDestinations from '../../components/PartnersAndDestinations';
 import CallToActionSection from '../../components/CallToActionSection';
 import BlogListSection from '../../components/Blog';
 import EventRecommendations from '../../components/Recomend';
+import TrendingEvents from '../../components/TrendingEvent';
 const HomePage: React.FC = () => {
 
   return (
@@ -23,6 +24,7 @@ const HomePage: React.FC = () => {
         <StatsSection />
         <EventRecommendations/>
         <BlogListSection/>
+        <TrendingEvents/>
         <CategorySection />
         <EventListSection />
         <FeaturesSection />
