@@ -11,7 +11,8 @@ import type {
     GetAllRequestByMe,
     GetAllEventByMeResponse,
     GetPendingEventsResponse,
-    GetPendingEventsRequest
+    GetPendingEventsRequest,
+    TrendingEventParams
 } from "../types/event/event"
 import type { CancelledEventsResponse, GetCancelledEventsRequest } from "../types/event/cancelledEvent"
 import type { MassRefundApiResponse } from "../types/refund/massRefund"
@@ -166,7 +167,22 @@ const eventService = {
     },
     getEventByUrlPath: (urlPath: string): Promise<AxiosResponse<GetEventDetailResponse>> => {
         return API.call().get(`/events/url/${urlPath}`);
-    }
+    },
+
+    trendingEvent: (
+        params: TrendingEventParams
+    ): Promise<AxiosResponse<GetAllEventResponse>> => {
+        return API.call().get("/events/trending", {
+            params: {
+                Days: params.Days ?? 30,
+                PageNumber: params.PageNumber ?? 1,
+                PageSize: params.PageSize ?? 10,
+                SortOrder: params.SortOrder ?? "Ascending",
+            },
+        });
+    },
+
+
 }
 
 export default eventService
