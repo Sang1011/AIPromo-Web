@@ -143,6 +143,13 @@ export default function StaffEventApprovalQueue() {
     });
   };
 
+  const isSelectedEventSpec = eventSpecEventId === selectedEventId;
+  const specImageUrl =
+    isSelectedEventSpec && typeof eventSpec?.specImage === "string"
+      ? eventSpec.specImage.trim()
+      : "";
+  const hasSpecImage = Boolean(specImageUrl);
+
   const openDetailModal = async (eventId: string) => {
     setSelectedEventId(eventId);
     setShowDetailModal(true);
@@ -573,12 +580,20 @@ export default function StaffEventApprovalQueue() {
                   Sơ đồ chỗ ngồi
                 </h3>
 
-                {eventSpecLoading && eventSpecEventId === selectedEventId ? (
+                {eventSpecLoading && isSelectedEventSpec ? (
                   <div className="h-[500px] w-full bg-white/5 rounded-xl border border-white/10 flex items-center justify-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                       <span className="text-sm text-slate-400">Đang tải sơ đồ...</span>
                     </div>
+                  </div>
+                ) : hasSpecImage ? (
+                  <div className="h-[500px] w-full bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+                    <img
+                      src={specImageUrl}
+                      alt="Sơ đồ chỗ ngồi"
+                      className="w-full h-full object-contain bg-black/20"
+                    />
                   </div>
                 ) : eventSpec?.spec && eventSpecEventId === selectedEventId ? (
                   <div className="h-[500px] w-full bg-white/5 rounded-xl border border-white/10 overflow-hidden">
@@ -638,7 +653,12 @@ export default function StaffEventApprovalQueue() {
                         key={t.id}
                         className="flex justify-between p-3 rounded-lg bg-white/5 border-l-2 border-purple-500"
                       >
-                        <span>{t.name}</span>
+                        <div className="flex flex-col">
+                          <span>{t.name}</span>
+                          <span className="text-xs text-slate-400 mt-1">
+                            Số lượng vé: {(t.quantity ?? 0).toLocaleString("vi-VN")}
+                          </span>
+                        </div>
                         <span className="text-purple-400 font-bold">
                           {t.price.toLocaleString("vi-VN")}₫
                         </span>
