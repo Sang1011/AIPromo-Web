@@ -1,11 +1,11 @@
 import DOMPurify from 'dompurify'
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import Footer from '../../components/Footer'
 import Header from '../../components/Header'
 import type { AppDispatch, RootState } from "../../store"
-import { fetchAllEvents, fetchEventByUrlPath } from "../../store/eventSlice"
+import { fetchAllEvents, fetchEventById, fetchEventByUrlPath } from "../../store/eventSlice"
 import type { GetEventDetailResponse } from "../../types/event/event"
 import "./EventDetail.css"
 
@@ -237,8 +237,20 @@ const RELATED_PAGE_SIZE = 3
 function EventDetail() {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
-  const { urlPath } = useParams<{ urlPath: string }>()
+  const { param } = useParams<{ param?: string }>();
 
+let id: string | null = null;
+let urlPath: string | null = null;
+
+if (param?.startsWith("id=")) {
+  id = param.replace("id=", "");
+} else if (param?.startsWith("urlPath=")) {
+  urlPath = param.replace("urlPath=", "");
+}
+
+console.log("id:", id);
+console.log("urlPath:", urlPath);
+  
   // ── Lightbox state ──
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
@@ -251,11 +263,16 @@ function EventDetail() {
   const [relatedPage, setRelatedPage] = useState(1)
   const [relatedLoading, setRelatedLoading] = useState(false)
 
-  useEffect(() => {
-    window.scrollTo(0, 0)
-    if (!urlPath) return
+useEffect(() => {
+  window.scrollTo(0, 0)
+
+  if (id) {
+    dispatch(fetchEventById(id))
+  } else if (urlPath) {
     dispatch(fetchEventByUrlPath(urlPath))
-  }, [dispatch, urlPath])
+  }
+
+}, [dispatch, id, urlPath])
 
   // ── Fetch related events whenever page changes ──
   useEffect(() => {
