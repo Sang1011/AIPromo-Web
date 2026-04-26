@@ -6,17 +6,52 @@ import {
 import AdminStatsCard from "../shared/AdminStatsCard";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../store";
+import { useEffect, useState } from "react";
+import userService from "../../../services/userService";
 
 export default function AdminUserStats() {
 
-    const { users } = useSelector((state: RootState) => state.USER);
-    const totalUsers = users.length;
+    const { users, pagination } = useSelector((state: RootState) => state.USER);
+    const [allUsers, setAllUsers] = useState(users);
 
-    const organizers = users.filter((u: any) =>
+    useEffect(() => {
+        let mounted = true;
+
+        const fetchAll = async () => {
+            try {
+                const total = pagination?.totalCount ?? users.length;
+                // If we already have all users locally, use them
+                if (users.length >= total) {
+                    if (mounted) setAllUsers(users);
+                    return;
+                }
+
+                const resp = await userService.getAllUsers({
+                    PageNumber: 1,
+                    PageSize: total,
+                    SortColumn: "userId",
+                    Dir: "desc",
+                });
+
+                const items = resp.data?.data?.items ?? users;
+                if (mounted) setAllUsers(items);
+            } catch (e) {
+                if (mounted) setAllUsers(users);
+            }
+        };
+
+        fetchAll();
+
+        return () => { mounted = false; };
+    }, [users, pagination]);
+
+    const totalUsers = pagination?.totalCount ?? allUsers.length;
+
+    const organizers = allUsers.filter((u: any) =>
         u.roles?.includes("Organizer")
     ).length;
 
-    const attendees = users.filter((u: any) =>
+    const attendees = allUsers.filter((u: any) =>
         u.roles?.includes("Attendee")
     ).length;
 

@@ -23,6 +23,7 @@ import cancelledEventReducer from "./cancelledEventSlice";
 import reportReducer from "./reportSlice";
 import packageReducer from "./aiPackageSlice";
 import policyReducer from "./policySlice";
+import adminEventReportReducer from "./adminEventReportSlice";
 
 const store = configureStore({
     reducer: {
@@ -50,6 +51,7 @@ const store = configureStore({
         REPORT: reportReducer,
         PACKAGE: packageReducer,
         POLICY: policyReducer,
+        ADMIN_EVENT_REPORT: adminEventReportReducer,
     }
 })
 

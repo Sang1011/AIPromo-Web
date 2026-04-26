@@ -45,13 +45,12 @@ export default function AdminEventStats() {
                 label="Tổng Sự kiện"
                 value={loading ? "..." : stats.totalEvents.toLocaleString("vi-VN")}
                 change={`${stats.published} đã duyệt`}
-                subtext="Total events"
                 icon={<MdCalendarMonth className="text-sm" />}
             />
             <AdminStatsCard
                 label="Chờ Phê duyệt"
                 value={loading ? "..." : stats.pendingReview}
-                change={stats.pendingReview > 0 ? "Requires Action" : "Up to date"}
+                change={stats.pendingReview > 0 ? "Cần xử lí" : "Up to date"}
                 changePositive={stats.pendingReview === 0}
                 icon={<MdPendingActions className="text-sm" />}
                 iconBg="bg-amber-500/10"
