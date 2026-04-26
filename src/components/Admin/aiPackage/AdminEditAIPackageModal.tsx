@@ -167,7 +167,7 @@ export default function AdminEditAIPackageModal({ isOpen, packageId, onClose }: 
                         </div>
 
                         <div>
-                            <label className="text-sm font-semibold text-slate-300 block mb-2">Số Token tối đa (mỗi tháng)</label>
+                            <label className="text-sm font-semibold text-slate-300 block mb-2">Số Token tối đa {type === "Subscription" ? "(mỗi tháng)" : ""}</label>
                             <div className="relative">
                                 <input
                                     value={tokenQuota ?? ""}

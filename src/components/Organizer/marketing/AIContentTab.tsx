@@ -89,9 +89,7 @@ export default function AIContentTab({
                     <div className="flex-1 min-w-0">
                         <p className="font-semibold">Đã chọn ảnh</p>
                         <p className="text-green-500/70 truncate">
-                            {selectedImageUrl.startsWith("blob:")
-                                ? "Ảnh từ máy — sẽ được upload khi áp dụng"
-                                : "Ảnh AI — sẽ được đưa vào bài viết"}
+                            Ảnh sẽ được đưa vào bài viết
                         </p>
                     </div>
                     <button

@@ -59,14 +59,14 @@ const formatDate = (dateString: string) => {
 export default function WithdrawalTable() {
     const dispatch = useDispatch<AppDispatch>();
     const { withdrawalList, loading, actionLoading } = useSelector((state: RootState) => state.WITHDRAWAL);
-    
+
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
-    
+
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedWithdrawalId, setSelectedWithdrawalId] = useState<string | null>(null);
-    
+
     // Inline filter state
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
@@ -82,9 +82,9 @@ export default function WithdrawalTable() {
             SortColumn: "CreatedAt",
             SortOrder: "desc"
         };
-        
+
         if (filters.Status) params.Status = filters.Status;
-        
+
         // Convert dates to UTC format for backend
         if (filters.CreatedFrom) {
             const fromDate = new Date(filters.CreatedFrom);
@@ -96,7 +96,7 @@ export default function WithdrawalTable() {
             toDate.setHours(23, 59, 59, 999);
             params.CreatedTo = toDate.toISOString();
         }
-        
+
         await dispatch(fetchWithdrawalRequests(params));
     };
 
@@ -135,7 +135,7 @@ export default function WithdrawalTable() {
             SortOrder: "desc"
         };
         if (filters.Status) params.Status = filters.Status;
-        
+
         // Convert dates to UTC format for backend
         if (filters.CreatedFrom) {
             const fromDate = new Date(filters.CreatedFrom);
@@ -147,7 +147,7 @@ export default function WithdrawalTable() {
             toDate.setHours(23, 59, 59, 999);
             params.CreatedTo = toDate.toISOString();
         }
-        
+
         dispatch(fetchWithdrawalRequests(params));
     };
 
@@ -166,7 +166,7 @@ export default function WithdrawalTable() {
     };
 
     const hasActiveFilters = filters.Status || filters.CreatedFrom || filters.CreatedTo;
-    
+
     const statusOptions = [
         { value: "", label: "Tất cả" },
         { value: "Pending", label: "Chờ phê duyệt" },
@@ -196,11 +196,10 @@ export default function WithdrawalTable() {
                     <div className="flex gap-2">
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className={`text-xs px-4 py-2 rounded-lg font-bold transition-all border flex items-center gap-2 ${
-                                showFilters
+                            className={`text-xs px-4 py-2 rounded-lg font-bold transition-all border flex items-center gap-2 ${showFilters
                                     ? "bg-[#7c3bed] text-white border-[#7c3bed] shadow-[0_0_15px_rgba(124,59,237,0.4)]"
                                     : "bg-[#1a1625] text-slate-300 border-white/10 hover:bg-white/5"
-                            }`}
+                                }`}
                         >
                             <MdFilterList className="text-sm" />
                             {showFilters ? "Ẩn lọc" : "Lọc"}
@@ -329,7 +328,7 @@ export default function WithdrawalTable() {
                                             <td className="px-8 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div>
-                                                        <p className="font-bold text-white text-sm">{request.receiverName || "User Name"}</p>
+                                                        <p className="font-bold text-white text-sm">{request.receiverName?.toUpperCase() || "User Name"}</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -384,11 +383,10 @@ export default function WithdrawalTable() {
                             <button
                                 key={page}
                                 onClick={() => setCurrentPage(page)}
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold ${
-                                    currentPage === page
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold ${currentPage === page
                                         ? "bg-[#7c3bed] text-white"
                                         : "border border-white/5 text-slate-400 hover:bg-white/5"
-                                }`}
+                                    }`}
                             >
                                 {page}
                             </button>

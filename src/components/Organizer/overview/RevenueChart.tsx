@@ -9,7 +9,6 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import type { SalesTrendData, SalesTrendPeriod } from "../../../types/ticketing/ticketing";
-import { fmtMoneyVND } from "../../../utils/fmtMoneyVND";
 
 interface RevenueChartProps {
     trendData: SalesTrendData | null;
@@ -158,9 +157,13 @@ export default function RevenueChart({ trendData, period, loading, onPeriodChang
                                 stroke="#6B7280"
                                 tickLine={false}
                                 axisLine={false}
-                                tickFormatter={fmtMoneyVND}
+                                tickFormatter={(v: number) => {
+                                    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}tr`;
+                                    if (v >= 1_000) return `${(v / 1_000).toFixed(0)}k`;
+                                    return String(v);
+                                }}
                                 tick={{ fontSize: 11 }}
-                                width={48}
+                                width={56}  // tăng từ 48 lên 56
                             />
 
                             <YAxis

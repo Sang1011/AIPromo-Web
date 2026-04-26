@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+    RiAlertLine,
     RiCalendarEventLine,
     RiLineChartLine,
     RiMoneyDollarCircleLine,
     RiRefund2Line,
 } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
+import "../../components/Organizer/shared/datetime.css"
 import {
     Area,
     AreaChart,
@@ -30,11 +32,17 @@ import { fetchAllEventSalesTrend } from "../../store/ticketingSlice";
 import type { EventStatus } from "../../types/event/event";
 import { fmtMoneyVND } from "../../utils/fmtMoneyVND";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PLATFORM_FEE_RATE = 0.15;
+/** Multiplier applied to BE's netRevenue to get organizer's actual take-home */
+const NET_MULTIPLIER = 1 - PLATFORM_FEE_RATE; // 0.85
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const generateColor = (index: number): string => {
     const hue = (index * 137.508) % 360;
-    const saturation = 65;
-    const lightness = 58;
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    return `hsl(${hue}, 65%, 58%)`;
 };
 
 type TrendRange = 1 | 3 | 6;
@@ -51,7 +59,6 @@ const chartScale = (maxValue: number): { divisor: number; unit: string } => {
     return { divisor: 1, unit: "đồng" };
 };
 
-/** "W2 T4" = tuần 2 của tháng 4 */
 const getWeekKey = (d: Date): string =>
     `T${d.getMonth() + 1}/W${Math.ceil(d.getDate() / 7)}`;
 
@@ -88,6 +95,17 @@ const TooltipStyle = {
     cursor: { fill: "rgba(124,59,237,0.06)" },
 };
 
+function EmptyChart({ message = "Chưa có dữ liệu" }: { message?: string }) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full gap-2 py-8">
+            <div className="w-12 h-12 rounded-full bg-surface-dark border border-border-dark flex items-center justify-center">
+                <span className="text-xl text-slate-600">∅</span>
+            </div>
+            <p className="text-sm text-text-muted">{message}</p>
+        </div>
+    );
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 interface MetricCardProps {
@@ -97,8 +115,9 @@ interface MetricCardProps {
     value: string;
     sub: React.ReactNode;
     subColor?: string;
+    loading?: boolean;
 }
-function MetricCard({ icon, iconBg, label, value, sub, subColor }: MetricCardProps) {
+function MetricCard({ icon, iconBg, label, value, sub, subColor, loading }: MetricCardProps) {
     return (
         <div className="bg-card-dark rounded-xl border border-border-dark p-5 flex flex-col gap-3">
             <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: iconBg }}>
@@ -106,8 +125,17 @@ function MetricCard({ icon, iconBg, label, value, sub, subColor }: MetricCardPro
             </div>
             <div>
                 <p className="text-sm text-white uppercase font-bold tracking-widest mb-1">{label}</p>
-                <p className="text-2xl font-semibold text-gray-100">{value}</p>
-                <p className="text-sm mt-1" style={{ color: subColor ?? "#64748b" }}>{sub}</p>
+                {loading ? (
+                    <>
+                        <div className="h-7 w-36 bg-surface-dark rounded animate-pulse mb-1" />
+                        <div className="h-4 w-48 bg-surface-dark rounded animate-pulse" />
+                    </>
+                ) : (
+                    <>
+                        <p className="text-2xl font-semibold text-gray-100">{value}</p>
+                        <p className="text-sm mt-1" style={{ color: subColor ?? "#64748b" }}>{sub}</p>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -137,6 +165,7 @@ function SectionCard({ title, sub, children, className = "", headerRight }: Sect
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function OrganizerOverviewAllPage() {
     const dispatch = useDispatch<AppDispatch>();
 
@@ -147,15 +176,17 @@ export default function OrganizerOverviewAllPage() {
     const { allEventSalesTrend, allEventSalesTrendLoading } = useSelector(
         (state: RootState) => state.TICKETING
     );
+
     const [areaSeries, setAreaSeries] = useState<"net" | "gross">("net");
     const [showGross, setShowGross] = useState(true);
     const [showNet, setShowNet] = useState(true);
     const [trendRange, setTrendRange] = useState<TrendRange>(3);
+    const [customStart, setCustomStart] = useState<string>("");
+    const [customEnd, setCustomEnd] = useState<string>("");
+    const [useCustomRange, setUseCustomRange] = useState(false);
 
-    // 1. Fetch profile
     useEffect(() => { dispatch(fetchOrganizerProfile()); }, [dispatch]);
 
-    // 2. Fetch summary + breakdown
     useEffect(() => {
         if (!profile?.userId) return;
         dispatch(fetchRevenueSummaryOrganizer(profile.userId));
@@ -166,29 +197,46 @@ export default function OrganizerOverviewAllPage() {
         dispatch(fetchRevenueBreakdownOrganizer({ organizerId: profile.userId, byNet: false }));
     }, [dispatch, profile?.userId]);
 
-    // 3. Fetch sales trend — re-fetch khi đổi range
     useEffect(() => {
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - trendRange);
+        const endDate = useCustomRange && customEnd ? new Date(customEnd) : new Date();
+        const startDate = useCustomRange && customStart
+            ? new Date(customStart)
+            : (() => { const d = new Date(); d.setMonth(d.getMonth() - trendRange); return d; })();
+
         dispatch(fetchAllEventSalesTrend({
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
         }));
-    }, [dispatch, trendRange]);
+    }, [dispatch, trendRange, useCustomRange, customStart, customEnd]);
 
-    // ─── Derived: bar + donut ─────────────────────────────────────────────────
+    // ─── Derived data ─────────────────────────────────────────────────────────
 
     const summary = revenueSummaryOrganizer;
     const breakdown = revenueBreakdownOrganizer ?? [];
 
+    const isLoadingSummary = loading?.organizerSummary;
+    const isLoadingBreakdown = loading?.organizerBreakdown;
+
+    // ── Summary cards
+    // totalNetBeforeFee  = BE's netRevenue summed (after promos & refunds, before platform fee)
+    // totalPlatformFee   = 15% of totalNetBeforeFee
+    // totalActualNet     = organizer's take-home (85%)
+    const { totalNetBeforeFee, totalActualNet, totalPlatformFee } = useMemo(() => {
+        if (!breakdown.length) return { totalNetBeforeFee: 0, totalActualNet: 0, totalPlatformFee: 0 };
+        const netBeforeFee = breakdown.reduce((s, x) => s + x.netRevenue, 0);
+        const fee = netBeforeFee * PLATFORM_FEE_RATE;
+        const net = netBeforeFee - fee;
+        return { totalNetBeforeFee: netBeforeFee, totalActualNet: net, totalPlatformFee: fee };
+    }, [breakdown]);
+
+    // ── Bar chart: net column = BE netRevenue × 0.85
     const barData = breakdown.map((item) => ({
         name: item.eventName ?? item.eventId,
         gross: item.grossRevenue,
-        net: item.netRevenue,
+        net: item.netRevenue * NET_MULTIPLIER,
     }));
 
-    const barMaxValue = Math.max(...breakdown.map((x) => Math.max(x.grossRevenue, x.netRevenue)), 0);
+    const barMaxValue = Math.max(...breakdown.map((x) => x.grossRevenue), 0);
     const barScale = chartScale(barMaxValue);
 
     const totalGross = breakdown.reduce((s, x) => s + x.grossRevenue, 0);
@@ -197,6 +245,7 @@ export default function OrganizerOverviewAllPage() {
         value: totalGross > 0 ? Math.round((x.grossRevenue / totalGross) * 100) : 0,
     }));
 
+    // ── Area chart
     const { areaData, eventTitles } = useMemo(() => {
         if (!allEventSalesTrend?.events?.length) return { areaData: [], eventTitles: [] };
 
@@ -217,8 +266,10 @@ export default function OrganizerOverviewAllPage() {
                     keyToDate.set(key, d);
                 }
                 const row = map.get(key)!;
-                // ← Switch field theo areaSeries
-                const val = areaSeries === "net" ? point.netRevenue : point.grossRevenue;
+
+                const rawVal = areaSeries === "net" ? point.netRevenue : point.grossRevenue;
+                const val = areaSeries === "net" ? rawVal * NET_MULTIPLIER : rawVal;
+
                 row[title] = (row[title] ?? 0) + val;
             }
         }
@@ -253,27 +304,34 @@ export default function OrganizerOverviewAllPage() {
         ? Math.floor(areaData.length / 8)
         : areaData.length > 10 ? 1 : 0;
 
-    const isLoadingSummary = loading?.organizerSummary;
-    const isLoadingBreakdown = loading?.organizerBreakdown;
-
     const colorMap = useMemo(() => {
         const map: Record<string, string> = {};
-
         const allKeys = [
             ...new Set([
                 ...breakdown.map(x => x.eventName ?? x.eventId),
-                ...eventTitles
+                ...eventTitles,
             ])
         ];
-
-        allKeys.forEach((key, i) => {
-            map[key] = generateColor(i);
-        });
-
+        allKeys.forEach((key, i) => { map[key] = generateColor(i); });
         return map;
     }, [breakdown, eventTitles]);
+
+    const areaSubLabel = areaSeries === "net"
+        ? "Doanh thu ròng thực nhận (sau khuyến mãi, hoàn tiền & phí nền tảng)"
+        : "Doanh thu gộp";
+
     return (
         <div className="space-y-6">
+
+            {/* ── Platform fee notice ───────────────────────────────────── */}
+            <div className="flex items-start gap-3 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-3">
+                <RiAlertLine className="mt-0.5 shrink-0 text-orange-400" size={17} />
+                <p className="text-sm text-orange-300/90 leading-relaxed">
+                    <span className="font-semibold text-orange-300">Phí nền tảng 15%&nbsp;—&nbsp;</span>
+                    Nền tảng sẽ khấu trừ 15% phí dịch vụ trên doanh thu ròng của từng sự kiện (sau khi đã trừ khuyến mãi &amp; hoàn vé).
+                    Tất cả số liệu <strong className="text-orange-200">Ròng thực nhận</strong> hiển thị bên dưới đã phản ánh khoản khấu trừ này.
+                </p>
+            </div>
 
             {/* ── Metric cards ── */}
             {isLoadingSummary || !summary ? (
@@ -285,35 +343,47 @@ export default function OrganizerOverviewAllPage() {
             ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <MetricCard
-                        iconBg="#7c3bed" icon={<RiLineChartLine size={20} color="#FFFFFF" />}
+                        iconBg="#7c3bed"
+                        icon={<RiLineChartLine size={20} color="#FFFFFF" />}
                         label="Tổng doanh thu gộp"
                         value={`${fmtMoneyVND(summary.grossRevenue)} đồng`}
-                        sub="Tất cả sự kiện"
+                        sub="Tất cả sự kiện · chưa trừ bất kỳ khoản nào"
                     />
                     <MetricCard
-                        iconBg="#7c3bed" icon={<RiMoneyDollarCircleLine size={20} color="#FFFFFF" />}
-                        label="Doanh thu ròng"
-                        value={`${fmtMoneyVND(summary.netRevenue)} đồng`}
-                        sub="Sau hoàn vé & khuyến mãi"
+                        iconBg="#059669"
+                        icon={<RiMoneyDollarCircleLine size={20} color="#FFFFFF" />}
+                        label="Ròng thực nhận"
+                        loading={!!isLoadingBreakdown}
+                        value={`${fmtMoneyVND(totalActualNet)} đồng`}
+                        sub={
+                            <span className="flex flex-col gap-0.5">
+                                <span className="text-slate-400">
+                                    Trước phí:&nbsp;
+                                    <span className="text-slate-200 font-medium">{fmtMoneyVND(totalNetBeforeFee)} đ</span>
+                                </span>
+                                <span className="text-orange-400">
+                                    − Phí nền tảng:&nbsp;
+                                    <span className="font-medium">{fmtMoneyVND(totalPlatformFee)} đ</span>
+                                </span>
+                            </span>
+                        }
                     />
                     <MetricCard
-                        iconBg="#7c3bed" icon={<RiCalendarEventLine size={20} color="#FFFFFF" />}
+                        iconBg="#7c3bed"
+                        icon={<RiCalendarEventLine size={20} color="#FFFFFF" />}
                         label="Số sự kiện"
                         value={String(summary.eventCount)}
                         sub={
                             <>
-                                <span className="text-emerald-400">
-                                    {summary.completedEventCount} đã hoàn thành
-                                </span>
+                                <span className="text-emerald-400">{summary.completedEventCount} đã hoàn thành</span>
                                 {" · "}
-                                <span className="text-blue-400">
-                                    {summary.activeEventCount} đang mở
-                                </span>
+                                <span className="text-blue-400">{summary.activeEventCount} đang mở</span>
                             </>
                         }
                     />
                     <MetricCard
-                        iconBg="#7c3bed" icon={<RiRefund2Line size={20} color="#FFFFFF" />}
+                        iconBg="#7c3bed"
+                        icon={<RiRefund2Line size={20} color="#FFFFFF" />}
                         label="Tổng hoàn vé"
                         value={`${fmtMoneyVND(summary.totalRefunds)} đồng`}
                         sub={summary.grossRevenue > 0
@@ -329,7 +399,7 @@ export default function OrganizerOverviewAllPage() {
                 <SectionCard
                     className="lg:col-span-3"
                     title="Doanh thu theo sự kiện"
-                    sub={`Doanh thu gộp và ròng từng sự kiện (${barScale.unit}đ)`}
+                    sub={`Doanh thu gộp và ròng thực nhận từng sự kiện (${barScale.unit} đồng)`}
                 >
                     <div className="flex items-center gap-2 mb-4">
                         <button
@@ -342,12 +412,16 @@ export default function OrganizerOverviewAllPage() {
                             onClick={() => { if (showGross) setShowNet(v => !v); }}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${showNet ? "bg-primary text-white" : "bg-surface-dark text-text-muted hover:text-white"}`}
                         >
-                            Doanh thu ròng
+                            Ròng thực nhận
                         </button>
                     </div>
 
                     {isLoadingBreakdown ? (
                         <div className="h-52 bg-surface-dark rounded-lg animate-pulse" />
+                    ) : barData.length === 0 ? (
+                        <div className="h-52">
+                            <EmptyChart message="Chưa có dữ liệu doanh thu" />
+                        </div>
                     ) : (
                         <>
                             <ResponsiveContainer width="100%" height={220}>
@@ -363,7 +437,7 @@ export default function OrganizerOverviewAllPage() {
                                         {...TooltipStyle}
                                         formatter={(val: number | undefined, name: string | undefined) => [
                                             `${fmtMoneyVND(val ?? 0)} đồng`,
-                                            name === "gross" ? "Doanh thu gộp" : "Doanh thu ròng",
+                                            name === "gross" ? "Doanh thu gộp" : "Ròng thực nhận",
                                         ]}
                                     />
                                     {showGross && <Bar dataKey="gross" name="gross" fill="#7c3bed" radius={[4, 4, 0, 0]} />}
@@ -380,7 +454,7 @@ export default function OrganizerOverviewAllPage() {
                                 {showNet && (
                                     <div className="flex items-center gap-2">
                                         <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: "#2dd4bf" }} />
-                                        <span className="text-sm text-slate-400">Doanh thu ròng</span>
+                                        <span className="text-sm text-slate-400">Ròng thực nhận</span>
                                     </div>
                                 )}
                             </div>
@@ -391,6 +465,10 @@ export default function OrganizerOverviewAllPage() {
                 <SectionCard className="lg:col-span-2" title="Phân bổ doanh thu" sub="Tỉ trọng từng sự kiện (%)">
                     {isLoadingBreakdown ? (
                         <div className="h-52 bg-surface-dark rounded-lg animate-pulse" />
+                    ) : totalGross === 0 ? (
+                        <div className="h-52">
+                            <EmptyChart message="Chưa có doanh thu để phân bổ" />
+                        </div>
                     ) : (
                         <>
                             <ResponsiveContainer width="100%" height={200}>
@@ -423,155 +501,227 @@ export default function OrganizerOverviewAllPage() {
                 </SectionCard>
             </div>
 
-            {/* ── Stacked Area Trend + Refund rates ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-                {/* Stacked area */}
-                <SectionCard
-                    title="Xu hướng doanh thu theo sự kiện"
-                    sub={
-                        trendRange === 1
-                            ? `Theo ngày — 1 tháng gần nhất (${areaScale.unit}đ) · ${areaSeries === "net" ? "Doanh thu ròng" : "Doanh thu gộp"}`
-                            : `Theo tuần — ${trendRange} tháng gần nhất (${areaScale.unit}đ) · ${areaSeries === "net" ? "Doanh thu ròng" : "Doanh thu gộp"}`
-                    }
-                    headerRight={
-                        <div className="flex items-center gap-2 -mt-0.5 flex-shrink-0 flex-wrap justify-end">
-                            {/* Toggle gross/net */}
-                            <div className="flex items-center gap-1 border border-slate-800 rounded-lg p-0.5">
-                                <button
-                                    onClick={() => setAreaSeries("net")}
-                                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${areaSeries === "net"
-                                            ? "bg-primary text-white"
-                                            : "text-text-muted hover:text-white"
-                                        }`}
-                                >
-                                    Ròng
-                                </button>
-                                <button
-                                    onClick={() => setAreaSeries("gross")}
-                                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${areaSeries === "gross"
-                                            ? "bg-primary text-white"
-                                            : "text-text-muted hover:text-white"
-                                        }`}
-                                >
-                                    Gộp
-                                </button>
-                            </div>
-
-                            {/* Range selector — same as before */}
-                            <div className="flex items-center gap-1">
-                                {RANGE_OPTIONS.map((opt) => (
-                                    <button
-                                        key={opt.value}
-                                        onClick={() => setTrendRange(opt.value)}
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${trendRange === opt.value
-                                                ? "bg-primary text-white"
-                                                : "bg-surface-dark text-text-muted hover:text-white"
-                                            }`}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
-                            </div>
+            {/* ── Area trend chart ── */}
+            <SectionCard
+                title="Xu hướng doanh thu theo sự kiện"
+                sub={
+                    useCustomRange
+                        ? `Tùy chọn · ${areaScale.unit}đ · ${areaSubLabel}`
+                        : trendRange === 1
+                            ? `Theo ngày — 1 tháng gần nhất (${areaScale.unit}đ) · ${areaSubLabel}`
+                            : `Theo tuần — ${trendRange} tháng gần nhất (${areaScale.unit}đ) · ${areaSubLabel}`
+                }
+                headerRight={
+                    <div className="flex items-center gap-2 -mt-0.5 flex-wrap justify-end">
+                        <div className="flex items-center gap-1 border border-slate-800 rounded-lg p-0.5">
+                            <button onClick={() => setAreaSeries("net")}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${areaSeries === "net" ? "bg-primary text-white" : "text-text-muted hover:text-white"}`}>
+                                Ròng thực nhận
+                            </button>
+                            <button onClick={() => setAreaSeries("gross")}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${areaSeries === "gross" ? "bg-primary text-white" : "text-text-muted hover:text-white"}`}>
+                                Gộp
+                            </button>
                         </div>
-                    }
-                >
-                    {allEventSalesTrendLoading ? (
-                        <div className="h-52 bg-surface-dark rounded-lg animate-pulse" />
-                    ) : areaData.length === 0 ? (
-                        <div className="h-52 flex items-center justify-center text-sm text-text-muted">
-                            Chưa có dữ liệu xu hướng
+                        <div className="flex items-center gap-1">
+                            {RANGE_OPTIONS.map((opt) => (
+                                <button key={opt.value} onClick={() => { setTrendRange(opt.value); setUseCustomRange(false); }}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors
+                                    ${!useCustomRange && trendRange === opt.value
+                                            ? "bg-primary text-white"
+                                            : "bg-surface-dark text-text-muted hover:text-white"}`}>
+                                    {opt.label}
+                                </button>
+                            ))}
                         </div>
-                    ) : (
-                        <>
-                            <ResponsiveContainer width="100%" height={200}>
-                                <AreaChart data={areaData}>
-                                    <defs>
-                                        {eventTitles.map((title, i) => (
-                                            <linearGradient key={title} id={`areaGrad${i}`} x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={colorMap[title]} stopOpacity={0.4} />
-                                                <stop offset="95%" stopColor={colorMap[title]} stopOpacity={0.05} />
-                                            </linearGradient>
-                                        ))}
-
-                                    </defs>
-                                    <CartesianGrid vertical={false} stroke="#1e293b" />
-                                    <XAxis
-                                        dataKey="label"
-                                        tick={{ fill: "#475569", fontSize: 11 }}
-                                        axisLine={false} tickLine={false}
-                                        interval={xAxisInterval}
-                                    />
-                                    <YAxis
-                                        tick={{ fill: "#475569", fontSize: 11 }}
-                                        axisLine={false} tickLine={false}
-                                        tickFormatter={(v) => `${+(v / areaScale.divisor).toFixed(1)}${areaScale.unit[0]}`}
-                                        width={48}
-                                    />
-                                    <Tooltip
-                                        {...TooltipStyle}
-                                        formatter={(val: number | undefined, name: string | undefined) => [
-                                            `${fmtMoneyVND(val ?? 0)} đồng`,
-                                            name,
-                                        ]}
-                                    />
+                        <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+                            <input
+                                type="date" value={customStart}
+                                onChange={(e) => { setCustomStart(e.target.value); setUseCustomRange(true); }}
+                                className="bg-surface-dark border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-primary/60 transition cursor-pointer"
+                            />
+                            <span className="text-slate-600 text-xs">→</span>
+                            <input
+                                type="date" value={customEnd}
+                                onChange={(e) => { setCustomEnd(e.target.value); setUseCustomRange(true); }}
+                                className="bg-surface-dark border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-primary/60 transition cursor-pointer"
+                            />
+                            {useCustomRange && (
+                                <button onClick={() => { setUseCustomRange(false); setCustomStart(""); setCustomEnd(""); }}
+                                    className="text-slate-500 hover:text-red-400 transition text-xs px-1">✕</button>
+                            )}
+                        </div>
+                    </div>
+                }
+            >
+                {allEventSalesTrendLoading ? (
+                    <div className="h-64 bg-surface-dark rounded-lg animate-pulse" />
+                ) : areaData.length === 0 ? (
+                    <div className="h-64 flex items-center justify-center text-sm text-text-muted">
+                        Chưa có dữ liệu xu hướng
+                    </div>
+                ) : (
+                    <>
+                        <ResponsiveContainer width="100%" height={260}>
+                            <AreaChart data={areaData}>
+                                <defs>
                                     {eventTitles.map((title, i) => (
-                                        <Area
-                                            key={title}
-                                            type="monotone"
-                                            dataKey={title}
-                                            stackId="1"
-                                            stroke={colorMap[title]}
-                                            strokeWidth={1.5}
-                                            fill={`url(#areaGrad${i})`}
-                                        />
+                                        <linearGradient key={title} id={`areaGrad${i}`} x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor={colorMap[title]} stopOpacity={0.4} />
+                                            <stop offset="95%" stopColor={colorMap[title]} stopOpacity={0.05} />
+                                        </linearGradient>
                                     ))}
-                                </AreaChart>
-                            </ResponsiveContainer>
-
-                            {/* Legend */}
-                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
-                                {eventTitles.map((title) => (
-                                    <div key={title} className="flex items-center gap-1.5">
-                                        <span
-                                            className="w-2.5 h-2.5 rounded-sm inline-block flex-shrink-0"
-                                            style={{ background: colorMap[title] }}
-                                        />
-                                        <span className="text-xs text-slate-400 truncate max-w-[120px]">{title}</span>
-                                    </div>
+                                </defs>
+                                <CartesianGrid vertical={false} stroke="#1e293b" />
+                                <XAxis dataKey="label" tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} interval={xAxisInterval} />
+                                <YAxis
+                                    tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false}
+                                    tickFormatter={(v) => `${+(v / areaScale.divisor).toFixed(1)}${areaScale.unit[0]}`}
+                                    width={48}
+                                />
+                                <Tooltip
+                                    {...TooltipStyle}
+                                    formatter={(val: number | undefined, name: string | undefined) => [
+                                        `${fmtMoneyVND(val ?? 0)} đồng`,
+                                        areaSeries === "net" ? `${name} (ròng thực nhận)` : name,
+                                    ]}
+                                />
+                                {eventTitles.map((title, i) => (
+                                    <Area key={title} type="monotone" dataKey={title} stackId="1"
+                                        stroke={colorMap[title]} strokeWidth={1.5} fill={`url(#areaGrad${i})`} />
                                 ))}
-                            </div>
-                        </>
-                    )}
-                </SectionCard>
-
-                {/* Refund rates */}
-                <SectionCard title="Tỉ lệ hoàn vé theo sự kiện" sub="% hoàn trên tổng doanh thu gộp">
-                    {isLoadingBreakdown ? (
-                        <div className="h-40 bg-surface-dark rounded-lg animate-pulse" />
-                    ) : (
-                        <div className="flex flex-col gap-4 mt-1">
-                            {breakdown.map((r) => (
-                                <div key={r.eventId}>
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-sm text-slate-400 truncate max-w-[170px]">
-                                            {r.eventName ?? r.eventId}
-                                        </span>
-                                        <span className="text-sm font-medium tabular-nums" style={{ color: refundColor(r.refundRate) }}>
-                                            {r.refundRate.toFixed(1)}%
-                                        </span>
-                                    </div>
-                                    <div className="h-1.5 rounded-full bg-slate-800">
-                                        <div
-                                            className="h-1.5 rounded-full transition-all duration-500"
-                                            style={{
-                                                width: `${Math.min(r.refundRate * 8, 100)}%`,
-                                                background: refundColor(r.refundRate),
-                                            }}
-                                        />
-                                    </div>
+                            </AreaChart>
+                        </ResponsiveContainer>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
+                            {eventTitles.map((title) => (
+                                <div key={title} className="flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-sm inline-block flex-shrink-0" style={{ background: colorMap[title] }} />
+                                    <span className="text-xs text-slate-400 truncate max-w-[150px]">{title}</span>
                                 </div>
                             ))}
+                        </div>
+                    </>
+                )}
+            </SectionCard>
+
+            {/* ── Donut hoàn vé + Bảng chi tiết ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                <SectionCard className="lg:col-span-2" title="Phân bổ hoàn vé" sub="Tỉ trọng hoàn vé từng sự kiện">
+                    {isLoadingBreakdown ? (
+                        <div className="h-52 bg-surface-dark rounded-lg animate-pulse" />
+                    ) : (() => {
+                        const totalRefund = breakdown.reduce((s, x) => s + x.refundAmount, 0);
+                        if (totalRefund === 0) {
+                            return (
+                                <div className="flex flex-col items-center justify-center py-10 gap-3">
+                                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center">
+                                        <span className="text-2xl">✓</span>
+                                    </div>
+                                    <p className="text-sm font-semibold text-emerald-400">Không có hoàn vé</p>
+                                    <p className="text-xs text-slate-500 text-center max-w-[160px]">
+                                        Tất cả sự kiện đều không có giao dịch hoàn vé
+                                    </p>
+                                </div>
+                            );
+                        }
+                        const donutRefundData = breakdown
+                            .filter((x) => x.refundAmount > 0)
+                            .map((x) => ({
+                                name: x.eventName ?? x.eventId,
+                                value: x.refundAmount,
+                                pct: Math.round((x.refundAmount / totalRefund) * 100),
+                            }));
+                        return (
+                            <>
+                                <div className="relative">
+                                    <ResponsiveContainer width="100%" height={200}>
+                                        <PieChart>
+                                            <Pie data={donutRefundData} cx="50%" cy="50%"
+                                                innerRadius={60} outerRadius={85} paddingAngle={3} dataKey="value">
+                                                {donutRefundData.map((d, i) => (
+                                                    <Cell key={i} fill={colorMap[d.name]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                contentStyle={TooltipStyle.contentStyle}
+                                                itemStyle={TooltipStyle.itemStyle}
+                                                formatter={(val: number | undefined) => [`${fmtMoneyVND(val ?? 0)} đồng`, "Hoàn vé"]}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Tổng hoàn</p>
+                                        <p className="text-sm font-bold text-white">{fmtMoneyVND(totalRefund)}</p>
+                                        <p className="text-[10px] text-slate-500">đồng</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-2 mt-2">
+                                    {donutRefundData.map((d, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-2.5 h-2.5 rounded-sm inline-block shrink-0" style={{ background: colorMap[d.name] }} />
+                                                <span className="text-xs text-slate-400 truncate max-w-[120px]">{d.name}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className="text-xs text-slate-500">{fmtMoneyVND(d.value)}đ</span>
+                                                <span className="text-xs font-semibold text-white w-8 text-right">{d.pct}%</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        );
+                    })()}
+                </SectionCard>
+
+                <SectionCard className="lg:col-span-3" title="Tỉ lệ hoàn vé theo sự kiện" sub="% hoàn · tiền hoàn · phân loại rủi ro">
+                    {isLoadingBreakdown ? (
+                        <div className="h-40 bg-surface-dark rounded-lg animate-pulse" />
+                    ) : breakdown.length === 0 ? (
+                        <EmptyChart message="Chưa có dữ liệu hoàn vé" />
+                    ) : (
+                        <div className="flex flex-col gap-5 mt-1">
+                            {breakdown.map((r) => {
+                                const riskBadge = r.refundRate < 4
+                                    ? { label: "Tốt", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-400/25" }
+                                    : r.refundRate < 8
+                                        ? { label: "Trung bình", cls: "bg-amber-500/10 text-amber-400 border-amber-400/25" }
+                                        : { label: "Cao", cls: "bg-red-500/10 text-red-400 border-red-400/25" };
+                                return (
+                                    <div key={r.eventId}>
+                                        <div className="flex items-center justify-between mb-1.5 gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorMap[r.eventName ?? r.eventId] }} />
+                                                <span className="text-sm text-slate-300 truncate">{r.eventName ?? r.eventId}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className="text-xs text-slate-500 tabular-nums">{fmtMoneyVND(r.refundAmount)}đ</span>
+                                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${riskBadge.cls}`}>
+                                                    {riskBadge.label}
+                                                </span>
+                                                <span className="text-sm font-bold tabular-nums w-12 text-right" style={{ color: refundColor(r.refundRate) }}>
+                                                    {r.refundRate.toFixed(1)}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="h-2 rounded-full bg-slate-800">
+                                            <div className="h-2 rounded-full transition-all duration-500"
+                                                style={{ width: `${Math.min(r.refundRate * 8, 100)}%`, background: refundColor(r.refundRate) }} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {breakdown.some(r => r.refundAmount > 0) && (
+                                <div className="mt-1 pt-3 border-t border-border-dark flex items-center justify-between">
+                                    <span className="text-xs text-slate-500">Tổng hoàn vé</span>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-sm font-semibold text-white">
+                                            {fmtMoneyVND(breakdown.reduce((s, r) => s + r.refundAmount, 0))} đồng
+                                        </span>
+                                        <span className="text-xs text-slate-500">/ {breakdown.length} sự kiện</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </SectionCard>
@@ -581,13 +731,24 @@ export default function OrganizerOverviewAllPage() {
             <div className="bg-card-dark rounded-xl border border-border-dark overflow-hidden">
                 <div className="px-5 py-4 border-b border-border-dark">
                     <p className="text-base font-semibold text-white">Tổng quan tất cả sự kiện</p>
-                    <p className="text-sm text-text-muted mt-0.5">Doanh thu gộp · ròng · hoàn vé · trạng thái</p>
+                    <p className="text-sm text-text-muted mt-0.5">
+                        Doanh thu gộp · hoàn vé · ròng trước phí · phí nền tảng · ròng thực nhận · trạng thái
+                    </p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-surface-dark">
-                                {["Sự kiện", "Doanh thu gộp", "Hoàn vé", "Doanh thu ròng", "Tỉ lệ hoàn", "Trạng thái"].map((h) => (
+                                {[
+                                    "Sự kiện",
+                                    "Doanh thu gộp",
+                                    "Hoàn vé",
+                                    "Ròng trước phí",
+                                    "Phí nền tảng (15%)",
+                                    "Ròng thực nhận",
+                                    "Tỉ lệ hoàn",
+                                    "Trạng thái",
+                                ].map((h) => (
                                     <th key={h} className="text-left px-5 py-3 text-sm font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
                                         {h}
                                     </th>
@@ -598,47 +759,90 @@ export default function OrganizerOverviewAllPage() {
                             {isLoadingBreakdown ? (
                                 [...Array(3)].map((_, i) => (
                                     <tr key={i}>
-                                        <td colSpan={6} className="px-5 py-4">
+                                        <td colSpan={8} className="px-5 py-4">
                                             <div className="h-4 bg-surface-dark rounded animate-pulse" />
                                         </td>
                                     </tr>
                                 ))
+                            ) : breakdown.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="px-5 py-12 text-center">
+                                        <p className="text-sm text-text-muted">Chưa có dữ liệu sự kiện</p>
+                                    </td>
+                                </tr>
                             ) : (
-                                breakdown.map((row) => (
-                                    <tr key={row.eventId} className="hover:bg-surface-dark/50 transition-colors">
-                                        <td className="px-5 py-3.5 font-medium text-white whitespace-nowrap">
-                                            {row.eventName ?? row.eventId}
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
-                                            {fmtMoneyVND(row.grossRevenue)} đồng
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
-                                            {fmtMoneyVND(row.refundAmount)} đồng
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
-                                            {fmtMoneyVND(row.netRevenue)} đồng
-                                        </td>
-                                        <td className="px-5 py-3.5">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="h-1.5 w-20 rounded-full bg-slate-800">
-                                                    <div
-                                                        className="h-1.5 rounded-full"
-                                                        style={{
-                                                            width: `${Math.min(row.refundRate * 8, 100)}%`,
-                                                            background: refundColor(row.refundRate),
-                                                        }}
-                                                    />
-                                                </div>
-                                                <span className="text-sm font-medium tabular-nums" style={{ color: refundColor(row.refundRate) }}>
-                                                    {row.refundRate.toFixed(1)}%
+                                breakdown.map((row) => {
+                                    const netBeforeFee = row.netRevenue;
+                                    const fee = row.netRevenue * PLATFORM_FEE_RATE;
+                                    const actualNet = row.netRevenue * NET_MULTIPLIER;
+                                    return (
+                                        <tr key={row.eventId} className="hover:bg-surface-dark/50 transition-colors">
+                                            <td className="px-5 py-3.5 font-medium text-white whitespace-nowrap max-w-[200px] relative group">
+                                                <span className="block truncate">
+                                                    {row.eventName ?? row.eventId}
                                                 </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-5 py-3.5">{statusBadge(row.status)}</td>
-                                    </tr>
-                                ))
+
+                                                <div className="absolute left-0 top-full mt-1 hidden group-hover:block bg-black text-white text-xs px-2 py-1 rounded shadow-lg z-50 whitespace-normal">
+                                                    {row.eventName ?? row.eventId}
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
+                                                {fmtMoneyVND(row.grossRevenue)} đ
+                                            </td>
+                                            <td className="px-5 py-3.5 text-rose-400 whitespace-nowrap tabular-nums">
+                                                − {fmtMoneyVND(row.refundAmount)} đ
+                                            </td>
+                                            {/* NEW: net before platform fee */}
+                                            <td className="px-5 py-3.5 text-slate-200 whitespace-nowrap tabular-nums">
+                                                {fmtMoneyVND(netBeforeFee)} đ
+                                            </td>
+                                            <td className="px-5 py-3.5 whitespace-nowrap tabular-nums text-orange-400">
+                                                − {fmtMoneyVND(fee)} đ
+                                            </td>
+                                            <td className="px-5 py-3.5 text-emerald-400 font-semibold whitespace-nowrap tabular-nums">
+                                                {fmtMoneyVND(actualNet)} đ
+                                            </td>
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="h-1.5 w-20 rounded-full bg-slate-800">
+                                                        <div className="h-1.5 rounded-full"
+                                                            style={{ width: `${Math.min(row.refundRate * 8, 100)}%`, background: refundColor(row.refundRate) }} />
+                                                    </div>
+                                                    <span className="text-sm font-medium tabular-nums" style={{ color: refundColor(row.refundRate) }}>
+                                                        {row.refundRate.toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3.5">{statusBadge(row.status)}</td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
+                        {breakdown.length > 0 && !isLoadingBreakdown && (
+                            <tfoot>
+                                <tr className="bg-surface-dark border-t border-border-dark">
+                                    <td className="px-5 py-3 text-sm font-semibold text-white">Tổng cộng</td>
+                                    <td className="px-5 py-3 text-sm font-semibold text-slate-200 tabular-nums">
+                                        {fmtMoneyVND(breakdown.reduce((s, r) => s + r.grossRevenue, 0))} đ
+                                    </td>
+                                    <td className="px-5 py-3 text-sm font-semibold text-rose-400 tabular-nums">
+                                        − {fmtMoneyVND(breakdown.reduce((s, r) => s + r.refundAmount, 0))} đ
+                                    </td>
+                                    {/* NEW tfoot: sum of netRevenue before fee */}
+                                    <td className="px-5 py-3 text-sm font-semibold text-slate-200 tabular-nums">
+                                        {fmtMoneyVND(totalNetBeforeFee)} đ
+                                    </td>
+                                    <td className="px-5 py-3 text-sm font-semibold text-orange-400 tabular-nums">
+                                        − {fmtMoneyVND(totalPlatformFee)} đ
+                                    </td>
+                                    <td className="px-5 py-3 text-sm font-semibold text-emerald-400 tabular-nums">
+                                        {fmtMoneyVND(totalActualNet)} đ
+                                    </td>
+                                    <td colSpan={2} />
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
             </div>

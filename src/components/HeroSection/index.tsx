@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const HeroSection: React.FC = () => {
   return (
@@ -39,11 +40,9 @@ const HeroSection: React.FC = () => {
           {/* Actions */}
           <div className="flex flex-wrap gap-4">
             <button className="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-primary/30 flex items-center gap-2 group">
-              Bắt đầu ngay
+          <Link to="/verify-organizer"> Bắt đầu ngay</Link>   
             </button>
-            <button className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all">
-              Xem Demo
-            </button>
+         
           </div>
         </div>
       </div>

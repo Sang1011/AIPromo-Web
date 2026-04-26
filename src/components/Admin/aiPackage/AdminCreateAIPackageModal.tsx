@@ -87,7 +87,7 @@ export default function AdminCreateAIPackageModal({ isOpen, onClose }: Props) {
                     </div>
 
                     <div>
-                        <label className="text-sm font-semibold text-slate-300 block mb-2">Số Token tối đa (mỗi tháng)</label>
+                        <label className="text-sm font-semibold text-slate-300 block mb-2">Số Token tối đa {type === "Subscription" ? "(mỗi tháng)" : ""}</label>
                         <input value={tokenQuota ?? ''} onChange={(e) => setTokenQuota(e.target.value ? Number(e.target.value) : undefined)} type="number" className="w-full bg-slate-900/50 border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 focus:ring-2 focus:ring-violet-500/50 outline-none" placeholder="5.000" />
                     </div>
 

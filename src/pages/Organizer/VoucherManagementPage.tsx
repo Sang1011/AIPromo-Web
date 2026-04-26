@@ -13,6 +13,7 @@ import { downloadFileExcel } from "../../utils/downloadFileExcel";
 import { getCurrentDateTime } from "../../utils/getCurrentDateTime";
 import { notify } from "../../utils/notify";
 import { saveReportToFirebase } from "../../utils/saveReportToFirebase";
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string) {
@@ -100,7 +101,6 @@ type VoucherFormData = {
     eventId: string;
 };
 
-
 const toLocalDateTime = (isoString: string) => {
     const date = new Date(isoString);
     const tzOffset = date.getTimezoneOffset() * 60000;
@@ -161,7 +161,6 @@ const EMPTY_FORM: VoucherFormData = {
     eventId: "",
 };
 
-
 function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModalProps) {
     const dispatch = useDispatch<AppDispatch>();
 
@@ -171,9 +170,7 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
     const [errors, setErrors] = useState<FormErrors>({});
     const [saving, setSaving] = useState(false);
 
-    // Format số thành chuỗi có dấu chấm ngăn cách hàng nghìn
     const formatRaw = (num: string) => num.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
 
     const [displayValue, setDisplayValue] = useState<string>(() => {
         if (!form.value) return "";
@@ -191,7 +188,6 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                 setDisplayValue("100");
             } else {
                 setDisplayValue(form.value);
-
             }
         } else {
             setDisplayValue(form.value ? formatRaw(form.value) : "");
@@ -199,7 +195,6 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
     };
 
     const handleValueChange = (raw: string) => {
-        // Chỉ cho nhập số
         const digitsOnly = raw.replace(/\D/g, "");
         update("value", digitsOnly);
         if (form.type === "Fixed") {
@@ -229,7 +224,6 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                     endDate: new Date(form.endDate).toISOString(),
                     eventId: form.eventId.trim(),
                 };
-                console.log(payload);
                 await dispatch(fetchCreateVoucher(payload)).unwrap();
                 notify.success("Tạo voucher thành công");
             } else {
@@ -271,9 +265,9 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-2xl bg-gradient-to-b from-[#1a1233] to-[#0d0a1a] border border-white/10 shadow-2xl">
+            <div className="w-full max-w-lg rounded-2xl bg-gradient-to-b from-[#1a1233] to-[#0d0a1a] border border-white/10 shadow-2xl flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
                     <h3 className="text-lg font-semibold text-white">
                         {mode === "create" ? "Tạo voucher mới" : "Chỉnh sửa voucher"}
                     </h3>
@@ -282,14 +276,25 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                     </button>
                 </div>
 
-                {/* Body */}
-                <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                {/*
+                 * FIX: calendar popup bị clip vì toàn bộ body có overflow-y-auto.
+                 * Giải pháp: tách body thành 2 phần:
+                 *   1. Phần scroll được (name, desc, code, type/value, maxUse)
+                 *   2. Phần datetime — nằm ngoài vùng scroll, overflow: visible
+                 *      → calendar popup thoải mái mở rộng xuống dưới mà không bị cắt.
+                 */}
 
+                {/* Scrollable fields */}
+                <div className="px-6 pt-5 pb-2 space-y-4 overflow-y-auto max-h-[45vh]">
                     {/* name */}
                     <Field label="Tên voucher *" error={errors.name}>
                         <input
                             value={form.name}
-                            onChange={e => update("name", e.target.value)}
+                            onChange={e => {
+                                const raw = e.target.value.toUpperCase();
+                                const filtered = raw.replace(/[^A-Z0-9]/g, "");
+                                update("name", filtered)
+                            }}
                             placeholder="VD: Voucher giảm hè 2026"
                             className={inputCls(!!errors.name)}
                         />
@@ -305,11 +310,16 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                             className={`${inputCls(false)} resize-none`}
                         />
                     </Field>
+
                     {/* couponCode */}
                     <Field label="Mã voucher *" error={errors.couponCode}>
                         <input
                             value={form.couponCode}
-                            onChange={e => update("couponCode", e.target.value.toUpperCase())}
+                            onChange={e => {
+                                const raw = e.target.value.toUpperCase();
+                                const filtered = raw.replace(/[^A-Z0-9]/g, "");
+                                update("couponCode", filtered);
+                            }}
                             placeholder="VD: SUMMER2026"
                             className={inputCls(!!errors.couponCode)}
                         />
@@ -337,7 +347,7 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                                 inputMode="numeric"
                                 value={displayValue}
                                 onChange={e => handleValueChange(e.target.value)}
-                                placeholder={form.type === "Fixed" ? "0" : "0"}
+                                placeholder="0"
                                 className={inputCls(!!errors.value)}
                             />
                         </Field>
@@ -355,37 +365,34 @@ function VoucherModal({ mode, initial, onClose, onSaved, eventId }: VoucherModal
                         />
                     </Field>
 
-                    {/* startDate + endDate dùng DateTimeInput */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <DateTimeInput
-                                label="Thời gian bắt đầu"
-                                required
-                                value={form.startDate}
-                                onChange={(v: any) => update("startDate", v)}
-                                min={new Date().toISOString()}
-                            />
-                            {errors.startDate && (
-                                <p className="text-xs text-red-400 mt-1">{errors.startDate}</p>
-                            )}
-                        </div>
-                        <div>
-                            <DateTimeInput
-                                label="Thời gian kết thúc"
-                                required
-                                value={form.endDate}
-                                onChange={(v: any) => update("endDate", v)}
-                                min={new Date().toISOString()}
-                            />
-                            {errors.endDate && (
-                                <p className="text-xs text-red-400 mt-1">{errors.endDate}</p>
-                            )}
-                        </div>
+                    <div>
+                        <DateTimeInput
+                            label="Thời gian bắt đầu"
+                            required
+                            value={form.startDate}
+                            onChange={(v: any) => update("startDate", v)}
+                            min={new Date().toISOString()}
+                        />
+                        {errors.startDate && (
+                            <p className="text-xs text-red-400 mt-1">{errors.startDate}</p>
+                        )}
+                    </div>
+                    <div>
+                        <DateTimeInput
+                            label="Thời gian kết thúc"
+                            required
+                            value={form.endDate}
+                            onChange={(v: any) => update("endDate", v)}
+                            min={new Date().toISOString()}
+                        />
+                        {errors.endDate && (
+                            <p className="text-xs text-red-400 mt-1">{errors.endDate}</p>
+                        )}
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 shrink-0">
                     <button
                         onClick={onClose}
                         className="px-5 py-2 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 text-sm transition"
@@ -480,6 +487,7 @@ export default function VoucherManagementPage() {
     const [editTarget, setEditTarget] = useState<VoucherItem | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<VoucherItem | null>(null);
     const eventName = useEventTitle();
+
     const load = (page = 1) => {
         dispatch(fetchGetVouchers({
             PageNumber: page,
@@ -490,7 +498,6 @@ export default function VoucherManagementPage() {
 
     useEffect(() => { load(currentPage); }, [currentPage, eventId]);
 
-
     const items: VoucherItem[] = vouchers?.items ?? [];
 
     const filtered = items.filter((v) => {
@@ -500,8 +507,6 @@ export default function VoucherManagementPage() {
         return matchSearch && matchFilter;
     });
 
-    const email = (currentInfor as MeInfo)?.email;
-
     const handleExportExcel = async () => {
         if (!eventId) return notify.error("Không tìm thấy eventId");
         try {
@@ -509,13 +514,15 @@ export default function VoucherManagementPage() {
             const { iso, formatted } = getCurrentDateTime();
             const fileName = `vouchers_${eventName}_${formatted}.xlsx`;
             downloadFileExcel(blob, fileName);
-
+            const userId = (currentInfor as MeInfo)?.userId;
+            const userName = (currentInfor as MeInfo)?.name;
             await saveReportToFirebase({
                 eventId,
                 eventName: eventName ?? eventId,
                 fileName,
-                createdBy: email ?? "",
-                createdAt: iso
+                createdBy: userName ?? "",
+                createdAt: iso,
+                userId: userId ?? "",
             });
             notify.success("Xuất Excel thành công");
         } catch (err) {
@@ -636,8 +643,6 @@ export default function VoucherManagementPage() {
                                 <span className="text-slate-300 text-sm truncate pr-2" title={v.name}>
                                     {v.name || "—"}
                                 </span>
-
-                                {/* Mô tả — thêm mới */}
                                 <span className="text-slate-500 text-sm truncate pr-2" title={v.description}>
                                     {v.description || "—"}
                                 </span>

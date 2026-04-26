@@ -123,10 +123,16 @@ export default function EventCard({ event, isMember = false }: EventCardProps) {
 
                 <div className="flex-1 space-y-3 min-w-0">
                     {/* Title + badges */}
-                    <div className="flex justify-between items-start gap-3">
-                        <h3 className="text-xl font-bold dark:text-white group-hover:text-primary transition-colors truncate">
-                            {event.title}
-                        </h3>
+                    <div className="flex justify-between items-start gap-3 overflow-hidden">
+                        <div className="group relative flex flex-col justify-center">
+                            <h3 className="text-xl font-bold dark:text-white group-hover:text-primary transition-colors truncate flex-1 min-w-0 max-w-[465px]">
+                                {event.title}
+                            </h3>
+
+                            <div className="absolute left-0 top-full mt-2 hidden group-hover:block bg-black text-white text-sm px-2 py-1 rounded whitespace-nowrap z-50">
+                                {event.title}
+                            </div>
+                        </div>
 
                         <div className="flex items-center gap-2 flex-shrink-0">
                             {isMember && (

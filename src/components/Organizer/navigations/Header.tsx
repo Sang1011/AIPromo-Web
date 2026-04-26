@@ -39,7 +39,7 @@ export default function Header({
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [cancelReason, setCancelReason] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+    const [cancelRequested, setCancelRequested] = useState(false);
     const MAX_REASON = 500;
 
     // Resolve role từ currentInfor
@@ -132,6 +132,7 @@ export default function Header({
 
         if (fetchRequestCancelEvent.fulfilled.match(result)) {
             notify.success("Yêu cầu huỷ sự kiện thành công");
+            setCancelRequested(true);
             setShowCancelModal(false);
             setCancelReason("");
         } else {
@@ -173,13 +174,13 @@ export default function Header({
                         <div className="group relative flex flex-col justify-center">
                             <h1 className="text-2xl font-bold text-white max-w-[600px] truncate">
                                 {haveTitle && isEventHeader
-                                    ? "Sự kiện " + (currentEvent?.title ?? "Đang tải...")
+                                    ? (currentEvent?.title ?? "Đang tải...")
                                     : title}
                             </h1>
 
                             <div className="absolute left-0 top-full mt-2 hidden group-hover:block bg-black text-white text-sm px-2 py-1 rounded whitespace-nowrap z-50">
                                 {haveTitle && isEventHeader
-                                    ? "Sự kiện " + (currentEvent?.title ?? "")
+                                    ? (currentEvent?.title ?? "")
                                     : title}
                             </div>
                         </div>
@@ -191,7 +192,19 @@ export default function Header({
                         {isOrganizer &&
                             isEventHeader &&
                             currentEvent &&
-                            (currentEvent.status === "Published" || currentEvent.status === "Suspended") && (
+                            !cancelRequested &&
+                            (() => {
+                                const now = new Date();
+                                const hasNotStarted = currentEvent.eventStartAt
+                                    ? new Date(currentEvent.eventStartAt) > now
+                                    : true;
+
+                                const canCancel =
+                                    (currentEvent.status === "Published" && hasNotStarted) ||
+                                    currentEvent.status === "Suspended";
+
+                                return canCancel;
+                            })() && (
                                 <button
                                     onClick={() => setShowCancelModal(true)}
                                     className="px-5 py-2.5 rounded-full font-semibold border border-red-400/30 text-red-400 hover:bg-red-500/10 transition text-sm"
