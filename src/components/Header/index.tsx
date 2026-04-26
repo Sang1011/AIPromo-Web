@@ -18,7 +18,7 @@ const Header: React.FC = () => {
   const { currentInfor } = useSelector((state: RootState) => state.AUTH);
   const events = useSelector((state: RootState) => state.EVENT.events);
   const user = currentInfor as UserInfo;
-  console.log("user", user);
+
 
   const isLoggedIn = Boolean(user?.userId);
 

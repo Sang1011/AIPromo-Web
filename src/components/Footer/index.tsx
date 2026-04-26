@@ -6,24 +6,22 @@ const Footer: React.FC = () => {
     product: {
       title: "Sản phẩm",
       links: [
-        { name: "Bán vé online", href: "#" },
-        { name: "Quản lý sự kiện", href: "#" },
-        { name: "Dịch vụ AI", href: "#" },
+        { name: "Bán vé online", href: "/all-event" },
       ]
     },
     company: {
       title: "Công ty",
       links: [
-        { name: "Về chúng tôi", href: "#" },
+        { name: "Về chúng tôi", href: "https://www.facebook.com/profile.php?id=61573284472767&locale=vi_VN" },
         { name: "Tuyển dụng", href: "#" },
-        { name: "Blog", href: "#" },
+        { name: "Blog", href: "https://www.facebook.com/profile.php?id=61573284472767&locale=vi_VN" },
       ]
     },
     support: {
       title: "Hỗ trợ",
       links: [
-        { name: "Trung tâm trợ giúp", href: "#" },
-        { name: "Chính sách bảo mật", href: "/privacy" },
+        { name: "Trung tâm trợ giúp", href: "https://www.facebook.com/profile.php?id=61573284472767&locale=vi_VN" },
+        { name: "Chính sách bảo mật", href: "https://www.facebook.com/profile.php?id=61573284472767&locale=vi_VN" },
       ]
     }
   };
