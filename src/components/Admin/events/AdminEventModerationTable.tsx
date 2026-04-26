@@ -19,7 +19,12 @@ import type { AppDispatch, RootState } from "../../../store";
 import {
     fetchEventById,
 } from "../../../store/eventSlice";
+import {
+    fetchEventRevenueDetail,
+    clearRevenueDetail,
+} from "../../../store/adminEventReportSlice";
 import { fetchEventSpec, clearEventSpec } from "../../../store/staffEventSlice";
+import EventRevenueModal from "./AdminRevenueModal";
 import toast from "react-hot-toast";
 import SeatMapReadOnly from "../../Organizer/seatmap/SeatMapReadOnly";
 import type { SeatMapData } from "../../../types/config/seatmap";
@@ -115,7 +120,12 @@ export default function AdminEventModerationTable() {
     const eventSpecLoading = useSelector((state: RootState) => state.STAFF_EVENT.loading);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-    // view-only modal: no action inputs
+    const [showRevenueModal, setShowRevenueModal] = useState(false);
+    const [selectedRevenueEventId, setSelectedRevenueEventId] = useState<string | null>(null);
+    const revenueDetail = useSelector((state: RootState) => state.ADMIN_EVENT_REPORT.revenueDetail);
+    const revenueCurrentEventId = useSelector((state: RootState) => state.ADMIN_EVENT_REPORT.currentEventId);
+    const revenueLoading = useSelector((state: RootState) => state.ADMIN_EVENT_REPORT.loading);
+    const revenueError = useSelector((state: RootState) => state.ADMIN_EVENT_REPORT.error);
 
     const handleFilterChange = (key: string, value: string) => {
         setLocalFilters((prev) => ({ ...prev, [key]: value }));
@@ -151,6 +161,17 @@ export default function AdminEventModerationTable() {
             } catch (err: any) {
                 toast.error(err?.response?.data?.message ?? err?.message ?? "Không thể tải chi tiết sự kiện");
             }
+    };
+
+    const openRevenueModal = async (eventId: string) => {
+        setSelectedRevenueEventId(eventId);
+        setShowRevenueModal(true);
+        dispatch(clearRevenueDetail());
+        try {
+            await dispatch(fetchEventRevenueDetail(eventId)).unwrap();
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message ?? err?.message ?? "Không thể tải doanh thu");
+        }
     };
 
     // view-only: no action handlers
@@ -311,6 +332,14 @@ export default function AdminEventModerationTable() {
                                                                             >
                                                                                 Xem chi tiết
                                                                             </button>
+                                                                            {evt.status === "Completed" && (
+                                                                                <button
+                                                                                    onClick={() => openRevenueModal(evt.id)}
+                                                                                    className="ml-3 px-3 py-1.5 rounded-lg bg-[#1f3a2e] text-emerald-400 text-xs font-bold border border-emerald-500/10 hover:bg-emerald-500/5 transition-all"
+                                                                                >
+                                                                                    Xem doanh thu
+                                                                                </button>
+                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -521,6 +550,24 @@ export default function AdminEventModerationTable() {
                 </div>,
                 document.body
             )}
+
+                {/* Revenue Modal */}
+                <EventRevenueModal
+                    isOpen={showRevenueModal}
+                    eventId={selectedRevenueEventId}
+                    currentEventId={revenueCurrentEventId}
+                    revenueDetail={revenueDetail}
+                    loading={revenueLoading}
+                    error={revenueError}
+                    eventTitle={
+                        currentPageEvents.find((e) => e.id === selectedRevenueEventId)?.title
+                    }
+                    onClose={() => {
+                        setShowRevenueModal(false);
+                        setSelectedRevenueEventId(null);
+                        dispatch(clearRevenueDetail());
+                    }}
+                />
 
             {/* Confirmation Modal - Approve */}
             {/* No action confirmations for view-only modal */}

@@ -29,6 +29,10 @@ export interface AdminReportsKpis {
     activeUsers: KpiWithTotal;
     events: EventsKpi;
     ticketsSold: KpiWithTotal;
+    revenueBreakdown?: {
+        ticketRevenue: number;
+        aiPackageRevenue: number;
+    };
 }
 
 export interface AdminReportsData {
