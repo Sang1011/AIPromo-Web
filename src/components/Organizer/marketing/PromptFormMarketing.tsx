@@ -493,8 +493,6 @@ function AIContentSection({
     );
 }
 
-// ─── ManualSection ────────────────────────────────────────────────────────────
-
 function ManualSection({
     isSaving,
     onSaveDraft,
@@ -509,12 +507,20 @@ function ManualSection({
 }) {
     const editorRef = useRef<{ getBlocks: () => ContentBlock[] } | null>(null);
     const [title, setTitle] = useState("");
-    const [pendingFile, setPendingFile] = useState<File | null>(null);
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
 
+    // Track image state locally — nhưng KHÔNG dùng làm key của BlockEditor
+    const [pendingFile, setPendingFile] = useState<File | null>(sharedImageFile);
+    const [imageUrl, setImageUrl] = useState<string | null>(sharedImageUrl);
+
+    // Sync từ parent khi shared image thay đổi (tab AI Image → chọn ảnh)
+    // Dùng ref để tránh reset state không cần thiết
+    const prevSharedUrl = useRef(sharedImageUrl);
     useEffect(() => {
-        setImageUrl(sharedImageUrl);
-        setPendingFile(sharedImageFile);
+        if (sharedImageUrl !== prevSharedUrl.current) {
+            prevSharedUrl.current = sharedImageUrl;
+            setImageUrl(sharedImageUrl);
+            setPendingFile(sharedImageFile);
+        }
     }, [sharedImageUrl, sharedImageFile]);
 
     const handleImageChange = (file: File | null, url: string | null) => {
@@ -523,21 +529,29 @@ function ManualSection({
     };
 
     const handleSave = () => {
-        const blocks = editorRef.current?.getBlocks() ?? [];
-        const textBlocks = blocks.filter(b => b.type !== "image");
+        // Lấy toàn bộ blocks từ editor (bao gồm image block nếu có)
+        const allBlocks = editorRef.current?.getBlocks() ?? [];
+        // Strip image blocks khi serialize — ảnh được lưu qua imageUrl riêng
+        const textBlocks = allBlocks.filter(b => b.type !== "image");
         onSaveDraft(textBlocks, title, pendingFile, imageUrl);
     };
 
+    // Initial blocks: inject image nếu có sharedImageUrl lúc mount
+    // Chỉ tính 1 lần khi mount — KHÔNG thay đổi sau đó (không dùng làm key)
+    const initialBlocksRef = useRef<ContentBlock[]>(
+        injectImageBlock([], sharedImageUrl)
+    );
+
     return (
         <div className="space-y-5">
-            {sharedImageUrl && !imageUrl?.startsWith("blob:") && (
+            {imageUrl && (
                 <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/20
                                 rounded-xl px-4 py-3 text-xs text-blue-400">
                     <MdOutlineImage className="text-blue-400 shrink-0" />
                     <div className="flex-1">
-                        <p className="font-semibold">Ảnh AI đã được gắn vào bài</p>
+                        <p className="font-semibold">Ảnh đang được gắn vào bài</p>
                         <p className="text-blue-400/60 mt-0.5">
-                            Ảnh hiển thị trong editor bên dưới. Kéo thả để đổi vị trí, hoặc xóa block Ảnh để bỏ.
+                            Kéo thả block Ảnh để đổi vị trí, xóa block Ảnh để bỏ ảnh.
                         </p>
                     </div>
                 </div>
@@ -567,10 +581,15 @@ function ManualSection({
                 />
             </div>
 
+            {/*
+             * KEY FIX: Không dùng imageUrl làm key → BlockEditor không bao giờ unmount.
+             * initialBlocks chỉ dùng lúc mount (tính 1 lần qua ref).
+             * Khi user thêm image block trong editor → onImageChange cập nhật state local.
+             * Khi shared image thay đổi từ tab khác → không remount, user tự thêm block ảnh.
+             */}
             <BlockEditor
-                key={imageUrl ?? "no-img"}
                 editorRef={editorRef}
-                initialBlocks={injectImageBlock([], imageUrl)}
+                initialBlocks={initialBlocksRef.current}
                 onImageChange={handleImageChange}
             />
 
