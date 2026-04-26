@@ -17,7 +17,7 @@ function formatVND(amount: number) {
 }
 
 function formatPercent(value: number) {
-    return `${(value * 100).toFixed(1)}%`;
+    return `${(value * 1).toFixed(1)}%`;
 }
 
 export default function EventRevenueModal({
@@ -138,11 +138,14 @@ export default function EventRevenueModal({
                                     />
                                 </div>
 
-                                {/* Ticket Types + Financial side-by-side */}
+                                {/* ── LEFT col-8: Ticket table + Discount | RIGHT col-4: Finance ── */}
                                 <div className="grid lg:grid-cols-12 gap-6">
-                                    {/* Ticket Types Table */}
-                                    {byTicketType.length > 0 && (
-                                        <div className="lg:col-span-8 space-y-4">
+
+                                    {/* LEFT: Ticket Types + Discount Codes */}
+                                    <div className="lg:col-span-8 space-y-6">
+
+                                        {/* Ticket Types Table — always shown */}
+                                        <div className="space-y-4">
                                             <SectionHeading icon="confirmation_number" title="Doanh thu theo loại vé" />
                                             <div className="bg-white/5 rounded-xl border border-white/5 overflow-hidden">
                                                 <table className="w-full text-left text-sm">
@@ -151,31 +154,24 @@ export default function EventRevenueModal({
                                                             <th className="px-5 py-4">Loại vé</th>
                                                             <th className="px-4 py-4 text-right">Giá niêm yết</th>
                                                             <th className="px-4 py-4 text-right">Đã bán / Phát hành</th>
-                                                            <th className="px-4 py-4 text-right">Đã hoàn</th>
                                                             <th className="px-4 py-4 text-right">Doanh thu</th>
                                                             <th className="px-5 py-4 text-right">Đóng góp</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-white/5 text-slate-300">
-                                                        {byTicketType.map((t, i) => (
+                                                        {byTicketType.length > 0 ? byTicketType.map((t, i) => (
                                                             <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                                                                <td className="px-5 py-4">
-                                                                    <p className="font-semibold text-white">{t.ticketTypeName}</p>
-                                                                    {t.discountedPrice < t.listedPrice && (
-                                                                        <p className="text-[10px] text-emerald-400 mt-0.5">
-                                                                            Sau giảm: {formatVND(t.discountedPrice)}
-                                                                        </p>
-                                                                    )}
+                                                                <td className="px-5 py-4 font-semibold text-white">
+                                                                    {t.ticketTypeName}
                                                                 </td>
-                                                                <td className="px-4 py-4 text-right">{formatVND(t.listedPrice)}</td>
+                                                                <td className="px-4 py-4 text-right">
+                                                                    {formatVND(t.listedPrice)}
+                                                                </td>
                                                                 <td className="px-4 py-4 text-right font-medium text-white">
                                                                     {t.soldQuantity.toLocaleString("vi-VN")}
                                                                     <span className="text-[10px] text-slate-500 ml-1">
                                                                         / {t.issuedQuantity.toLocaleString("vi-VN")}
                                                                     </span>
-                                                                </td>
-                                                                <td className="px-4 py-4 text-right text-red-400">
-                                                                    {t.cancelledOrRefundedQuantity.toLocaleString("vi-VN")}
                                                                 </td>
                                                                 <td className="px-4 py-4 text-right font-medium text-white">
                                                                     {formatVND(t.revenue)}
@@ -186,15 +182,62 @@ export default function EventRevenueModal({
                                                                     </span>
                                                                 </td>
                                                             </tr>
-                                                        ))}
+                                                        )) : (
+                                                            <tr>
+                                                                <td colSpan={5} className="px-5 py-8 text-center text-slate-500 text-sm italic">
+                                                                    Chưa có dữ liệu loại vé
+                                                                </td>
+                                                            </tr>
+                                                        )}
                                                     </tbody>
                                                 </table>
                                             </div>
                                         </div>
-                                    )}
 
-                                    {/* Financial Summary */}
-                                    <div className={`space-y-4 ${byTicketType.length > 0 ? "lg:col-span-4" : "lg:col-span-12"}`}>
+                                        {/* Discount Codes Table — always shown */}
+                                        <div className="space-y-4">
+                                            <SectionHeading icon="sell" title="Hiệu quả mã giảm giá" />
+                                            <div className="bg-white/5 rounded-xl border border-white/5 overflow-hidden">
+                                                <table className="w-full text-left text-sm">
+                                                    <thead className="bg-white/5 text-[10px] text-slate-500 uppercase font-bold">
+                                                        <tr>
+                                                            <th className="px-5 py-4">Mã khuyến mãi</th>
+                                                            <th className="px-4 py-4 text-center">Số lượt dùng</th>
+                                                            <th className="px-5 py-4 text-right">Tổng tiền đã giảm</th>
+                                                            <th className="px-5 py-4 text-right">Doanh thu sau giảm</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-white/5 text-slate-300">
+                                                        {discountCodes.length > 0 ? discountCodes.map((d, i) => (
+                                                            <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                                                                <td className="px-5 py-4 font-mono text-[#d2bbff] font-bold tracking-wider">
+                                                                    {d.code}
+                                                                </td>
+                                                                <td className="px-4 py-4 text-center font-bold text-white">
+                                                                    {d.usageCount.toLocaleString("vi-VN")}
+                                                                </td>
+                                                                <td className="px-5 py-4 text-right text-red-400 font-medium">
+                                                                    -{formatVND(d.totalDiscountAmount)}
+                                                                </td>
+                                                                <td className="px-5 py-4 text-right text-white font-bold">
+                                                                    {formatVND(d.netRevenueAfterDiscount)}
+                                                                </td>
+                                                            </tr>
+                                                        )) : (
+                                                            <tr>
+                                                                <td colSpan={4} className="px-5 py-8 text-center text-slate-500 text-sm italic">
+                                                                    Chưa có dữ liệu mã giảm giá
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* RIGHT: Financial cards */}
+                                    <div className="lg:col-span-4 space-y-4">
                                         <SectionHeading icon="account_balance" title="Tài chính" />
                                         <div className="grid grid-cols-1 gap-4">
                                             <FinanceCard
@@ -230,43 +273,6 @@ export default function EventRevenueModal({
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Discount Codes Table */}
-                                {discountCodes.length > 0 && (
-                                    <div className="space-y-4">
-                                        <SectionHeading icon="sell" title="Hiệu quả mã giảm giá" />
-                                        <div className="bg-white/5 rounded-xl border border-white/5 overflow-hidden">
-                                            <table className="w-full text-left text-sm">
-                                                <thead className="bg-white/5 text-[10px] text-slate-500 uppercase font-bold">
-                                                    <tr>
-                                                        <th className="px-5 py-4">Mã khuyến mãi</th>
-                                                        <th className="px-4 py-4 text-center">Số lượt dùng</th>
-                                                        <th className="px-5 py-4 text-right">Tổng tiền đã giảm</th>
-                                                        <th className="px-5 py-4 text-right">Doanh thu sau giảm</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-white/5 text-slate-300">
-                                                    {discountCodes.map((d, i) => (
-                                                        <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                                                            <td className="px-5 py-4 font-mono text-[#d2bbff] font-bold tracking-wider">
-                                                                {d.code}
-                                                            </td>
-                                                            <td className="px-4 py-4 text-center font-bold text-white">
-                                                                {d.usageCount.toLocaleString("vi-VN")}
-                                                            </td>
-                                                            <td className="px-5 py-4 text-right text-red-400 font-medium">
-                                                                -{formatVND(d.totalDiscountAmount)}
-                                                            </td>
-                                                            <td className="px-5 py-4 text-right text-white font-bold">
-                                                                {formatVND(d.netRevenueAfterDiscount)}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                )}
                             </>
                         );
                     })()}
