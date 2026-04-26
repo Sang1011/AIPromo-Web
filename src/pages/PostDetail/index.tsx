@@ -14,7 +14,6 @@ import type { AdminPostItem } from "../../types/post/post";
 import PostBlockRenderer from "../../components/Organizer/post/PostBlockRenderer";
 import { parseBodyToBlocks } from "../../utils/renderPostContent";
 import { injectImageBlock } from "../../utils/injectImageBlock";
-import { injectButtonBlock } from "../../utils/injectButtonBlock";
 import type { ContentBlock } from "../../types/post/post";
 import { GrFormPreviousLink } from "react-icons/gr";
 
@@ -100,7 +99,7 @@ export default function PostDetail() {
       parseBodyToBlocks(postDetail.body),
       postDetail.imageUrl ?? null,
     );
-    return injectButtonBlock(withImage, eventHref);
+    return withImage;
   }, [postDetail, eventHref]);
 
   const blocksWithoutTitle = blocks[0]?.type === "heading"

@@ -498,12 +498,14 @@ function ManualSection({
     onSaveDraft,
     sharedImageUrl,
     sharedImageFile,
+    sharedEventUrlPath
 }: {
     loading: any;
     isSaving: boolean;
     sharedImageUrl: string | null;
     sharedImageFile: File | null;
     onSaveDraft: (blocks: ContentBlock[], title: string, imageFile: File | null, imageUrl: string | null) => void;
+    sharedEventUrlPath?: string;
 }) {
     const editorRef = useRef<{ getBlocks: () => ContentBlock[] } | null>(null);
     const [title, setTitle] = useState("");
@@ -591,6 +593,7 @@ function ManualSection({
                 editorRef={editorRef}
                 initialBlocks={initialBlocksRef.current}
                 onImageChange={handleImageChange}
+                eventUrlPath={sharedEventUrlPath}
             />
 
             <button
@@ -624,6 +627,7 @@ export default function PromptFormMarketing() {
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
     const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
     const [isSavingWithImage, setIsSavingWithImage] = useState(false);
+    const eventUrlPath = (currentEvent as any)?.urlPath;
 
     useEffect(() => {
         if (eventId) dispatch(fetchEventById(eventId));
@@ -862,6 +866,7 @@ export default function PromptFormMarketing() {
                             sharedImageUrl={selectedImageUrl}
                             sharedImageFile={pendingImageFile}
                             onSaveDraft={handleSaveDraftFromManual}
+                            sharedEventUrlPath={eventUrlPath}
                         />
                     )}
                 </div>

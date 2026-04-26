@@ -200,6 +200,8 @@ export default function PostPreviewPage() {
 
     // ── Image position từ Firebase ────────────────────────────────────────────
     const [imageInsertAt, setImageInsertAt] = useState<number | undefined>(undefined);
+    const currentEvent = useSelector((s: RootState) => s.EVENT.currentEvent);
+    const eventUrlPath = (currentEvent as any)?.urlPath ?? "";
 
     useEffect(() => {
         if (!postId) return;
@@ -664,6 +666,7 @@ export default function PostPreviewPage() {
                                                     postId={postId}
                                                     onChange={handleManualBlocksChange}
                                                     onImageChange={handleManualImageChange}
+                                                    eventUrlPath={eventUrlPath}
                                                 />
                                             )}
                                         </div>

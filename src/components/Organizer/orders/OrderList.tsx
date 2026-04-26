@@ -278,7 +278,7 @@ export default function OrderList({ eventId }: OrderListProps) {
                         label="Doanh thu (hoàn thành)"
                         value={fmtMoneyVND(summary.totalRevenue)}
                         accent="border-emerald-500/10"
-                        sub={`Trung bình tranh này: ${fmtMoneyVND(summary.avgOrderValue)}/đơn`}
+                        sub={`Trung bình trang này: ${fmtMoneyVND(summary.avgOrderValue)}/đơn`}
                         badge={
                             summary.completionRate > 0
                                 ? { text: `${summary.completionRate}% hoàn thành`, cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" }
