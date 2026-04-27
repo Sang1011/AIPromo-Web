@@ -4,10 +4,11 @@ import type { GetPostsParams } from "../types/post/post";
 import {
     fetchAllDistributionMetrics,
     fetchAllDistributionMetricsInstagram,
+    fetchAllDistributionMetricsThreads,
     fetchOrganizerPosts,
 } from "../store/postSlice";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { PostWithMetrics, PostWithIGMetrics } from "../pages/Organizer/AnalyticsPage";
+import type { PostWithMetrics, PostWithIGMetrics, PostWithThreadsMetrics } from "../pages/Organizer/AnalyticsPage";
 
 export function useAnalyticsData(params: GetPostsParams) {
     const dispatch = useDispatch<AppDispatch>();
@@ -16,6 +17,7 @@ export function useAnalyticsData(params: GetPostsParams) {
         loading,
         distributionMetricsMap,
         distributionMetricsInstagramMap,
+        distributionMetricsThreadsMap,
     } = useSelector((s: RootState) => s.POST);
 
     const [metricsDispatched, setMetricsDispatched] = useState(false);
@@ -32,14 +34,12 @@ export function useAnalyticsData(params: GetPostsParams) {
     useEffect(() => {
         if (loading.fetchList) return;
 
-        // Facebook: lấy distribution Sent mới nhất của mỗi post
         const fbTargets = posts.flatMap(post =>
             (post.distributions ?? [])
                 .filter(d => d.platform === "Facebook" && d.status === "Sent")
                 .map(d => ({ postId: post.id, distributionId: d.id }))
         );
 
-        // Instagram: lấy distribution Sent mới nhất theo sentAt (nhất quán với InstagramMetricsSection)
         const igTargets = posts.flatMap(post => {
             const latest = (post.distributions ?? [])
                 .filter(d => d.platform === "Instagram" && d.status === "Sent")
@@ -51,21 +51,30 @@ export function useAnalyticsData(params: GetPostsParams) {
             return latest ? [{ postId: post.id, distributionId: latest.id }] : [];
         });
 
+        const thTargets = posts.flatMap(post => {
+            const latest = (post.distributions ?? [])
+                .filter(d => d.platform === "Threads" && d.status === "Sent")
+                .sort((a, b) => {
+                    const ta = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+                    const tb = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+                    return tb - ta;
+                })[0];
+            return latest ? [{ postId: post.id, distributionId: latest.id }] : [];
+        });
+
         if (fbTargets.length) dispatch(fetchAllDistributionMetrics(fbTargets));
         if (igTargets.length) dispatch(fetchAllDistributionMetricsInstagram(igTargets));
+        if (thTargets.length) dispatch(fetchAllDistributionMetricsThreads(thTargets));
 
         setMetricsDispatched(true);
     }, [posts, loading.fetchList, dispatch]);
 
-    // Posts có Facebook metrics
     const postsWithMetrics = useMemo((): PostWithMetrics[] => {
         return posts
             .map(post => {
                 const fbDist = (post.distributions ?? [])
                     .filter(d => d.platform === "Facebook" && d.status === "Sent")
-                    .sort((a, b) =>
-                        new Date(b.sentAt!).getTime() - new Date(a.sentAt!).getTime()
-                    )[0];
+                    .sort((a, b) => new Date(b.sentAt!).getTime() - new Date(a.sentAt!).getTime())[0];
                 if (!fbDist) return null;
                 const metrics = distributionMetricsMap[fbDist.id];
                 if (!metrics) return null;
@@ -73,12 +82,10 @@ export function useAnalyticsData(params: GetPostsParams) {
             })
             .filter((x): x is PostWithMetrics => x !== null)
             .sort((a, b) =>
-                new Date(a.post.publishedAt ?? 0).getTime() -
-                new Date(b.post.publishedAt ?? 0).getTime()
+                new Date(a.post.publishedAt ?? 0).getTime() - new Date(b.post.publishedAt ?? 0).getTime()
             );
     }, [posts, distributionMetricsMap]);
 
-    // Posts có Instagram metrics
     const postsWithIGMetrics = useMemo((): PostWithIGMetrics[] => {
         return posts
             .map(post => {
@@ -96,16 +103,37 @@ export function useAnalyticsData(params: GetPostsParams) {
             })
             .filter((x): x is PostWithIGMetrics => x !== null)
             .sort((a, b) =>
-                new Date(a.post.publishedAt ?? 0).getTime() -
-                new Date(b.post.publishedAt ?? 0).getTime()
+                new Date(a.post.publishedAt ?? 0).getTime() - new Date(b.post.publishedAt ?? 0).getTime()
             );
     }, [posts, distributionMetricsInstagramMap]);
+
+    const postsWithThreadsMetrics = useMemo((): PostWithThreadsMetrics[] => {
+        return posts
+            .map(post => {
+                const thDist = (post.distributions ?? [])
+                    .filter(d => d.platform === "Threads" && d.status === "Sent")
+                    .sort((a, b) => {
+                        const ta = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+                        const tb = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+                        return tb - ta;
+                    })[0];
+                if (!thDist) return null;
+                const metrics = distributionMetricsThreadsMap[thDist.id];
+                if (!metrics) return null;
+                return { post, metrics, distributionId: thDist.id };
+            })
+            .filter((x): x is PostWithThreadsMetrics => x !== null)
+            .sort((a, b) =>
+                new Date(a.post.publishedAt ?? 0).getTime() - new Date(b.post.publishedAt ?? 0).getTime()
+            );
+    }, [posts, distributionMetricsThreadsMap]);
 
     const isLoading =
         loading.fetchList ||
         !metricsDispatched ||
         loading.fetchAllDistributionMetrics ||
-        loading.fetchAllDistributionMetricsInstagram;
+        loading.fetchAllDistributionMetricsInstagram ||
+        loading.fetchAllDistributionMetricsThreads;
 
-    return { postsWithMetrics, postsWithIGMetrics, isLoading, refresh };
+    return { postsWithMetrics, postsWithIGMetrics, postsWithThreadsMetrics, isLoading, refresh };
 }

@@ -1,6 +1,6 @@
 import type { AxiosResponse } from "axios";
 import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams, GetDistributionMetricsFacebookResponse, UploadImageResponse, GetTotalMetricsResponse, PeriodOptionMetrics, GetDistributionMetricsInstagramResponse } from "../types/post/post";
+import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams, GetDistributionMetricsFacebookResponse, UploadImageResponse, GetTotalMetricsResponse, PeriodOptionMetrics, GetDistributionMetricsInstagramResponse, GetDistributionMetricsThreadsResponse } from "../types/post/post";
 import type { ApiResponse, ApiResponseNoData } from "../types/api";
 
 const postService = {
@@ -94,6 +94,11 @@ const postService = {
     },
     getDistributionMetricsInstagram: (postId: string, distributionId: string): Promise<AxiosResponse<GetDistributionMetricsInstagramResponse>> => {
         return interceptorAPI().get(`/posts/${postId}/distributions/${distributionId}/instagram-metrics`);
+    },
+    getDistributionMetricsThreads: (postId: string, distributionId: string) => {
+        return interceptorAPI().get<GetDistributionMetricsThreadsResponse>(
+            `/posts/${postId}/distributions/${distributionId}/metrics/threads`
+        )
     },
 }
 

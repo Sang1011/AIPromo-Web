@@ -15,6 +15,7 @@ export type RefundAmountReportItem = number;
 export interface RefundRateReportItem {
     eventId: string;
     grossRevenue: number;
+    netRevenue: number;
     totalRefunds: number;
     refundRatePercent: number;
 }

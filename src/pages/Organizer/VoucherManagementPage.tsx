@@ -619,72 +619,73 @@ export default function VoucherManagementPage() {
                     <div className="text-center">Thao tác</div>
                 </div>
 
-                <div className="divide-y divide-white/5">
-                    {loading && (
-                        <div className="flex items-center justify-center gap-2 py-12 text-slate-500 text-sm">
-                            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                            Đang tải...
-                        </div>
-                    )}
-
-                    {!loading && filtered.length === 0 && (
-                        <div className="py-12 text-center text-slate-500 text-sm">
-                            Không tìm thấy voucher nào
-                        </div>
-                    )}
-
-                    {!loading && filtered.map((v) => {
-                        const status = deriveStatus(v);
-                        return (
-                            <div
-                                key={v.id}
-                                className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1.2fr_100px] px-6 py-4 items-center hover:bg-white/5 transition"
-                            >
-                                <span className="text-slate-300 text-sm truncate pr-2" title={v.name}>
-                                    {v.name || "—"}
-                                </span>
-                                <span className="text-slate-500 text-sm truncate pr-2" title={v.description}>
-                                    {v.description || "—"}
-                                </span>
-                                <div>
-                                    <p className="text-primary font-semibold text-sm">{v.couponCode}</p>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        {formatDate(v.startDate)} – {formatDate(v.endDate)}
-                                    </p>
-                                </div>
-                                <span className="text-slate-400 text-sm">
-                                    {v.type === "Percentage" ? "Phần trăm" : "Cố định"}
-                                </span>
-                                <span className="text-white font-semibold text-sm">
-                                    {v.type === "Percentage" ? `${v.value}%` : `${v.value.toLocaleString("vi-VN")}đ`}
-                                </span>
-                                <span className="text-slate-300 text-sm">
-                                    {v.maxUse === 0 ? "∞" : v.maxUse}
-                                </span>
-                                <span className="text-slate-300 text-sm">{v.totalUse}</span>
-                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium w-fit ${STATUS_STYLE[status]}`}>
-                                    {STATUS_LABEL[status]}
-                                </span>
-                                <div className="flex items-center justify-center gap-2">
-                                    <button
-                                        onClick={() => setEditTarget(v)}
-                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition"
-                                        title="Chỉnh sửa"
-                                    >
-                                        <FiEdit2 size={13} />
-                                    </button>
-                                    <button
-                                        onClick={() => setDeleteTarget(v)}
-                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition"
-                                        title="Xóa"
-                                    >
-                                        <FiTrash2 size={13} />
-                                    </button>
-                                </div>
+                {!loading && filtered.map((v) => {
+                    const status = deriveStatus(v);
+                    return (
+                        <div
+                            key={v.id}
+                            className="grid grid-cols-[1.5fr_1.2fr_1.5fr_1fr_1fr_1fr_1fr_1.2fr_100px] px-6 py-4 items-center hover:bg-white/5 transition"
+                        >
+                            {/* Col 1: Mã voucher */}
+                            <div>
+                                <p className="text-primary font-semibold text-sm">{v.couponCode}</p>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    {formatDate(v.startDate)} – {formatDate(v.endDate)}
+                                </p>
                             </div>
-                        );
-                    })}
-                </div>
+                            {/* Col 2: Tên */}
+                            <div className="relative group truncate pr-2">
+                                <span className="text-slate-300 text-sm truncate block">
+                                    {v.name.length > 15 ? v.name.slice(0, 15) + "..." : v.name || "—"}
+                                </span>
+                                {v.name.length > 15 && (
+                                    <div className="absolute left-0 top-full mt-1 z-50 hidden group-hover:block bg-[#1a1233] border border-white/10 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
+                                        {v.name}
+                                    </div>
+                                )}
+                            </div>
+                            {/* Col 3: Mô tả */}
+                            <span className="text-slate-500 text-sm truncate pr-2" title={v.description}>
+                                {v.description || "—"}
+                            </span>
+                            {/* Col 4: Loại */}
+                            <span className="text-slate-400 text-sm">
+                                {v.type === "Percentage" ? "Phần trăm" : "Cố định"}
+                            </span>
+                            {/* Col 5: Giảm giá */}
+                            <span className="text-white font-semibold text-sm">
+                                {v.type === "Percentage" ? `${v.value}%` : `${v.value.toLocaleString("vi-VN")}đ`}
+                            </span>
+                            {/* Col 6: Số lượng */}
+                            <span className="text-slate-300 text-sm">
+                                {v.maxUse === 0 ? "∞" : v.maxUse}
+                            </span>
+                            {/* Col 7: Đã dùng */}
+                            <span className="text-slate-300 text-sm">{v.totalUse}</span>
+                            {/* Col 8: Trạng thái */}
+                            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium w-fit ${STATUS_STYLE[status]}`}>
+                                {STATUS_LABEL[status]}
+                            </span>
+                            {/* Col 9: Thao tác */}
+                            <div className="flex items-center justify-center gap-2">
+                                <button
+                                    onClick={() => setEditTarget(v)}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition"
+                                    title="Chỉnh sửa"
+                                >
+                                    <FiEdit2 size={13} />
+                                </button>
+                                <button
+                                    onClick={() => setDeleteTarget(v)}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition"
+                                    title="Xóa"
+                                >
+                                    <FiTrash2 size={13} />
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
                 <Pagination
                     currentPage={vouchers?.pageNumber ?? 1}
                     totalPages={vouchers?.totalPages ?? 1}

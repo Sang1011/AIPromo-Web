@@ -98,6 +98,7 @@ const mockSalesTrendWeek: SalesTrendData = {
 const mockRefundRate: RefundRateReportItem = {
     eventId: "mock-event-id",
     grossRevenue: 167_000_000,
+    netRevenue: 158_000_000,
     totalRefunds: 8_500_000,
     refundRatePercent: 5.09,
 };
@@ -117,6 +118,7 @@ const mockTransactionSummary: TransactionSummaryReportItem = {
 const emptyRefundRate = (eventId: string): RefundRateReportItem => ({
     eventId,
     grossRevenue: 0,
+    netRevenue: 0,
     totalRefunds: 0,
     refundRatePercent: 0,
 });

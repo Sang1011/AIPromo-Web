@@ -18,11 +18,11 @@ const reportService = {
     getTransactionSummaryReport: (eventId: string): Promise<AxiosResponse<TransactionSummaryReportResponse>> => {
         return interceptorAPI().post(`/reports/revenue/transaction-summary`, { eventId });
     },
-    getRevenueSummaryOrganizerReport: (organizerId: string): Promise<AxiosResponse<RevenueSummaryOrganizerReportResponse>> => {
-        return interceptorAPI().get(`/reports/revenue/organizer/${organizerId}/summary`);
+    getRevenueSummaryOrganizerReport: (): Promise<AxiosResponse<RevenueSummaryOrganizerReportResponse>> => {
+        return interceptorAPI().get(`/ticketing/report/organizers/revenue/summary`);
     },
-    getRevenueBreakdownOrganizerReport: (organizerId: string, byNet: boolean): Promise<AxiosResponse<RevenueBreakdownOrganizerReportResponse>> => {
-        return interceptorAPI().get(`/reports/revenue/organizer/${organizerId}/events?byNet=${byNet}`);
+    getRevenueBreakdownOrganizerReport: (byNet: boolean): Promise<AxiosResponse<RevenueBreakdownOrganizerReportResponse>> => {
+        return interceptorAPI().get(`/ticketing/report/organizers/revenue/events?byNet=${byNet}`);
     },
     getGrossRevenueByEventReport: (): Promise<AxiosResponse<GrossRevenueByEventResponse>> => {
         return interceptorAPI().post(`/reports/revenue/events`, {});

@@ -149,6 +149,22 @@ export interface DistributionMetricsInstagram {
     fetchedAt: Date;
 }
 
+export interface DistributionMetricsThreads {
+    externalPostId: string;
+    externalUrl: string;
+    views: number;
+    likes: number;
+    replies: number;
+    reposts: number;
+    quotes: number;
+    shares: number;
+    engagementRate: number;
+    engagementRateFormatted: string;
+    fetchedAt: string;
+}
+
+export type GetDistributionMetricsThreadsResponse = ApiResponse<DistributionMetricsThreads>;
+
 export type GetDistributionMetricsInstagramResponse = ApiResponse<DistributionMetricsInstagram>
 export type GetDistributionMetricsFacebookResponse = ApiResponse<DistributionMetricsFacebook>
 export type GenerateImageResponse = ApiResponse<{ imageUrl: string }>

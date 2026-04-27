@@ -1,4 +1,4 @@
-import type { ApiResponse } from "../api";
+import type { ApiResponse, PaginatedResponse } from "../api";
 
 export interface CreatePendingOrderRequest {
     eventId: string,
@@ -18,22 +18,22 @@ export interface OrderItemOrganizer {
     buyerEmail: string;
     totalPrice: number;
     originalPrice: number;
-    voucherCode: string;
-    discountAmount: number;
+    voucherCode: string | null;
+    discountAmount: number | null;
     status: string;
 }
 
+export interface OrderSummary {
+    totalOrders: number;
+    grossRevenue: number;
+    netRevenue: number;
+    totalDiscount: number;
+    cancelledOrders: number;
+}
+
 export interface PaginatedOrders {
-    items: OrderItemOrganizer[];
-    pageNumber: number;
-    pageSize: number;
-    totalCount: number;
-    currentPageSize: number;
-    currentStartIndex: number;
-    currentEndIndex: number;
-    totalPages: number;
-    hasPrevious: boolean;
-    hasNext: boolean;
+    orders: PaginatedResponse<OrderItemOrganizer>;
+    summary: OrderSummary;
 }
 
 export interface GetOrdersRequest {

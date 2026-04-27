@@ -91,7 +91,7 @@ export default function OrdersTable({ orders, onViewDetail }: Props) {
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-medium">
                                         <BiSolidCoupon /> {o.voucherCode}
                                     </span>
-                                    <p className="text-xs text-slate-500 mt-1">-{fmt(o.discountAmount)}</p>
+                                    <p className="text-xs text-slate-500 mt-1">-{fmt(Number(o.discountAmount))}</p>
                                 </div>
                             ) : (
                                 <span className="text-slate-600 text-sm">—</span>
@@ -100,9 +100,9 @@ export default function OrdersTable({ orders, onViewDetail }: Props) {
                             {/* Final price */}
                             <div>
                                 <p className="text-white font-semibold text-sm">{fmt(o.totalPrice)}</p>
-                                {o.discountAmount > 0 && (
+                                {Number(o.discountAmount) > 0 && (
                                     <p className="text-xs text-emerald-500 mt-0.5">
-                                        Tiết kiệm {fmt(o.discountAmount)}
+                                        Tiết kiệm {fmt(Number(o.discountAmount))}
                                     </p>
                                 )}
                             </div>

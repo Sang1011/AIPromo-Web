@@ -17,6 +17,7 @@ import type {
     GetTotalMetricsItem,
     PeriodOptionMetrics,
     DistributionMetricsInstagram,
+    DistributionMetricsThreads,
 } from "../types/post/post";
 import type { PaginatedResponse } from "../types/api";
 
@@ -34,6 +35,9 @@ interface PostState {
 
     distributionMetricsInstagram: DistributionMetricsInstagram | null;
     distributionMetricsInstagramMap: Record<string, DistributionMetricsInstagram>;
+
+    distributionMetricsThreads: DistributionMetricsThreads | null;
+    distributionMetricsThreadsMap: Record<string, DistributionMetricsThreads>;
 
     adminPosts: AdminPostItem[];
     adminPostDetail: AdminPostItem | null;
@@ -64,6 +68,8 @@ interface PostState {
         publishAdminPost: boolean;
         fetchDistributionMetricsInstagram: boolean;
         fetchAllDistributionMetricsInstagram: boolean;
+        fetchDistributionMetricsThreads: boolean;
+        fetchAllDistributionMetricsThreads: boolean;
     };
 
     error: {
@@ -89,6 +95,8 @@ interface PostState {
         publishAdminPost: string | null;
         fetchDistributionMetricsInstagram: string | null;
         fetchAllDistributionMetricsInstagram: string | null;
+        fetchDistributionMetricsThreads: string | null;
+        fetchAllDistributionMetricsThreads: string | null;
     };
 }
 
@@ -103,6 +111,8 @@ const initialState: PostState = {
     distributionMetricsMap: {},
     distributionMetricsInstagram: null,
     distributionMetricsInstagramMap: {},
+    distributionMetricsThreads: null,
+    distributionMetricsThreadsMap: {},
     tableFilters: {
         pageNumber: 1,
         pageSize: 5,
@@ -117,6 +127,8 @@ const initialState: PostState = {
         status: "Published",
         hasExternalPostUrl: true,
     },
+
+
 
     adminPosts: [],
     adminPostDetail: null,
@@ -144,6 +156,8 @@ const initialState: PostState = {
         approvePost: false,
         rejectPost: false,
         publishAdminPost: false,
+        fetchAllDistributionMetricsThreads: false,
+        fetchDistributionMetricsThreads: false,
         fetchAllDistributionMetricsInstagram: false,
         fetchDistributionMetricsInstagram: false
     },
@@ -169,7 +183,9 @@ const initialState: PostState = {
         rejectPost: null,
         publishAdminPost: null,
         fetchAllDistributionMetricsInstagram: null,
-        fetchDistributionMetricsInstagram: null
+        fetchDistributionMetricsInstagram: null,
+        fetchAllDistributionMetricsThreads: null,
+        fetchDistributionMetricsThreads: null
     },
 };
 
@@ -494,6 +510,40 @@ export const fetchFacebookTotalMetrics = createAsyncThunk(
     }
 );
 
+export const fetchDistributionMetricsThreads = createAsyncThunk(
+    "post/fetchDistributionMetricsThreads",
+    async ({ postId, distributionId }: { postId: string; distributionId: string }, { rejectWithValue }) => {
+        try {
+            const res = await postService.getDistributionMetricsThreads(postId, distributionId);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi fetch Threads metrics");
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi fetch Threads metrics");
+        }
+    }
+);
+
+export const fetchAllDistributionMetricsThreads = createAsyncThunk(
+    "post/fetchAllDistributionMetricsThreads",
+    async (targets: { postId: string; distributionId: string }[], { rejectWithValue }) => {
+        try {
+            const results = await Promise.allSettled(
+                targets.map(({ postId, distributionId }) =>
+                    postService.getDistributionMetricsThreads(postId, distributionId)
+                        .then(res => ({ distributionId, data: res.data.data }))
+                )
+            );
+            const map: Record<string, DistributionMetricsThreads> = {};
+            results.forEach(r => {
+                if (r.status === "fulfilled") map[r.value.distributionId] = r.value.data;
+            });
+            return map;
+        } catch (error: any) {
+            return rejectWithValue("Lỗi khi fetch Threads metrics");
+        }
+    }
+);
+
 const postSlice = createSlice({
     name: "post",
     initialState,
@@ -519,6 +569,8 @@ const postSlice = createSlice({
         clearFacebookTotalMetrics(state) { state.facebookTotalMetrics = null; },
         clearDistributionMetricsInstagram(state) { state.distributionMetricsInstagram = null; },
         clearDistributionMetricsInstagramMap(state) { state.distributionMetricsInstagramMap = {}; },
+        clearDistributionMetricsThreads(state) { state.distributionMetricsThreads = null; },
+        clearDistributionMetricsThreadMap(state) { state.distributionMetricsThreadsMap = {}; },
     },
     extraReducers: (builder) => {
         builder
@@ -724,6 +776,34 @@ const postSlice = createSlice({
                 state.loading.fetchAllDistributionMetricsInstagram = false;
                 state.error.fetchAllDistributionMetricsInstagram = action.payload as string;
             });
+
+        builder
+            .addCase(fetchAllDistributionMetricsThreads.pending, (state) => {
+                state.loading.fetchAllDistributionMetricsThreads = true;
+                state.error.fetchAllDistributionMetricsThreads = null;
+            })
+            .addCase(fetchAllDistributionMetricsThreads.fulfilled, (state, action) => {
+                state.loading.fetchAllDistributionMetricsThreads = false;
+                state.distributionMetricsThreadsMap = { ...state.distributionMetricsThreadsMap, ...action.payload };
+            })
+            .addCase(fetchAllDistributionMetricsThreads.rejected, (state, action) => {
+                state.loading.fetchAllDistributionMetricsThreads = false;
+                state.error.fetchAllDistributionMetricsThreads = action.payload as string;
+            });
+
+        builder
+            .addCase(fetchDistributionMetricsThreads.pending, (state) => {
+                state.loading.fetchDistributionMetricsThreads = true;
+                state.error.fetchDistributionMetricsThreads = null;
+            })
+            .addCase(fetchDistributionMetricsThreads.fulfilled, (state, action: PayloadAction<DistributionMetricsThreads>) => {
+                state.loading.fetchDistributionMetricsThreads = false;
+                state.distributionMetricsThreads = action.payload;
+            })
+            .addCase(fetchDistributionMetricsThreads.rejected, (state, action) => {
+                state.loading.fetchDistributionMetricsThreads = false;
+                state.error.fetchDistributionMetricsThreads = action.payload as string;
+            });
     },
 });
 
@@ -741,6 +821,8 @@ export const {
     clearDistributionMetricsMap,
     clearFacebookTotalMetrics,
     clearDistributionMetricsInstagram,
-    clearDistributionMetricsInstagramMap
+    clearDistributionMetricsInstagramMap,
+    clearDistributionMetricsThreads,
+    clearDistributionMetricsThreadMap
 } = postSlice.actions;
 export default postSlice.reducer;
