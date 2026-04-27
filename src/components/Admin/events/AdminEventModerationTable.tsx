@@ -573,14 +573,14 @@ export default function AdminEventModerationTable() {
             {/* No action confirmations for view-only modal */}
 
             {/* Pagination */}
-            {pagination && pagination.totalPages > 1 && (
+            {pagination && (
                 <div className="px-6 py-4 border-t border-[#302447] flex items-center justify-between bg-[rgba(24,18,43,0.4)]">
                     <p className="text-[10px] text-[#a592c8] font-bold uppercase tracking-widest">
                         <span className="text-primary">{filteredEvents.length > 0 ? (pagination.pageNumber - 1) * pagination.pageSize + 1 : 0}</span>
                         {" - "}
-                        <span className="text-primary">{Math.min(pagination.pageNumber * pagination.pageSize, filteredEvents.length)}</span>
+                        <span className="text-primary">{Math.min(pagination.pageNumber * pagination.pageSize, pagination.totalCount ?? filteredEvents.length)}</span>
                         {" "}trên{" "}
-                        <span className="text-white">{filteredEvents.length}</span>{" "}
+                        <span className="text-white">{pagination.totalCount ?? filteredEvents.length}</span>{" "}
                         sự kiện
                     </p>
                     <div className="flex gap-1.5">
