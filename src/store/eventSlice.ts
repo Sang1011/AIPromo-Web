@@ -17,6 +17,7 @@ import type {
     GetPendingEventsRequest,
     PendingEventsData,
     EventItemByMe,
+    TrendingEventParams,
 } from "../types/event/event";
 import type { ApiResponse } from "../types/api";
 
@@ -43,6 +44,8 @@ interface EventState {
         hasPrevious: boolean;
         hasNext: boolean;
     } | null;
+    trendingEvents: GetAllEventResponse | null;
+    loading: "idle" | "pending" | "fulfilled" | "rejected";
 }
 
 const initialState: EventState = {
@@ -52,6 +55,8 @@ const initialState: EventState = {
     pagination: null,
     myEvents: [],
     myEventsPagination: null,
+    trendingEvents: null,
+    loading: "idle",
 };
 
 
@@ -102,6 +107,21 @@ export const fetchEventById = createAsyncThunk<
             return (await eventService.getEventById(id)).data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error);
+        }
+    }
+);
+
+export const fetchTrendingEvent = createAsyncThunk<
+    GetAllEventResponse,
+    TrendingEventParams
+>(
+    `${name}/fetchTrendingEvent`,
+    async (params, thunkAPI) => {
+        try {
+            const res = await eventService.trendingEvent(params);
+            return res.data;
+        } catch (error: any) {
+            return thunkAPI.rejectWithValue(error.response?.data || error.message);
         }
     }
 );
@@ -489,6 +509,17 @@ const eventSlice = createSlice({
             }
 
         });
+        builder
+            .addCase(fetchTrendingEvent.pending, (state) => {
+                state.loading = "pending";
+            })
+            .addCase(fetchTrendingEvent.fulfilled, (state, action: PayloadAction<GetAllEventResponse>) => {
+                state.trendingEvents = action.payload;
+                state.loading = "fulfilled";
+            })
+            .addCase(fetchTrendingEvent.rejected, (state) => {
+                state.loading = "rejected";
+            });
     },
 });
 

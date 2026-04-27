@@ -268,7 +268,7 @@ export default function Step1EventInfo({
         else if (eventForm.title.length < 5) newErrors.title = "Tên sự kiện tối thiểu 5 ký tự";
         else if (eventForm.title.length > 150) newErrors.title = "Tên sự kiện tối đa 150 ký tự";
         if (!eventForm.description.trim()) newErrors.description = "Mô tả sự kiện không được để trống";
-        else if (eventForm.description.length > 500) newErrors.description = "Mô tả tối đa 500 ký tự";
+        else if (eventForm.description.length > 3000) newErrors.description = "Mô tả tối đa 3000 ký tự";
         if (!eventForm.location.trim()) newErrors.location = "Địa điểm không được để trống";
         else if (eventForm.location.length > 500) newErrors.location = "Địa điểm tối đa 500 ký tự";
         if (eventForm.selectedHashtags.length < 1) newErrors.selectedHashtags = "Phải chọn ít nhất 1 hashtag";

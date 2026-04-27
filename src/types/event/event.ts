@@ -254,6 +254,13 @@ export interface GetPendingEventsRequest extends GetAllRequest {
     Title?: string;
     Statuses?: string;
 }
+export interface TrendingEventParams {
+  Days: number;
+  PageNumber?: number;
+  PageSize?: number;
+  SortColumn?: string;
+  SortOrder?: "Ascending" | "Descending";
+}
 
 export const SPEAKER_PROFESSION_GROUPS: { label: string; items: string[] }[] = [
     {

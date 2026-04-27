@@ -57,7 +57,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/event-detail/${item.urlPath}`);
+   navigate(`/event-detail/urlPath=${item.urlPath}`);
   };
 
   const isFree = item.minPrice === 0;

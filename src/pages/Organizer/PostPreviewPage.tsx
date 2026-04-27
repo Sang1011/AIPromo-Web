@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FiArrowLeft } from "react-icons/fi";
 import {
     MdOutlineBolt,
@@ -179,6 +179,9 @@ export default function PostPreviewPage() {
 
     // ── Editor state ──────────────────────────────────────────────────────────
     const manualEditorRef = useRef<{ getBlocks: () => ContentBlock[] } | null>(null);
+
+    // liveBlocks = mirror chính xác state của BlockEditor, BAO GỒM image block.
+    // Không bao giờ filter image block ra khỏi đây — chỉ filter khi serialize để save.
     const [liveBlocks, setLiveBlocks] = useState<ContentBlock[]>([]);
     const [manualTitle, setManualTitle] = useState("");
     const [isSaving, setIsSaving] = useState(false);
@@ -187,16 +190,18 @@ export default function PostPreviewPage() {
     const [previewData, setPreviewData] = useState<{ blocks: ContentBlock[]; title: string } | null>(null);
 
     // ── Image state ────────────────────────────────────────────────────────────
-    // AI Content tab: owned by UploadImageSection
     const [aiSelectedImageUrl, setAiSelectedImageUrl] = useState<string | null>(null);
     const [aiPendingImageFile, setAiPendingImageFile] = useState<File | null>(null);
 
-    // Manual tab: owned by BlockEditor (via onImageChange callback)
+    // manualImageFile / manualImageUrl: track riêng để upload khi save.
+    // BlockEditor tự quản lý src trong image block của nó.
     const [manualImageFile, setManualImageFile] = useState<File | null>(null);
     const [manualImageUrl, setManualImageUrl] = useState<string | null>(null);
 
     // ── Image position từ Firebase ────────────────────────────────────────────
     const [imageInsertAt, setImageInsertAt] = useState<number | undefined>(undefined);
+    const currentEvent = useSelector((s: RootState) => s.EVENT.currentEvent);
+    const eventUrlPath = (currentEvent as any)?.urlPath ?? "";
 
     useEffect(() => {
         if (!postId) return;
@@ -218,28 +223,35 @@ export default function PostPreviewPage() {
     // ── Seed editor khi postDetail load xong ──────────────────────────────────
     useEffect(() => {
         if (postDetail && !initialBlocksLoaded) {
-            const parsed = parseBodyToBlocks(postDetail.body);
+            // Parse text blocks (không inject image — BlockEditor sẽ nhận initialBlocks có sẵn ảnh)
+            const parsed = parseBodyToBlocks(postDetail.body).filter(b => b.type !== "image");
             setManualTitle(postDetail.title);
-            setLiveBlocks(parsed);
-
-            // Seed image state cho AI Content tab
+            setLiveBlocks(parsed); // liveBlocks ban đầu = text blocks; image sẽ được inject qua initialBlocks
             setAiSelectedImageUrl(postDetail.imageUrl ?? null);
-
-            // Seed image state cho Manual tab
             setManualImageUrl(postDetail.imageUrl ?? null);
-
             setInitialBlocksLoaded(true);
         }
     }, [postDetail, initialBlocksLoaded]);
 
-    // ── Preview blocks cho AI Content tab + Manual tab preview ───────────────
-    // AI Content: inject image của aiSelectedImageUrl
-    const aiPreviewBlocks = injectImageBlock(liveBlocks, aiSelectedImageUrl, imageInsertAt);
+    // ── initialBlocks cho BlockEditor — tính 1 lần khi initialBlocksLoaded ───
+    // useMemo với dep [initialBlocksLoaded] đảm bảo không re-calc sau khi mount.
+    // BlockEditor dùng initialBlocks CHỈ khi khởi tạo state nội bộ.
+    const manualInitialBlocks = useMemo(() => {
+        if (!postDetail || !initialBlocksLoaded) return [];
+        const textBlocks = parseBodyToBlocks(postDetail.body).filter(b => b.type !== "image");
+        return injectImageBlock(textBlocks, postDetail.imageUrl ?? null, imageInsertAt);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialBlocksLoaded]); // ← chủ ý chỉ dep initialBlocksLoaded
 
-    // Manual tab: inject image từ manualImageUrl (owned by BlockEditor)
-    const manualPreviewBlocks = injectImageBlock(liveBlocks, manualImageUrl, imageInsertAt);
+    // ── Preview blocks ────────────────────────────────────────────────────────
+    // AI Content tab: inject aiSelectedImageUrl vào liveBlocks (đã strip image)
+    const liveTextBlocks = liveBlocks.filter(b => b.type !== "image");
+    const aiPreviewBlocks = injectImageBlock(liveTextBlocks, aiSelectedImageUrl, imageInsertAt);
 
-    // Preview mode: dùng đúng ảnh theo tab đang active
+    // Manual tab: liveBlocks đã chứa image block (từ BlockEditor onChange)
+    // → dùng thẳng liveBlocks, không inject thêm
+    const manualPreviewBlocks = liveBlocks;
+
     const previewBlocks = activeTab === "manual" ? manualPreviewBlocks : aiPreviewBlocks;
 
     // ── AI Generate handlers ──────────────────────────────────────────────────
@@ -254,39 +266,36 @@ export default function PostPreviewPage() {
 
     const handleAiSelectImage = (url: string) => {
         setAiSelectedImageUrl(url);
-        setManualImageUrl(url);                          // ← sync ngay, không qua effect
+        setManualImageUrl(url);
         if (!url.startsWith("blob:")) {
             setAiPendingImageFile(null);
-            setManualImageFile(null);                    // ← clear file nếu chọn AI URL
+            setManualImageFile(null);
         }
         if (imageInsertAt === undefined) {
-            const headingIdx = liveBlocks.findIndex(b => b.type === "heading");
+            const headingIdx = liveTextBlocks.findIndex(b => b.type === "heading");
             setImageInsertAt(headingIdx !== -1 ? headingIdx + 1 : 0);
         }
     };
 
-    // ── handleAiClearImage — clear cả manual ─────────────────────────────────────
     const handleAiClearImage = () => {
         setAiSelectedImageUrl(null);
         setAiPendingImageFile(null);
-        setManualImageUrl(null);                         // ← sync clear
+        setManualImageUrl(null);
         setManualImageFile(null);
     };
 
-    // ── handleAiFileSelected — sync manualImageUrl ────────────────────────────────
     const handleAiFileSelected = (file: File) => {
         setAiPendingImageFile(file);
         const blobUrl = URL.createObjectURL(file);
         setAiSelectedImageUrl(blobUrl);
-        setManualImageUrl(blobUrl);                      // ← sync ngay
-        setManualImageFile(file);                        // ← manual tab cũng biết file này
+        setManualImageUrl(blobUrl);
+        setManualImageFile(file);
         if (imageInsertAt === undefined) {
-            const headingIdx = liveBlocks.findIndex(b => b.type === "heading");
+            const headingIdx = liveTextBlocks.findIndex(b => b.type === "heading");
             setImageInsertAt(headingIdx !== -1 ? headingIdx + 1 : 0);
         }
     };
 
-    // ── handleConfirmApply — set manualImageUrl cùng transaction ─────────────────
     const handleConfirmApply = async () => {
         if (!previewData || !postDetail || !postId) return;
         setIsSaving(true);
@@ -300,14 +309,15 @@ export default function PostPreviewPage() {
                 })).unwrap();
                 resolvedImageUrl = res.imageUrl;
                 setAiSelectedImageUrl(res.imageUrl);
-                setManualImageUrl(res.imageUrl);         // ← sync cùng lúc
+                setManualImageUrl(res.imageUrl);
                 setAiPendingImageFile(null);
                 setManualImageFile(null);
             } else if (aiSelectedImageUrl?.startsWith("http")) {
                 resolvedImageUrl = aiSelectedImageUrl;
-                setManualImageUrl(aiSelectedImageUrl);   // ← đảm bảo manual tab nhận đúng URL
+                setManualImageUrl(aiSelectedImageUrl);
             }
 
+            // Strip image blocks khi serialize
             const blocksToSave = previewData.blocks.filter(b => b.type !== "image");
 
             const data: UpdatePostContentRequest = {
@@ -323,7 +333,8 @@ export default function PostPreviewPage() {
             await dispatch(updatePostContent({ postId, data })).unwrap();
 
             setManualTitle(previewData.title || postDetail.title);
-            setLiveBlocks(blocksToSave);                 // ← liveBlocks update cùng render với manualImageUrl
+            // Cập nhật liveBlocks (text blocks)
+            setLiveBlocks(blocksToSave);
 
             notify.success("Đã cập nhật nội dung bài đăng!");
             setPreviewData(null);
@@ -338,18 +349,9 @@ export default function PostPreviewPage() {
         }
     };
 
-    // ── Manual tab image handler (BlockEditor owns via onImageChange) ─────────
-    const handleManualImageChange = (file: File | null, url: string | null) => {
-        setManualImageFile(file);
-        setManualImageUrl(url);
-        // Tính vị trí insert dựa trên vị trí image block trong liveBlocks + manualEditorRef
-        if (url && imageInsertAt === undefined) {
-            const headingIdx = liveBlocks.findIndex(b => b.type === "heading");
-            setImageInsertAt(headingIdx !== -1 ? headingIdx + 1 : 0);
-        }
-    };
-
-    // ── Khi BlockEditor drag/drop block (bao gồm image block) ────────────────
+    // ── Manual tab: BlockEditor onChange ─────────────────────────────────────
+    // KHÔNG filter image blocks — giữ nguyên toàn bộ blocks.
+    // Track vị trí image block để lưu Firebase.
     const handleManualBlocksChange = (blocks: ContentBlock[]) => {
         const imageIdx = blocks.findIndex(b => b.type === "image");
         if (imageIdx !== -1) {
@@ -358,15 +360,27 @@ export default function PostPreviewPage() {
                 saveImagePosition(postId, imageIdx).catch(console.error);
             }
         }
-        // Strip image blocks khỏi liveBlocks — ảnh lưu riêng qua manualImageUrl
-        setLiveBlocks(blocks.filter(b => b.type !== "image"));
+        // ✅ Lưu TOÀN BỘ blocks
+        setLiveBlocks(blocks);
     };
 
-    // ── Save từ Manual tab (BlockEditor owns image) ───────────────────────────
+    // ── Manual tab: BlockEditor onImageChange ─────────────────────────────────
+    // Chỉ track file/url để upload sau này. BlockEditor tự quản lý src.
+    const handleManualImageChange = (file: File | null, url: string | null) => {
+        setManualImageFile(file);
+        setManualImageUrl(url);
+        if (url && imageInsertAt === undefined) {
+            const headingIdx = liveTextBlocks.findIndex(b => b.type === "heading");
+            setImageInsertAt(headingIdx !== -1 ? headingIdx + 1 : 0);
+        }
+    };
+
+    // ── Save từ Manual tab ────────────────────────────────────────────────────
     const handleSaveFromManual = async () => {
         if (!postDetail || !postId) return;
         setIsSaving(true);
         try {
+            // ✅ Strip image blocks khi serialize
             const blocksToSave = liveBlocks.filter(b => b.type !== "image");
 
             let resolvedImageUrl: string | undefined =
@@ -382,7 +396,6 @@ export default function PostPreviewPage() {
                 setManualImageUrl(res.imageUrl);
                 setManualImageFile(null);
 
-                // Sau khi upload, lưu vị trí image
                 if (imageInsertAt !== undefined) {
                     saveImagePosition(postId, imageInsertAt).catch(console.error);
                 }
@@ -449,7 +462,6 @@ export default function PostPreviewPage() {
             <header className="sticky top-0 z-20 bg-[#0B0B12]/95 backdrop-blur-md
                                border-b border-slate-800/80 px-6 py-3
                                flex items-center justify-between gap-4 shrink-0">
-                {/* Left */}
                 <div className="flex items-center gap-4 min-w-0">
                     <button
                         onClick={() => navigate(-1)}
@@ -470,7 +482,6 @@ export default function PostPreviewPage() {
                     </div>
                 </div>
 
-                {/* Center — mode toggle */}
                 <div className="flex items-center gap-3">
                     {canEdit && <ModeToggle mode={mode} onChange={setMode} />}
                     {!canEdit && (
@@ -480,7 +491,6 @@ export default function PostPreviewPage() {
                     )}
                 </div>
 
-                {/* Right — save */}
                 <div className="flex items-center gap-3">
                     <SaveStatus saving={isSaving} saved={savedRecently} />
                     {mode === "editor" && canEdit && activeTab === "manual" && (
@@ -529,7 +539,6 @@ export default function PostPreviewPage() {
                         <div className="w-full lg:w-1/2 xl:w-[45%] border-r border-slate-800/60
                                         overflow-y-auto custom-scrollbar flex flex-col">
 
-                            {/* Panel header + Tab bar */}
                             <div className="px-6 pt-5 pb-0 shrink-0">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
@@ -614,9 +623,9 @@ export default function PostPreviewPage() {
                                     {/* ── Tab: Tự soạn ── */}
                                     {activeTab === "manual" && (
                                         <div className="space-y-5">
-                                            {manualImageUrl && aiSelectedImageUrl === manualImageUrl && (
+                                            {manualImageUrl && (
                                                 <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/20
-                            rounded-xl px-4 py-3 text-xs text-blue-400">
+                                                                rounded-xl px-4 py-3 text-xs text-blue-400">
                                                     <MdOutlineImage className="shrink-0" />
                                                     <div>
                                                         <p className="font-semibold">Ảnh đang được áp dụng</p>
@@ -627,7 +636,6 @@ export default function PostPreviewPage() {
                                                 </div>
                                             )}
 
-                                            {/* Title input */}
                                             <div>
                                                 <label className="block text-[10px] font-black text-slate-500
                                                                    uppercase tracking-widest mb-2">
@@ -644,14 +652,23 @@ export default function PostPreviewPage() {
                                                                focus:outline-none focus:border-primary transition-colors"
                                                 />
                                             </div>
-                                            <BlockEditor
-                                                key={`${manualImageUrl ?? "no-img"}-${imageInsertAt ?? "auto"}-${liveBlocks.length}`}
-                                                editorRef={manualEditorRef}
-                                                initialBlocks={injectImageBlock(liveBlocks, manualImageUrl, imageInsertAt)}
-                                                postId={postId}
-                                                onChange={handleManualBlocksChange}
-                                                onImageChange={handleManualImageChange}
-                                            />
+
+                                            {/*
+                                             * KEY FIX: Không dùng dynamic key.
+                                             * BlockEditor mount 1 lần với manualInitialBlocks (stable).
+                                             * onChange giữ nguyên toàn bộ blocks (kể cả image).
+                                             * onImageChange chỉ track file/url để upload.
+                                             */}
+                                            {initialBlocksLoaded && (
+                                                <BlockEditor
+                                                    editorRef={manualEditorRef}
+                                                    initialBlocks={manualInitialBlocks}
+                                                    postId={postId}
+                                                    onChange={handleManualBlocksChange}
+                                                    onImageChange={handleManualImageChange}
+                                                    eventUrlPath={eventUrlPath}
+                                                />
+                                            )}
                                         </div>
                                     )}
                                 </div>

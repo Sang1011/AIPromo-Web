@@ -25,6 +25,7 @@ import {
     MdOutlineFormatQuote,
     MdOutlineHorizontalRule,
     MdOutlineImage,
+    MdOutlineLink,
     MdOutlineTextFields,
     MdOutlineTitle
 } from "react-icons/md";
@@ -44,6 +45,7 @@ interface BlockEditorProps {
     onChange?: (blocks: ContentBlock[]) => void;
     editorRef?: React.MutableRefObject<{ getBlocks: () => ContentBlock[] } | null>;
     postId?: string;
+    eventUrlPath?: string;
 
     /**
      * disableImageBlock: true → ẩn nút "Ảnh" trong toolbar và không cho thêm image block.
@@ -85,6 +87,7 @@ function defaultBlock(type: ContentBlock["type"]): BlockWithId {
         case "highlight": return withId({ type: "highlight", content: "" });
         case "divider": return withId({ type: "divider" });
         case "image": return withId({ type: "image", src: "" });
+        case "button": return withId({ type: "button", label: "Đăng ký ngay", href: "" } as any);
         default: return withId({ type: "paragraph", text: "" });
     }
 }
@@ -289,6 +292,47 @@ function BlockFieldEditor({
             );
         }
 
+        case "button":
+            return (
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            CTA Button
+                        </span>
+                    </div>
+                    <div className="rounded-xl border border-primary/30 bg-primary/5 overflow-hidden">
+                        {/* Preview nút */}
+                        <div className="px-4 py-3 flex items-center justify-center border-b border-primary/10">
+                            <div className="px-6 py-2 rounded-full text-sm font-semibold text-white"
+                                style={{ background: "linear-gradient(135deg, #7c3bed, #a855f7)" }}>
+                                {(block as any).label || "Đăng ký ngay"}
+                            </div>
+                        </div>
+                        {/* Config row */}
+                        <div className="px-4 py-2.5 flex items-center gap-3">
+                            <MdOutlineLink className="text-primary text-base shrink-0" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[10px] text-slate-500 truncate">
+                                    {(block as any).href || "URL chưa được cấu hình"}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 border-l border-slate-700 pl-3">
+                                <span className="text-[9px] text-slate-600 uppercase tracking-wider">Nhãn</span>
+                                <input
+                                    type="text"
+                                    value={(block as any).label ?? "Đăng ký ngay"}
+                                    onChange={(e) => onUpdate({ label: e.target.value } as any)}
+                                    placeholder="Đăng ký ngay"
+                                    className="bg-slate-800 text-slate-100 text-xs outline-none rounded-lg
+                                       px-2.5 py-1 w-28 border border-slate-700
+                                       focus:border-primary transition-colors"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
         case "highlight":
             return (
                 <div className="space-y-1">
@@ -364,7 +408,8 @@ const TOOLBAR_ITEMS: {
         { type: "list", icon: <MdOutlineFormatListBulleted />, label: "Danh sách" },
         { type: "highlight", icon: <MdOutlineFormatQuote />, label: "Quote" },
         { type: "divider", icon: <MdOutlineHorizontalRule />, label: "Divider" },
-        { type: "image", icon: <MdOutlineImage />, label: "Ảnh" }
+        { type: "image", icon: <MdOutlineImage />, label: "Ảnh" },
+        { type: "button", icon: <MdOutlineLink />, label: "CTA" }
     ];
 
 // ─── Main BlockEditor ─────────────────────────────────────────────────────────
@@ -376,6 +421,7 @@ export default function BlockEditor({
     postId,
     disableImageBlock = false,
     onImageChange,
+    eventUrlPath,
 }: BlockEditorProps) {
     const [blocks, setBlocks] = useState<BlockWithId[]>(() =>
         initialBlocks.length > 0
@@ -385,6 +431,7 @@ export default function BlockEditor({
 
     // Chỉ block image nếu đã có 1 rồi (dù disableImageBlock = false)
     const hasImageBlock = blocks.some((b) => b.type === "image");
+    const hasCTABlock = blocks.some((b) => b.type === "button");
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -412,6 +459,13 @@ export default function BlockEditor({
     };
 
     const handleAdd = (type: ContentBlock["type"]) => {
+        if (type === "button") {
+            const href = eventUrlPath
+                ? `https://aipromo.online/event-detail/${eventUrlPath}`
+                : "";
+            update([...blocks, withId({ type: "button", label: "Đăng ký ngay", href } as any)]);
+            return;
+        }
         update([...blocks, defaultBlock(type)]);
     };
 
@@ -457,30 +511,44 @@ export default function BlockEditor({
                     if (item.type === "image" && disableImageBlock) return null;
 
                     // Disable nút Ảnh nếu đã có 1 image block
-                    const isDisabled = item.type === "image" && hasImageBlock;
+                    const isDisabled =
+                        (item.type === "image" && hasImageBlock) ||
+                        ((item.type as string) === "button" && hasCTABlock);
 
                     return (
-                        <button
-                            key={item.type}
-                            type="button"
-                            onClick={() => !isDisabled && handleAdd(item.type)}
-                            disabled={isDisabled}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
-                                       border transition-all
-                                       ${isDisabled
-                                    ? "border-slate-800 text-slate-700 cursor-not-allowed"
-                                    : "border-slate-700 text-slate-400 hover:border-primary/50 hover:text-white hover:bg-primary/10"
-                                }`}
-                            title={isDisabled ? "Chỉ được thêm 1 ảnh cho bài post" : `Thêm ${item.label}`}
-                        >
-                            {item.icon}
-                            {item.label}
-                            {isDisabled && (
-                                <span className="ml-1 text-[9px] text-slate-700 font-normal">
-                                    (đã có)
-                                </span>
-                            )}
-                        </button>
+                        <div className="relative group/tip">
+                            <button
+                                key={item.type}
+                                type="button"
+                                onClick={() => !isDisabled && handleAdd(item.type as ContentBlock["type"])}
+                                disabled={isDisabled}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                   border transition-all
+                   ${isDisabled
+                                        ? "border-slate-800 text-slate-700 cursor-not-allowed"
+                                        : "border-slate-700 text-slate-400 hover:border-primary/50 hover:text-white hover:bg-primary/10"
+                                    }`}
+                            >
+                                {item.icon}
+                                {item.label}
+                                {isDisabled && (
+                                    <span className="ml-1 text-[9px] text-slate-700 font-normal">(đã có)</span>
+                                )}
+                            </button>
+                            {/* Custom tooltip */}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5
+                    bg-slate-800 border border-slate-700 rounded-lg text-[10px] text-slate-300
+                    whitespace-nowrap opacity-0 group-hover/tip:opacity-100 pointer-events-none
+                    transition-opacity z-50">
+                                {isDisabled
+                                    ? item.type === "image"
+                                        ? "Chỉ được thêm 1 ảnh cho bài post"
+                                        : "Chỉ được thêm 1 CTA button"
+                                    : `Thêm ${item.label}`}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4
+                        border-transparent border-t-slate-700" />
+                            </div>
+                        </div>
                     );
                 })}
             </div>

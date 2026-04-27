@@ -108,6 +108,12 @@ export default function RefundRateCard({ data, loading }: Props) {
                         dot="#7c3bed"
                     />
                     <StatRow
+                        label="Doanh thu ròng (đã trừ phí khuyến mãi, hoàn tiền)"
+                        value={fmtMoneyVND(data.netRevenue)}
+                        color="text-white"
+                        dot="#00bcff"
+                    />
+                    <StatRow
                         label="Đã hoàn tiền"
                         value={fmtMoneyVND(data.totalRefunds)}
                         color="text-red-400"

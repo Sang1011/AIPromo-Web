@@ -96,6 +96,10 @@ export default function RevenueCards({ summary }: RevenueCardsProps) {
                     </div>
                     <p className="text-2xl font-bold text-emerald-300">{fmtMoneyVND(actualNetRevenue)}</p>
                     <p className="text-xs text-emerald-400/50 mt-1">Sau khi trừ khuyến mãi, phí nền tảng, hoàn tiền</p>
+                    <div className="mt-3 pt-3 border-t border-emerald-500/15 flex items-center justify-between">
+                        <span className="text-xs text-green-400/70">Doanh thu ròng trước khi trừ phí nền tảng</span>
+                        <span className="text-xs font-semibold text-green-400">{fmtMoneyVND(netRevenue)} đồng</span>
+                    </div>
 
                     {/* Platform fee breakdown line */}
                     <div className="mt-3 pt-3 border-t border-emerald-500/15 flex items-center justify-between">

@@ -95,9 +95,9 @@ export const fetchTransactionSummary = createAsyncThunk(
 
 export const fetchRevenueSummaryOrganizer = createAsyncThunk(
     "report/fetchRevenueSummaryOrganizer",
-    async (organizerId: string, { rejectWithValue }) => {
+    async (__, { rejectWithValue }) => {
         try {
-            const res = await reportService.getRevenueSummaryOrganizerReport(organizerId);
+            const res = await reportService.getRevenueSummaryOrganizerReport();
             return res.data.data;
         } catch (err: any) {
             return rejectWithValue(err?.response?.data?.message || "Error");
@@ -107,9 +107,9 @@ export const fetchRevenueSummaryOrganizer = createAsyncThunk(
 
 export const fetchRevenueBreakdownOrganizer = createAsyncThunk(
     "report/fetchRevenueBreakdownOrganizer",
-    async ({ organizerId, byNet }: { organizerId: string; byNet: boolean }, { rejectWithValue }) => {
+    async ({ byNet }: { byNet: boolean }, { rejectWithValue }) => {
         try {
-            const res = await reportService.getRevenueBreakdownOrganizerReport(organizerId, byNet);
+            const res = await reportService.getRevenueBreakdownOrganizerReport(byNet);
             return res.data.data.perEvent;
         } catch (err: any) {
             return rejectWithValue(err?.response?.data?.message || "Error");

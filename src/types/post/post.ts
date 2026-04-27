@@ -122,8 +122,14 @@ export interface DistributionMetricsFacebook {
     externalUrl: string;
     likes: number;
     comments: number;
+    shares: number;
     reach: number;
     clicks: number;
+    ticketsSold: number;
+    conversionRate: number;
+    conversionRateFormatted: string;
+    engagementRate: number;
+    engagementRateFormatted: string;
     fetchedAt: Date;
 }
 
@@ -133,10 +139,31 @@ export interface DistributionMetricsInstagram {
     likes: number;
     comments: number;
     reach: number;
-    saves: number,
-    shares: number,
+    saves: number;
+    shares: number;
+    ticketsSold: number;
+    conversionRate: number;
+    conversionRateFormatted: string;
+    engagementRate: number;
+    engagementRateFormatted: string;
     fetchedAt: Date;
 }
+
+export interface DistributionMetricsThreads {
+    externalPostId: string;
+    externalUrl: string;
+    views: number;
+    likes: number;
+    replies: number;
+    reposts: number;
+    quotes: number;
+    shares: number;
+    engagementRate: number;
+    engagementRateFormatted: string;
+    fetchedAt: string;
+}
+
+export type GetDistributionMetricsThreadsResponse = ApiResponse<DistributionMetricsThreads>;
 
 export type GetDistributionMetricsInstagramResponse = ApiResponse<DistributionMetricsInstagram>
 export type GetDistributionMetricsFacebookResponse = ApiResponse<DistributionMetricsFacebook>
