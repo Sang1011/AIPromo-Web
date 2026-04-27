@@ -70,7 +70,7 @@ const Header: React.FC = () => {
   const handleSelectEvent = (id: number | string) => {
     setSearchFocused(false);
     setSearchQuery("");
-    navigate(`/event-detail/${id}`);
+    navigate(`/event-detail/urlPath=${id}`);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
