@@ -103,7 +103,7 @@ export default function AdminEventModerationTable() {
     });
 
     useEffect(() => {
-        dispatch(fetchAllAdminEvents({ PageNumber: 1, PageSize: 10 }));
+        dispatch(fetchAllAdminEvents({ PageNumber: 1, PageSize: 1000 }));
     }, [dispatch]);
 
     useEffect(() => {
@@ -208,7 +208,7 @@ export default function AdminEventModerationTable() {
                         Lọc
                     </button>
                     <button
-                        onClick={() => dispatch(fetchAllAdminEvents({ PageNumber: 1, PageSize: 10 }))}
+                        onClick={() => dispatch(fetchAllAdminEvents({ PageNumber: 1, PageSize: 1000 }))}
                         className="bg-[#302447] text-[#a592c8] text-xs px-4 py-2 rounded-lg font-bold hover:bg-[#3d2f5a] hover:text-white transition-all border border-[#302447] flex items-center gap-2"
                     >
                         <MdRefresh className={`text-sm ${loading ? "animate-spin" : ""}`} />
