@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useSelector } from "react-redux";
 import {
     MdCalendarMonth,
     MdPendingActions,
@@ -6,84 +7,29 @@ import {
     MdPayments,
 } from "react-icons/md";
 import AdminStatsCard from "../shared/AdminStatsCard";
+import type { RootState } from "../../../store";
 
-// Kiểu dữ liệu tối thiểu cần cho stats (không import từ slice để tránh coupling)
-interface EventSummary {
-    status: string;
-    eventStartAt: string;
-    eventEndAt: string;
-}
-
-interface StatsState {
-    events: EventSummary[];
-    totalCount: number;
-    loading: boolean;
-}
-
-// Gọi API trực tiếp, không qua Redux → không conflict với AdminEventModerationTable
-async function fetchStatsEvents(): Promise<{ events: EventSummary[]; totalCount: number }> {
-    // Bước 1: Lấy totalCount bằng 1 request nhỏ
-    const firstRes = await fetch("/api/events?PageNumber=1&PageSize=1");
-    if (!firstRes.ok) throw new Error("Failed to fetch stats");
-    const firstData = await firstRes.json();
-    const totalCount: number = firstData.totalCount ?? 0;
-
-    if (totalCount === 0) return { events: [], totalCount: 0 };
-
-    // Bước 2: Lấy toàn bộ events để tính stats (chỉ cần status + dates)
-    const allRes = await fetch(`/api/events?PageNumber=1&PageSize=${totalCount}`);
-    if (!allRes.ok) throw new Error("Failed to fetch all stats events");
-    const allData = await allRes.json();
-
-    return {
-        events: allData.data ?? allData.items ?? [],
-        totalCount,
-    };
-}
-
+// Không gọi API ở đây — AdminEventModerationTable đã fetch PageSize=1000
+// vào store chung, Stats chỉ đọc lại allEvents từ store.
 export default function AdminEventStats() {
-    const [state, setState] = useState<StatsState>({
-        events: [],
-        totalCount: 0,
-        loading: true,
-    });
-
-    useEffect(() => {
-        let cancelled = false;
-
-        fetchStatsEvents()
-            .then(({ events, totalCount }) => {
-                if (!cancelled) {
-                    setState({ events, totalCount, loading: false });
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setState((prev) => ({ ...prev, loading: false }));
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const { allEvents, pagination, loading } = useSelector(
+        (state: RootState) => state.ADMIN_EVENT
+    );
 
     const stats = useMemo(() => {
-        const { events, totalCount } = state;
+        const totalEvents = pagination?.totalCount ?? allEvents.length;
 
-        const pendingReview = events.filter((e) => e.status === "PendingReview").length;
-        const published = events.filter((e) => e.status === "Published").length;
-        const ongoing = events.filter((e) => {
+        const pendingReview = allEvents.filter((e) => e.status === "PendingReview").length;
+        const published = allEvents.filter((e) => e.status === "Published").length;
+        const ongoing = allEvents.filter((e) => {
             const now = new Date();
             const start = new Date(e.eventStartAt);
             const end = new Date(e.eventEndAt);
             return e.status === "Published" && now >= start && now <= end;
         }).length;
 
-        return { totalEvents: totalCount, pendingReview, published, ongoing };
-    }, [state]);
-
-    const { loading } = state;
+        return { totalEvents, pendingReview, published, ongoing };
+    }, [allEvents, pagination]);
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
