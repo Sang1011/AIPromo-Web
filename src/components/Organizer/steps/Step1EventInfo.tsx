@@ -26,6 +26,8 @@ import ImagePreviewBox from "../shared/ImagePreviewBox";
 import { UnsavedBanner } from "../shared/UnsavedBanner";
 import UploadBox from "../shared/UploadBox";
 import { Step1Skeleton } from "../Step1Skeleton";
+import { uploadWithRetry } from "../../../utils/uploadWithRetry";
+import { compressImage } from "../../../utils/compressImage";
 
 interface Step1EventInfoProps {
     onNext?: () => void;
@@ -206,6 +208,7 @@ export default function Step1EventInfo({
 
     const hashtagRef = useRef<HTMLDivElement>(null);
     const categoryRef = useRef<HTMLDivElement>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // ── Fetch helpers ──────────────────────────────────────────────────────
     const fetchHashtags = async (name?: string) => {
@@ -403,48 +406,69 @@ export default function Step1EventInfo({
         });
     };
 
-    // ── Upload & submit ────────────────────────────────────────────────────
     const flushUploads = async () => {
+        // ── 1. Banner ─────────────────────────────────────────────────────────
         let finalBannerUrl = eventForm.bannerUrl || "";
         if (eventForm.bannerFile) {
+            const compressed = await compressImage(eventForm.bannerFile);
             if (mode === "edit" && eventId) {
-                const res = await dispatch(fetchUpdateEventBanner({ eventId, file: eventForm.bannerFile })).unwrap();
+                const res = await uploadWithRetry(() =>
+                    dispatch(fetchUpdateEventBanner({ eventId, file: compressed })).unwrap()
+                );
                 finalBannerUrl = res.url;
             } else {
-                finalBannerUrl = await dispatch(fetchUpload({ folder: "events/banners", file: eventForm.bannerFile })).unwrap();
+                finalBannerUrl = await uploadWithRetry(() =>
+                    dispatch(fetchUpload({ folder: "events/banners", file: compressed })).unwrap()
+                );
             }
             URL.revokeObjectURL(eventForm.bannerUrl!);
         }
 
+        // ── 2. Xoá ảnh cũ ────────────────────────────────────────────────────
         if (mode === "edit" && eventId && eventForm.deletedImageIds.length > 0) {
-            await Promise.all(
-                eventForm.deletedImageIds.map((imageId) =>
+            for (const imageId of eventForm.deletedImageIds) {
+                await uploadWithRetry(() =>
                     dispatch(fetchDeleteImage({ eventId, imageId })).unwrap()
-                )
-            );
+                );
+            }
         }
 
-        const updatedImages = await Promise.all(
-            eventForm.images.map(async (img) => {
-                if (!img.file) return img;
-                URL.revokeObjectURL(img.url);
-                if (mode === "edit" && eventId) {
-                    const res = await dispatch(fetchCreateImage({ eventId, file: img.file })).unwrap();
-                    return { id: res.id, url: res.imageUrl, file: null };
-                } else {
-                    const url = await dispatch(fetchUpload({ folder: "events/images", file: img.file })).unwrap();
-                    return { id: null, url, file: null };
-                }
-            })
-        );
+        // ── 3. Upload ảnh bổ sung ─────────────────────────────────────────────
+        const updatedImages: EventImage[] = [];
+        for (const img of eventForm.images) {
+            if (!img.file) {
+                updatedImages.push(img);
+                continue;
+            }
+            URL.revokeObjectURL(img.url);
+            const compressed = await compressImage(img.file);
+            if (mode === "edit" && eventId) {
+                const res = await uploadWithRetry(() =>
+                    dispatch(fetchCreateImage({ eventId, file: compressed })).unwrap()
+                );
+                updatedImages.push({ id: res.id, url: res.imageUrl, file: null });
+            } else {
+                const url = await uploadWithRetry(() =>
+                    dispatch(fetchUpload({ folder: "events/images", file: compressed })).unwrap()
+                );
+                updatedImages.push({ id: null, url, file: null });
+            }
+        }
 
-        const updatedActorUrls = await Promise.all(
-            eventForm.actors.map(async (actor, index) => {
-                if (!actor.image) return eventForm.actorUrls[index] ?? "";
-                const url = await dispatch(fetchUpload({ folder: "events/actors", file: actor.image })).unwrap();
-                return url;
-            })
-        );
+        // ── 4. Upload ảnh actor ───────────────────────────────────────────────
+        const updatedActorUrls: string[] = [];
+        for (let i = 0; i < eventForm.actors.length; i++) {
+            const actor = eventForm.actors[i];
+            if (!actor.image) {
+                updatedActorUrls.push(eventForm.actorUrls[i] ?? "");
+                continue;
+            }
+            const compressed = await compressImage(actor.image);
+            const url = await uploadWithRetry(() =>
+                dispatch(fetchUpload({ folder: "events/actors", file: compressed })).unwrap()
+            );
+            updatedActorUrls.push(url);
+        }
 
         const updatedActors = eventForm.actors.map((actor) => ({ ...actor, image: null }));
 
@@ -462,12 +486,14 @@ export default function Step1EventInfo({
     };
 
     const handleNext = async () => {
+        if (isSubmitting) return;
         if (mode === "edit" && eventId && !isChanged) {
             onNext?.();
             return;
         }
 
         if (!validateAll()) return;
+        setIsSubmitting(true);
         const { finalBannerUrl, updatedImages, updatedActorUrls } = await flushUploads();
 
         const payload = {
@@ -507,6 +533,8 @@ export default function Step1EventInfo({
         } catch (e) {
             console.log(e);
             notify.error(mode === "create" ? "Không thể tạo sự kiện" : "Không thể cập nhật sự kiện");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -543,6 +571,7 @@ export default function Step1EventInfo({
     const [bannerSaving, setBannerSaving] = useState(false);
 
     const handleBannerSave = async () => {
+        if (bannerSaving) return;
         if (!validateAll()) return;
         setBannerSaving(true);
         try {
@@ -1010,8 +1039,15 @@ export default function Step1EventInfo({
 
                 {/* ===== Footer ===== */}
                 <div className="flex justify-end pt-6">
-                    <button onClick={handleNext} className="px-6 py-3 rounded-xl bg-primary text-white font-semibold">
-                        {mode === "create" ? "Tạo sự kiện" : isChanged ? "Lưu và Tiếp tục →" : "Tiếp theo →"}
+                    <button
+                        onClick={handleNext}
+                        disabled={isSubmitting}
+                        className="px-6 py-3 rounded-xl bg-primary text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isSubmitting
+                            ? "Đang lưu..."
+                            : mode === "create" ? "Tạo sự kiện" : isChanged ? "Lưu và Tiếp tục →" : "Tiếp theo →"
+                        }
                     </button>
                 </div>
             </div>
