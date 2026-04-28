@@ -1,5 +1,3 @@
-"use client";
-
 import {
     MdFacebook,
     MdOutlineBarChart,
@@ -9,10 +7,9 @@ import {
     MdOutlinePeopleAlt,
     MdOutlineRefresh,
     MdOutlineRepeat,
-    MdOutlineShare,
     MdOutlineThumbUp,
     MdOutlineTouchApp,
-    MdOutlineVisibility,
+    MdOutlineVisibility
 } from "react-icons/md";
 import { RiInstagramLine } from "react-icons/ri";
 import { useParams } from "react-router-dom";
@@ -59,7 +56,8 @@ export interface PostWithThreadsMetrics {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(n: number): string {
+function fmt(n: number | null | undefined): string {
+    if (n == null) return "—";
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return n.toString();
@@ -107,6 +105,7 @@ function SummaryKpis({ fb, ig, th }: {
     ig: PostWithIGMetrics[];
     th: PostWithThreadsMetrics[];
 }) {
+    // Facebook aggregates
     const fbReach = fb.reduce((s, d) => s + d.metrics.reach, 0);
     const fbLikes = fb.reduce((s, d) => s + d.metrics.likes, 0);
     const fbComments = fb.reduce((s, d) => s + d.metrics.comments, 0);
@@ -115,6 +114,7 @@ function SummaryKpis({ fb, ig, th }: {
     const fbTickets = fb.reduce((s, d) => s + d.metrics.ticketsSold, 0);
     const fbEng = fbLikes + fbComments + fbShares;
 
+    // Instagram aggregates
     const igReach = ig.reduce((s, d) => s + d.metrics.reach, 0);
     const igLikes = ig.reduce((s, d) => s + d.metrics.likes, 0);
     const igComments = ig.reduce((s, d) => s + d.metrics.comments, 0);
@@ -123,17 +123,30 @@ function SummaryKpis({ fb, ig, th }: {
     const igTickets = ig.reduce((s, d) => s + d.metrics.ticketsSold, 0);
     const igEng = igLikes + igComments + igSaves + igShares;
 
+    // Threads aggregates — ALL fields from DistributionMetricsThreads
     const thViews = th.reduce((s, d) => s + d.metrics.views, 0);
     const thLikes = th.reduce((s, d) => s + d.metrics.likes, 0);
     const thReplies = th.reduce((s, d) => s + d.metrics.replies, 0);
     const thReposts = th.reduce((s, d) => s + d.metrics.reposts, 0);
     const thQuotes = th.reduce((s, d) => s + d.metrics.quotes, 0);
     const thShares = th.reduce((s, d) => s + d.metrics.shares, 0);
+    const thTickets = th.reduce((s, d) => s + (d.metrics.ticketsSold ?? 0), 0);
     const thEng = thLikes + thReplies + thReposts + thQuotes + thShares;
 
     const totalReach = fbReach + igReach + thViews;
     const totalEng = fbEng + igEng + thEng;
-    const totalTickets = fbTickets + igTickets;
+    const totalTickets = fbTickets + igTickets + thTickets;
+
+    // Avg CVR per platform (weighted by post count)
+    const fbAvgCvr = fb.length > 0
+        ? fb.reduce((s, d) => s + (d.metrics.conversionRate ?? 0), 0) / fb.length
+        : null;
+    const igAvgCvr = ig.length > 0
+        ? ig.reduce((s, d) => s + (d.metrics.conversionRate ?? 0), 0) / ig.length
+        : null;
+    const thAvgCvr = th.length > 0
+        ? th.reduce((s, d) => s + (d.metrics.conversionRate ?? 0), 0) / th.length
+        : null;
 
     return (
         <div className="space-y-4">
@@ -149,7 +162,7 @@ function SummaryKpis({ fb, ig, th }: {
                     color="text-violet-400" borderColor="border-violet-500/20" bgColor="bg-violet-500/5" />
                 <KpiCard icon={<MdOutlineConfirmationNumber />} label="Tổng Vé bán"
                     value={fmt(totalTickets)}
-                    sub={`FB ${fmt(fbTickets)} · IG ${fmt(igTickets)}`}
+                    sub={`FB ${fmt(fbTickets)} · IG ${fmt(igTickets)} · TH ${fmt(thTickets)}`}
                     color="text-amber-400" borderColor="border-amber-500/20" bgColor="bg-amber-500/5" />
             </div>
 
@@ -163,12 +176,15 @@ function SummaryKpis({ fb, ig, th }: {
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
                         <KpiCard icon={<MdOutlinePeopleAlt />} label="Reach" value={fmt(fbReach)} sub="Người tiếp cận"
                             color="text-blue-400" borderColor="border-blue-500/15" bgColor="bg-blue-500/5" platformIcon={<MdFacebook />} />
-                        <KpiCard icon={<MdOutlineTouchApp />} label="Clicks" value={fmt(fbClicks)} sub="Lượt click"
+                        <KpiCard icon={<MdOutlineTouchApp />} label="Clicks" value={fmt(fbClicks)}
+                            sub={`CTR: ${pct(fbClicks, fbReach)}`}
                             color="text-emerald-400" borderColor="border-emerald-500/15" bgColor="bg-emerald-500/5" platformIcon={<MdFacebook />} />
-                        <KpiCard icon={<MdOutlineThumbUp />} label="Thích" value={fmt(fbLikes)} sub={`${pct(fbLikes, fbEng)} tương tác`}
+                        <KpiCard icon={<MdOutlineConfirmationNumber />} label="Vé bán" value={fmt(fbTickets)}
+                            sub={`CVR TB: ${fbAvgCvr != null ? `${(fbAvgCvr * 100).toFixed(2)}%` : "—"}`}
+                            color="text-amber-400" borderColor="border-amber-500/15" bgColor="bg-amber-500/5" platformIcon={<MdFacebook />} />
+                        <KpiCard icon={<MdOutlineThumbUp />} label="Thích" value={fmt(fbLikes)}
+                            sub={`${pct(fbLikes, fbEng)} tương tác`}
                             color="text-sky-400" borderColor="border-sky-500/15" bgColor="bg-sky-500/5" platformIcon={<MdFacebook />} />
-                        <KpiCard icon={<MdOutlineShare />} label="Chia sẻ" value={fmt(fbShares)} sub={`${pct(fbShares, fbEng)} tương tác`}
-                            color="text-cyan-400" borderColor="border-cyan-500/15" bgColor="bg-cyan-500/5" platformIcon={<MdFacebook />} />
                     </div>
                 </div>
             )}
@@ -183,11 +199,14 @@ function SummaryKpis({ fb, ig, th }: {
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
                         <KpiCard icon={<MdOutlinePeopleAlt />} label="Reach" value={fmt(igReach)} sub="Người tiếp cận"
                             color="text-pink-400" borderColor="border-pink-500/15" bgColor="bg-pink-500/5" platformIcon={<RiInstagramLine />} />
-                        <KpiCard icon={<MdOutlineThumbUp />} label="Thích" value={fmt(igLikes)} sub={`${pct(igLikes, igEng)} tương tác`}
-                            color="text-rose-400" borderColor="border-rose-500/15" bgColor="bg-rose-500/5" platformIcon={<RiInstagramLine />} />
-                        <KpiCard icon={<MdOutlineBookmark />} label="Lưu bài" value={fmt(igSaves)} sub={`${pct(igSaves, igEng)} tương tác`}
+                        <KpiCard icon={<MdOutlineBookmark />} label="Lưu bài" value={fmt(igSaves)}
+                            sub={`Save Rate: ${pct(igSaves, igReach)}`}
                             color="text-amber-400" borderColor="border-amber-500/15" bgColor="bg-amber-500/5" platformIcon={<RiInstagramLine />} />
-                        <KpiCard icon={<MdOutlineChatBubbleOutline />} label="Bình luận" value={fmt(igComments)} sub={`${pct(igComments, igEng)} tương tác`}
+                        <KpiCard icon={<MdOutlineConfirmationNumber />} label="Vé bán" value={fmt(igTickets)}
+                            sub={`CVR TB: ${igAvgCvr != null ? `${(igAvgCvr * 100).toFixed(2)}%` : "—"}`}
+                            color="text-orange-400" borderColor="border-orange-500/15" bgColor="bg-orange-500/5" platformIcon={<RiInstagramLine />} />
+                        <KpiCard icon={<MdOutlineChatBubbleOutline />} label="Bình luận" value={fmt(igComments)}
+                            sub={`${pct(igComments, igEng)} tương tác`}
                             color="text-purple-400" borderColor="border-purple-500/15" bgColor="bg-purple-500/5" platformIcon={<RiInstagramLine />} />
                     </div>
                 </div>
@@ -203,15 +222,168 @@ function SummaryKpis({ fb, ig, th }: {
                     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
                         <KpiCard icon={<MdOutlineVisibility />} label="Views" value={fmt(thViews)} sub="Lượt xem"
                             color="text-slate-200" borderColor="border-slate-600/30" bgColor="bg-slate-700/10" platformIcon={<ThreadsIcon />} />
-                        <KpiCard icon={<MdOutlineThumbUp />} label="Thích" value={fmt(thLikes)} sub={`${pct(thLikes, thEng)} tương tác`}
-                            color="text-rose-300" borderColor="border-rose-500/15" bgColor="bg-rose-500/5" platformIcon={<ThreadsIcon />} />
-                        <KpiCard icon={<MdOutlineChatBubbleOutline />} label="Replies" value={fmt(thReplies)} sub={`${pct(thReplies, thEng)} tương tác`}
-                            color="text-sky-300" borderColor="border-sky-500/15" bgColor="bg-sky-500/5" platformIcon={<ThreadsIcon />} />
-                        <KpiCard icon={<MdOutlineRepeat />} label="Reposts" value={fmt(thReposts)} sub={`${pct(thReposts, thEng)} tương tác`}
+                        <KpiCard icon={<MdOutlineRepeat />} label="Reposts" value={fmt(thReposts)}
+                            sub={`Repost Rate: ${pct(thReposts, thViews)}`}
                             color="text-emerald-300" borderColor="border-emerald-500/15" bgColor="bg-emerald-500/5" platformIcon={<ThreadsIcon />} />
+                        <KpiCard icon={<MdOutlineConfirmationNumber />} label="Vé bán" value={fmt(thTickets)}
+                            sub={`CVR TB: ${thAvgCvr != null ? `${(thAvgCvr * 100).toFixed(2)}%` : "—"}`}
+                            color="text-amber-300" borderColor="border-amber-500/15" bgColor="bg-amber-500/5" platformIcon={<ThreadsIcon />} />
+                        <KpiCard icon={<MdOutlineChatBubbleOutline />} label="Replies" value={fmt(thReplies)}
+                            sub={`${pct(thReplies, thEng)} tương tác`}
+                            color="text-sky-300" borderColor="border-sky-500/15" bgColor="bg-sky-500/5" platformIcon={<ThreadsIcon />} />
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// ─── ConversionRateChart ──────────────────────────────────────────────────────
+// Chart mới: CVR từng bài theo nền tảng
+
+function ConversionRateChart({ fb, ig, th }: {
+    fb: PostWithMetrics[];
+    ig: PostWithIGMetrics[];
+    th: PostWithThreadsMetrics[];
+}) {
+    if (!fb.length && !ig.length && !th.length) return null;
+
+    // Per-post CVR data
+    const fbData = fb.map((d, i) => ({
+        name: truncate(d.post.title, 12),
+        idx: `FB#${i + 1}`,
+        platform: "Facebook",
+        cvr: (d.metrics.conversionRate ?? 0) * 100,
+        ctr: d.metrics.reach > 0 ? (d.metrics.clicks / d.metrics.reach) * 100 : 0,
+        tickets: d.metrics.ticketsSold,
+    }));
+
+    const igData = ig.map((d, i) => ({
+        name: truncate(d.post.title, 12),
+        idx: `IG#${i + 1}`,
+        platform: "Instagram",
+        cvr: (d.metrics.conversionRate ?? 0) * 100,
+        saveRate: d.metrics.reach > 0 ? (d.metrics.saves / d.metrics.reach) * 100 : 0,
+        tickets: d.metrics.ticketsSold,
+    }));
+
+    const thData = th.map((d, i) => ({
+        name: truncate(d.post.title, 12),
+        idx: `TH#${i + 1}`,
+        platform: "Threads",
+        cvr: (d.metrics.conversionRate ?? 0) * 100,
+        repostRate: d.metrics.views > 0 ? (d.metrics.reposts / d.metrics.views) * 100 : 0,
+        tickets: d.metrics.ticketsSold ?? 0,
+    }));
+
+    const CvrTooltip = ({ active, payload }: any) => {
+        if (!active || !payload?.length) return null;
+        const d = payload[0]?.payload;
+        return (
+            <div className="bg-slate-900/95 border border-slate-700 rounded-xl px-4 py-3 text-xs space-y-1.5 min-w-[160px]">
+                <p className="text-white font-bold">{d?.name}</p>
+                <p className="text-slate-500">{d?.platform}</p>
+                {payload.map((p: any) => (
+                    <div key={p.dataKey} className="flex justify-between gap-4">
+                        <span style={{ color: p.fill || p.color }}>{p.name}</span>
+                        <span className="text-white font-bold">{p.value?.toFixed(2)}%</span>
+                    </div>
+                ))}
+                <div className="flex justify-between gap-4 border-t border-slate-700 pt-1 mt-1">
+                    <span className="text-amber-400">Vé bán</span>
+                    <span className="text-white font-bold">{fmt(d?.tickets)}</span>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-2">
+                <span className="w-1.5 h-6 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full" />
+                <h3 className="text-base font-bold text-white">Chuyển đổi & Tỷ lệ hiệu suất</h3>
+                <span className="text-[10px] text-slate-600 font-black uppercase tracking-widest">CVR · CTR · Save Rate · Repost Rate</span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Facebook CVR + CTR */}
+                {fb.length > 0 && (
+                    <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                            <MdFacebook className="text-blue-400" />
+                            <p className="text-[10px] font-black text-blue-400/70 uppercase tracking-widest">Facebook · CVR & CTR</p>
+                        </div>
+                        <div className="h-[180px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={fbData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
+                                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
+                                    <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
+                                    <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
+                                    <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                                    <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                    <Bar dataKey="ctr" name="CTR" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex gap-4 mt-2 text-xs text-slate-600">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" />CTR</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Instagram CVR + Save Rate */}
+                {ig.length > 0 && (
+                    <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                            <RiInstagramLine className="text-pink-400" />
+                            <p className="text-[10px] font-black text-pink-400/70 uppercase tracking-widest">Instagram · CVR & Save Rate</p>
+                        </div>
+                        <div className="h-[180px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={igData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
+                                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
+                                    <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
+                                    <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
+                                    <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                                    <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                    <Bar dataKey="saveRate" name="Save Rate" fill="#e1306c" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex gap-4 mt-2 text-xs text-slate-600">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-pink-500" />Save Rate</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Threads CVR + Repost Rate */}
+                {th.length > 0 && (
+                    <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                            <span className="text-slate-300"><ThreadsIcon /></span>
+                            <p className="text-[10px] font-black text-slate-400/70 uppercase tracking-widest">Threads · CVR & Repost Rate</p>
+                        </div>
+                        <div className="h-[180px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={thData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
+                                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
+                                    <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
+                                    <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
+                                    <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                                    <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                    <Bar dataKey="repostRate" name="Repost Rate" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex gap-4 mt-2 text-xs text-slate-600">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" />Repost Rate</span>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -247,6 +419,7 @@ function PlatformComparisonChart({ fb, ig, th }: {
     const thReposts = th.reduce((s, d) => s + d.metrics.reposts, 0);
     const thQuotes = th.reduce((s, d) => s + d.metrics.quotes, 0);
     const thShares = th.reduce((s, d) => s + d.metrics.shares, 0);
+    const thTickets = th.reduce((s, d) => s + (d.metrics.ticketsSold ?? 0), 0);
     const thEng = thLikes + thReplies + thReposts + thQuotes + thShares;
 
     const volumeData = [
@@ -258,7 +431,7 @@ function PlatformComparisonChart({ fb, ig, th }: {
     ];
 
     const convData = [
-        { metric: "Vé bán", Facebook: fbTickets, Instagram: igTickets, Threads: 0 },
+        { metric: "Vé bán", Facebook: fbTickets, Instagram: igTickets, Threads: thTickets },
         { metric: "Clicks (FB)", Facebook: fbClicks, Instagram: 0, Threads: 0 },
         { metric: "Lưu (IG)", Facebook: 0, Instagram: igSaves, Threads: 0 },
         { metric: "Reposts (TH)", Facebook: 0, Instagram: 0, Threads: thReposts },
@@ -307,7 +480,7 @@ function PlatformComparisonChart({ fb, ig, th }: {
                             <BarChart data={volumeData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
                                 <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
                                 <XAxis dataKey="metric" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
                                 {fb.length > 0 && <Bar dataKey="Facebook" fill="#1877F2" radius={[4, 4, 0, 0]} maxBarSize={28} />}
                                 {ig.length > 0 && <Bar dataKey="Instagram" fill="#E1306C" radius={[4, 4, 0, 0]} maxBarSize={28} />}
@@ -317,7 +490,7 @@ function PlatformComparisonChart({ fb, ig, th }: {
                     </div>
                 </div>
 
-                {/* Conversion & đặc thù */}
+                {/* Conversion & đặc thù — Threads tickets now included */}
                 <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Chuyển đổi & đặc thù</p>
                     <p className="text-xs text-slate-600 mb-3">Vé · Clicks(FB) · Lưu(IG) · Reposts/Quotes(TH)</p>
@@ -327,7 +500,7 @@ function PlatformComparisonChart({ fb, ig, th }: {
                             <BarChart data={convData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
                                 <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
                                 <XAxis dataKey="metric" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
                                 {fb.length > 0 && <Bar dataKey="Facebook" fill="#1877F2" radius={[4, 4, 0, 0]} maxBarSize={32} />}
                                 {ig.length > 0 && <Bar dataKey="Instagram" fill="#E1306C" radius={[4, 4, 0, 0]} maxBarSize={32} />}
@@ -355,6 +528,7 @@ function PlatformComparisonChart({ fb, ig, th }: {
                                     style={{ width: fbReach > 0 ? `${Math.min((fbEng / fbReach) * 100, 100)}%` : "0%" }} />
                             </div>
                             <p className="text-xs text-slate-600">{fmt(fbEng)} tương tác / {fmt(fbReach)} reach</p>
+                            <p className="text-xs text-slate-600">CTR: {pct(fbClicks, fbReach)} · Vé: {fmt(fbTickets)}</p>
                         </div>
                     )}
                     {ig.length > 0 && (
@@ -370,6 +544,7 @@ function PlatformComparisonChart({ fb, ig, th }: {
                                     style={{ width: igReach > 0 ? `${Math.min((igEng / igReach) * 100, 100)}%` : "0%" }} />
                             </div>
                             <p className="text-xs text-slate-600">{fmt(igEng)} tương tác / {fmt(igReach)} reach</p>
+                            <p className="text-xs text-slate-600">Save Rate: {pct(igSaves, igReach)} · Vé: {fmt(igTickets)}</p>
                         </div>
                     )}
                     {th.length > 0 && (
@@ -385,6 +560,7 @@ function PlatformComparisonChart({ fb, ig, th }: {
                                     style={{ width: thViews > 0 ? `${Math.min((thEng / thViews) * 100, 100)}%` : "0%" }} />
                             </div>
                             <p className="text-xs text-slate-600">{fmt(thEng)} tương tác / {fmt(thViews)} views</p>
+                            <p className="text-xs text-slate-600">Repost Rate: {pct(thReposts, thViews)} · Vé: {fmt(thTickets)}</p>
                         </div>
                     )}
                 </div>
@@ -471,7 +647,7 @@ function ReachTrendChart({ fb, ig, th }: {
                         </defs>
                         <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                         <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `#${v}`} />
-                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }} />
                         {fb.length > 0 && <Area type="monotone" dataKey="facebook" stroke="#3b82f6" strokeWidth={2} fill="url(#fbGrad)" connectNulls />}
                         {ig.length > 0 && <Area type="monotone" dataKey="instagram" stroke="#ec4899" strokeWidth={2} fill="url(#igGrad)" connectNulls />}
@@ -525,7 +701,8 @@ function EngagementBreakdown({ fb, ig, th }: {
             title: d.post.title, platform: "Threads",
             likes: d.metrics.likes, comments: 0,
             shares: d.metrics.shares, saves: 0,
-            replies: d.metrics.replies, reposts: d.metrics.reposts + d.metrics.quotes,
+            replies: d.metrics.replies,
+            reposts: d.metrics.reposts + d.metrics.quotes,
         })),
     ];
 
@@ -554,7 +731,6 @@ function EngagementBreakdown({ fb, ig, th }: {
         <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
             <h3 className="text-base font-bold text-white mb-5">Phân tích Engagement · Tất cả nền tảng</h3>
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {/* Breakdown bars */}
                 <div className="lg:col-span-2 space-y-5">
                     {fb.length > 0 && (
                         <div className="space-y-2">
@@ -624,7 +800,6 @@ function EngagementBreakdown({ fb, ig, th }: {
                     )}
                 </div>
 
-                {/* Stacked bar per post */}
                 <div className="lg:col-span-3">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Tương tác theo từng bài</p>
                     <div className="h-[220px]">
@@ -632,7 +807,7 @@ function EngagementBreakdown({ fb, ig, th }: {
                             <BarChart data={perPostData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                                 <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
                                 <XAxis dataKey="shortTitle" tick={{ fill: "#64748b", fontSize: 8 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmt} />
+                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
                                 <Tooltip content={<EngTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
                                 <Bar dataKey="likes" name="Thích" stackId="a" fill="#3b82f6" maxBarSize={36} />
                                 <Bar dataKey="comments" name="Bình luận" stackId="a" fill="#8b5cf6" maxBarSize={36} />
@@ -667,34 +842,47 @@ function TopPostsTable({ fb, ig, th }: {
     type Row = {
         id: string; title: string; publishedAt: string | null;
         platform: "Facebook" | "Instagram" | "Threads";
-        reach: number; engagement: number; engRate: string; tickets: number;
+        reach: number; engagement: number; engRate: string;
+        tickets: number; cvr: string;
     };
 
     const rows: Row[] = [
-        ...fb.map(d => ({
-            id: d.post.id + "_fb", title: d.post.title, publishedAt: d.post.publishedAt,
-            platform: "Facebook" as const,
-            reach: d.metrics.reach,
-            engagement: d.metrics.likes + d.metrics.comments + d.metrics.shares,
-            engRate: pct(d.metrics.likes + d.metrics.comments + d.metrics.shares, d.metrics.reach),
-            tickets: d.metrics.ticketsSold,
-        })),
-        ...ig.map(d => ({
-            id: d.post.id + "_ig", title: d.post.title, publishedAt: d.post.publishedAt,
-            platform: "Instagram" as const,
-            reach: d.metrics.reach,
-            engagement: d.metrics.likes + d.metrics.comments + d.metrics.saves + d.metrics.shares,
-            engRate: pct(d.metrics.likes + d.metrics.comments + d.metrics.saves + d.metrics.shares, d.metrics.reach),
-            tickets: d.metrics.ticketsSold,
-        })),
-        ...th.map(d => ({
-            id: d.post.id + "_th", title: d.post.title, publishedAt: d.post.publishedAt,
-            platform: "Threads" as const,
-            reach: d.metrics.views,
-            engagement: d.metrics.likes + d.metrics.replies + d.metrics.reposts + d.metrics.quotes + d.metrics.shares,
-            engRate: pct(d.metrics.likes + d.metrics.replies + d.metrics.reposts + d.metrics.quotes + d.metrics.shares, d.metrics.views),
-            tickets: 0,
-        })),
+        ...fb.map(d => {
+            const eng = d.metrics.likes + d.metrics.comments + d.metrics.shares;
+            return {
+                id: d.post.id + "_fb", title: d.post.title, publishedAt: d.post.publishedAt,
+                platform: "Facebook" as const,
+                reach: d.metrics.reach,
+                engagement: eng,
+                engRate: pct(eng, d.metrics.reach),
+                tickets: d.metrics.ticketsSold,
+                cvr: d.metrics.conversionRateFormatted ?? "—",
+            };
+        }),
+        ...ig.map(d => {
+            const eng = d.metrics.likes + d.metrics.comments + d.metrics.saves + d.metrics.shares;
+            return {
+                id: d.post.id + "_ig", title: d.post.title, publishedAt: d.post.publishedAt,
+                platform: "Instagram" as const,
+                reach: d.metrics.reach,
+                engagement: eng,
+                engRate: pct(eng, d.metrics.reach),
+                tickets: d.metrics.ticketsSold,
+                cvr: d.metrics.conversionRateFormatted ?? "—",
+            };
+        }),
+        ...th.map(d => {
+            const eng = d.metrics.likes + d.metrics.replies + d.metrics.reposts + d.metrics.quotes + d.metrics.shares;
+            return {
+                id: d.post.id + "_th", title: d.post.title, publishedAt: d.post.publishedAt,
+                platform: "Threads" as const,
+                reach: d.metrics.views,
+                engagement: eng,
+                engRate: pct(eng, d.metrics.views),
+                tickets: d.metrics.ticketsSold ?? 0,   // ← fixed: no longer hardcoded 0
+                cvr: d.metrics.conversionRateFormatted ?? "—",
+            };
+        }),
     ].sort((a, b) => b.reach - a.reach).slice(0, 10);
 
     const PlatformIcon = ({ p }: { p: Row["platform"] }) => {
@@ -721,6 +909,7 @@ function TopPostsTable({ fb, ig, th }: {
                             <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Tương tác</th>
                             <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Eng. Rate</th>
                             <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Vé bán</th>
+                            <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">CVR</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -736,6 +925,9 @@ function TopPostsTable({ fb, ig, th }: {
                                 <td className="text-right text-emerald-400 font-semibold py-3 tabular-nums">{r.engRate}</td>
                                 <td className="text-right text-amber-400 py-3 tabular-nums">
                                     {r.tickets > 0 ? fmt(r.tickets) : <span className="text-slate-700">—</span>}
+                                </td>
+                                <td className="text-right text-orange-400 py-3 tabular-nums">
+                                    {r.cvr !== "—" ? r.cvr : <span className="text-slate-700">—</span>}
                                 </td>
                             </tr>
                         ))}
@@ -830,6 +1022,7 @@ export default function AnalyticsPage() {
                 <>
                     <SummaryKpis fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
                     <PlatformComparisonChart fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
+                    <ConversionRateChart fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
                     <ReachTrendChart fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
                     <EngagementBreakdown fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
                     <TopPostsTable fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />

@@ -158,6 +158,9 @@ export interface DistributionMetricsThreads {
     reposts: number;
     quotes: number;
     shares: number;
+    ticketsSold: number;
+    conversionRate: number;
+    conversionRateFormatted: string;
     engagementRate: number;
     engagementRateFormatted: string;
     fetchedAt: string;

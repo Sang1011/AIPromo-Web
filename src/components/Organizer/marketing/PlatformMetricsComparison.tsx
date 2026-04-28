@@ -3,8 +3,10 @@ import { RiInstagramLine } from "react-icons/ri";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../store";
 import type { PostDetail } from "../../../types/post/post";
+import React from "react";
 
-function fmt(n: number): string {
+function fmt(n: number | null | undefined): string {
+    if (n == null) return "—";
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return n.toString();
@@ -25,11 +27,11 @@ interface TableRow {
     fb: CellValue;
     ig: CellValue;
     th: CellValue;
-    section?: string; // nếu set thì render divider trước row này
+    section?: string;
 }
 
 function f(n: number | null | undefined): string {
-    return n != null ? fmt(n) : "—";
+    return fmt(n);
 }
 
 function pct(n: number | null | undefined): string {
@@ -104,6 +106,11 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
     if (!hasFb && !hasIg && !hasTh) return null;
     if (!fb && !ig && !th) return null;
 
+    // Repost Rate value for Threads
+    const thRepostRate = (th?.views ?? 0) > 0
+        ? (th!.reposts ?? 0) / th!.views
+        : null;
+
     // ── Rows ──────────────────────────────────────────────────────────────
     const rows: TableRow[] = [
         // Phân phối
@@ -147,13 +154,19 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
             label: "CVR",
             fb: pct(fb?.conversionRate),
             ig: pct(ig?.conversionRate),
-            th: "—",
+            th: th?.conversionRateFormatted ?? "—",
+        },
+        {
+            label: "Repost Rate",
+            fb: "—",
+            ig: "—",
+            th: thRepostRate != null ? `${(thRepostRate * 100).toFixed(2)}%` : "—",
         },
         {
             label: "Vé bán",
             fb: f(fb?.ticketsSold),
             ig: f(ig?.ticketsSold),
-            th: "—",
+            th: f(th?.ticketsSold),
         },
     ];
 
@@ -168,16 +181,18 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
         "Reposts": { fb: null, ig: null, th: th?.reposts ?? null },
         "Quotes": { fb: null, ig: null, th: th?.quotes ?? null },
         "Eng. Rate": { fb: fb?.engagementRate ?? null, ig: ig?.engagementRate ?? null, th: th?.engagementRate ?? null },
-        "CVR": { fb: fb?.conversionRate ?? null, ig: ig?.conversionRate ?? null, th: null },
-        "Vé bán": { fb: fb?.ticketsSold ?? null, ig: ig?.ticketsSold ?? null, th: null },
+        "CVR": { fb: fb?.conversionRate ?? null, ig: ig?.conversionRate ?? null, th: th?.conversionRate ?? null },
+        "Repost Rate": { fb: null, ig: null, th: thRepostRate },
+        "Vé bán": { fb: fb?.ticketsSold ?? null, ig: ig?.ticketsSold ?? null, th: th?.ticketsSold ?? null },
     };
 
     // ── Footer totals ─────────────────────────────────────────────────────
     const totalReach = (fb?.reach ?? 0) + (ig?.reach ?? 0) + (th?.views ?? 0);
-    const totalEngagement = (fb ? fb.likes + fb.comments + fb.shares : 0)
-        + (ig ? ig.likes + ig.comments + ig.saves + ig.shares : 0)
-        + (th ? th.likes + th.replies + th.reposts + th.quotes + th.shares : 0);
-    const totalTickets = (fb?.ticketsSold ?? 0) + (ig?.ticketsSold ?? 0);
+    const totalEngagement =
+        (fb ? (fb.likes ?? 0) + (fb.comments ?? 0) + (fb.shares ?? 0) : 0)
+        + (ig ? (ig.likes ?? 0) + (ig.comments ?? 0) + (ig.saves ?? 0) + (ig.shares ?? 0) : 0)
+        + (th ? (th.likes ?? 0) + (th.replies ?? 0) + (th.reposts ?? 0) + (th.quotes ?? 0) + (th.shares ?? 0) : 0);
+    const totalTickets = (fb?.ticketsSold ?? 0) + (ig?.ticketsSold ?? 0) + (th?.ticketsSold ?? 0);
 
     return (
         <section className="space-y-4">
@@ -194,7 +209,6 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
                 {/* Platform header row */}
                 <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] border-b border-slate-800 bg-slate-900/40">
                     <div className="px-4 py-3" />
-                    {/* Facebook */}
                     <div className="px-4 py-3 flex items-center justify-center gap-1.5">
                         <MdFacebook className="text-blue-400 text-lg" />
                         <span className="text-xs font-black text-blue-400">Facebook</span>
@@ -203,7 +217,6 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
                             : <span className="text-[9px] text-slate-700 ml-1">—</span>
                         }
                     </div>
-                    {/* Instagram */}
                     <div className="px-4 py-3 flex items-center justify-center gap-1.5">
                         <RiInstagramLine className="text-pink-400 text-lg" />
                         <span className="text-xs font-black text-pink-400">Instagram</span>
@@ -212,7 +225,6 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
                             : <span className="text-[9px] text-slate-700 ml-1">—</span>
                         }
                     </div>
-                    {/* Threads */}
                     <div className="px-4 py-3 flex items-center justify-center gap-1.5 text-slate-300">
                         <ThreadsIcon />
                         <span className="text-xs font-black text-slate-300">Threads</span>
@@ -223,17 +235,17 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
                     </div>
                 </div>
 
-                {/* Table */}
+                {/* Table — key trên Fragment để fix warning */}
                 <table className="w-full">
                     <tbody>
                         {rows.map((row, i) => {
                             const raw = rawByLabel[row.label];
                             const win = raw ? winner(raw.fb, raw.ig, raw.th) : null;
                             return (
-                                <>
-                                    {row.section && <SectionDivider key={`sec-${i}`} label={row.section} />}
-                                    <DataRow key={row.label} row={row} win={win} />
-                                </>
+                                <React.Fragment key={`fragment-${row.label}-${i}`}>
+                                    {row.section && <SectionDivider label={row.section} />}
+                                    <DataRow row={row} win={win} />
+                                </React.Fragment>
                             );
                         })}
                     </tbody>
