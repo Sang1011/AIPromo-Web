@@ -3,11 +3,9 @@ import {
     RiAlertLine,
     RiCalendarEventLine,
     RiLineChartLine,
-    RiMoneyDollarCircleLine,
-    RiRefund2Line,
+    RiMoneyDollarCircleLine
 } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
-import "../../components/Organizer/shared/datetime.css"
 import {
     Area,
     AreaChart,
@@ -22,6 +20,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
+import "../../components/Organizer/shared/datetime.css";
 import type { AppDispatch, RootState } from "../../store";
 import { fetchOrganizerProfile } from "../../store/organizerProfileSlice";
 import {
@@ -78,8 +77,6 @@ const statusBadge = (status: EventStatus) => {
         </span>
     );
 };
-
-const refundColor = (rate: number) => rate < 4 ? "#4ade80" : rate < 8 ? "#fbbf24" : "#f87171";
 
 const TooltipStyle = {
     contentStyle: {
@@ -337,7 +334,7 @@ export default function OrganizerOverviewAllPage() {
                     ))}
                 </div>
             ) : (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                     <MetricCard
                         iconBg="#7c3bed"
                         icon={<RiLineChartLine size={20} color="#FFFFFF" />}
@@ -376,16 +373,6 @@ export default function OrganizerOverviewAllPage() {
                                 <span className="text-blue-400">{summary.activeEventCount} đang mở</span>
                             </>
                         }
-                    />
-                    <MetricCard
-                        iconBg="#7c3bed"
-                        icon={<RiRefund2Line size={20} color="#FFFFFF" />}
-                        label="Tổng hoàn vé"
-                        value={`${fmtMoneyVND(summary.totalRefunds)} đồng`}
-                        sub={summary.grossRevenue > 0
-                            ? `${((summary.totalRefunds / summary.grossRevenue) * 100).toFixed(2)}% tỉ lệ hoàn`
-                            : "0% tỉ lệ hoàn"}
-                        subColor="#f87171"
                     />
                 </div>
             )}
@@ -615,11 +602,9 @@ export default function OrganizerOverviewAllPage() {
                                 {[
                                     "Sự kiện",
                                     "Doanh thu gộp",
-                                    "Hoàn vé",
                                     "Ròng trước phí",
                                     "Phí nền tảng (15%)",
                                     "Ròng thực nhận",
-                                    "Tỉ lệ hoàn",
                                     "Trạng thái",
                                 ].map((h) => (
                                     <th key={h} className="text-left px-5 py-3 text-sm font-medium text-text-muted uppercase tracking-widest whitespace-nowrap">
@@ -662,9 +647,6 @@ export default function OrganizerOverviewAllPage() {
                                             <td className="px-5 py-3.5 text-slate-300 whitespace-nowrap tabular-nums">
                                                 {fmtMoneyVND(row.grossRevenue)} đ
                                             </td>
-                                            <td className="px-5 py-3.5 text-rose-400 whitespace-nowrap tabular-nums">
-                                                − {fmtMoneyVND(row.refundAmount)} đ
-                                            </td>
                                             {/* NEW: net before platform fee */}
                                             <td className="px-5 py-3.5 text-slate-200 whitespace-nowrap tabular-nums">
                                                 {fmtMoneyVND(netBeforeFee)} đ
@@ -674,17 +656,6 @@ export default function OrganizerOverviewAllPage() {
                                             </td>
                                             <td className="px-5 py-3.5 text-emerald-400 font-semibold whitespace-nowrap tabular-nums">
                                                 {fmtMoneyVND(actualNet)} đ
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="h-1.5 w-20 rounded-full bg-slate-800">
-                                                        <div className="h-1.5 rounded-full"
-                                                            style={{ width: `${Math.min(row.refundRate * 8, 100)}%`, background: refundColor(row.refundRate) }} />
-                                                    </div>
-                                                    <span className="text-sm font-medium tabular-nums" style={{ color: refundColor(row.refundRate) }}>
-                                                        {row.refundRate && row.refundRate.toFixed(1)}%
-                                                    </span>
-                                                </div>
                                             </td>
                                             <td className="px-5 py-3.5">{statusBadge(row.status)}</td>
                                         </tr>
@@ -698,9 +669,6 @@ export default function OrganizerOverviewAllPage() {
                                     <td className="px-5 py-3 text-sm font-semibold text-white">Tổng cộng</td>
                                     <td className="px-5 py-3 text-sm font-semibold text-slate-200 tabular-nums">
                                         {fmtMoneyVND(breakdown.reduce((s, r) => s + r.grossRevenue, 0))} đ
-                                    </td>
-                                    <td className="px-5 py-3 text-sm font-semibold text-rose-400 tabular-nums">
-                                        − {fmtMoneyVND(breakdown.reduce((s, r) => s + r.refundAmount, 0))} đ
                                     </td>
                                     {/* NEW tfoot: sum of netRevenue before fee */}
                                     <td className="px-5 py-3 text-sm font-semibold text-slate-200 tabular-nums">

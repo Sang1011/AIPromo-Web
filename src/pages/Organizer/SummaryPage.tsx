@@ -1,31 +1,29 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { useParams } from "react-router-dom";
 import type { AppDispatch, RootState } from "../../store";
-import {
-    fetchOverviewOrganizerStats,
-    fetchSalesTrend,
-} from "../../store/ticketingSlice";
 import {
     fetchRefundRate,
     fetchTransactionSummary,
 } from "../../store/reportSlice";
+import {
+    fetchOverviewOrganizerStats,
+    fetchSalesTrend,
+} from "../../store/ticketingSlice";
+import type {
+    TransactionSummaryReportItem
+} from "../../types/report/report";
 import type {
     OverviewStatistic,
     SalesTrendData,
     SalesTrendPeriod,
 } from "../../types/ticketing/ticketing";
-import type {
-    RefundRateReportItem,
-    TransactionSummaryReportItem,
-} from "../../types/report/report";
 
 import RevenueCards from "../../components/Organizer/overview/RevenueCards";
 import RevenueChart from "../../components/Organizer/overview/RevenueChart";
 import TicketTypeBreakdownTable from "../../components/Organizer/overview/TicketTypeBreakdownTable";
-import TicketTypeBarChart from "../../components/Organizer/overview/ticketTypeBarChart"
-import RefundRateCard from "../../components/Organizer/overview/RefundRateCard";
 import TransactionSummaryCard from "../../components/Organizer/overview/TransactionSummaryCard";
+import TicketTypeBarChart from "../../components/Organizer/overview/ticketTypeBarChart";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
@@ -95,14 +93,6 @@ const mockSalesTrendWeek: SalesTrendData = {
     ],
 };
 
-const mockRefundRate: RefundRateReportItem = {
-    eventId: "mock-event-id",
-    grossRevenue: 167_000_000,
-    netRevenue: 158_000_000,
-    totalRefunds: 8_500_000,
-    refundRatePercent: 5.09,
-};
-
 const mockTransactionSummary: TransactionSummaryReportItem = {
     eventId: "mock-event-id",
     totalTransactions: 342,
@@ -112,16 +102,6 @@ const mockTransactionSummary: TransactionSummaryReportItem = {
     walletPayAmount: 98_000_000,
     directPayAmount: 56_500_000,
 };
-
-// ─── Empty-state fallbacks (shown when API returns no data yet) ───────────────
-
-const emptyRefundRate = (eventId: string): RefundRateReportItem => ({
-    eventId,
-    grossRevenue: 0,
-    netRevenue: 0,
-    totalRefunds: 0,
-    refundRatePercent: 0,
-});
 
 const emptyTransactionSummary = (eventId: string): TransactionSummaryReportItem => ({
     eventId,
@@ -149,7 +129,6 @@ export default function SummaryPage() {
 
     // ── Report slice ─────────────────────────────────────────────────────────
     const {
-        refundRate: reduxRefundRate,
         transactionSummary: reduxTransactionSummary,
         loading: reportLoading,
     } = useSelector((state: RootState) => state.REPORT);
@@ -169,13 +148,7 @@ export default function SummaryPage() {
     const loading = USE_MOCK ? mockLoading : reduxLoading;
     const salesTrendLoading = USE_MOCK ? mockTrendLoading : reduxTrendLoading;
 
-    const refundRateLoading = USE_MOCK ? false : !!reportLoading.refundRate;
     const transactionLoading = USE_MOCK ? false : !!reportLoading.transaction;
-
-    // Always render both cards — fallback to zero/empty state when no data
-    const refundRate = USE_MOCK
-        ? mockRefundRate
-        : (reduxRefundRate ?? emptyRefundRate(eventId ?? ""));
     const transactionSummary = USE_MOCK
         ? mockTransactionSummary
         : (reduxTransactionSummary ?? emptyTransactionSummary(eventId ?? ""));
@@ -237,8 +210,8 @@ export default function SummaryPage() {
             />
 
             {/* ── Refund & Transaction analytics (side by side) ─────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <RefundRateCard data={refundRate} loading={refundRateLoading} />
+            <div className="gap-6">
+                {/* <RefundRateCard data={refundRate} loading={refundRateLoading} /> */}
                 <TransactionSummaryCard data={transactionSummary} loading={transactionLoading} />
             </div>
 

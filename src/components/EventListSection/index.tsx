@@ -57,7 +57,7 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-   navigate(`/event-detail/urlPath=${item.urlPath}`);
+    navigate(`/event-detail/${item.urlPath}`);
   };
 
   const isFree = item.minPrice === 0;
@@ -142,8 +142,8 @@ const EventCard: React.FC<{ item: EventItem }> = ({ item }) => {
                   : "rgba(245,158,11,0.2)",
               color: item.status === "Published" ? "#2dd4bf" : "#fbbf24",
               border: `1px solid ${item.status === "Published"
-                  ? "rgba(20,184,166,0.4)"
-                  : "rgba(245,158,11,0.4)"
+                ? "rgba(20,184,166,0.4)"
+                : "rgba(245,158,11,0.4)"
                 }`,
             }}
           >

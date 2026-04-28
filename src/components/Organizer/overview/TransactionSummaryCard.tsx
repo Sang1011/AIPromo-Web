@@ -29,7 +29,6 @@ export default function TransactionSummaryCard({ data, loading }: Props) {
         totalTransactions,
         completedCount,
         failedCount,
-        refundedCount,
         walletPayAmount,
         directPayAmount,
     } = data;
@@ -37,7 +36,6 @@ export default function TransactionSummaryCard({ data, loading }: Props) {
     const statusData = [
         { name: "Thành công", value: completedCount, color: "#22c55e", key: "completed" },
         { name: "Thất bại", value: failedCount, color: "#ef4444", key: "failed" },
-        { name: "Hoàn tiền", value: refundedCount, color: "#f97316", key: "refunded" },
     ];
 
     const paymentData = [
