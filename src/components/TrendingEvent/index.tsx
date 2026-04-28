@@ -31,7 +31,7 @@ function EventCard({ event, rank }: { event: EventItem; rank: number }) {
 
   return (
     <a
-      href={`event-detail/urlPath=${event.urlPath}`}
+      href={`event-detail/${event.urlPath}`}
       className="relative flex-shrink-0 group"
       style={{
         width: "clamp(260px, 28vw, 360px)",
