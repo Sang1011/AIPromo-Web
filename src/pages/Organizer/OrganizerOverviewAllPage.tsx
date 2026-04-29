@@ -310,7 +310,7 @@ export default function OrganizerOverviewAllPage() {
     }, [breakdown, eventTitles]);
 
     const areaSubLabel = areaSeries === "net"
-        ? "Doanh thu ròng thực nhận (sau khuyến mãi, hoàn tiền & phí nền tảng)"
+        ? "Doanh thu ròng thực nhận (đã trừ khuyến mãi & phí nền tảng)"
         : "Doanh thu gộp";
 
     return (
@@ -321,7 +321,7 @@ export default function OrganizerOverviewAllPage() {
                 <RiAlertLine className="mt-0.5 shrink-0 text-orange-400" size={17} />
                 <p className="text-sm text-orange-300/90 leading-relaxed">
                     <span className="font-semibold text-orange-300">Phí nền tảng 15%&nbsp;—&nbsp;</span>
-                    Nền tảng sẽ khấu trừ 15% phí dịch vụ trên doanh thu ròng của từng sự kiện (sau khi đã trừ khuyến mãi &amp; hoàn vé).
+                    Nền tảng sẽ khấu trừ 15% phí dịch vụ trên doanh thu ròng của từng sự kiện (sau khi đã trừ khuyến mãi &amp;).
                     Tất cả số liệu <strong className="text-orange-200">Ròng thực nhận</strong> hiển thị bên dưới đã phản ánh khoản khấu trừ này.
                 </p>
             </div>
@@ -592,7 +592,7 @@ export default function OrganizerOverviewAllPage() {
                 <div className="px-5 py-4 border-b border-border-dark">
                     <p className="text-base font-semibold text-white">Tổng quan tất cả sự kiện</p>
                     <p className="text-sm text-text-muted mt-0.5">
-                        Doanh thu gộp · hoàn vé · ròng trước phí · phí nền tảng · ròng thực nhận · trạng thái
+                        Doanh thu gộp · ròng trước phí · phí nền tảng · ròng thực nhận · trạng thái
                     </p>
                 </div>
                 <div className="overflow-x-auto">

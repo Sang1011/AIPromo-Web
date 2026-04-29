@@ -127,6 +127,8 @@ export interface DistributionMetricsFacebook {
     shares: number;
     reach: number;
     clicks: number;
+    buyCount: number,
+    clickCount: number,
     ticketsSold: number;
     conversionRate: number;
     conversionRateFormatted: string;
@@ -143,6 +145,8 @@ export interface DistributionMetricsInstagram {
     reach: number;
     saves: number;
     shares: number;
+    buyCount: number,
+    clickCount: number,
     ticketsSold: number;
     conversionRate: number;
     conversionRateFormatted: string;

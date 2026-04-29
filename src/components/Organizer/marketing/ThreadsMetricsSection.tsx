@@ -1,16 +1,28 @@
 import { useEffect } from "react";
 import {
-    MdOutlineRefresh, MdOutlineOpenInNew, MdOutlineVisibility,
-    MdOutlineThumbUp, MdOutlineChatBubbleOutline, MdOutlineRepeat,
-    MdOutlineFormatQuote, MdOutlineShare, MdOutlineTrendingUp,
-    MdOutlineConfirmationNumber,
+    MdOutlineChatBubbleOutline,
+    MdOutlineFormatQuote,
+    MdOutlineOpenInNew,
+    MdOutlineRefresh,
+    MdOutlineRepeat,
+    MdOutlineShare,
+    MdOutlineThumbUp,
+    MdOutlineTrendingUp,
+    MdOutlineVisibility
 } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetricsThreads, fetchDistributionMetricsThreads } from "../../../store/postSlice";
 import type { PostDetail } from "../../../types/post/post";
 import { formatDateTime } from "../../../utils/formatDateTime";
+import {
+    calcThreadsCTR,
+    calcThreadsCVR,
+    calcThreadsER,
+    fmtPct,
+} from "../../../utils/metricsFormulas";
 import { EmptyStateThreads } from "../shared/EmtyState";
+import { FormulaNote } from "../shared/FormulaNote";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,10 +44,11 @@ const ThreadsIcon = () => (
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
-    icon, label, value, sub, color = "text-slate-300", borderColor = "border-slate-700", badge,
+    icon, label, value, sub, color = "text-slate-300", borderColor = "border-slate-700", badge, formulaNote,
 }: {
     icon: React.ReactNode; label: string; value: string | number;
     sub?: string; color?: string; borderColor?: string; badge?: string;
+    formulaNote?: React.ReactNode;
 }) {
     return (
         <div className={`relative bg-slate-900/60 border ${borderColor} rounded-2xl px-5 py-4 flex flex-col gap-2 overflow-hidden group transition-all duration-200 hover:border-opacity-60`}>
@@ -46,9 +59,10 @@ function StatCard({
                 )}
             </div>
             <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</p>
-                <p className={`text-2xl font-black ${color} mt-0.5 tabular-nums`}>{value}</p>
-                {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
+                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{label}</p>
+                <p className={`text-3xl font-black ${color} mt-0.5 tabular-nums`}>{value}</p>
+                {sub && <p className="text-sm text-slate-600 mt-0.5">{sub}</p>}
+                {formulaNote}
             </div>
         </div>
     );
@@ -57,15 +71,16 @@ function StatCard({
 // ─── RateCard ─────────────────────────────────────────────────────────────────
 
 function RateCard({
-    label, rate, numerator, denominator, numeratorLabel, denominatorLabel, gradient,
+    label, rate, numerator, denominator, numeratorLabel, denominatorLabel, gradient, formula, note,
 }: {
     label: string; rate: string; numerator: number; denominator: number;
     numeratorLabel: string; denominatorLabel: string; gradient: string;
+    formula?: string; note?: string;
 }) {
     const pctNum = denominator > 0 ? Math.min((numerator / denominator) * 100, 100) : 0;
     return (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-4 space-y-3">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</p>
+            <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{label}</p>
             <p className="text-3xl font-black text-white tabular-nums">{rate}</p>
             <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-700"
@@ -75,6 +90,7 @@ function RateCard({
                 <span>{numeratorLabel}: <span className="text-slate-400 font-semibold">{fmt(numerator)}</span></span>
                 <span>{denominatorLabel}: <span className="text-slate-400 font-semibold">{fmt(denominator)}</span></span>
             </div>
+            {formula && <FormulaNote formula={formula} note={note} />}
         </div>
     );
 }
@@ -85,7 +101,7 @@ function SectionDivider({ label }: { label: string }) {
     return (
         <div className="flex items-center gap-3 py-1">
             <div className="h-px flex-1 bg-slate-800" />
-            <span className="text-[10px] font-black tracking-widest text-slate-600 uppercase">{label}</span>
+            <span className="text-xs font-black tracking-widest text-slate-600 uppercase">{label}</span>
             <div className="h-px flex-1 bg-slate-800" />
         </div>
     );
@@ -123,8 +139,6 @@ export default function ThreadsMetricsSection({ post }: { post: PostDetail }) {
 
     if (!threadsDistribution) return null;
 
-    const totalEngagement = m ? (m.likes ?? 0) + (m.replies ?? 0) + (m.reposts ?? 0) + (m.quotes ?? 0) + (m.shares ?? 0) : 0;
-
     return (
         <section className="space-y-5">
             {/* ── Header ── */}
@@ -160,106 +174,132 @@ export default function ThreadsMetricsSection({ post }: { post: PostDetail }) {
 
             {loading.fetchDistributionMetricsThreads && !m && <MetricsSkeleton />}
 
-            {m && (
-                <div className="space-y-5">
-                    {/* ── Phân phối ── */}
-                    <SectionDivider label="Phân phối" />
-                    <div className="grid grid-cols-1 gap-3">
-                        <StatCard
-                            icon={<MdOutlineVisibility />}
-                            label="Lượt xem"
-                            value={fmt(m.views)}
-                            sub="Tổng views bài viết"
-                            color="text-slate-200"
-                            borderColor="border-slate-700"
-                        />
-                    </div>
+            {m && (() => {
+                const er = calcThreadsER(m.likes ?? 0, m.replies ?? 0, m.reposts ?? 0, m.quotes ?? 0, m.views ?? 0);
+                const ctr = calcThreadsCTR(m.clickCount ?? 0, m.views ?? 0);
+                const cvr = calcThreadsCVR(m.buyCount ?? 0, m.clickCount ?? 0);
+                const totalEngagement = (m.likes ?? 0) + (m.replies ?? 0) + (m.reposts ?? 0) + (m.quotes ?? 0) + (m.shares ?? 0);
+                const contributionPct = (m.ticketsSold ?? 0) > 0 ? (m.buyCount ?? 0) / m.ticketsSold : null;
+                const repostRate = (m.views ?? 0) > 0 ? (m.reposts ?? 0) / m.views : null;
 
-                    {/* ── Tương tác ── */}
-                    <SectionDivider label="Tương tác" />
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <StatCard icon={<MdOutlineThumbUp />} label="Lượt thích" value={fmt(m.likes)} color="text-rose-400" borderColor="border-rose-500/20" />
-                        <StatCard icon={<MdOutlineChatBubbleOutline />} label="Replies" value={fmt(m.replies)} color="text-sky-400" borderColor="border-sky-500/20" />
-                        <StatCard icon={<MdOutlineRepeat />} label="Reposts" value={fmt(m.reposts)} color="text-emerald-400" borderColor="border-emerald-500/20" />
-                        <StatCard icon={<MdOutlineFormatQuote />} label="Quotes" value={fmt(m.quotes)} color="text-violet-400" borderColor="border-violet-500/20" />
-                        <StatCard icon={<MdOutlineShare />} label="Chia sẻ" value={fmt(m.shares)} color="text-amber-400" borderColor="border-amber-500/20" />
-                        <StatCard icon={<MdOutlineTrendingUp />} label="Tổng tương tác" value={fmt(totalEngagement)} color="text-slate-200" borderColor="border-slate-600" />
-                    </div>
-
-                    {/* ── Chuyển đổi & Kinh doanh ── */}
-                    <SectionDivider label="Chuyển đổi & Kinh doanh" />
-                    <div className="grid grid-cols-2 gap-3">
-                        <StatCard
-                            icon={<MdOutlineConfirmationNumber />}
-                            label="Vé đã bán"
-                            value={fmt(m.ticketsSold)}
-                            sub="Từ bài đăng này"
-                            color="text-amber-400"
-                            borderColor="border-amber-500/20"
-                            badge="Business"
-                        />
-                        <StatCard
-                            icon={<MdOutlineTrendingUp />}
-                            label="Tỷ lệ chuyển đổi"
-                            value={m.conversionRateFormatted ?? "—"}
-                            sub="Tương tác → Vé"
-                            color="text-orange-400"
-                            borderColor="border-orange-500/20"
-                            badge="CVR"
-                        />
-                    </div>
-
-                    {/* ── Tỷ lệ hiệu suất ── */}
-                    <SectionDivider label="Tỷ lệ hiệu suất" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Engagement Rate */}
-                        <div className="bg-slate-900/60 border border-slate-700 rounded-2xl px-5 py-4 space-y-3">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Engagement Rate</p>
-                            <p className="text-3xl font-black text-white tabular-nums">{m.engagementRateFormatted ?? "—"}</p>
-                            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full rounded-full transition-all duration-700"
-                                    style={{
-                                        width: `${Math.min(m.engagementRate ?? 0, 100)}%`,
-                                        background: "linear-gradient(90deg, #94a3b8, #e2e8f0)",
-                                    }}
-                                />
-                            </div>
-                            <div className="flex justify-between text-xs text-slate-600">
-                                <span>Tổng tương tác: <span className="text-slate-400 font-semibold">{fmt(totalEngagement)}</span></span>
-                                <span>Views: <span className="text-slate-400 font-semibold">{fmt(m.views)}</span></span>
-                            </div>
+                return (
+                    <div className="space-y-5">
+                        {/* ── Phân phối ── */}
+                        <SectionDivider label="Phân phối" />
+                        <div className="grid grid-cols-1 gap-3">
+                            <StatCard
+                                icon={<MdOutlineVisibility />}
+                                label="Lượt xem"
+                                value={fmt(m.views)}
+                                sub="Tổng views bài viết"
+                                color="text-slate-200"
+                                borderColor="border-slate-700"
+                            />
                         </div>
 
-                        {/* Repost Rate */}
-                        <RateCard
-                            label="Repost Rate"
-                            rate={(m.views ?? 0) > 0 ? `${(((m.reposts ?? 0) / m.views) * 100).toFixed(2)}%` : "—"}
-                            numerator={m.reposts ?? 0}
-                            denominator={m.views ?? 0}
-                            numeratorLabel="Reposts"
-                            denominatorLabel="Views"
-                            gradient="linear-gradient(90deg, #10b981, #6366f1)"
-                        />
-                    </div>
+                        {/* ── Tương tác ── */}
+                        <SectionDivider label="Tương tác" />
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <StatCard icon={<MdOutlineThumbUp />} label="Lượt thích" value={fmt(m.likes)} color="text-rose-400" borderColor="border-rose-500/20" />
+                            <StatCard icon={<MdOutlineChatBubbleOutline />} label="Replies" value={fmt(m.replies)} color="text-sky-400" borderColor="border-sky-500/20" />
+                            <StatCard icon={<MdOutlineRepeat />} label="Reposts" value={fmt(m.reposts)} color="text-emerald-400" borderColor="border-emerald-500/20" />
+                            <StatCard icon={<MdOutlineFormatQuote />} label="Quotes" value={fmt(m.quotes)} color="text-violet-400" borderColor="border-violet-500/20" />
+                            <StatCard
+                                icon={<MdOutlineShare />}
+                                label="Chia sẻ"
+                                value={fmt(m.shares)}
+                                color="text-amber-400"
+                                borderColor="border-amber-500/20"
+                                formulaNote={<FormulaNote formula="—" note="Không dùng trong ER (Threads không phân biệt internal/external share)" />}
+                            />
+                            <StatCard icon={<MdOutlineTrendingUp />} label="Tổng tương tác" value={fmt(totalEngagement)} color="text-slate-200" borderColor="border-slate-600" />
+                        </div>
 
-                    {/* ── External link ── */}
-                    {m.externalUrl && (
-                        <div className="flex items-center gap-3 bg-slate-900/40 border border-slate-800 rounded-2xl px-5 py-3">
-                            <ThreadsIcon />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs text-slate-500 mb-0.5">Link bài Threads</p>
+                        {/* ── Chuyển đổi & Kinh doanh ── */}
+                        <SectionDivider label="Chuyển đổi & Kinh doanh" />
+                        <div className="grid grid-cols-1 gap-3">
+                            <StatCard
+                                icon={<MdOutlineTrendingUp />}
+                                label="Số lượng vé đã đóng góp từ bài này"
+                                value={fmt(m.buyCount)}
+                                sub={contributionPct != null ? `${fmtPct(contributionPct)} tổng vé` : undefined}
+                                color="text-orange-400"
+                                borderColor="border-orange-500/20"
+                                badge="Lượt mua"
+                                formulaNote={<FormulaNote formula="buyCount / ticketsSold" note="Tỷ lệ đóng góp của bài đăng này" />}
+                            />
+                        </div>
+
+                        {/* ── Tỷ lệ hiệu suất ── */}
+                        <SectionDivider label="Tỷ lệ hiệu suất" />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <RateCard
+                                label="Engagement Rate"
+                                rate={fmtPct(er)}
+                                numerator={totalEngagement - (m.shares ?? 0)}
+                                denominator={m.views ?? 0}
+                                numeratorLabel="Likes+Replies+Reposts+Quotes"
+                                denominatorLabel="Views"
+                                gradient="linear-gradient(90deg, #94a3b8, #e2e8f0)"
+                                formula="(likes + replies + reposts + quotes) / views"
+                                note="Không tính shares — Threads không phân biệt internal/external share"
+                            />
+                            <RateCard
+                                label="Click-Through Rate"
+                                rate={fmtPct(ctr)}
+                                numerator={m.clickCount ?? 0}
+                                denominator={m.views ?? 0}
+                                numeratorLabel="clickCount"
+                                denominatorLabel="Views"
+                                gradient="linear-gradient(90deg, #10b981, #06b6d4)"
+                                formula="clickCount / views"
+                                note="clickCount = AiPromo tracking (Threads API không trả clicks native)"
+                            />
+                            <RateCard
+                                label="Conversion Rate"
+                                rate={fmtPct(cvr)}
+                                numerator={m.buyCount ?? 0}
+                                denominator={m.clickCount ?? 0}
+                                numeratorLabel="Lượt mua"
+                                denominatorLabel="clickCount"
+                                gradient="linear-gradient(90deg, #f59e0b, #ef4444)"
+                                formula="buyCount / clickCount"
+                            />
+                        </div>
+
+                        {/* ── Repost Rate (Threads-specific) ── */}
+                        <div className="grid grid-cols-1 gap-4">
+                            <RateCard
+                                label="Repost Rate"
+                                rate={fmtPct(repostRate)}
+                                numerator={m.reposts ?? 0}
+                                denominator={m.views ?? 0}
+                                numeratorLabel="Reposts"
+                                denominatorLabel="Views"
+                                gradient="linear-gradient(90deg, #10b981, #6366f1)"
+                                formula="reposts / views"
+                                note="Chỉ số đặc trưng của Threads — đo mức lan truyền nội dung"
+                            />
+                        </div>
+
+                        {/* ── External link ── */}
+                        {m.externalUrl && (
+                            <div className="flex items-center gap-3 bg-slate-900/40 border border-slate-800 rounded-2xl px-5 py-3">
+                                <ThreadsIcon />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-500 mb-0.5">Link bài Threads</p>
+                                    <a href={m.externalUrl} target="_blank" rel="noreferrer"
+                                        className="text-slate-300 text-sm hover:underline truncate block">{m.externalUrl}</a>
+                                </div>
                                 <a href={m.externalUrl} target="_blank" rel="noreferrer"
-                                    className="text-slate-300 text-sm hover:underline truncate block">{m.externalUrl}</a>
+                                    className="shrink-0 p-2 rounded-xl border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-all">
+                                    <MdOutlineOpenInNew />
+                                </a>
                             </div>
-                            <a href={m.externalUrl} target="_blank" rel="noreferrer"
-                                className="shrink-0 p-2 rounded-xl border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-all">
-                                <MdOutlineOpenInNew />
-                            </a>
-                        </div>
-                    )}
-                </div>
-            )}
+                        )}
+                    </div>
+                );
+            })()}
 
             {!m && !loading.fetchDistributionMetricsThreads && <EmptyStateThreads />}
         </section>

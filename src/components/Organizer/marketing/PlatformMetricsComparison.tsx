@@ -1,9 +1,10 @@
+import React from "react";
 import { MdFacebook } from "react-icons/md";
 import { RiInstagramLine } from "react-icons/ri";
 import { useSelector } from "react-redux";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { RootState } from "../../../store";
 import type { PostDetail } from "../../../types/post/post";
-import React from "react";
 
 function fmt(n: number | null | undefined): string {
     if (n == null) return "—";
@@ -71,22 +72,177 @@ function DataRow({ row, win }: { row: TableRow; win: string | null }) {
             <td className="py-2.5 px-4 text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                 {row.label}
             </td>
-            <td className={`py-2.5 px-4 text-center text-sm tabular-nums font-bold transition
+            <td className={`py-2.5 px-4 text-center text-base tabular-nums font-bold transition
                 ${row.fb === "—" ? "text-slate-700" : win === "fb" ? "text-blue-300" : "text-slate-400"}`}>
                 {row.fb}
                 {win === "fb" && row.fb !== "—" && <span className="ml-1 text-[9px] text-blue-400">▲</span>}
             </td>
-            <td className={`py-2.5 px-4 text-center text-sm tabular-nums font-bold transition
+            <td className={`py-2.5 px-4 text-center text-base tabular-nums font-bold transition
                 ${row.ig === "—" ? "text-slate-700" : win === "ig" ? "text-pink-300" : "text-slate-400"}`}>
                 {row.ig}
                 {win === "ig" && row.ig !== "—" && <span className="ml-1 text-[9px] text-pink-400">▲</span>}
             </td>
-            <td className={`py-2.5 px-4 text-center text-sm tabular-nums font-bold transition
+            <td className={`py-2.5 px-4 text-center text-base tabular-nums font-bold transition
                 ${row.th === "—" ? "text-slate-700" : win === "th" ? "text-slate-200" : "text-slate-400"}`}>
                 {row.th}
                 {win === "th" && row.th !== "—" && <span className="ml-1 text-[9px] text-slate-400">▲</span>}
             </td>
         </tr>
+    );
+}
+
+// ── BuyCount Donut Chart ──────────────────────────────────────────────────────
+
+function BuyCountDonutChart({
+    fb, ig, th, ticketsSold,
+}: {
+    fb: number; ig: number; th: number; ticketsSold: number;
+}) {
+    const totalBuy = fb + ig + th;
+
+    const data = [
+        { name: "Facebook", value: fb, color: "#3b82f6" },
+        { name: "Instagram", value: ig, color: "#e1306c" },
+        { name: "Threads", value: th, color: "#94a3b8" },
+    ].filter(d => d.value > 0);
+
+    const unclaimed = ticketsSold > totalBuy ? ticketsSold - totalBuy : 0;
+    if (unclaimed > 0) {
+        data.push({ name: "Nền tảng AIPromo", value: unclaimed, color: "#7c3bed" });
+    }
+
+    const CustomTooltip = ({ active, payload }: any) => {
+        if (!active || !payload?.length) return null;
+        const d = payload[0].payload;
+        const pctVal = ticketsSold > 0 ? ((d.value / ticketsSold) * 100).toFixed(1) : "—";
+        return (
+            <div className="bg-slate-900/95 border border-slate-700 rounded-xl px-3 py-2 text-xs space-y-0.5">
+                <p className="text-white font-bold">{d.name}</p>
+                <p className="text-slate-300">{d.value.toLocaleString()} vé</p>
+                <p className="text-slate-500">{pctVal}% tổng vé</p>
+            </div>
+        );
+    };
+
+    const pct = (n: number) => ticketsSold > 0 ? `${((n / ticketsSold) * 100).toFixed(1)}%` : "—";
+
+    return (
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-5 space-y-4">
+            {/* Header */}
+            <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    Đóng góp vé bán theo nền tảng
+                </p>
+                <div className="flex items-baseline gap-4 flex-wrap">
+                    <div className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-black text-amber-400 tabular-nums">{fmt(totalBuy)}</span>
+                        <span className="text-sm text-slate-500">vé từ kênh phân phối</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-black text-purple-400 tabular-nums">{fmt(ticketsSold)}</span>
+                        <span className="text-sm text-slate-500">tổng vé sự kiện</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Chart + Legend */}
+            <div className="flex items-center gap-4">
+                {/* Donut */}
+                <div className="w-[220px] h-[220px] md:w-[260px] md:h-[260px] shrink-0 relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={55}
+                                outerRadius={80}
+                                paddingAngle={data.length > 1 ? 2 : 0}
+                                dataKey="value"
+                                strokeWidth={0}
+                            >
+                                {data.map((entry, i) => (
+                                    <Cell key={i} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <Tooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 1000 }} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                    {/* Center label */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest leading-none">Lượt mua</p>
+                        <p className="text-base font-black text-white tabular-nums mt-0.5">{fmt(ticketsSold)}</p>
+                    </div>
+                </div>
+
+                {/* Legend rows */}
+                <div className="flex-1 space-y-2">
+                    {fb > 0 && (
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
+                                <MdFacebook className="text-blue-400 text-base" />
+                                <span className="text-sm text-slate-400 font-semibold">Facebook</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-base font-black text-blue-300 tabular-nums">{fmt(fb)}</span>
+                                <span className="text-xs text-slate-600 ml-1.5">{pct(fb)}</span>
+                            </div>
+                        </div>
+                    )}
+                    {ig > 0 && (
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-[#e1306c] shrink-0" />
+                                <RiInstagramLine className="text-pink-400 text-base" />
+                                <span className="text-sm text-slate-400 font-semibold">Instagram</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-base font-black text-pink-300 tabular-nums">{fmt(ig)}</span>
+                                <span className="text-xs text-slate-600 ml-1.5">{pct(ig)}</span>
+                            </div>
+                        </div>
+                    )}
+                    {th > 0 && (
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0" />
+                                <ThreadsIcon />
+                                <span className="text-sm text-slate-400 font-semibold">Threads</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-base font-black text-slate-300 tabular-nums">{fmt(th)}</span>
+                                <span className="text-xs text-slate-600 ml-1.5">{pct(th)}</span>
+                            </div>
+                        </div>
+                    )}
+                    {unclaimed > 0 && (
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: "#7c3bed" }} />
+                                <span className="text-sm text-slate-400 font-semibold">Nền tảng AIPromo</span>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-base font-black text-purple-300 tabular-nums">{fmt(unclaimed)}</span>
+                                <span className="text-xs text-slate-500 ml-1.5">{pct(unclaimed)}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tổng vé sự kiện */}
+                    <div className="pt-2 border-t border-slate-800 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Từ kênh phân phối</span>
+                            <span className="text-base font-black text-amber-400 tabular-nums">{fmt(totalBuy)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tổng sự kiện</span>
+                            <span className="text-base font-black text-purple-400 tabular-nums">{fmt(ticketsSold)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -110,6 +266,15 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
     const thRepostRate = (th?.views ?? 0) > 0
         ? (th!.reposts ?? 0) / th!.views
         : null;
+
+    // ticketsSold — lấy từ FB (hoặc fallback IG/Threads), chỉ dùng 1 nguồn vì là số chung sự kiện
+    const ticketsSold = fb?.ticketsSold ?? ig?.ticketsSold ?? th?.ticketsSold ?? 0;
+
+    // buyCount per platform
+    const fbBuy = fb?.buyCount ?? 0;
+    const igBuy = ig?.buyCount ?? 0;
+    const thBuy = th?.buyCount ?? 0;
+    const hasBuyData = fbBuy > 0 || igBuy > 0 || thBuy > 0;
 
     // ── Rows ──────────────────────────────────────────────────────────────
     const rows: TableRow[] = [
@@ -151,6 +316,12 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
             th: th?.engagementRateFormatted ?? "—",
         },
         {
+            label: "CTR",
+            fb: pct(fb?.conversionRate != null ? fb.clicks / (fb.reach || 1) : null),
+            ig: "—",
+            th: "—",
+        },
+        {
             label: "CVR",
             fb: pct(fb?.conversionRate),
             ig: pct(ig?.conversionRate),
@@ -162,11 +333,13 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
             ig: "—",
             th: thRepostRate != null ? `${(thRepostRate * 100).toFixed(2)}%` : "—",
         },
+        // BuyCount per platform (so sánh đóng góp)
         {
-            label: "Vé bán",
-            fb: f(fb?.ticketsSold),
-            ig: f(ig?.ticketsSold),
-            th: f(th?.ticketsSold),
+            section: "Đóng góp vé",
+            label: "BuyCount",
+            fb: f(fb?.buyCount),
+            ig: f(ig?.buyCount),
+            th: f(th?.buyCount),
         },
     ];
 
@@ -181,9 +354,10 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
         "Reposts": { fb: null, ig: null, th: th?.reposts ?? null },
         "Quotes": { fb: null, ig: null, th: th?.quotes ?? null },
         "Eng. Rate": { fb: fb?.engagementRate ?? null, ig: ig?.engagementRate ?? null, th: th?.engagementRate ?? null },
+        "CTR": { fb: fb?.reach ? fb.clicks / fb.reach : null, ig: null, th: null },
         "CVR": { fb: fb?.conversionRate ?? null, ig: ig?.conversionRate ?? null, th: th?.conversionRate ?? null },
         "Repost Rate": { fb: null, ig: null, th: thRepostRate },
-        "Vé bán": { fb: fb?.ticketsSold ?? null, ig: ig?.ticketsSold ?? null, th: th?.ticketsSold ?? null },
+        "BuyCount": { fb: fb?.buyCount ?? null, ig: ig?.buyCount ?? null, th: th?.buyCount ?? null },
     };
 
     // ── Footer totals ─────────────────────────────────────────────────────
@@ -192,7 +366,6 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
         (fb ? (fb.likes ?? 0) + (fb.comments ?? 0) + (fb.shares ?? 0) : 0)
         + (ig ? (ig.likes ?? 0) + (ig.comments ?? 0) + (ig.saves ?? 0) + (ig.shares ?? 0) : 0)
         + (th ? (th.likes ?? 0) + (th.replies ?? 0) + (th.reposts ?? 0) + (th.quotes ?? 0) + (th.shares ?? 0) : 0);
-    const totalTickets = (fb?.ticketsSold ?? 0) + (ig?.ticketsSold ?? 0) + (th?.ticketsSold ?? 0);
 
     return (
         <section className="space-y-4">
@@ -200,10 +373,20 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
             <div className="flex items-center gap-3">
                 <span className="w-1.5 h-6 bg-gradient-to-b from-blue-500 via-pink-500 to-slate-400 rounded-full" />
                 <h2 className="text-lg font-bold text-white">So sánh nền tảng</h2>
-                <span className="text-[10px] text-slate-600 font-black uppercase tracking-widest">
+                <span className="text-xs text-slate-600 font-black uppercase tracking-widest">
                     Facebook · Instagram · Threads
                 </span>
             </div>
+
+            {/* Donut chart — chỉ hiện nếu có buyCount data */}
+            {hasBuyData && ticketsSold > 0 && (
+                <BuyCountDonutChart
+                    fb={fbBuy}
+                    ig={igBuy}
+                    th={thBuy}
+                    ticketsSold={ticketsSold}
+                />
+            )}
 
             <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden">
                 {/* Platform header row */}
@@ -235,7 +418,7 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
                     </div>
                 </div>
 
-                {/* Table — key trên Fragment để fix warning */}
+                {/* Table */}
                 <table className="w-full">
                     <tbody>
                         {rows.map((row, i) => {
@@ -251,8 +434,8 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
                     </tbody>
                 </table>
 
-                {/* Footer */}
-                <div className="border-t border-slate-800 bg-slate-900/40 px-5 py-3 grid grid-cols-3 gap-4 text-center">
+                {/* Footer — bỏ tổng vé, chỉ giữ reach và engagement */}
+                <div className="border-t border-slate-800 bg-slate-900/40 px-5 py-3 grid grid-cols-2 gap-4 text-center">
                     <div>
                         <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Tổng reach / views</p>
                         <p className="text-base font-black text-slate-300 tabular-nums mt-0.5">{fmt(totalReach)}</p>
@@ -260,10 +443,6 @@ export default function PlatformMetricsComparison({ post }: { post: PostDetail }
                     <div>
                         <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Tổng tương tác</p>
                         <p className="text-base font-black text-slate-300 tabular-nums mt-0.5">{fmt(totalEngagement)}</p>
-                    </div>
-                    <div>
-                        <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Tổng vé bán</p>
-                        <p className="text-base font-black text-amber-400 tabular-nums mt-0.5">{fmt(totalTickets)}</p>
                     </div>
                 </div>
             </div>

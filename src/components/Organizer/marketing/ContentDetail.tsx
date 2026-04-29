@@ -628,7 +628,7 @@ export default function ContentDetail({
                         open={showPushFBConfirm}
                         title="Đăng bài lên Facebook"
                         description={facebookDistribution
-                            ? "Bài đã được đăng lên Facebook trước đó. Bạn có chắc muốn đăng lại không?"
+                            ? "Bài đã được đăng lên Facebook trước đó. Các dữ liệu phân tích hiện tại sẽ bị xóa hoàn toàn nếu bạn đăng lại. Bạn có chắc muốn đăng lại không?"
                             : "Xác nhận đăng bài viết này lên trang Facebook của sự kiện?"}
                         confirmText={facebookDistribution ? "Đăng lại" : "Đăng bài"}
                         loading={postLoading.pushPost}
@@ -640,7 +640,7 @@ export default function ContentDetail({
                         open={showPushIGConfirm}
                         title="Đăng bài lên Instagram"
                         description={instagramDistribution
-                            ? "Bài đã được đăng lên Instagram trước đó. Bạn có chắc muốn đăng lại không?"
+                            ? "Bài đã được đăng lên Instagram trước đó. Các dữ liệu phân tích hiện tại sẽ bị xóa hoàn toàn nếu bạn đăng lại. Bạn có chắc muốn đăng lại không?"
                             : "Xác nhận đăng bài viết này lên Instagram của sự kiện?"}
                         confirmText={instagramDistribution ? "Đăng lại" : "Đăng bài"}
                         loading={postLoading.pushPost}
@@ -651,7 +651,7 @@ export default function ContentDetail({
                         open={showPushThreadsConfirm}
                         title="Đăng bài lên Threads"
                         description={threadsDistribution
-                            ? "Bài đã được đăng lên Threads trước đó. Bạn có chắc muốn đăng lại không?"
+                            ? "Bài đã được đăng lên Threads trước đó. Các dữ liệu phân tích hiện tại sẽ bị xóa hoàn toàn nếu bạn đăng lại. Bạn có chắc muốn đăng lại không?"
                             : "Xác nhận đăng bài viết này lên Threads của sự kiện?"}
                         confirmText={threadsDistribution ? "Đăng lại" : "Đăng bài"}
                         loading={postLoading.pushPost}

@@ -1,14 +1,13 @@
 import { useEffect } from "react";
 import {
-    MdOutlineChatBubbleOutline,
     MdOutlineBookmark,
+    MdOutlineChatBubbleOutline,
     MdOutlineOpenInNew,
     MdOutlinePeopleAlt,
     MdOutlineRefresh,
-    MdOutlineThumbUp,
     MdOutlineShare,
-    MdOutlineConfirmationNumber,
-    MdOutlineTrendingUp,
+    MdOutlineThumbUp,
+    MdOutlineTrendingUp
 } from "react-icons/md";
 import { RiInstagramLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,11 +18,19 @@ import type { AppDispatch, RootState } from "../../../store";
 import { clearDistributionMetricsInstagram, fetchDistributionMetricsInstagram } from "../../../store/postSlice";
 import type { PostDetail } from "../../../types/post/post";
 import { formatDateTime } from "../../../utils/formatDateTime";
+import {
+    calcInstagramCTR,
+    calcInstagramCVR,
+    calcInstagramER,
+    fmtPct,
+} from "../../../utils/metricsFormulas";
 import { EmptyStateInstagram } from "../shared/EmtyState";
+import { FormulaNote } from "../shared/FormulaNote";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt(n: number): string {
+function fmt(n: number | null | undefined): string {
+    if (n == null) return "0";
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return n.toString();
@@ -32,10 +39,16 @@ function fmt(n: number): string {
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
 function StatCard({
-    icon, label, value, sub, color = "text-pink-400", borderColor = "border-pink-500/20", badge,
+    icon, label, value, sub, color = "text-pink-400", borderColor = "border-pink-500/20", badge, formulaNote,
 }: {
-    icon: React.ReactNode; label: string; value: string | number;
-    sub?: string; color?: string; borderColor?: string; badge?: string;
+    icon: React.ReactNode;
+    label: string;
+    value: string | number;
+    sub?: string;
+    color?: string;
+    borderColor?: string;
+    badge?: string;
+    formulaNote?: React.ReactNode;
 }) {
     return (
         <div className={`relative bg-slate-900/60 border ${borderColor} rounded-2xl px-5 py-4 flex flex-col gap-2 overflow-hidden group transition-all duration-200 hover:border-opacity-60`}>
@@ -46,9 +59,10 @@ function StatCard({
                 )}
             </div>
             <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</p>
-                <p className={`text-2xl font-black ${color} mt-0.5 tabular-nums`}>{value}</p>
-                {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
+                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{label}</p>
+                <p className={`text-3xl font-black ${color} mt-0.5 tabular-nums`}>{value}</p>
+                {sub && <p className="text-sm text-slate-600 mt-0.5">{sub}</p>}
+                {formulaNote}
             </div>
         </div>
     );
@@ -57,17 +71,23 @@ function StatCard({
 // ─── RateCard ─────────────────────────────────────────────────────────────────
 
 function RateCard({
-    label, rate, numerator, denominator, numeratorLabel, denominatorLabel, gradient,
+    label, rate, numerator, denominator, numeratorLabel, denominatorLabel, gradient, formula, note,
 }: {
-    label: string; rate: string; numerator: number; denominator: number;
-    numeratorLabel: string; denominatorLabel: string; gradient: string;
+    label: string;
+    rate: string;
+    numerator: number;
+    denominator: number;
+    numeratorLabel: string;
+    denominatorLabel: string;
+    gradient: string;
+    formula?: string;
+    note?: string;
 }) {
     const pctNum = denominator > 0 ? Math.min((numerator / denominator) * 100, 100) : 0;
-
     return (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-4 space-y-3">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</p>
-            <p className="text-3xl font-black text-white tabular-nums">{rate}</p>
+            <p className="text-xs font-black text-slate-500 uppercase tracking-widest">{label}</p>
+            <p className="text-4xl font-black text-white tabular-nums">{rate}</p>
             <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pctNum}%`, background: gradient }} />
             </div>
@@ -75,13 +95,16 @@ function RateCard({
                 <span>{numeratorLabel}: <span className="text-slate-400 font-semibold">{fmt(numerator)}</span></span>
                 <span>{denominatorLabel}: <span className="text-slate-400 font-semibold">{fmt(denominator)}</span></span>
             </div>
+            {formula && <FormulaNote formula={formula} note={note} />}
         </div>
     );
 }
 
-// ─── Engagement Bar Chart ─────────────────────────────────────────────────────
+// ─── EngagementBar ────────────────────────────────────────────────────────────
 
-function EngagementBar({ likes, comments, saves, shares }: { likes: number; comments: number; saves: number; shares: number }) {
+function EngagementBar({ likes, comments, saves, shares }: {
+    likes: number; comments: number; saves: number; shares: number;
+}) {
     const data = [
         { name: "Thích", value: likes, color: "#e1306c" },
         { name: "Bình luận", value: comments, color: "#8b5cf6" },
@@ -129,19 +152,19 @@ function MetricsSkeleton() {
     );
 }
 
-// ─── Divider ──────────────────────────────────────────────────────────────────
+// ─── SectionDivider ───────────────────────────────────────────────────────────
 
 function SectionDivider({ label }: { label: string }) {
     return (
         <div className="flex items-center gap-3 py-1">
             <div className="h-px flex-1 bg-slate-800" />
-            <span className="text-[10px] font-black tracking-widest text-slate-600 uppercase">{label}</span>
+            <span className="text-xs font-black tracking-widest text-slate-600 uppercase">{label}</span>
             <div className="h-px flex-1 bg-slate-800" />
         </div>
     );
 }
 
-// ─── InstagramMetricsSection ──────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function InstagramMetricsSection({ post }: { post: PostDetail }) {
     const dispatch = useDispatch<AppDispatch>();
@@ -166,15 +189,13 @@ export default function InstagramMetricsSection({ post }: { post: PostDetail }) 
 
     if (!igDistribution) return null;
 
-    const totalEngagement = m ? m.likes + m.comments + m.saves + m.shares : 0;
-
     return (
         <section className="space-y-5">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-lg font-bold text-white flex items-center gap-2.5">
                     <span className="w-1.5 h-6 bg-pink-500 rounded-full" />
-                    <RiInstagramLine className="text-pink-400 text-2xl" />
+                    <RiInstagramLine className="text-pink-400 text-3xl" />
                     Hiệu suất Instagram
                 </h2>
                 <div className="flex items-center gap-2.5 flex-wrap">
@@ -203,100 +224,120 @@ export default function InstagramMetricsSection({ post }: { post: PostDetail }) 
 
             {loading.fetchDistributionMetricsInstagram && !m && <MetricsSkeleton />}
 
-            {m && (
-                <div className="space-y-5">
-                    {/* ── Reach ── */}
-                    <SectionDivider label="Phân phối" />
-                    <div className="grid grid-cols-1 gap-3">
-                        <StatCard icon={<MdOutlinePeopleAlt />} label="Reach" value={fmt(m.reach)} sub="Người tiếp cận" color="text-violet-400" borderColor="border-violet-500/20" />
-                    </div>
+            {m && (() => {
+                const er = calcInstagramER(m.likes, m.comments, m.saves, m.shares, m.reach);
+                const ctr = calcInstagramCTR(m.clickCount, m.reach);
+                const cvr = calcInstagramCVR(m.buyCount, m.clickCount);
+                const totalEngagement = m.likes + m.comments + m.saves + m.shares;
+                const contributionPct = m.ticketsSold > 0 ? m.buyCount / m.ticketsSold : null;
 
-                    {/* ── Engagement ── */}
-                    <SectionDivider label="Tương tác" />
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <StatCard icon={<MdOutlineThumbUp />} label="Lượt thích" value={fmt(m.likes)} color="text-pink-400" borderColor="border-pink-500/20" />
-                        <StatCard icon={<MdOutlineChatBubbleOutline />} label="Bình luận" value={fmt(m.comments)} color="text-purple-400" borderColor="border-purple-500/20" />
-                        <StatCard icon={<MdOutlineBookmark />} label="Lưu" value={fmt(m.saves)} sub="Bài đã lưu" color="text-amber-400" borderColor="border-amber-500/20" />
-                        <StatCard icon={<MdOutlineShare />} label="Chia sẻ" value={fmt(m.shares)} color="text-emerald-400" borderColor="border-emerald-500/20" />
-                    </div>
-
-                    {/* ── Engagement chart ── */}
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-4 space-y-2">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Phân tích Engagement</p>
-                            <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-                                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-[#e1306c] inline-block" />Thích</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-violet-500 inline-block" />Bình luận</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500 inline-block" />Lưu</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" />Chia sẻ</span>
-                            </div>
+                return (
+                    <div className="space-y-5">
+                        {/* ── Phân phối ── */}
+                        <SectionDivider label="Phân phối" />
+                        <div className="grid grid-cols-1 gap-3">
+                            <StatCard
+                                icon={<MdOutlinePeopleAlt />}
+                                label="Reach"
+                                value={fmt(m.reach)}
+                                sub="Người tiếp cận"
+                                color="text-violet-400"
+                                borderColor="border-violet-500/20"
+                            />
                         </div>
-                        <EngagementBar likes={m.likes} comments={m.comments} saves={m.saves} shares={m.shares} />
-                    </div>
 
-                    {/* ── Conversion & Business ── */}
-                    <SectionDivider label="Chuyển đổi & Kinh doanh" />
-                    <div className="grid grid-cols-2 gap-3">
-                        <StatCard
-                            icon={<MdOutlineConfirmationNumber />}
-                            label="Vé đã bán"
-                            value={fmt(m.ticketsSold)}
-                            sub="Từ bài đăng này"
-                            color="text-amber-400"
-                            borderColor="border-amber-500/20"
-                            badge="Business"
-                        />
-                        <StatCard
-                            icon={<MdOutlineTrendingUp />}
-                            label="Tỷ lệ chuyển đổi"
-                            value={m.conversionRateFormatted}
-                            sub="Tương tác → Vé"
-                            color="text-orange-400"
-                            borderColor="border-orange-500/20"
-                            badge="CVR"
-                        />
-                    </div>
+                        {/* ── Tương tác ── */}
+                        <SectionDivider label="Tương tác" />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <StatCard icon={<MdOutlineThumbUp />} label="Lượt thích" value={fmt(m.likes)} color="text-pink-400" borderColor="border-pink-500/20" />
+                            <StatCard icon={<MdOutlineChatBubbleOutline />} label="Bình luận" value={fmt(m.comments)} color="text-purple-400" borderColor="border-purple-500/20" />
+                            <StatCard icon={<MdOutlineBookmark />} label="Lưu" value={fmt(m.saves)} sub="Bài đã lưu" color="text-amber-400" borderColor="border-amber-500/20" />
+                            <StatCard icon={<MdOutlineShare />} label="Chia sẻ" value={fmt(m.shares)} color="text-emerald-400" borderColor="border-emerald-500/20" />
+                        </div>
 
-                    {/* ── Rates ── */}
-                    <SectionDivider label="Tỷ lệ hiệu suất" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <RateCard
-                            label="Engagement Rate"
-                            rate={m.engagementRateFormatted}
-                            numerator={totalEngagement}
-                            denominator={m.reach}
-                            numeratorLabel="Tổng tương tác"
-                            denominatorLabel="Reach"
-                            gradient="linear-gradient(90deg, #e1306c, #833ab4)"
-                        />
-                        <RateCard
-                            label="Save Rate"
-                            rate={m.reach > 0 ? `${((m.saves / m.reach) * 100).toFixed(2)}%` : "—"}
-                            numerator={m.saves}
-                            denominator={m.reach}
-                            numeratorLabel="Lưu"
-                            denominatorLabel="Reach"
-                            gradient="linear-gradient(90deg, #f59e0b, #ef4444)"
-                        />
-                    </div>
+                        {/* ── Engagement chart ── */}
+                        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-4 space-y-2">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Phân tích Engagement</p>
+                                <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-[#e1306c] inline-block" />Thích</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-violet-500 inline-block" />Bình luận</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500 inline-block" />Lưu</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" />Chia sẻ</span>
+                                </div>
+                            </div>
+                            <EngagementBar likes={m.likes} comments={m.comments} saves={m.saves} shares={m.shares} />
+                        </div>
 
-                    {/* ── External link ── */}
-                    {m.externalUrl && (
-                        <div className="flex items-center gap-3 bg-slate-900/40 border border-slate-800 rounded-2xl px-5 py-3">
-                            <RiInstagramLine className="text-pink-400 text-lg shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs text-slate-500 mb-0.5">Link bài Instagram</p>
+                        {/* ── Chuyển đổi & Kinh doanh ── */}
+                        <SectionDivider label="Chuyển đổi & Kinh doanh" />
+                        <div className="grid grid-cols-1 gap-3">
+                            <StatCard
+                                icon={<MdOutlineTrendingUp />}
+                                label="Số lượng vé đã đóng góp từ bài này"
+                                value={fmt(m.buyCount)}
+                                sub={contributionPct != null ? `${fmtPct(contributionPct)} tổng vé` : undefined}
+                                color="text-orange-400"
+                                borderColor="border-orange-500/20"
+                                badge="Lượt mua"
+                                formulaNote={<FormulaNote formula="buyCount / ticketsSold" note="Tỷ lệ đóng góp của bài đăng này" />}
+                            />
+                        </div>
+
+                        {/* ── Tỷ lệ hiệu suất ── */}
+                        <SectionDivider label="Tỷ lệ hiệu suất" />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <RateCard
+                                label="Engagement Rate"
+                                rate={fmtPct(er)}
+                                numerator={totalEngagement}
+                                denominator={m.reach}
+                                numeratorLabel="Likes+Comments+Saves+Shares"
+                                denominatorLabel="Reach"
+                                gradient="linear-gradient(90deg, #e1306c, #833ab4)"
+                                formula="(likes + comments + saves + shares) / reach"
+                            />
+                            <RateCard
+                                label="Click-Through Rate"
+                                rate={fmtPct(ctr)}
+                                numerator={m.clickCount}
+                                denominator={m.reach}
+                                numeratorLabel="Clicks"
+                                denominatorLabel="Reach"
+                                gradient="linear-gradient(90deg, #10b981, #06b6d4)"
+                                formula="clickCount / reach"
+                                note="clickCount = AiPromo tracking (Instagram không trả clicks native)"
+                            />
+                            <RateCard
+                                label="Conversion Rate"
+                                rate={fmtPct(cvr)}
+                                numerator={m.buyCount}
+                                denominator={m.clickCount}
+                                numeratorLabel="Lượt mua"
+                                denominatorLabel="clickCount"
+                                gradient="linear-gradient(90deg, #f59e0b, #ef4444)"
+                                formula="buyCount / clickCount"
+                            />
+                        </div>
+
+                        {/* ── External link ── */}
+                        {m.externalUrl && (
+                            <div className="flex items-center gap-3 bg-slate-900/40 border border-slate-800 rounded-2xl px-5 py-3">
+                                <RiInstagramLine className="text-pink-400 text-lg shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-500 mb-0.5">Link bài Instagram</p>
+                                    <a href={m.externalUrl} target="_blank" rel="noreferrer"
+                                        className="text-pink-400 text-sm hover:underline truncate block">{m.externalUrl}</a>
+                                </div>
                                 <a href={m.externalUrl} target="_blank" rel="noreferrer"
-                                    className="text-pink-400 text-sm hover:underline truncate block">{m.externalUrl}</a>
+                                    className="shrink-0 p-2 rounded-xl border border-slate-700 text-slate-400 hover:border-pink-500/40 hover:text-pink-400 transition-all">
+                                    <MdOutlineOpenInNew />
+                                </a>
                             </div>
-                            <a href={m.externalUrl} target="_blank" rel="noreferrer"
-                                className="shrink-0 p-2 rounded-xl border border-slate-700 text-slate-400 hover:border-pink-500/40 hover:text-pink-400 transition-all">
-                                <MdOutlineOpenInNew />
-                            </a>
-                        </div>
-                    )}
-                </div>
-            )}
+                        )}
+                    </div>
+                );
+            })()}
 
             {!m && !loading.fetchDistributionMetricsInstagram && <EmptyStateInstagram />}
         </section>
