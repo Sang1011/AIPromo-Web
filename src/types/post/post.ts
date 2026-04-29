@@ -109,6 +109,8 @@ export interface PostListItem {
     distributions: PostDistribution[];
 }
 
+export type GetPostDistributionDetail = ApiResponse<PostDistribution>;
+
 export type GetOrganizerPostsResponse = ApiResponse<PaginatedResponse<PostListItem>>;
 
 export interface GenerateImageRequestBody {
@@ -149,6 +151,12 @@ export interface DistributionMetricsInstagram {
     fetchedAt: Date;
 }
 
+export const PLATFORM_MAP: Record<string, string> = {
+    fb: "Facebook",
+    ig: "Instagram",
+    th: "Threads",
+}
+
 export interface DistributionMetricsThreads {
     externalPostId: string;
     externalUrl: string;
@@ -159,11 +167,20 @@ export interface DistributionMetricsThreads {
     quotes: number;
     shares: number;
     ticketsSold: number;
+    buyCount: number,
+    clickCount: number,
     conversionRate: number;
     conversionRateFormatted: string;
     engagementRate: number;
     engagementRateFormatted: string;
     fetchedAt: string;
+}
+
+export interface IncrementBuyClickAnalyticsRequest {
+    platform: string;
+    distributionId: string;
+    buyIncrement: number;
+    clickIncrement: number;
 }
 
 export type GetDistributionMetricsThreadsResponse = ApiResponse<DistributionMetricsThreads>;

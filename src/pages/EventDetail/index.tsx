@@ -1,12 +1,14 @@
 import DOMPurify from 'dompurify'
 import { useEffect, useState } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import Footer from '../../components/Footer'
 import Header from '../../components/Header'
 import type { AppDispatch, RootState } from "../../store"
 import { fetchAllEvents, fetchEventByUrlPath } from "../../store/eventSlice"
+import { fetchExternalDistributionByPostIdAndPlatform, incrementBuyClickAnalytics } from '../../store/postSlice'
 import type { GetEventDetailResponse } from "../../types/event/event"
+import { PLATFORM_MAP } from '../../types/post/post'
 import "./EventDetail.css"
 
 // ─── Skeleton Components ───────────────────────────────────────────────────────
@@ -238,7 +240,43 @@ function EventDetail() {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
   const { urlPath } = useParams<{ urlPath?: string }>();
+  const [searchParams] = useSearchParams();
 
+  useEffect(() => {
+    const ref = searchParams.get("ref")
+    const p = searchParams.get("p")
+
+    if (ref) localStorage.setItem("tracking_ref", ref)
+    if (p) localStorage.setItem("tracking_platform", p)
+
+    const postId = ref ?? localStorage.getItem("tracking_ref")
+    const rawPlatform = p ?? localStorage.getItem("tracking_platform")
+    const platform = rawPlatform ? PLATFORM_MAP[rawPlatform] : null
+
+    if (!postId || !platform) return
+
+      ; (async () => {
+        const distResult = await dispatch(
+          fetchExternalDistributionByPostIdAndPlatform({ postId, platform })
+        )
+        if (!fetchExternalDistributionByPostIdAndPlatform.fulfilled.match(distResult)) return
+
+        const distributionId = distResult.payload.id
+        localStorage.setItem("tracking_distribution_id", distributionId)
+
+        await dispatch(
+          incrementBuyClickAnalytics({
+            postId,
+            body: {
+              platform,
+              distributionId,
+              clickIncrement: 1,
+              buyIncrement: 0,
+            },
+          })
+        )
+      })()
+  }, [searchParams])
   // ── Lightbox state ──
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)

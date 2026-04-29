@@ -1,7 +1,7 @@
 import type { AxiosResponse } from "axios";
-import { interceptorAPI } from "../utils/attachInterceptors";
-import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostsParams, SendToChatBoxReponse, UpdatePostContentRequest, GetAdminPostsQueryParams, GetDistributionMetricsFacebookResponse, UploadImageResponse, GetTotalMetricsResponse, PeriodOptionMetrics, GetDistributionMetricsInstagramResponse, GetDistributionMetricsThreadsResponse } from "../types/post/post";
 import type { ApiResponse, ApiResponseNoData } from "../types/api";
+import type { CreatePostDraftRequest, GenerateContentPostDraftUsingAIResponse, GenerateImageRequestBody, GenerateImageResponse, GetAdminPostsQueryParams, GetDistributionMetricsFacebookResponse, GetDistributionMetricsInstagramResponse, GetDistributionMetricsThreadsResponse, GetOrganizerPostsResponse, GetPostDetailResponse, GetPostDistributionDetail, GetPostsParams, GetTotalMetricsResponse, IncrementBuyClickAnalyticsRequest, PeriodOptionMetrics, SendToChatBoxReponse, UpdatePostContentRequest, UploadImageResponse } from "../types/post/post";
+import { interceptorAPI } from "../utils/attachInterceptors";
 
 const postService = {
     getPostDetail: (postId: string): Promise<AxiosResponse<GetPostDetailResponse>> => {
@@ -100,6 +100,12 @@ const postService = {
             `/posts/${postId}/distributions/${distributionId}/metrics/threads`
         )
     },
+    incrementBuyClickAnalytics: (postId: string, body: IncrementBuyClickAnalyticsRequest): Promise<AxiosResponse<ApiResponseNoData>> => {
+        return interceptorAPI().post(`/posts/${postId}/distributions/analytics`, body)
+    },
+    getExternalDistributionByPostIdAndPlatform: (postId: string, platform: string): Promise<AxiosResponse<GetPostDistributionDetail>> => {
+        return interceptorAPI().get(`/external-distributions/tracking/${postId}?platform=${platform}`)
+    }
 }
 
 export default postService;

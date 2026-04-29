@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import "./orderSuccess.css";
+import { useDispatch } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
+import type { AppDispatch } from "../../store";
+import { incrementBuyClickAnalytics } from "../../store/postSlice";
+import { PLATFORM_MAP } from "../../types/post/post";
+import "./orderSuccess.css";
 
 const floatingParticles = Array.from({ length: 12 }, (_, i) => ({
   id: i,
@@ -22,6 +26,37 @@ export default function OrderSuccess() {
     const t = setTimeout(() => setVisible(true), 50);
     return () => clearTimeout(t);
   }, []);
+
+  const dispatch = useDispatch<AppDispatch>()
+
+  useEffect(() => {
+    const postId = localStorage.getItem("tracking_ref")
+    const rawPlatform = localStorage.getItem("tracking_platform")
+    const distributionId = localStorage.getItem("tracking_distribution_id")
+    const ticketQuantity = parseInt(localStorage.getItem("tracking_ticket_quantity") ?? "0", 10)
+    const platform = rawPlatform ? PLATFORM_MAP[rawPlatform] : null
+
+    if (!postId || !platform || !distributionId || ticketQuantity <= 0) return
+
+      ; (async () => {
+        await dispatch(
+          incrementBuyClickAnalytics({
+            postId,
+            body: {
+              platform,
+              distributionId,
+              clickIncrement: 0,
+              buyIncrement: ticketQuantity,
+            },
+          })
+        )
+
+        localStorage.removeItem("tracking_ref")
+        localStorage.removeItem("tracking_platform")
+        localStorage.removeItem("tracking_distribution_id")
+        localStorage.removeItem("tracking_ticket_quantity")
+      })()
+  }, [])
 
   return (
     <div

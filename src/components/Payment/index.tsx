@@ -610,6 +610,10 @@ export default function PaymentTicket() {
     handleOrderExpired
   );
 
+  useEffect(() => {
+    localStorage.removeItem("tracking_ticket_quantity")
+  }, [])
+
   const timerDisplay = useMemo(() => {
     const m = Math.floor(secondsLeft / 60).toString().padStart(2, "0");
     const s = (secondsLeft % 60).toString().padStart(2, "0");
@@ -740,6 +744,9 @@ export default function PaymentTicket() {
       setPayError("Đang tải thông tin đơn hàng hoặc dữ liệu thanh toán chưa sẵn sàng.");
       return;
     }
+
+    const ticketQuantity = orderTickets.length
+    localStorage.setItem("tracking_ticket_quantity", String(ticketQuantity))
 
     if (total === 0) {
       await clearOldOrderFromFirebase();

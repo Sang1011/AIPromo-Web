@@ -18,6 +18,8 @@ import type {
     PeriodOptionMetrics,
     DistributionMetricsInstagram,
     DistributionMetricsThreads,
+    IncrementBuyClickAnalyticsRequest,
+    PostDistribution,
 } from "../types/post/post";
 import type { PaginatedResponse } from "../types/api";
 
@@ -32,7 +34,7 @@ interface PostState {
     pagination: Omit<PaginatedResponse<PostListItem>, "items"> | null;
     tableFilters: Partial<GetPostsParams>;
     chartFilters: Partial<GetPostsParams>;
-
+    externalDistribution: PostDistribution | null;
     distributionMetricsInstagram: DistributionMetricsInstagram | null;
     distributionMetricsInstagramMap: Record<string, DistributionMetricsInstagram>;
 
@@ -58,6 +60,7 @@ interface PostState {
         sendToChatBox: boolean;
         fetchAdminList: boolean;
         fetchAdminDetail: boolean;
+        incrementBuyClickAnalytics: boolean;
         pushPost: boolean;
         fetchDistributionMetrics: boolean;
         fetchAllDistributionMetrics: boolean;
@@ -70,6 +73,7 @@ interface PostState {
         fetchAllDistributionMetricsInstagram: boolean;
         fetchDistributionMetricsThreads: boolean;
         fetchAllDistributionMetricsThreads: boolean;
+        fetchExternalDistribution: boolean;
     };
 
     error: {
@@ -83,6 +87,7 @@ interface PostState {
         fetchList: string | null;
         generateImage: string | null;
         sendToChatBox: string | null;
+        incrementBuyClickAnalytics: string | null;
         fetchAdminList: string | null;
         fetchAdminDetail: string | null;
         pushPost: string | null;
@@ -97,6 +102,7 @@ interface PostState {
         fetchAllDistributionMetricsInstagram: string | null;
         fetchDistributionMetricsThreads: string | null;
         fetchAllDistributionMetricsThreads: string | null;
+        fetchExternalDistribution: string | null;
     };
 }
 
@@ -108,6 +114,7 @@ const initialState: PostState = {
     chatBoxReply: null,
     posts: [],
     pagination: null,
+    externalDistribution: null,
     distributionMetricsMap: {},
     distributionMetricsInstagram: null,
     distributionMetricsInstagramMap: {},
@@ -141,12 +148,14 @@ const initialState: PostState = {
         archive: false,
         submitPost: false,
         publishPost: false,
+        fetchExternalDistribution: false,
         generateAI: false,
         createDraft: false,
         fetchList: false,
         generateImage: false,
         sendToChatBox: false,
         fetchAdminList: false,
+        incrementBuyClickAnalytics: false,
         fetchAdminDetail: false,
         fetchDistributionMetrics: false,
         fetchAllDistributionMetrics: false,
@@ -169,12 +178,14 @@ const initialState: PostState = {
         publishPost: null,
         generateAI: null,
         createDraft: null,
+        fetchExternalDistribution: null,
         fetchList: null,
         generateImage: null,
         sendToChatBox: null,
         fetchAdminList: null,
         fetchAdminDetail: null,
         pushPost: null,
+        incrementBuyClickAnalytics: null,
         fetchDistributionMetrics: null,
         fetchAllDistributionMetrics: null,
         uploadImage: null,
@@ -544,6 +555,37 @@ export const fetchAllDistributionMetricsThreads = createAsyncThunk(
     }
 );
 
+export const incrementBuyClickAnalytics = createAsyncThunk(
+    "post/incrementBuyClickAnalytics",
+    async (
+        { postId, body }: { postId: string; body: IncrementBuyClickAnalyticsRequest },
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await postService.incrementBuyClickAnalytics(postId, body);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi cập nhật analytics");
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi cập nhật analytics");
+        }
+    }
+);
+
+export const fetchExternalDistributionByPostIdAndPlatform = createAsyncThunk(
+    "post/fetchExternalDistributionByPostIdAndPlatform",
+    async (
+        { postId, platform }: { postId: string; platform: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const res = await postService.getExternalDistributionByPostIdAndPlatform(postId, platform);
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi fetch thông tin distribution");
+            return res.data.data;
+        } catch (error: any) {
+            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi fetch thông tin distribution");
+        }
+    }
+);
+
 const postSlice = createSlice({
     name: "post",
     initialState,
@@ -571,6 +613,7 @@ const postSlice = createSlice({
         clearDistributionMetricsInstagramMap(state) { state.distributionMetricsInstagramMap = {}; },
         clearDistributionMetricsThreads(state) { state.distributionMetricsThreads = null; },
         clearDistributionMetricsThreadMap(state) { state.distributionMetricsThreadsMap = {}; },
+        clearExternalDistribution(state) { state.externalDistribution = null; },
     },
     extraReducers: (builder) => {
         builder
@@ -804,6 +847,33 @@ const postSlice = createSlice({
                 state.loading.fetchDistributionMetricsThreads = false;
                 state.error.fetchDistributionMetricsThreads = action.payload as string;
             });
+
+        builder
+            .addCase(incrementBuyClickAnalytics.pending, (state) => {
+                state.loading.incrementBuyClickAnalytics = true;
+                state.error.incrementBuyClickAnalytics = null;
+            })
+            .addCase(incrementBuyClickAnalytics.fulfilled, (state) => {
+                state.loading.incrementBuyClickAnalytics = false;
+            })
+            .addCase(incrementBuyClickAnalytics.rejected, (state, action) => {
+                state.loading.incrementBuyClickAnalytics = false;
+                state.error.incrementBuyClickAnalytics = action.payload as string;
+            });
+
+        builder
+            .addCase(fetchExternalDistributionByPostIdAndPlatform.pending, (state) => {
+                state.loading.fetchExternalDistribution = true;
+                state.error.fetchExternalDistribution = null;
+            })
+            .addCase(fetchExternalDistributionByPostIdAndPlatform.fulfilled, (state, action: PayloadAction<PostDistribution>) => {
+                state.loading.fetchExternalDistribution = false;
+                state.externalDistribution = action.payload;
+            })
+            .addCase(fetchExternalDistributionByPostIdAndPlatform.rejected, (state, action) => {
+                state.loading.fetchExternalDistribution = false;
+                state.error.fetchExternalDistribution = action.payload as string;
+            });
     },
 });
 
@@ -823,6 +893,7 @@ export const {
     clearDistributionMetricsInstagram,
     clearDistributionMetricsInstagramMap,
     clearDistributionMetricsThreads,
-    clearDistributionMetricsThreadMap
+    clearDistributionMetricsThreadMap,
+    clearExternalDistribution,
 } = postSlice.actions;
 export default postSlice.reducer;
