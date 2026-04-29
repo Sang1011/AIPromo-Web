@@ -1,21 +1,27 @@
+import { useState } from "react";
 import {
     MdFacebook,
     MdOutlineBarChart,
-    MdOutlineBookmark,
-    MdOutlineChatBubbleOutline,
     MdOutlineConfirmationNumber,
     MdOutlinePeopleAlt,
     MdOutlineRefresh,
-    MdOutlineRepeat,
-    MdOutlineThumbUp,
     MdOutlineTouchApp,
-    MdOutlineVisibility
 } from "react-icons/md";
 import { RiInstagramLine } from "react-icons/ri";
 import { useParams } from "react-router-dom";
 import {
-    Area, AreaChart, Bar, BarChart, CartesianGrid,
-    ResponsiveContainer, Tooltip, XAxis, YAxis
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
 } from "recharts";
 import { useAnalyticsData } from "../../hooks/useAnalyticsData";
 import type {
@@ -25,6 +31,18 @@ import type {
     GetPostsParams,
     PostListItem,
 } from "../../types/post/post";
+import {
+    calcFacebookCTR,
+    calcFacebookCVR,
+    calcFacebookER,
+    calcInstagramCTR,
+    calcInstagramCVR,
+    calcInstagramER,
+    calcThreadsCTR,
+    calcThreadsCVR,
+    calcThreadsER,
+    fmtPct
+} from "../../utils/metricsFormulas";
 
 // ─── Threads Icon ─────────────────────────────────────────────────────────────
 
@@ -54,6 +72,15 @@ export interface PostWithThreadsMetrics {
     distributionId: string;
 }
 
+// ─── Page size options ────────────────────────────────────────────────────────
+
+const PAGE_SIZE_OPTIONS = [
+    { label: "10 bài gần nhất", value: 10 },
+    { label: "20 bài gần nhất", value: 20 },
+    { label: "50 bài gần nhất", value: 50 },
+    { label: "Tất cả (100)", value: 100 },
+] as const;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n: number | null | undefined): string {
@@ -61,11 +88,6 @@ function fmt(n: number | null | undefined): string {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
     return n.toString();
-}
-
-function pct(num: number, den: number, decimals = 2): string {
-    if (!den) return "0%";
-    return `${((num / den) * 100).toFixed(decimals)}%`;
 }
 
 function fmtDate(dateStr: string): string {
@@ -77,494 +99,419 @@ function truncate(s: string, max = 16): string {
     return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-// ─── KpiCard ──────────────────────────────────────────────────────────────────
+const SCROLL_THRESHOLD = 10;
 
-function KpiCard({ icon, label, value, sub, color, borderColor, bgColor, platformIcon }: {
-    icon: React.ReactNode; label: string; value: string; sub: string;
-    color: string; borderColor: string; bgColor: string; platformIcon?: React.ReactNode;
-}) {
+// ─── SectionHeader ────────────────────────────────────────────────────────────
+
+function SectionHeader({ accent, title, sub }: { accent: string; title: string; sub?: string }) {
     return (
-        <div className={`rounded-2xl border ${borderColor} ${bgColor} px-5 py-4 flex flex-col gap-3`}>
-            <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</p>
-                <div className="flex items-center gap-1.5">
-                    {platformIcon && <span className="text-sm opacity-60">{platformIcon}</span>}
-                    <div className={`${color} text-lg opacity-70`}>{icon}</div>
-                </div>
-            </div>
-            <p className={`text-2xl font-black ${color} tabular-nums`}>{value}</p>
-            <p className="text-xs text-slate-600">{sub}</p>
+        <div className="flex items-center gap-2.5 mb-4">
+            <span className={`w-1 h-6 rounded-full ${accent}`} />
+            <h3 className="text-base font-bold text-white">{title}</h3>
+            {sub && <span className="text-[10px] text-slate-600 font-black uppercase tracking-widest">{sub}</span>}
         </div>
     );
 }
 
-// ─── SummaryKpis ──────────────────────────────────────────────────────────────
+// ─── PlatformBadge ────────────────────────────────────────────────────────────
 
-function SummaryKpis({ fb, ig, th }: {
+function PlatformBadge({ platform, count }: { platform: "Facebook" | "Instagram" | "Threads"; count: number }) {
+    const cfg = {
+        Facebook: { icon: <MdFacebook />, color: "text-blue-400", bg: "bg-blue-500/10 border-blue-500/20" },
+        Instagram: { icon: <RiInstagramLine />, color: "text-pink-400", bg: "bg-pink-500/10 border-pink-500/20" },
+        Threads: { icon: <ThreadsIcon className="w-3.5 h-3.5" />, color: "text-slate-300", bg: "bg-slate-600/10 border-slate-600/20" },
+    }[platform];
+    return (
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-sm font-semibold ${cfg.color} ${cfg.bg}`}>
+            {cfg.icon}
+            <span>{count} bài</span>
+        </div>
+    );
+}
+
+// ─── OverviewKpiRow ───────────────────────────────────────────────────────────
+// Top-level summary: Reach, Engagement, Ticket Contribution, Click Tracking
+
+function OverviewKpiRow({ fb, ig, th }: {
     fb: PostWithMetrics[];
     ig: PostWithIGMetrics[];
     th: PostWithThreadsMetrics[];
 }) {
-    // Facebook aggregates
     const fbReach = fb.reduce((s, d) => s + d.metrics.reach, 0);
-    const fbLikes = fb.reduce((s, d) => s + d.metrics.likes, 0);
-    const fbComments = fb.reduce((s, d) => s + d.metrics.comments, 0);
-    const fbShares = fb.reduce((s, d) => s + d.metrics.shares, 0);
-    const fbClicks = fb.reduce((s, d) => s + d.metrics.clicks, 0);
-    const fbTickets = fb.reduce((s, d) => s + d.metrics.ticketsSold, 0);
-    const fbEng = fbLikes + fbComments + fbShares;
-
-    // Instagram aggregates
     const igReach = ig.reduce((s, d) => s + d.metrics.reach, 0);
-    const igLikes = ig.reduce((s, d) => s + d.metrics.likes, 0);
-    const igComments = ig.reduce((s, d) => s + d.metrics.comments, 0);
-    const igSaves = ig.reduce((s, d) => s + d.metrics.saves, 0);
-    const igShares = ig.reduce((s, d) => s + d.metrics.shares, 0);
-    const igTickets = ig.reduce((s, d) => s + d.metrics.ticketsSold, 0);
-    const igEng = igLikes + igComments + igSaves + igShares;
+    const thViews = th.reduce((s, d) => s + (d.metrics.views ?? 0), 0);
 
-    // Threads aggregates — ALL fields from DistributionMetricsThreads
-    const thViews = th.reduce((s, d) => s + d.metrics.views, 0);
-    const thLikes = th.reduce((s, d) => s + d.metrics.likes, 0);
-    const thReplies = th.reduce((s, d) => s + d.metrics.replies, 0);
-    const thReposts = th.reduce((s, d) => s + d.metrics.reposts, 0);
-    const thQuotes = th.reduce((s, d) => s + d.metrics.quotes, 0);
-    const thShares = th.reduce((s, d) => s + d.metrics.shares, 0);
-    const thTickets = th.reduce((s, d) => s + (d.metrics.ticketsSold ?? 0), 0);
-    const thEng = thLikes + thReplies + thReposts + thQuotes + thShares;
+    const fbEng = fb.reduce((s, d) => s + d.metrics.likes + d.metrics.comments, 0);
+    const igEng = ig.reduce((s, d) => s + d.metrics.likes + d.metrics.comments + d.metrics.saves + d.metrics.shares, 0);
+    const thEng = th.reduce((s, d) => s + (d.metrics.likes ?? 0) + (d.metrics.replies ?? 0) + (d.metrics.reposts ?? 0) + (d.metrics.quotes ?? 0), 0);
+
+    // ticketsSold là số vé của sự kiện, lấy từ nguồn nào cũng được vì là dữ liệu chung
+    const ticketsSold = fb[0]?.metrics.ticketsSold ?? ig[0]?.metrics.ticketsSold ?? th[0]?.metrics.ticketsSold ?? 0;
+
+    const fbBuy = fb.reduce((s, d) => s + d.metrics.buyCount, 0);
+    const igBuy = ig.reduce((s, d) => s + d.metrics.buyCount, 0);
+    const thBuy = th.reduce((s, d) => s + (d.metrics.buyCount ?? 0), 0);
+    const totalBuy = fbBuy + igBuy + thBuy;
+
+    const fbClickCount = fb.reduce((s, d) => s + d.metrics.clickCount, 0);
+    const igClickCount = ig.reduce((s, d) => s + d.metrics.clickCount, 0);
+    const thClickCount = th.reduce((s, d) => s + (d.metrics.clickCount ?? 0), 0);
+    const totalClickCount = fbClickCount + igClickCount + thClickCount;
 
     const totalReach = fbReach + igReach + thViews;
     const totalEng = fbEng + igEng + thEng;
-    const totalTickets = fbTickets + igTickets + thTickets;
+    const overallER = totalReach > 0 ? totalEng / totalReach : null;
 
-    // Avg CVR per platform (weighted by post count)
-    const fbAvgCvr = fb.length > 0
-        ? fb.reduce((s, d) => s + (d.metrics.conversionRate ?? 0), 0) / fb.length
-        : null;
-    const igAvgCvr = ig.length > 0
-        ? ig.reduce((s, d) => s + (d.metrics.conversionRate ?? 0), 0) / ig.length
-        : null;
-    const thAvgCvr = th.length > 0
-        ? th.reduce((s, d) => s + (d.metrics.conversionRate ?? 0), 0) / th.length
-        : null;
+    const pieData = [
+        fbBuy > 0 && { name: "Facebook", value: fbBuy, color: "#3b82f6" },
+        igBuy > 0 && { name: "Instagram", value: igBuy, color: "#e1306c" },
+        thBuy > 0 && { name: "Threads", value: thBuy, color: "#94a3b8" },
+    ].filter(Boolean) as { name: string; value: number; color: string }[];
+    const unclaimed = ticketsSold > totalBuy ? ticketsSold - totalBuy : 0;
+    if (unclaimed > 0) pieData.push({ name: "AIPromo", value: unclaimed, color: "#7c3bed" });
 
-    return (
-        <div className="space-y-4">
-            {/* Combined overview */}
-            <div className="grid grid-cols-3 gap-4">
-                <KpiCard icon={<MdOutlinePeopleAlt />} label="Tổng Reach / Views"
-                    value={fmt(totalReach)}
-                    sub={`FB ${fmt(fbReach)} · IG ${fmt(igReach)} · TH ${fmt(thViews)}`}
-                    color="text-blue-400" borderColor="border-blue-500/20" bgColor="bg-blue-500/5" />
-                <KpiCard icon={<MdOutlineBarChart />} label="Tổng Tương tác"
-                    value={fmt(totalEng)}
-                    sub={`FB ${fmt(fbEng)} · IG ${fmt(igEng)} · TH ${fmt(thEng)}`}
-                    color="text-violet-400" borderColor="border-violet-500/20" bgColor="bg-violet-500/5" />
-                <KpiCard icon={<MdOutlineConfirmationNumber />} label="Tổng Vé bán"
-                    value={fmt(totalTickets)}
-                    sub={`FB ${fmt(fbTickets)} · IG ${fmt(igTickets)} · TH ${fmt(thTickets)}`}
-                    color="text-amber-400" borderColor="border-amber-500/20" bgColor="bg-amber-500/5" />
-            </div>
-
-            {/* Facebook */}
-            {fb.length > 0 && (
-                <div>
-                    <div className="flex items-center gap-2 mb-2.5">
-                        <MdFacebook className="text-blue-400" />
-                        <span className="text-xs font-black text-blue-400/70 uppercase tracking-widest">Facebook · {fb.length} bài</span>
-                    </div>
-                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-                        <KpiCard icon={<MdOutlinePeopleAlt />} label="Reach" value={fmt(fbReach)} sub="Người tiếp cận"
-                            color="text-blue-400" borderColor="border-blue-500/15" bgColor="bg-blue-500/5" platformIcon={<MdFacebook />} />
-                        <KpiCard icon={<MdOutlineTouchApp />} label="Clicks" value={fmt(fbClicks)}
-                            sub={`CTR: ${pct(fbClicks, fbReach)}`}
-                            color="text-emerald-400" borderColor="border-emerald-500/15" bgColor="bg-emerald-500/5" platformIcon={<MdFacebook />} />
-                        <KpiCard icon={<MdOutlineConfirmationNumber />} label="Vé bán" value={fmt(fbTickets)}
-                            sub={`CVR TB: ${fbAvgCvr != null ? `${(fbAvgCvr * 100).toFixed(2)}%` : "—"}`}
-                            color="text-amber-400" borderColor="border-amber-500/15" bgColor="bg-amber-500/5" platformIcon={<MdFacebook />} />
-                        <KpiCard icon={<MdOutlineThumbUp />} label="Thích" value={fmt(fbLikes)}
-                            sub={`${pct(fbLikes, fbEng)} tương tác`}
-                            color="text-sky-400" borderColor="border-sky-500/15" bgColor="bg-sky-500/5" platformIcon={<MdFacebook />} />
-                    </div>
-                </div>
-            )}
-
-            {/* Instagram */}
-            {ig.length > 0 && (
-                <div>
-                    <div className="flex items-center gap-2 mb-2.5">
-                        <RiInstagramLine className="text-pink-400" />
-                        <span className="text-xs font-black text-pink-400/70 uppercase tracking-widest">Instagram · {ig.length} bài</span>
-                    </div>
-                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-                        <KpiCard icon={<MdOutlinePeopleAlt />} label="Reach" value={fmt(igReach)} sub="Người tiếp cận"
-                            color="text-pink-400" borderColor="border-pink-500/15" bgColor="bg-pink-500/5" platformIcon={<RiInstagramLine />} />
-                        <KpiCard icon={<MdOutlineBookmark />} label="Lưu bài" value={fmt(igSaves)}
-                            sub={`Save Rate: ${pct(igSaves, igReach)}`}
-                            color="text-amber-400" borderColor="border-amber-500/15" bgColor="bg-amber-500/5" platformIcon={<RiInstagramLine />} />
-                        <KpiCard icon={<MdOutlineConfirmationNumber />} label="Vé bán" value={fmt(igTickets)}
-                            sub={`CVR TB: ${igAvgCvr != null ? `${(igAvgCvr * 100).toFixed(2)}%` : "—"}`}
-                            color="text-orange-400" borderColor="border-orange-500/15" bgColor="bg-orange-500/5" platformIcon={<RiInstagramLine />} />
-                        <KpiCard icon={<MdOutlineChatBubbleOutline />} label="Bình luận" value={fmt(igComments)}
-                            sub={`${pct(igComments, igEng)} tương tác`}
-                            color="text-purple-400" borderColor="border-purple-500/15" bgColor="bg-purple-500/5" platformIcon={<RiInstagramLine />} />
-                    </div>
-                </div>
-            )}
-
-            {/* Threads */}
-            {th.length > 0 && (
-                <div>
-                    <div className="flex items-center gap-2 mb-2.5">
-                        <span className="text-slate-300"><ThreadsIcon /></span>
-                        <span className="text-xs font-black text-slate-400/70 uppercase tracking-widest">Threads · {th.length} bài</span>
-                    </div>
-                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-                        <KpiCard icon={<MdOutlineVisibility />} label="Views" value={fmt(thViews)} sub="Lượt xem"
-                            color="text-slate-200" borderColor="border-slate-600/30" bgColor="bg-slate-700/10" platformIcon={<ThreadsIcon />} />
-                        <KpiCard icon={<MdOutlineRepeat />} label="Reposts" value={fmt(thReposts)}
-                            sub={`Repost Rate: ${pct(thReposts, thViews)}`}
-                            color="text-emerald-300" borderColor="border-emerald-500/15" bgColor="bg-emerald-500/5" platformIcon={<ThreadsIcon />} />
-                        <KpiCard icon={<MdOutlineConfirmationNumber />} label="Vé bán" value={fmt(thTickets)}
-                            sub={`CVR TB: ${thAvgCvr != null ? `${(thAvgCvr * 100).toFixed(2)}%` : "—"}`}
-                            color="text-amber-300" borderColor="border-amber-500/15" bgColor="bg-amber-500/5" platformIcon={<ThreadsIcon />} />
-                        <KpiCard icon={<MdOutlineChatBubbleOutline />} label="Replies" value={fmt(thReplies)}
-                            sub={`${pct(thReplies, thEng)} tương tác`}
-                            color="text-sky-300" borderColor="border-sky-500/15" bgColor="bg-sky-500/5" platformIcon={<ThreadsIcon />} />
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ─── ConversionRateChart ──────────────────────────────────────────────────────
-// Chart mới: CVR từng bài theo nền tảng
-
-function ConversionRateChart({ fb, ig, th }: {
-    fb: PostWithMetrics[];
-    ig: PostWithIGMetrics[];
-    th: PostWithThreadsMetrics[];
-}) {
-    if (!fb.length && !ig.length && !th.length) return null;
-
-    // Per-post CVR data
-    const fbData = fb.map((d, i) => ({
-        name: truncate(d.post.title, 12),
-        idx: `FB#${i + 1}`,
-        platform: "Facebook",
-        cvr: (d.metrics.conversionRate ?? 0) * 100,
-        ctr: d.metrics.reach > 0 ? (d.metrics.clicks / d.metrics.reach) * 100 : 0,
-        tickets: d.metrics.ticketsSold,
-    }));
-
-    const igData = ig.map((d, i) => ({
-        name: truncate(d.post.title, 12),
-        idx: `IG#${i + 1}`,
-        platform: "Instagram",
-        cvr: (d.metrics.conversionRate ?? 0) * 100,
-        saveRate: d.metrics.reach > 0 ? (d.metrics.saves / d.metrics.reach) * 100 : 0,
-        tickets: d.metrics.ticketsSold,
-    }));
-
-    const thData = th.map((d, i) => ({
-        name: truncate(d.post.title, 12),
-        idx: `TH#${i + 1}`,
-        platform: "Threads",
-        cvr: (d.metrics.conversionRate ?? 0) * 100,
-        repostRate: d.metrics.views > 0 ? (d.metrics.reposts / d.metrics.views) * 100 : 0,
-        tickets: d.metrics.ticketsSold ?? 0,
-    }));
-
-    const CvrTooltip = ({ active, payload }: any) => {
+    const PieTooltip = ({ active, payload }: any) => {
         if (!active || !payload?.length) return null;
-        const d = payload[0]?.payload;
+        const d = payload[0].payload;
+        const pctVal = ticketsSold > 0 ? ((d.value / ticketsSold) * 100).toFixed(1) : "—";
         return (
-            <div className="bg-slate-900/95 border border-slate-700 rounded-xl px-4 py-3 text-xs space-y-1.5 min-w-[160px]">
-                <p className="text-white font-bold">{d?.name}</p>
-                <p className="text-slate-500">{d?.platform}</p>
-                {payload.map((p: any) => (
-                    <div key={p.dataKey} className="flex justify-between gap-4">
-                        <span style={{ color: p.fill || p.color }}>{p.name}</span>
-                        <span className="text-white font-bold">{p.value?.toFixed(2)}%</span>
-                    </div>
-                ))}
-                <div className="flex justify-between gap-4 border-t border-slate-700 pt-1 mt-1">
-                    <span className="text-amber-400">Vé bán</span>
-                    <span className="text-white font-bold">{fmt(d?.tickets)}</span>
-                </div>
+            <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-3 py-2 text-sm shadow-xl">
+                <p className="text-white font-bold">{d.name}</p>
+                <p className="text-slate-300">{d.value.toLocaleString()} vé · {pctVal}%</p>
             </div>
         );
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-gradient-to-b from-amber-400 to-orange-500 rounded-full" />
-                <h3 className="text-base font-bold text-white">Chuyển đổi & Tỷ lệ hiệu suất</h3>
-                <span className="text-[10px] text-slate-600 font-black uppercase tracking-widest">CVR · CTR · Save Rate · Repost Rate</span>
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+            {/* Reach */}
+            <div className="rounded-2xl bg-gradient-to-br from-blue-950/40 to-slate-900/60 border border-blue-500/10 p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tổng Reach / Views</span>
+                    <MdOutlinePeopleAlt className="text-blue-400 text-lg opacity-60" />
+                </div>
+                <p className="text-4xl font-black text-blue-300 tabular-nums">{fmt(totalReach)}</p>
+                <div className="space-y-1.5">
+                    {fb.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><MdFacebook className="text-blue-400" />Facebook</span>
+                            <span className="text-blue-400 font-semibold tabular-nums">{fmt(fbReach)}</span>
+                        </div>
+                    )}
+                    {ig.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><RiInstagramLine className="text-pink-400" />Instagram</span>
+                            <span className="text-pink-400 font-semibold tabular-nums">{fmt(igReach)}</span>
+                        </div>
+                    )}
+                    {th.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><ThreadsIcon className="w-3 h-3" />Threads</span>
+                            <span className="text-slate-300 font-semibold tabular-nums">{fmt(thViews)}</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Facebook CVR + CTR */}
-                {fb.length > 0 && (
-                    <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                            <MdFacebook className="text-blue-400" />
-                            <p className="text-[10px] font-black text-blue-400/70 uppercase tracking-widest">Facebook · CVR & CTR</p>
+            {/* Engagement */}
+            <div className="rounded-2xl bg-gradient-to-br from-violet-950/40 to-slate-900/60 border border-violet-500/10 p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tổng Tương tác</span>
+                    <MdOutlineBarChart className="text-violet-400 text-lg opacity-60" />
+                </div>
+                <div className="flex items-end gap-3">
+                    <p className="text-4xl font-black text-violet-300 tabular-nums">{fmt(totalEng)}</p>
+                    {overallER != null && (
+                        <span className="text-sm text-violet-500 font-semibold mb-1">ER {fmtPct(overallER)}</span>
+                    )}
+                </div>
+                <div className="space-y-1.5">
+                    {fb.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><MdFacebook className="text-blue-400" />Facebook <span className="text-slate-700">(likes+comments)</span></span>
+                            <span className="text-violet-400 font-semibold tabular-nums">{fmt(fbEng)}</span>
                         </div>
-                        <div className="h-[180px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={fbData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
-                                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
-                                    <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
-                                    <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                                    <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                                    <Bar dataKey="ctr" name="CTR" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                    )}
+                    {ig.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><RiInstagramLine className="text-pink-400" />Instagram <span className="text-slate-700">(+saves+shares)</span></span>
+                            <span className="text-violet-400 font-semibold tabular-nums">{fmt(igEng)}</span>
                         </div>
-                        <div className="flex gap-4 mt-2 text-xs text-slate-600">
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" />CTR</span>
+                    )}
+                    {th.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><ThreadsIcon className="w-3 h-3" />Threads <span className="text-slate-700">(+replies+reposts+quotes)</span></span>
+                            <span className="text-violet-400 font-semibold tabular-nums">{fmt(thEng)}</span>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
+            </div>
 
-                {/* Instagram CVR + Save Rate */}
-                {ig.length > 0 && (
-                    <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                            <RiInstagramLine className="text-pink-400" />
-                            <p className="text-[10px] font-black text-pink-400/70 uppercase tracking-widest">Instagram · CVR & Save Rate</p>
-                        </div>
-                        <div className="h-[180px]">
+            {/* Ticket conversion donut */}
+            <div className="rounded-2xl bg-gradient-to-br from-amber-950/30 to-slate-900/60 border border-amber-500/10 p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Đóng góp vé bán</span>
+                    <MdOutlineConfirmationNumber className="text-amber-400 text-lg opacity-60" />
+                </div>
+                <div className="flex items-center gap-4">
+                    {pieData.length > 0 ? (
+                        <div className="w-[90px] h-[90px] shrink-0 relative">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={igData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
-                                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
-                                    <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
-                                    <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                                    <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                                    <Bar dataKey="saveRate" name="Save Rate" fill="#e1306c" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                                </BarChart>
+                                <PieChart>
+                                    <Pie
+                                        data={pieData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={28}
+                                        outerRadius={42}
+                                        paddingAngle={pieData.length > 1 ? 2 : 0}
+                                        dataKey="value"
+                                        strokeWidth={0}
+                                    >
+                                        {pieData.map((e, i) => (
+                                            <Cell key={i} fill={e.color} />
+                                        ))}
+                                    </Pie>
+                                    {/* Tăng z-index để tooltip không bị chữ "Tổng" đè */}
+                                    <Tooltip
+                                        content={<PieTooltip />}
+                                        wrapperStyle={{ zIndex: 9999 }}
+                                    />
+                                </PieChart>
                             </ResponsiveContainer>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <p className="text-[9px] text-slate-600 font-black uppercase">Tổng</p>
+                                <p className="text-sm font-black text-white tabular-nums">
+                                    {fmt(ticketsSold)}
+                                </p>
+                            </div>
                         </div>
-                        <div className="flex gap-4 mt-2 text-xs text-slate-600">
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-pink-500" />Save Rate</span>
+                    ) : (
+                        <div className="w-[90px] h-[90px] shrink-0 flex items-center justify-center">
+                            <MdOutlineConfirmationNumber className="text-5xl text-slate-800" />
                         </div>
-                    </div>
-                )}
+                    )}
+                    <div className="flex-1 space-y-1.5">
+                        {fb.length > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-1 text-slate-500">
+                                    <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                                    FB
+                                </span>
+                                <span className="text-amber-400 font-bold tabular-nums">
+                                    {fmt(fbBuy)}
+                                </span>
+                            </div>
+                        )}
+                        {ig.length > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-1 text-slate-500">
+                                    <span className="w-2 h-2 rounded-full bg-pink-500 shrink-0" />
+                                    IG
+                                </span>
+                                <span className="text-amber-400 font-bold tabular-nums">
+                                    {fmt(igBuy)}
+                                </span>
+                            </div>
+                        )}
+                        {th.length > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-1 text-slate-500">
+                                    <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                                    TH
+                                </span>
+                                <span className="text-amber-400 font-bold tabular-nums">
+                                    {fmt(thBuy)}
+                                </span>
+                            </div>
+                        )}
 
-                {/* Threads CVR + Repost Rate */}
-                {th.length > 0 && (
-                    <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className="text-slate-300"><ThreadsIcon /></span>
-                            <p className="text-[10px] font-black text-slate-400/70 uppercase tracking-widest">Threads · CVR & Repost Rate</p>
-                        </div>
-                        <div className="h-[180px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={thData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
-                                    <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
-                                    <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
-                                    <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                                    <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                                    <Bar dataKey="repostRate" name="Repost Rate" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="flex gap-4 mt-2 text-xs text-slate-600">
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" />Repost Rate</span>
+                        {/* Kênh khác (AIPromo / bán trực tiếp) */}
+                        {unclaimed > 0 && (
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-1 text-slate-500">
+                                    <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                                    AIPromo
+                                </span>
+                                <span className="text-amber-400 font-bold tabular-nums">
+                                    {fmt(unclaimed)}
+                                </span>
+                            </div>
+                        )}
+
+                        <div className="pt-1 border-t border-slate-800 space-y-1.5">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600 font-black uppercase tracking-wider">
+                                    Tổng sự kiện
+                                </span>
+                                <span className="text-amber-300 font-black text-sm tabular-nums">
+                                    {fmt(ticketsSold)}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                )}
+                </div>
+            </div>
+
+            {/* Click Tracking */}
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900/60 border border-emerald-500/10 p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Click Tracking</span>
+                    <MdOutlineTouchApp className="text-emerald-400 text-lg opacity-60" />
+                </div>
+                <p className="text-4xl font-black text-emerald-300 tabular-nums">{fmt(totalClickCount)}</p>
+                <div className="space-y-1.5">
+                    {fb.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><MdFacebook className="text-blue-400" />FB</span>
+                            <span className="text-emerald-400 font-semibold tabular-nums">{fmt(fbClickCount)}</span>
+                        </div>
+                    )}
+                    {ig.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><RiInstagramLine className="text-pink-400" />IG</span>
+                            <span className="text-emerald-400 font-semibold tabular-nums">{fmt(igClickCount)}</span>
+                        </div>
+                    )}
+                    {th.length > 0 && (
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-1.5 text-slate-500"><ThreadsIcon className="w-3 h-3" />TH</span>
+                            <span className="text-emerald-400 font-semibold tabular-nums">{fmt(thClickCount)}</span>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
 }
 
-// ─── PlatformComparisonChart ──────────────────────────────────────────────────
+// ─── PlatformRatesPanel ───────────────────────────────────────────────────────
+// Per-platform stat cards + rate bars (đã bổ sung Shares)
 
-function PlatformComparisonChart({ fb, ig, th }: {
+function RateBar({ label, value, gradient, formula }: {
+    label: string; value: number | null; gradient: string; formula: string;
+}) {
+    const pctWidth = value != null ? Math.min(value * 100, 100) : 0;
+    return (
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500 font-semibold">{label}</span>
+                <span className="text-white font-black tabular-nums">{fmtPct(value)}</span>
+            </div>
+            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pctWidth}%`, background: gradient }} />
+            </div>
+            <p className="text-xs text-slate-700 font-mono">{formula}</p>
+        </div>
+    );
+}
+
+function PlatformRatesPanel({ fb, ig, th }: {
     fb: PostWithMetrics[];
     ig: PostWithIGMetrics[];
     th: PostWithThreadsMetrics[];
 }) {
-    if (!fb.length && !ig.length && !th.length) return null;
-
     const fbReach = fb.reduce((s, d) => s + d.metrics.reach, 0);
     const fbLikes = fb.reduce((s, d) => s + d.metrics.likes, 0);
     const fbComments = fb.reduce((s, d) => s + d.metrics.comments, 0);
-    const fbShares = fb.reduce((s, d) => s + d.metrics.shares, 0);
     const fbClicks = fb.reduce((s, d) => s + d.metrics.clicks, 0);
-    const fbTickets = fb.reduce((s, d) => s + d.metrics.ticketsSold, 0);
-    const fbEng = fbLikes + fbComments + fbShares;
+    const fbBuyCount = fb.reduce((s, d) => s + d.metrics.buyCount, 0);
+    const fbClickCount = fb.reduce((s, d) => s + d.metrics.clickCount, 0);
+    const fbShares = fb.reduce((s, d) => s + d.metrics.shares, 0);
 
     const igReach = ig.reduce((s, d) => s + d.metrics.reach, 0);
     const igLikes = ig.reduce((s, d) => s + d.metrics.likes, 0);
     const igComments = ig.reduce((s, d) => s + d.metrics.comments, 0);
-    const igShares = ig.reduce((s, d) => s + d.metrics.shares, 0);
     const igSaves = ig.reduce((s, d) => s + d.metrics.saves, 0);
-    const igTickets = ig.reduce((s, d) => s + d.metrics.ticketsSold, 0);
-    const igEng = igLikes + igComments + igShares + igSaves;
+    const igShares = ig.reduce((s, d) => s + d.metrics.shares, 0);
+    const igBuyCount = ig.reduce((s, d) => s + d.metrics.buyCount, 0);
+    const igClickCount = ig.reduce((s, d) => s + d.metrics.clickCount, 0);
 
-    const thViews = th.reduce((s, d) => s + d.metrics.views, 0);
-    const thLikes = th.reduce((s, d) => s + d.metrics.likes, 0);
-    const thReplies = th.reduce((s, d) => s + d.metrics.replies, 0);
-    const thReposts = th.reduce((s, d) => s + d.metrics.reposts, 0);
-    const thQuotes = th.reduce((s, d) => s + d.metrics.quotes, 0);
-    const thShares = th.reduce((s, d) => s + d.metrics.shares, 0);
-    const thTickets = th.reduce((s, d) => s + (d.metrics.ticketsSold ?? 0), 0);
-    const thEng = thLikes + thReplies + thReposts + thQuotes + thShares;
+    const thViews = th.reduce((s, d) => s + (d.metrics.views ?? 0), 0);
+    const thLikes = th.reduce((s, d) => s + (d.metrics.likes ?? 0), 0);
+    const thReplies = th.reduce((s, d) => s + (d.metrics.replies ?? 0), 0);
+    const thReposts = th.reduce((s, d) => s + (d.metrics.reposts ?? 0), 0);
+    const thQuotes = th.reduce((s, d) => s + (d.metrics.quotes ?? 0), 0);
+    const thShares = th.reduce((s, d) => s + (d.metrics.shares ?? 0), 0);
+    const thBuyCount = th.reduce((s, d) => s + (d.metrics.buyCount ?? 0), 0);
+    const thClickCount = th.reduce((s, d) => s + (d.metrics.clickCount ?? 0), 0);
 
-    const volumeData = [
-        { metric: "Reach/Views", Facebook: fbReach, Instagram: igReach, Threads: thViews },
-        { metric: "Tương tác", Facebook: fbEng, Instagram: igEng, Threads: thEng },
-        { metric: "Thích", Facebook: fbLikes, Instagram: igLikes, Threads: thLikes },
-        { metric: "Bình luận", Facebook: fbComments, Instagram: igComments, Threads: thReplies },
-        { metric: "Chia sẻ", Facebook: fbShares, Instagram: igShares, Threads: thShares },
-    ];
+    const fbER = calcFacebookER(fbLikes, fbComments, fbReach);
+    const fbCTR = calcFacebookCTR(fbClicks, fbReach);
+    const fbCVR = calcFacebookCVR(fbBuyCount, fbClickCount);
 
-    const convData = [
-        { metric: "Vé bán", Facebook: fbTickets, Instagram: igTickets, Threads: thTickets },
-        { metric: "Clicks (FB)", Facebook: fbClicks, Instagram: 0, Threads: 0 },
-        { metric: "Lưu (IG)", Facebook: 0, Instagram: igSaves, Threads: 0 },
-        { metric: "Reposts (TH)", Facebook: 0, Instagram: 0, Threads: thReposts },
-        { metric: "Quotes (TH)", Facebook: 0, Instagram: 0, Threads: thQuotes },
-    ];
+    const igER = calcInstagramER(igLikes, igComments, igSaves, igShares, igReach);
+    const igCTR = calcInstagramCTR(igClickCount, igReach);
+    const igCVR = calcInstagramCVR(igBuyCount, igClickCount);
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (!active || !payload?.length) return null;
-        return (
-            <div className="bg-slate-900/95 border border-slate-700 rounded-xl px-4 py-3 text-xs space-y-1.5 min-w-[140px]">
-                <p className="text-white font-bold">{label}</p>
-                {payload.map((p: any) => p.value > 0 && (
-                    <div key={p.dataKey} className="flex justify-between gap-4">
-                        <span style={{ color: p.color }}>{p.dataKey}</span>
-                        <span className="text-white font-bold">{fmt(p.value)}</span>
-                    </div>
-                ))}
-            </div>
-        );
-    };
-
-    const Legend = () => (
-        <div className="flex items-center gap-5 text-xs text-slate-500 mb-3 flex-wrap">
-            {fb.length > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#1877F2] inline-block" />Facebook</span>}
-            {ig.length > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#E1306C] inline-block" />Instagram</span>}
-            {th.length > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#94a3b8] inline-block" />Threads</span>}
-        </div>
-    );
+    const thER = calcThreadsER(thLikes, thReplies, thReposts, thQuotes, thViews);
+    const thCTR = calcThreadsCTR(thClickCount, thViews);
+    const thCVR = calcThreadsCVR(thBuyCount, thClickCount);
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <span className="w-1.5 h-6 bg-gradient-to-b from-blue-500 via-pink-500 to-slate-400 rounded-full" />
-                <h3 className="text-base font-bold text-white">So sánh nền tảng tổng hợp</h3>
-                <span className="text-[10px] text-slate-600 font-black uppercase tracking-widest">FB · IG · Threads</span>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Volume */}
-                <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Volume metrics</p>
-                    <p className="text-xs text-slate-600 mb-3">Reach · Tương tác · Thích · Bình luận · Chia sẻ</p>
-                    <Legend />
-                    <div className="h-[240px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={volumeData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
-                                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
-                                <XAxis dataKey="metric" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                                {fb.length > 0 && <Bar dataKey="Facebook" fill="#1877F2" radius={[4, 4, 0, 0]} maxBarSize={28} />}
-                                {ig.length > 0 && <Bar dataKey="Instagram" fill="#E1306C" radius={[4, 4, 0, 0]} maxBarSize={28} />}
-                                {th.length > 0 && <Bar dataKey="Threads" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={28} />}
-                            </BarChart>
-                        </ResponsiveContainer>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {fb.length > 0 && (
+                <div className="rounded-2xl bg-gradient-to-b from-[#0d1729] to-[#0b0f1a] border border-blue-500/10 p-5 space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
+                        <MdFacebook className="text-blue-400 text-lg" />
+                        <span className="text-sm font-black text-blue-400/80 uppercase tracking-widest">Facebook · {fb.length} bài</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Reach</p><p className="text-xl font-black text-blue-300 tabular-nums">{fmt(fbReach)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Clicks</p><p className="text-xl font-black text-emerald-400 tabular-nums">{fmt(fbClicks)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Likes</p><p className="text-xl font-black text-blue-400 tabular-nums">{fmt(fbLikes)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Comments</p><p className="text-xl font-black text-violet-400 tabular-nums">{fmt(fbComments)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Shares</p><p className="text-xl font-black text-cyan-400 tabular-nums">{fmt(fbShares)}</p></div>
+                    </div>
+                    <div className="space-y-3">
+                        <RateBar label="Engagement Rate" value={fbER} gradient="linear-gradient(90deg,#3b82f6,#8b5cf6)" formula="(likes+comments)/reach" />
+                        <RateBar label="Click-Through Rate" value={fbCTR} gradient="linear-gradient(90deg,#10b981,#06b6d4)" formula="clicks/reach" />
+                        <RateBar label="Conversion Rate" value={fbCVR} gradient="linear-gradient(90deg,#f59e0b,#ef4444)" formula="buyCount/clickCount" />
                     </div>
                 </div>
+            )}
 
-                {/* Conversion & đặc thù — Threads tickets now included */}
-                <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Chuyển đổi & đặc thù</p>
-                    <p className="text-xs text-slate-600 mb-3">Vé · Clicks(FB) · Lưu(IG) · Reposts/Quotes(TH)</p>
-                    <Legend />
-                    <div className="h-[240px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={convData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
-                                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
-                                <XAxis dataKey="metric" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
-                                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                                {fb.length > 0 && <Bar dataKey="Facebook" fill="#1877F2" radius={[4, 4, 0, 0]} maxBarSize={32} />}
-                                {ig.length > 0 && <Bar dataKey="Instagram" fill="#E1306C" radius={[4, 4, 0, 0]} maxBarSize={32} />}
-                                {th.length > 0 && <Bar dataKey="Threads" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={32} />}
-                            </BarChart>
-                        </ResponsiveContainer>
+            {ig.length > 0 && (
+                <div className="rounded-2xl bg-gradient-to-b from-[#1a0d1a] to-[#0f0b14] border border-pink-500/10 p-5 space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
+                        <RiInstagramLine className="text-pink-400 text-lg" />
+                        <span className="text-sm font-black text-pink-400/80 uppercase tracking-widest">Instagram · {ig.length} bài</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Reach</p><p className="text-xl font-black text-pink-300 tabular-nums">{fmt(igReach)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Saves</p><p className="text-xl font-black text-amber-400 tabular-nums">{fmt(igSaves)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Likes</p><p className="text-xl font-black text-pink-400 tabular-nums">{fmt(igLikes)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Comments</p><p className="text-xl font-black text-violet-400 tabular-nums">{fmt(igComments)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Shares</p><p className="text-xl font-black text-emerald-400 tabular-nums">{fmt(igShares)}</p></div>
+                    </div>
+                    <div className="space-y-3">
+                        <RateBar label="Engagement Rate" value={igER} gradient="linear-gradient(90deg,#e1306c,#833ab4)" formula="(likes+comments+saves+shares)/reach" />
+                        <RateBar label="Click-Through Rate" value={igCTR} gradient="linear-gradient(90deg,#10b981,#06b6d4)" formula="clickCount/reach" />
+                        <RateBar label="Conversion Rate" value={igCVR} gradient="linear-gradient(90deg,#f59e0b,#ef4444)" formula="buyCount/clickCount" />
                     </div>
                 </div>
-            </div>
+            )}
 
-            {/* Engagement rate 3 nền tảng */}
-            <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Engagement Rate tổng hợp mỗi nền tảng</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {fb.length > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2"><MdFacebook className="text-blue-400" /><span className="text-sm text-slate-400">Facebook</span></div>
-                                <span className="text-sm font-black text-blue-300 tabular-nums">
-                                    {fbReach > 0 ? `${((fbEng / fbReach) * 100).toFixed(2)}%` : "—"}
-                                </span>
-                            </div>
-                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-blue-500 transition-all duration-700"
-                                    style={{ width: fbReach > 0 ? `${Math.min((fbEng / fbReach) * 100, 100)}%` : "0%" }} />
-                            </div>
-                            <p className="text-xs text-slate-600">{fmt(fbEng)} tương tác / {fmt(fbReach)} reach</p>
-                            <p className="text-xs text-slate-600">CTR: {pct(fbClicks, fbReach)} · Vé: {fmt(fbTickets)}</p>
-                        </div>
-                    )}
-                    {ig.length > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2"><RiInstagramLine className="text-pink-400" /><span className="text-sm text-slate-400">Instagram</span></div>
-                                <span className="text-sm font-black text-pink-300 tabular-nums">
-                                    {igReach > 0 ? `${((igEng / igReach) * 100).toFixed(2)}%` : "—"}
-                                </span>
-                            </div>
-                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-pink-500 transition-all duration-700"
-                                    style={{ width: igReach > 0 ? `${Math.min((igEng / igReach) * 100, 100)}%` : "0%" }} />
-                            </div>
-                            <p className="text-xs text-slate-600">{fmt(igEng)} tương tác / {fmt(igReach)} reach</p>
-                            <p className="text-xs text-slate-600">Save Rate: {pct(igSaves, igReach)} · Vé: {fmt(igTickets)}</p>
-                        </div>
-                    )}
-                    {th.length > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2"><span className="text-slate-300"><ThreadsIcon /></span><span className="text-sm text-slate-400">Threads</span></div>
-                                <span className="text-sm font-black text-slate-300 tabular-nums">
-                                    {thViews > 0 ? `${((thEng / thViews) * 100).toFixed(2)}%` : "—"}
-                                </span>
-                            </div>
-                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-slate-400 transition-all duration-700"
-                                    style={{ width: thViews > 0 ? `${Math.min((thEng / thViews) * 100, 100)}%` : "0%" }} />
-                            </div>
-                            <p className="text-xs text-slate-600">{fmt(thEng)} tương tác / {fmt(thViews)} views</p>
-                            <p className="text-xs text-slate-600">Repost Rate: {pct(thReposts, thViews)} · Vé: {fmt(thTickets)}</p>
-                        </div>
-                    )}
+            {th.length > 0 && (
+                <div className="rounded-2xl bg-gradient-to-b from-[#111418] to-[#0b0c10] border border-slate-600/10 p-5 space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
+                        <span className="text-slate-300"><ThreadsIcon /></span>
+                        <span className="text-sm font-black text-slate-400/80 uppercase tracking-widest">Threads · {th.length} bài</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Views</p><p className="text-xl font-black text-slate-200 tabular-nums">{fmt(thViews)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Reposts</p><p className="text-xl font-black text-emerald-400 tabular-nums">{fmt(thReposts)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Replies</p><p className="text-xl font-black text-sky-400 tabular-nums">{fmt(thReplies)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Quotes</p><p className="text-xl font-black text-violet-400 tabular-nums">{fmt(thQuotes)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Shares</p><p className="text-xl font-black text-amber-400 tabular-nums">{fmt(thShares)}</p></div>
+                    </div>
+                    <div className="space-y-3">
+                        <RateBar label="Engagement Rate" value={thER} gradient="linear-gradient(90deg,#94a3b8,#e2e8f0)" formula="(likes+replies+reposts+quotes)/views" />
+                        <RateBar label="Click-Through Rate" value={thCTR} gradient="linear-gradient(90deg,#10b981,#6366f1)" formula="clickCounts/views" />
+                        <RateBar label="Conversion Rate" value={thCVR} gradient="linear-gradient(90deg,#f59e0b,#ef4444)" formula="buyCount/clickCount" />
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
@@ -599,12 +546,13 @@ function ReachTrendChart({ fb, ig, th }: {
         threads: thMap.get(post.id)?.metrics.views ?? null,
     }));
 
-    const CustomTooltip = ({ active, payload }: any) => {
+    const TrendTooltip = ({ active, payload }: any) => {
         if (!active || !payload?.length) return null;
+        const d = payload[0]?.payload;
         return (
-            <div className="bg-slate-900/95 border border-slate-700 rounded-xl px-4 py-3 text-xs space-y-1.5 min-w-[160px]">
-                <p className="text-white font-bold text-sm truncate max-w-[200px]">{payload[0]?.payload?.title}</p>
-                <p className="text-slate-500 text-[10px]">{payload[0]?.payload?.date}</p>
+            <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-3.5 py-2.5 text-sm shadow-xl space-y-1.5 min-w-[160px]">
+                <p className="text-white font-bold truncate max-w-[200px]">{d?.title}</p>
+                <p className="text-slate-500 text-[12px]">{d?.date}</p>
                 {payload.map((p: any) => p.value != null && (
                     <div key={p.dataKey} className="flex justify-between gap-4">
                         <span style={{ color: p.color }}>
@@ -618,40 +566,34 @@ function ReachTrendChart({ fb, ig, th }: {
     };
 
     return (
-        <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-            <div className="mb-4">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <MdOutlinePeopleAlt className="text-blue-400" />
-                    Reach / Views theo bài đăng · Tất cả nền tảng
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">Mỗi điểm = 1 bài, sắp xếp theo publishedAt tăng dần</p>
-            </div>
-            <div className="flex items-center gap-5 text-xs text-slate-500 mb-3 flex-wrap">
+        <div className="rounded-2xl bg-gradient-to-b from-[#0e1420] to-[#0b0c12] border border-white/5 p-6">
+            <SectionHeader accent="bg-gradient-to-b from-blue-400 via-pink-400 to-slate-400" title="Reach / Views theo bài đăng" sub="tất cả nền tảng · theo thời gian" />
+            <div className="flex items-center gap-5 text-sm text-slate-500 mb-4 flex-wrap">
                 {fb.length > 0 && <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-400 inline-block rounded" />Facebook</span>}
                 {ig.length > 0 && <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-pink-400 inline-block rounded" />Instagram</span>}
                 {th.length > 0 && <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-slate-400 inline-block rounded" />Threads</span>}
             </div>
-            <div className="h-[260px]">
+            <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                         <defs>
-                            <linearGradient id="fbGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                            <linearGradient id="fbG" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.25} /><stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                             </linearGradient>
-                            <linearGradient id="igGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#ec4899" stopOpacity={0.3} /><stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
+                            <linearGradient id="igG" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#ec4899" stopOpacity={0.25} /><stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
                             </linearGradient>
-                            <linearGradient id="thGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#94a3b8" stopOpacity={0.3} /><stop offset="100%" stopColor="#94a3b8" stopOpacity={0} />
+                            <linearGradient id="thG" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#94a3b8" stopOpacity={0.2} /><stop offset="100%" stopColor="#94a3b8" stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                         <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `#${v}`} />
                         <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
-                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }} />
-                        {fb.length > 0 && <Area type="monotone" dataKey="facebook" stroke="#3b82f6" strokeWidth={2} fill="url(#fbGrad)" connectNulls />}
-                        {ig.length > 0 && <Area type="monotone" dataKey="instagram" stroke="#ec4899" strokeWidth={2} fill="url(#igGrad)" connectNulls />}
-                        {th.length > 0 && <Area type="monotone" dataKey="threads" stroke="#94a3b8" strokeWidth={2} fill="url(#thGrad)" connectNulls />}
+                        <Tooltip content={<TrendTooltip />} cursor={{ stroke: "rgba(255,255,255,0.07)", strokeWidth: 1 }} />
+                        {fb.length > 0 && <Area type="monotone" dataKey="facebook" stroke="#3b82f6" strokeWidth={2} fill="url(#fbG)" connectNulls />}
+                        {ig.length > 0 && <Area type="monotone" dataKey="instagram" stroke="#ec4899" strokeWidth={2} fill="url(#igG)" connectNulls />}
+                        {th.length > 0 && <Area type="monotone" dataKey="threads" stroke="#94a3b8" strokeWidth={2} fill="url(#thG)" connectNulls />}
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
@@ -659,9 +601,9 @@ function ReachTrendChart({ fb, ig, th }: {
     );
 }
 
-// ─── EngagementBreakdown ──────────────────────────────────────────────────────
+// ─── EngagementBreakdownPanel ─────────────────────────────────────────────────
 
-function EngagementBreakdown({ fb, ig, th }: {
+function EngagementBreakdownPanel({ fb, ig, th }: {
     fb: PostWithMetrics[];
     ig: PostWithIGMetrics[];
     th: PostWithThreadsMetrics[];
@@ -669,221 +611,318 @@ function EngagementBreakdown({ fb, ig, th }: {
     const fbLikes = fb.reduce((s, d) => s + d.metrics.likes, 0);
     const fbComments = fb.reduce((s, d) => s + d.metrics.comments, 0);
     const fbShares = fb.reduce((s, d) => s + d.metrics.shares, 0);
+
     const igLikes = ig.reduce((s, d) => s + d.metrics.likes, 0);
     const igComments = ig.reduce((s, d) => s + d.metrics.comments, 0);
     const igSaves = ig.reduce((s, d) => s + d.metrics.saves, 0);
     const igShares = ig.reduce((s, d) => s + d.metrics.shares, 0);
-    const thLikes = th.reduce((s, d) => s + d.metrics.likes, 0);
-    const thReplies = th.reduce((s, d) => s + d.metrics.replies, 0);
-    const thReposts = th.reduce((s, d) => s + d.metrics.reposts, 0);
-    const thQuotes = th.reduce((s, d) => s + d.metrics.quotes, 0);
-    const thShares = th.reduce((s, d) => s + d.metrics.shares, 0);
 
-    const fbTotal = fbLikes + fbComments + fbShares;
-    const igTotal = igLikes + igComments + igSaves + igShares;
-    const thTotal = thLikes + thReplies + thReposts + thQuotes + thShares;
+    const thLikes = th.reduce((s, d) => s + (d.metrics.likes ?? 0), 0);
+    const thReplies = th.reduce((s, d) => s + (d.metrics.replies ?? 0), 0);
+    const thReposts = th.reduce((s, d) => s + (d.metrics.reposts ?? 0), 0);
+    const thQuotes = th.reduce((s, d) => s + (d.metrics.quotes ?? 0), 0);
+    const thShares = th.reduce((s, d) => s + (d.metrics.shares ?? 0), 0);
 
-    const perPostData = [
-        ...fb.map(d => ({
-            shortTitle: `FB·${truncate(d.post.title, 8)}`,
-            title: d.post.title, platform: "Facebook",
-            likes: d.metrics.likes, comments: d.metrics.comments,
-            shares: d.metrics.shares, saves: 0, replies: 0, reposts: 0,
-        })),
-        ...ig.map(d => ({
-            shortTitle: `IG·${truncate(d.post.title, 8)}`,
-            title: d.post.title, platform: "Instagram",
-            likes: d.metrics.likes, comments: d.metrics.comments,
-            shares: d.metrics.shares, saves: d.metrics.saves, replies: 0, reposts: 0,
-        })),
-        ...th.map(d => ({
-            shortTitle: `TH·${truncate(d.post.title, 8)}`,
-            title: d.post.title, platform: "Threads",
-            likes: d.metrics.likes, comments: 0,
-            shares: d.metrics.shares, saves: 0,
-            replies: d.metrics.replies,
-            reposts: d.metrics.reposts + d.metrics.quotes,
-        })),
+    const fbERTotal = fbLikes + fbComments;
+    const igERTotal = igLikes + igComments + igSaves + igShares;
+    const thERTotal = thLikes + thReplies + thReposts + thQuotes;
+
+    type BreakdownItem = { label: string; value: number; color: string; inER: boolean };
+
+    const fbBreakdown: BreakdownItem[] = [
+        { label: "Likes", value: fbLikes, color: "#3b82f6", inER: true },
+        { label: "Comments", value: fbComments, color: "#8b5cf6", inER: true },
+        { label: "Shares*", value: fbShares, color: "#06b6d4", inER: false },
+    ];
+    const igBreakdown: BreakdownItem[] = [
+        { label: "Likes", value: igLikes, color: "#e1306c", inER: true },
+        { label: "Comments", value: igComments, color: "#8b5cf6", inER: true },
+        { label: "Saves", value: igSaves, color: "#f59e0b", inER: true },
+        { label: "Shares", value: igShares, color: "#10b981", inER: true },
+    ];
+    const thBreakdown: BreakdownItem[] = [
+        { label: "Likes", value: thLikes, color: "#f43f5e", inER: true },
+        { label: "Replies", value: thReplies, color: "#38bdf8", inER: true },
+        { label: "Reposts", value: thReposts, color: "#34d399", inER: true },
+        { label: "Quotes", value: thQuotes, color: "#a78bfa", inER: true },
+        { label: "Shares*", value: thShares, color: "#94a3b8", inER: false },
     ];
 
-    const EngTooltip = ({ active, payload }: any) => {
-        if (!active || !payload?.length) return null;
-        const plat = payload[0]?.payload?.platform;
+    function BreakdownBars({ items, total }: { items: BreakdownItem[]; total: number }) {
         return (
-            <div className="bg-slate-900/95 border border-slate-700 rounded-xl px-4 py-3 text-xs space-y-1.5 min-w-[160px]">
-                <div className="flex items-center gap-1.5">
-                    {plat === "Instagram" ? <RiInstagramLine className="text-pink-400" />
-                        : plat === "Threads" ? <span className="text-slate-300"><ThreadsIcon className="w-3 h-3" /></span>
-                            : <MdFacebook className="text-blue-400" />}
-                    <p className="text-white font-bold truncate max-w-[180px]">{payload[0]?.payload?.title}</p>
-                </div>
-                {payload.map((p: any) => p.value > 0 && (
+            <div className="space-y-2">
+                {items.map(b => (
+                    <div key={b.label} className="flex items-center gap-2.5">
+                        <span className={`text-sm w-20 shrink-0 ${b.inER ? "text-slate-400" : "text-slate-600"}`}>{b.label}</span>
+                        <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${total > 0 ? (b.value / total) * 100 : 0}%`, backgroundColor: b.color }} />
+                        </div>
+                        <span className="text-sm font-bold tabular-nums w-12 text-right" style={{ color: b.inER ? b.color : "#475569" }}>{fmt(b.value)}</span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-2xl bg-gradient-to-b from-[#0e1420] to-[#0b0c12] border border-white/5 p-6">
+            <SectionHeader accent="bg-violet-500" title="Phân tích Engagement" sub="tổng hợp · theo nền tảng" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {fb.length > 0 && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <MdFacebook className="text-blue-400" />
+                            <span className="text-[10px] font-black text-blue-400/70 uppercase tracking-widest">Facebook</span>
+                            <span className="text-xs text-slate-700 ml-auto font-mono">ER=likes+comments</span>
+                        </div>
+                        <BreakdownBars items={fbBreakdown} total={fbERTotal + fbShares} />
+                        <p className="text-xs text-slate-700">* Shares không tính vào ER (độ chính xác thấp)</p>
+                    </div>
+                )}
+                {ig.length > 0 && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <RiInstagramLine className="text-pink-400" />
+                            <span className="text-[10px] font-black text-pink-400/70 uppercase tracking-widest">Instagram</span>
+                            <span className="text-xs text-slate-700 ml-auto font-mono">ER=all4</span>
+                        </div>
+                        <BreakdownBars items={igBreakdown} total={igERTotal} />
+                    </div>
+                )}
+                {th.length > 0 && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-slate-300"><ThreadsIcon /></span>
+                            <span className="text-[10px] font-black text-slate-400/70 uppercase tracking-widest">Threads</span>
+                            <span className="text-xs text-slate-700 ml-auto font-mono">ER=likes+rep+repost+quote</span>
+                        </div>
+                        <BreakdownBars items={thBreakdown} total={thERTotal + thShares} />
+                        <p className="text-xs text-slate-700">* Shares không tính vào ER</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── ConversionRateChart (đã sửa ScrollChart không cần data prop) ─────────────
+
+function ConversionRateChart({ fb, ig, th }: {
+    fb: PostWithMetrics[];
+    ig: PostWithIGMetrics[];
+    th: PostWithThreadsMetrics[];
+}) {
+    const isLarge = (arr: any[]) => arr.length > SCROLL_THRESHOLD;
+
+    const fbData = fb.map((d, i) => ({
+        name: truncate(d.post.title, 12),
+        idx: `FB#${i + 1}`,
+        cvr: (calcFacebookCVR(d.metrics.buyCount, d.metrics.clickCount) ?? 0) * 100,
+        ctr: (calcFacebookCTR(d.metrics.clicks, d.metrics.reach) ?? 0) * 100,
+        tickets: d.metrics.ticketsSold,
+    }));
+
+    const igData = ig.map((d, i) => ({
+        name: truncate(d.post.title, 12),
+        idx: `IG#${i + 1}`,
+        cvr: (calcInstagramCVR(d.metrics.buyCount, d.metrics.clickCount) ?? 0) * 100,
+        ctr: (calcInstagramCTR(d.metrics.clickCount, d.metrics.reach) ?? 0) * 100,
+        tickets: d.metrics.ticketsSold,
+    }));
+
+    const thData = th.map((d, i) => ({
+        name: truncate(d.post.title, 12),
+        idx: `TH#${i + 1}`,
+        cvr: (calcThreadsCVR(d.metrics.buyCount ?? 0, d.metrics.clickCount ?? 0) ?? 0) * 100,
+        ctr: (calcThreadsCTR(d.metrics.clickCount ?? 0, d.metrics.views ?? 0) ?? 0) * 100,
+        tickets: d.metrics.ticketsSold ?? 0,
+    }));
+
+    const CvrTooltip = ({ active, payload }: any) => {
+        if (!active || !payload?.length) return null;
+        const d = payload[0]?.payload;
+        return (
+            <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-3.5 py-2.5 text-sm shadow-xl space-y-1.5 min-w-[160px]">
+                <p className="text-white font-bold">{d?.name}</p>
+                {payload.map((p: any) => (
                     <div key={p.dataKey} className="flex justify-between gap-4">
                         <span style={{ color: p.fill }}>{p.name}</span>
-                        <span className="text-white font-bold">{fmt(p.value)}</span>
+                        <span className="text-white font-bold">{p.value?.toFixed(2)}%</span>
                     </div>
                 ))}
             </div>
         );
     };
 
-    return (
-        <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-            <h3 className="text-base font-bold text-white mb-5">Phân tích Engagement · Tất cả nền tảng</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-2 space-y-5">
-                    {fb.length > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-1.5 mb-2">
-                                <MdFacebook className="text-blue-400 text-sm" />
-                                <span className="text-[10px] font-black text-blue-400/70 uppercase tracking-widest">Facebook</span>
-                            </div>
-                            {[
-                                { label: "Thích", value: fbLikes, color: "#3b82f6" },
-                                { label: "Bình luận", value: fbComments, color: "#8b5cf6" },
-                                { label: "Chia sẻ", value: fbShares, color: "#06b6d4" },
-                            ].map(b => (
-                                <div key={b.label} className="flex items-center gap-3">
-                                    <span className="text-xs text-slate-500 w-16 shrink-0">{b.label}</span>
-                                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full" style={{ width: `${fbTotal > 0 ? (b.value / fbTotal) * 100 : 0}%`, backgroundColor: b.color }} />
-                                    </div>
-                                    <span className="text-xs font-bold text-slate-400 tabular-nums w-10 text-right">{fmt(b.value)}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {ig.length > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-1.5 mb-2">
-                                <RiInstagramLine className="text-pink-400 text-sm" />
-                                <span className="text-[10px] font-black text-pink-400/70 uppercase tracking-widest">Instagram</span>
-                            </div>
-                            {[
-                                { label: "Thích", value: igLikes, color: "#e1306c" },
-                                { label: "Bình luận", value: igComments, color: "#8b5cf6" },
-                                { label: "Lưu", value: igSaves, color: "#f59e0b" },
-                                { label: "Chia sẻ", value: igShares, color: "#10b981" },
-                            ].map(b => (
-                                <div key={b.label} className="flex items-center gap-3">
-                                    <span className="text-xs text-slate-500 w-16 shrink-0">{b.label}</span>
-                                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full" style={{ width: `${igTotal > 0 ? (b.value / igTotal) * 100 : 0}%`, backgroundColor: b.color }} />
-                                    </div>
-                                    <span className="text-xs font-bold text-slate-400 tabular-nums w-10 text-right">{fmt(b.value)}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {th.length > 0 && (
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-1.5 mb-2">
-                                <span className="text-slate-300"><ThreadsIcon className="w-3.5 h-3.5" /></span>
-                                <span className="text-[10px] font-black text-slate-400/70 uppercase tracking-widest">Threads</span>
-                            </div>
-                            {[
-                                { label: "Thích", value: thLikes, color: "#f43f5e" },
-                                { label: "Replies", value: thReplies, color: "#38bdf8" },
-                                { label: "Reposts", value: thReposts, color: "#34d399" },
-                                { label: "Quotes", value: thQuotes, color: "#a78bfa" },
-                                { label: "Chia sẻ", value: thShares, color: "#94a3b8" },
-                            ].map(b => (
-                                <div key={b.label} className="flex items-center gap-3">
-                                    <span className="text-xs text-slate-500 w-16 shrink-0">{b.label}</span>
-                                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full" style={{ width: `${thTotal > 0 ? (b.value / thTotal) * 100 : 0}%`, backgroundColor: b.color }} />
-                                    </div>
-                                    <span className="text-xs font-bold text-slate-400 tabular-nums w-10 text-right">{fmt(b.value)}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+    function ScrollChart({ count, children }: { count: number; children: React.ReactNode }) {
+        const scrollable = count > SCROLL_THRESHOLD;
+        const dynWidth = scrollable ? Math.max(count * 50, 300) : undefined;
+        return scrollable ? (
+            <div className="overflow-x-auto pb-1">
+                <div style={{ width: dynWidth, height: 160 }}>
+                    <ResponsiveContainer width="100%" height="100%">{children as any}</ResponsiveContainer>
                 </div>
+            </div>
+        ) : (
+            <div className="h-[160px]">
+                <ResponsiveContainer width="100%" height="100%">{children as any}</ResponsiveContainer>
+            </div>
+        );
+    }
 
-                <div className="lg:col-span-3">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Tương tác theo từng bài</p>
-                    <div className="h-[220px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={perPostData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+    return (
+        <div className="rounded-2xl bg-gradient-to-b from-[#0e1420] to-[#0b0c12] border border-white/5 p-6">
+            <SectionHeader accent="bg-gradient-to-b from-amber-400 to-orange-500" title="CVR · CTR theo nền tảng" sub="per bài đăng" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Facebook */}
+                {fb.length > 0 && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <MdFacebook className="text-blue-400" />
+                            <p className="text-[10px] font-black text-blue-400/70 uppercase tracking-widest">Facebook · CVR & CTR</p>
+                            {isLarge(fbData) && <span className="ml-auto text-xs text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded-full">scroll →</span>}
+                        </div>
+                        <ScrollChart count={fbData.length}>
+                            <BarChart data={fbData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
                                 <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
-                                <XAxis dataKey="shortTitle" tick={{ fill: "#64748b", fontSize: 8 }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
-                                <Tooltip content={<EngTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
-                                <Bar dataKey="likes" name="Thích" stackId="a" fill="#3b82f6" maxBarSize={36} />
-                                <Bar dataKey="comments" name="Bình luận" stackId="a" fill="#8b5cf6" maxBarSize={36} />
-                                <Bar dataKey="shares" name="Chia sẻ" stackId="a" fill="#06b6d4" maxBarSize={36} />
-                                <Bar dataKey="saves" name="Lưu (IG)" stackId="a" fill="#f59e0b" maxBarSize={36} />
-                                <Bar dataKey="replies" name="Replies (TH)" stackId="a" fill="#38bdf8" maxBarSize={36} />
-                                <Bar dataKey="reposts" name="Reposts (TH)" stackId="a" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                                <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
+                                <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                                <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                <Bar dataKey="ctr" name="CTR" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
                             </BarChart>
-                        </ResponsiveContainer>
+                        </ScrollChart>
+                        <div className="flex gap-3 text-sm text-slate-600">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" />CTR</span>
+                        </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-600">
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" />Thích</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-violet-500" />Bình luận</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-cyan-500" />Chia sẻ</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />Lưu (IG)</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-sky-400" />Replies (TH)</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-400" />Reposts (TH)</span>
+                )}
+
+                {/* Instagram */}
+                {ig.length > 0 && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <RiInstagramLine className="text-pink-400" />
+                            <p className="text-[10px] font-black text-pink-400/70 uppercase tracking-widest">Instagram · CVR & CTR</p>
+                            {isLarge(igData) && <span className="ml-auto text-xs text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded-full">scroll →</span>}
+                        </div>
+                        <ScrollChart count={igData.length}>
+                            <BarChart data={igData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
+                                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
+                                <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
+                                <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                                <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                <Bar dataKey="ctr" name="CTR" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                            </BarChart>
+                        </ScrollChart>
+                        <div className="flex gap-3 text-sm text-slate-600">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" />CTR</span>
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {/* Threads */}
+                {th.length > 0 && (
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-slate-300"><ThreadsIcon /></span>
+                            <p className="text-[10px] font-black text-slate-400/70 uppercase tracking-widest">Threads · CVR & CTR</p>
+                            {isLarge(thData) && <span className="ml-auto text-xs text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded-full">scroll →</span>}
+                        </div>
+                        <ScrollChart count={thData.length}>
+                            <BarChart data={thData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
+                                <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
+                                <XAxis dataKey="idx" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `${v.toFixed(1)}%`} />
+                                <Tooltip content={<CvrTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                                <Bar dataKey="cvr" name="CVR" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                                <Bar dataKey="ctr" name="CTR" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                            </BarChart>
+                        </ScrollChart>
+                        <div className="flex gap-3 text-sm text-slate-600">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" />CVR</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" />CTR</span>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-// ─── TopPostsTable ────────────────────────────────────────────────────────────
+// ─── TopPostsTable (đã thêm cột chi tiết tương tác) ───────────────────────────
 
 function TopPostsTable({ fb, ig, th }: {
     fb: PostWithMetrics[];
     ig: PostWithIGMetrics[];
     th: PostWithThreadsMetrics[];
 }) {
+    type SortKey = "reach" | "engagement" | "er" | "tickets" | "cvr";
+    const [sortKey, setSortKey] = useState<SortKey>("reach");
+
     type Row = {
         id: string; title: string; publishedAt: string | null;
         platform: "Facebook" | "Instagram" | "Threads";
-        reach: number; engagement: number; engRate: string;
-        tickets: number; cvr: string;
+        reach: number; engagement: number; erRaw: number | null; engRate: string;
+        tickets: number; cvrRaw: number | null; cvr: string;
+        ctr: string;
+        likes: number; comments: number; shares: number;
+        saves?: number; reposts?: number; quotes?: number;
     };
 
     const rows: Row[] = [
         ...fb.map(d => {
-            const eng = d.metrics.likes + d.metrics.comments + d.metrics.shares;
+            const eng = d.metrics.likes + d.metrics.comments;
+            const er = calcFacebookER(d.metrics.likes, d.metrics.comments, d.metrics.reach);
+            const cvr = calcFacebookCVR(d.metrics.buyCount, d.metrics.clickCount);
+            const ctr = calcFacebookCTR(d.metrics.clicks, d.metrics.reach);
             return {
                 id: d.post.id + "_fb", title: d.post.title, publishedAt: d.post.publishedAt,
                 platform: "Facebook" as const,
-                reach: d.metrics.reach,
-                engagement: eng,
-                engRate: pct(eng, d.metrics.reach),
-                tickets: d.metrics.ticketsSold,
-                cvr: d.metrics.conversionRateFormatted ?? "—",
+                reach: d.metrics.reach, engagement: eng, erRaw: er, engRate: fmtPct(er),
+                tickets: d.metrics.buyCount, cvrRaw: cvr, cvr: fmtPct(cvr), ctr: fmtPct(ctr),
+                likes: d.metrics.likes, comments: d.metrics.comments, shares: d.metrics.shares,
             };
         }),
         ...ig.map(d => {
             const eng = d.metrics.likes + d.metrics.comments + d.metrics.saves + d.metrics.shares;
+            const er = calcInstagramER(d.metrics.likes, d.metrics.comments, d.metrics.saves, d.metrics.shares, d.metrics.reach);
+            const cvr = calcInstagramCVR(d.metrics.buyCount, d.metrics.clickCount);
+            const ctr = calcInstagramCTR(d.metrics.clickCount, d.metrics.reach);
             return {
                 id: d.post.id + "_ig", title: d.post.title, publishedAt: d.post.publishedAt,
                 platform: "Instagram" as const,
-                reach: d.metrics.reach,
-                engagement: eng,
-                engRate: pct(eng, d.metrics.reach),
-                tickets: d.metrics.ticketsSold,
-                cvr: d.metrics.conversionRateFormatted ?? "—",
+                reach: d.metrics.reach, engagement: eng, erRaw: er, engRate: fmtPct(er),
+                tickets: d.metrics.buyCount, cvrRaw: cvr, cvr: fmtPct(cvr), ctr: fmtPct(ctr),
+                likes: d.metrics.likes, comments: d.metrics.comments, shares: d.metrics.shares,
+                saves: d.metrics.saves,
             };
         }),
         ...th.map(d => {
-            const eng = d.metrics.likes + d.metrics.replies + d.metrics.reposts + d.metrics.quotes + d.metrics.shares;
+            const eng = (d.metrics.likes ?? 0) + (d.metrics.replies ?? 0) + (d.metrics.reposts ?? 0) + (d.metrics.quotes ?? 0);
+            const er = calcThreadsER(d.metrics.likes ?? 0, d.metrics.replies ?? 0, d.metrics.reposts ?? 0, d.metrics.quotes ?? 0, d.metrics.views ?? 0);
+            const cvr = calcThreadsCVR(d.metrics.buyCount ?? 0, d.metrics.clickCount ?? 0);
+            const ctr = calcThreadsCTR(d.metrics.clickCount ?? 0, d.metrics.views ?? 0);
             return {
                 id: d.post.id + "_th", title: d.post.title, publishedAt: d.post.publishedAt,
                 platform: "Threads" as const,
-                reach: d.metrics.views,
-                engagement: eng,
-                engRate: pct(eng, d.metrics.views),
-                tickets: d.metrics.ticketsSold ?? 0,   // ← fixed: no longer hardcoded 0
-                cvr: d.metrics.conversionRateFormatted ?? "—",
+                reach: d.metrics.views ?? 0, engagement: eng, erRaw: er, engRate: fmtPct(er),
+                tickets: d.metrics.buyCount ?? 0, cvrRaw: cvr, cvr: fmtPct(cvr), ctr: fmtPct(ctr),
+                likes: d.metrics.likes ?? 0, comments: d.metrics.replies ?? 0, shares: d.metrics.shares ?? 0,
+                reposts: d.metrics.reposts ?? 0, quotes: d.metrics.quotes ?? 0,
             };
         }),
-    ].sort((a, b) => b.reach - a.reach).slice(0, 10);
+    ].sort((a, b) => {
+        if (sortKey === "reach") return b.reach - a.reach;
+        if (sortKey === "engagement") return b.engagement - a.engagement;
+        if (sortKey === "er") return (b.erRaw ?? -1) - (a.erRaw ?? -1);
+        if (sortKey === "tickets") return b.tickets - a.tickets;
+        if (sortKey === "cvr") return (b.cvrRaw ?? -1) - (a.cvrRaw ?? -1);
+        return 0;
+    });
 
     const PlatformIcon = ({ p }: { p: Row["platform"] }) => {
         if (p === "Facebook") return <MdFacebook className="text-blue-400 text-base" />;
@@ -891,43 +930,73 @@ function TopPostsTable({ fb, ig, th }: {
         return <span className="text-slate-300"><ThreadsIcon className="w-4 h-4" /></span>;
     };
 
+    const SortBtn = ({ k, label }: { k: SortKey; label: string }) => (
+        <button
+            onClick={() => setSortKey(k)}
+            className={`text-xs font-black uppercase tracking-widest px-2 py-1 rounded-lg transition-all
+                ${sortKey === k ? "bg-slate-700 text-white" : "text-slate-600 hover:text-slate-400"}`}
+        >
+            {label}
+        </button>
+    );
+
     return (
-        <div className="rounded-2xl bg-gradient-to-b from-[#140f2a] to-[#0b0816] border border-white/5 p-6">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-white">Top bài đăng theo Reach / Views · Tất cả nền tảng</h3>
-                <span className="text-[10px] text-slate-500 bg-slate-800 px-2.5 py-1 rounded-full font-semibold">
-                    Top {rows.length} / {fb.length + ig.length + th.length} bài
-                </span>
+        <div className="rounded-2xl bg-gradient-to-b from-[#0e1420] to-[#0b0c12] border border-white/5 p-6">
+            <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+                <SectionHeader accent="bg-amber-400" title="Bảng xếp hạng bài đăng" sub={`${rows.length} bài · tất cả nền tảng`} />
+                <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-xs text-slate-600 mr-1">Sắp xếp:</span>
+                    <SortBtn k="reach" label="Reach" />
+                    <SortBtn k="engagement" label="Tương tác" />
+                    <SortBtn k="er" label="ER" />
+                    <SortBtn k="tickets" label="Vé" />
+                    <SortBtn k="cvr" label="CVR" />
+                </div>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-b border-white/5">
-                            <th className="text-left text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Nền tảng</th>
-                            <th className="text-left text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Bài viết</th>
-                            <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Reach/Views</th>
-                            <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Tương tác</th>
-                            <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Eng. Rate</th>
-                            <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">Vé bán</th>
-                            <th className="text-right text-[10px] font-black text-slate-500 uppercase tracking-widest pb-3">CVR</th>
+                            {["#", "Nền tảng", "Bài viết", "Reach/Views", "Tương tác", "ER", "CTR", "Vé bán", "CVR"].map(h => (
+                                <th key={h} className="text-center text-xs font-black text-slate-600 uppercase tracking-widest pb-3 pr-4 last:pr-0 whitespace-nowrap">{h}</th>
+                            ))}
+                            <th className="hidden lg:table-cell text-center text-xs font-black text-slate-600 uppercase tracking-widest pb-3 pr-4">Likes</th>
+                            <th className="hidden lg:table-cell text-center text-xs font-black text-slate-600 uppercase tracking-widest pb-3 pr-4">Comments</th>
+                            <th className="hidden lg:table-cell text-center text-xs font-black text-slate-600 uppercase tracking-widest pb-3 pr-4">Shares</th>
+                            <th className="hidden lg:table-cell text-center text-xs font-black text-slate-600 uppercase tracking-widest pb-3 pr-4">Saves/Reposts</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
-                        {rows.map(r => (
+                    <tbody className="divide-y divide-white/[0.03]">
+                        {rows.map((r, i) => (
                             <tr key={r.id} className="hover:bg-white/[0.02] transition-colors">
-                                <td className="py-3 pr-3"><PlatformIcon p={r.platform} /></td>
+                                <td className="py-3 pr-4 text-slate-700 text-sm font-bold tabular-nums">{i + 1}</td>
+                                <td className="py-3 pr-4"><PlatformIcon p={r.platform} /></td>
                                 <td className="py-3 pr-4">
-                                    <p className="text-white font-medium truncate max-w-[180px]">{r.title}</p>
-                                    <p className="text-xs text-slate-600 mt-0.5">{r.publishedAt ? fmtDate(r.publishedAt) : "—"}</p>
+                                    <p
+                                        className="text-white font-medium truncate max-w-[160px]"
+                                        title={r.title}
+                                    >
+                                        {r.title}
+                                    </p>
+                                    <p className="text-sm text-slate-600 mt-0.5">
+                                        {r.publishedAt ? fmtDate(r.publishedAt) : "—"}
+                                    </p>
                                 </td>
-                                <td className="text-right text-blue-400 font-bold py-3 tabular-nums">{fmt(r.reach)}</td>
-                                <td className="text-right text-violet-400 py-3 tabular-nums">{fmt(r.engagement)}</td>
-                                <td className="text-right text-emerald-400 font-semibold py-3 tabular-nums">{r.engRate}</td>
-                                <td className="text-right text-amber-400 py-3 tabular-nums">
+                                <td className="text-center text-blue-400 font-bold py-3 pr-4 tabular-nums">{fmt(r.reach)}</td>
+                                <td className="text-center text-violet-400 py-3 pr-4 tabular-nums">{fmt(r.engagement)}</td>
+                                <td className="text-center text-emerald-400 font-semibold py-3 pr-4 tabular-nums">{r.engRate}</td>
+                                <td className="text-center text-sky-400 font-semibold py-3 pr-4 tabular-nums">{r.ctr}</td>
+                                <td className="text-center text-amber-400 py-3 pr-4 tabular-nums">
                                     {r.tickets > 0 ? fmt(r.tickets) : <span className="text-slate-700">—</span>}
                                 </td>
-                                <td className="text-right text-orange-400 py-3 tabular-nums">
+                                <td className="text-center text-orange-400 py-3 tabular-nums">
                                     {r.cvr !== "—" ? r.cvr : <span className="text-slate-700">—</span>}
+                                </td>
+                                <td className="hidden lg:table-cell text-center text-blue-400 py-3 pr-4 tabular-nums">{fmt(r.likes)}</td>
+                                <td className="hidden lg:table-cell text-center text-purple-400 py-3 pr-4 tabular-nums">{fmt(r.comments)}</td>
+                                <td className="hidden lg:table-cell text-center text-cyan-400 py-3 pr-4 tabular-nums">{fmt(r.shares)}</td>
+                                <td className="hidden lg:table-cell text-center text-amber-400 py-3 tabular-nums">
+                                    {r.platform === "Instagram" ? fmt(r.saves) : r.platform === "Threads" ? fmt(r.reposts) : "—"}
                                 </td>
                             </tr>
                         ))}
@@ -938,22 +1007,91 @@ function TopPostsTable({ fb, ig, th }: {
     );
 }
 
+// ─── CrossPlatformBarChart ────────────────────────────────────────────────────
+
+function CrossPlatformBarChart({ fb, ig, th }: {
+    fb: PostWithMetrics[];
+    ig: PostWithIGMetrics[];
+    th: PostWithThreadsMetrics[];
+}) {
+    const fbReach = fb.reduce((s, d) => s + d.metrics.reach, 0);
+    const fbLikes = fb.reduce((s, d) => s + d.metrics.likes, 0);
+    const fbComments = fb.reduce((s, d) => s + d.metrics.comments, 0);
+    const fbShares = fb.reduce((s, d) => s + d.metrics.shares, 0);
+    const fbTickets = fb.reduce((s, d) => s + d.metrics.buyCount, 0);
+
+    const igReach = ig.reduce((s, d) => s + d.metrics.reach, 0);
+    const igLikes = ig.reduce((s, d) => s + d.metrics.likes, 0);
+    const igComments = ig.reduce((s, d) => s + d.metrics.comments, 0);
+    const igShares = ig.reduce((s, d) => s + d.metrics.shares, 0);
+    const igTickets = ig.reduce((s, d) => s + d.metrics.buyCount, 0);
+
+    const thViews = th.reduce((s, d) => s + (d.metrics.views ?? 0), 0);
+    const thLikes = th.reduce((s, d) => s + (d.metrics.likes ?? 0), 0);
+    const thReplies = th.reduce((s, d) => s + (d.metrics.replies ?? 0), 0);
+    const thShares = th.reduce((s, d) => s + (d.metrics.shares ?? 0), 0);
+    const thTickets = th.reduce((s, d) => s + (d.metrics.buyCount ?? 0), 0);
+
+    const volumeData = [
+        { metric: "Reach/Views", Facebook: fbReach, Instagram: igReach, Threads: thViews },
+        { metric: "Likes", Facebook: fbLikes, Instagram: igLikes, Threads: thLikes },
+        { metric: "Comments/Replies", Facebook: fbComments, Instagram: igComments, Threads: thReplies },
+        { metric: "Shares", Facebook: fbShares, Instagram: igShares, Threads: thShares },
+        { metric: "Vé bán", Facebook: fbTickets, Instagram: igTickets, Threads: thTickets },
+    ];
+
+    const PlatformTooltip = ({ active, payload, label }: any) => {
+        if (!active || !payload?.length) return null;
+        return (
+            <div className="bg-slate-900 border border-slate-700/60 rounded-xl px-3.5 py-2.5 text-sm shadow-xl space-y-1.5 min-w-[140px]">
+                <p className="text-white font-bold">{label}</p>
+                {payload.map((p: any) => p.value > 0 && (
+                    <div key={p.dataKey} className="flex justify-between gap-4">
+                        <span style={{ color: p.color }}>{p.dataKey}</span>
+                        <span className="text-white font-bold">{fmt(p.value)}</span>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    return (
+        <div className="rounded-2xl bg-gradient-to-b from-[#0e1420] to-[#0b0c12] border border-white/5 p-6">
+            <SectionHeader accent="bg-gradient-to-b from-blue-500 via-pink-500 to-slate-400" title="So sánh nền tảng" sub="volume metrics" />
+            <div className="flex items-center gap-5 text-sm text-slate-500 mb-4 flex-wrap">
+                {fb.length > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#1877F2] inline-block" />Facebook</span>}
+                {ig.length > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#E1306C] inline-block" />Instagram</span>}
+                {th.length > 0 && <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#94a3b8] inline-block" />Threads</span>}
+            </div>
+            <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={volumeData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barGap={2}>
+                        <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.04)" />
+                        <XAxis dataKey="metric" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => fmt(v)} />
+                        <Tooltip content={<PlatformTooltip />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                        {fb.length > 0 && <Bar dataKey="Facebook" fill="#1877F2" radius={[4, 4, 0, 0]} maxBarSize={28} />}
+                        {ig.length > 0 && <Bar dataKey="Instagram" fill="#E1306C" radius={[4, 4, 0, 0]} maxBarSize={28} />}
+                        {th.length > 0 && <Bar dataKey="Threads" fill="#94a3b8" radius={[4, 4, 0, 0]} maxBarSize={28} />}
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+}
+
 // ─── Skeleton / Empty ─────────────────────────────────────────────────────────
 
 function Skeleton() {
     return (
         <div className="space-y-6 animate-pulse">
+            <div className="grid grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-36 rounded-2xl bg-slate-800/50" />)}
+            </div>
             <div className="grid grid-cols-3 gap-4">
-                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-slate-800/50" />)}
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-64 rounded-2xl bg-slate-800/50" />)}
             </div>
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-                {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-24 rounded-2xl bg-slate-800/50" />)}
-            </div>
-            <div className="h-[320px] rounded-2xl bg-slate-800/50" />
-            <div className="grid grid-cols-2 gap-4">
-                <div className="h-[300px] rounded-2xl bg-slate-800/50" />
-                <div className="h-[300px] rounded-2xl bg-slate-800/50" />
-            </div>
+            <div className="h-[260px] rounded-2xl bg-slate-800/50" />
         </div>
     );
 }
@@ -961,14 +1099,14 @@ function Skeleton() {
 function EmptyState() {
     return (
         <div className="rounded-2xl border border-slate-800 p-16 flex flex-col items-center justify-center text-center gap-4">
-            <div className="flex gap-3 opacity-30">
+            <div className="flex gap-3 opacity-20">
                 <MdFacebook className="text-blue-400 text-5xl" />
                 <RiInstagramLine className="text-pink-400 text-5xl" />
                 <span className="text-slate-300 text-5xl"><ThreadsIcon className="w-12 h-12" /></span>
             </div>
             <div>
                 <p className="text-slate-400 font-semibold">Chưa có dữ liệu phân tích</p>
-                <p className="text-slate-600 text-xs mt-1 max-w-xs">
+                <p className="text-slate-600 text-sm mt-1 max-w-xs">
                     Dữ liệu sẽ hiển thị khi bài viết được đăng lên Facebook, Instagram hoặc Threads và có metrics.
                 </p>
             </div>
@@ -980,11 +1118,13 @@ function EmptyState() {
 
 export default function AnalyticsPage() {
     const { eventId } = useParams<{ eventId: string }>();
+    const [pageSize, setPageSize] = useState<number>(20);
+
     const FETCH_PARAMS: GetPostsParams = {
         pageNumber: 1,
-        pageSize: 20,
+        pageSize,
         sortColumn: "PublishedAt",
-        sortOrder: "asc",
+        sortOrder: "desc",
         status: "Published",
         hasExternalPostUrl: true,
         eventId,
@@ -992,39 +1132,68 @@ export default function AnalyticsPage() {
 
     const { postsWithMetrics, postsWithIGMetrics, postsWithThreadsMetrics, isLoading, refresh } = useAnalyticsData(FETCH_PARAMS);
     const hasData = postsWithMetrics.length > 0 || postsWithIGMetrics.length > 0 || postsWithThreadsMetrics.length > 0;
+    const totalPosts = postsWithMetrics.length + postsWithIGMetrics.length + postsWithThreadsMetrics.length;
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                     <h1 className="text-xl font-bold text-white flex items-center gap-2">
                         <span className="w-1.5 h-6 bg-gradient-to-b from-blue-400 via-pink-400 to-slate-400 rounded-full" />
                         Phân tích dữ liệu
                     </h1>
-                    <p className="text-xs text-slate-500 mt-1 ml-4">
-                        Facebook · Instagram · Threads · {postsWithMetrics.length} bài FB · {postsWithIGMetrics.length} bài IG · {postsWithThreadsMetrics.length} bài TH
-                    </p>
+                    {!isLoading && hasData && (
+                        <div className="flex items-center gap-2 mt-2 ml-4 flex-wrap">
+                            {postsWithMetrics.length > 0 && <PlatformBadge platform="Facebook" count={postsWithMetrics.length} />}
+                            {postsWithIGMetrics.length > 0 && <PlatformBadge platform="Instagram" count={postsWithIGMetrics.length} />}
+                            {postsWithThreadsMetrics.length > 0 && <PlatformBadge platform="Threads" count={postsWithThreadsMetrics.length} />}
+                        </div>
+                    )}
                 </div>
-                <button
-                    onClick={refresh}
-                    disabled={isLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-all disabled:opacity-50"
-                >
-                    <MdOutlineRefresh className={isLoading ? "animate-spin" : ""} />
-                    Làm mới
-                </button>
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <select
+                            value={pageSize}
+                            onChange={e => setPageSize(Number(e.target.value))}
+                            disabled={isLoading}
+                            className="appearance-none bg-slate-900 border border-slate-700 text-slate-300 text-sm font-semibold rounded-xl px-3 py-1.5 pr-7 focus:outline-none focus:border-slate-500 transition-colors disabled:opacity-50 cursor-pointer hover:border-slate-600"
+                        >
+                            {PAGE_SIZE_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]">▾</span>
+                    </div>
+                    <button
+                        onClick={refresh}
+                        disabled={isLoading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-all disabled:opacity-50"
+                    >
+                        <MdOutlineRefresh className={isLoading ? "animate-spin" : ""} />
+                        Làm mới
+                    </button>
+                </div>
             </div>
+
+            {totalPosts > SCROLL_THRESHOLD && !isLoading && (
+                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/40 border border-slate-700/40 text-sm text-slate-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                    Đang hiển thị <span className="text-white font-bold mx-1">{totalPosts}</span> bài — biểu đồ per-post có thể cuộn ngang.
+                </div>
+            )}
 
             {isLoading && <Skeleton />}
             {!isLoading && !hasData && <EmptyState />}
 
             {!isLoading && hasData && (
                 <>
-                    <SummaryKpis fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
-                    <PlatformComparisonChart fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
-                    <ConversionRateChart fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
+                    <OverviewKpiRow fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
+                    <PlatformRatesPanel fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
                     <ReachTrendChart fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
-                    <EngagementBreakdown fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
+                    <CrossPlatformBarChart fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
+                    <EngagementBreakdownPanel fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
+                    <ConversionRateChart fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
                     <TopPostsTable fb={postsWithMetrics} ig={postsWithIGMetrics} th={postsWithThreadsMetrics} />
                 </>
             )}
