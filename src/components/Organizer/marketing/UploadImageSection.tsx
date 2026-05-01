@@ -15,15 +15,24 @@ export default function UploadImageSection({
 }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [dragOver, setDragOver] = useState(false);
+    const ALLOWED_TYPES = ["image/png", "image/jpeg"];
 
     const handleFile = (file: File) => {
-        if (!file.type.startsWith("image/")) return;
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            notify.error("Chỉ chấp nhận file PNG, JPG, JPEG");
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            notify.error("File không được vượt quá 10MB");
+            return;
+        }
         const err = validateImageFile(file);
         if (err) { notify.error(err); return; }
         const localUrl = URL.createObjectURL(file);
         onSelectImage(localUrl);
         onFileSelected?.(file);
     };
+
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
@@ -56,7 +65,7 @@ export default function UploadImageSection({
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/png,image/jpeg"
                         className="hidden"
                         onChange={(e) => {
                             const file = e.target.files?.[0];
@@ -67,7 +76,7 @@ export default function UploadImageSection({
                     <p className={`text-xs font-medium ${dragOver ? "text-primary" : "text-slate-500"}`}>
                         Kéo thả hoặc <span className="text-primary underline">chọn file</span>
                     </p>
-                    <p className="text-[10px] text-slate-600 mt-0.5">Tối đa 10MB</p>
+                    <p className="text-[10px] text-slate-600 mt-0.5">Tối đa 10MB · PNG, JPG, JPEG</p>
                 </div>
             )}
         </div>
