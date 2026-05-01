@@ -255,11 +255,11 @@ export interface GetPendingEventsRequest extends GetAllRequest {
     Statuses?: string;
 }
 export interface TrendingEventParams {
-  Days: number;
-  PageNumber?: number;
-  PageSize?: number;
-  SortColumn?: string;
-  SortOrder?: "Ascending" | "Descending";
+    Days: number;
+    PageNumber?: number;
+    PageSize?: number;
+    SortColumn?: string;
+    SortOrder?: "Ascending" | "Descending";
 }
 
 export const SPEAKER_PROFESSION_GROUPS: { label: string; items: string[] }[] = [
@@ -302,9 +302,14 @@ export const SPEAKER_PROFESSION_GROUPS: { label: string; items: string[] }[] = [
         items: [
             "Nghệ sĩ",
             "Ca sĩ",
-            "Diễn viên",
-            "MC / Host / Presenter",
+            "Nhạc sĩ",
+            "DJ",
             "Producer",
+            "Diễn viên",
+            "Người mẫu",
+            "Hoa hậu",
+            "MC",
+            "Host",
             "Diễn giả truyền cảm hứng",
         ],
     },
