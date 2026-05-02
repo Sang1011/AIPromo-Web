@@ -25,13 +25,13 @@ import {
     generateContentPostUsingAI,
     generateImage,
     updatePostContent,
-    uploadImagePost,
+    uploadImagePost
 } from "../../store/postSlice";
 import type { ContentBlock, UpdatePostContentRequest } from "../../types/post/post";
 import { buildContextPrompt } from "../../utils/buildContextPrompt";
 import { injectImageBlock } from "../../utils/injectImageBlock";
 import { notify } from "../../utils/notify";
-import { getImagePosition, saveImagePosition } from "../../utils/postImagePosition";
+import { getImagePosition, removeImagePosition, saveImagePosition } from "../../utils/postImagePosition";
 import { parseBodyToBlocks, serializeBlocksToBody } from "../../utils/renderPostContent";
 
 // ─── Spinner ──────────────────────────────────────────────────────────────────
@@ -158,7 +158,10 @@ function GeneratePreviewModal({ blocks, title, onConfirm, onCancel, loading }: {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-
+type EditorRefHandle = {
+    getBlocks: () => ContentBlock[];
+    injectImage: (url: string | null) => void;
+};
 export default function PostPreviewPage() {
     const { postId } = useParams<{
         postId: string;
@@ -178,7 +181,7 @@ export default function PostPreviewPage() {
     const [activeTab, setActiveTab] = useState<ActiveTab>("content");
 
     // ── Editor state ──────────────────────────────────────────────────────────
-    const manualEditorRef = useRef<{ getBlocks: () => ContentBlock[] } | null>(null);
+    const manualEditorRef = useRef<EditorRefHandle | null>(null);
 
     // liveBlocks = mirror chính xác state của BlockEditor, BAO GỒM image block.
     // Không bao giờ filter image block ra khỏi đây — chỉ filter khi serialize để save.
@@ -252,7 +255,10 @@ export default function PostPreviewPage() {
     // → dùng thẳng liveBlocks, không inject thêm
     const manualPreviewBlocks = liveBlocks;
 
-    const previewBlocks = activeTab === "manual" ? manualPreviewBlocks : aiPreviewBlocks;
+    const manualHasImageBlock = liveBlocks.some(b => b.type === "image");
+    const previewBlocks = activeTab === "manual"
+        ? (manualHasImageBlock ? manualPreviewBlocks : injectImageBlock(liveTextBlocks, aiSelectedImageUrl, imageInsertAt))
+        : aiPreviewBlocks;
 
     // ── AI Generate handlers ──────────────────────────────────────────────────
     const handleGenerate = (tone: string, userPrompt: string) => {
@@ -264,16 +270,35 @@ export default function PostPreviewPage() {
         dispatch(generateContentPostUsingAI({ eventId: postDetail.eventId, userPromptRequirement: finalPrompt }));
     };
 
-    const handleAiSelectImage = (url: string) => {
+    const handleAiSelectImage = async (url: string) => {
         setAiSelectedImageUrl(url);
         setManualImageUrl(url);
-        if (!url.startsWith("blob:")) {
-            setAiPendingImageFile(null);
-            setManualImageFile(null);
-        }
+
         if (imageInsertAt === undefined) {
             const headingIdx = liveTextBlocks.findIndex(b => b.type === "heading");
             setImageInsertAt(headingIdx !== -1 ? headingIdx + 1 : 0);
+        }
+
+        if (!postDetail || !postId) return;
+
+        if (url.startsWith("http")) {
+            try {
+                const blob = await fetch(url).then(r => r.blob());
+                const ext = blob.type.includes("png") ? "png" : "jpg";
+                const file = new File([blob], `ai-image.${ext}`, { type: blob.type });
+
+                const res = await dispatch(uploadImagePost({
+                    postId,
+                    imageFile: file,
+                    folder: "post-images",
+                })).unwrap();
+
+                setAiSelectedImageUrl(res.imageUrl);
+                setManualImageUrl(res.imageUrl);
+                notify.success("Đã cập nhật ảnh bài đăng!");
+            } catch (err: any) {
+                notify.error(err?.message || "Cập nhật ảnh thất bại");
+            }
         }
     };
 
@@ -282,6 +307,9 @@ export default function PostPreviewPage() {
         setAiPendingImageFile(null);
         setManualImageUrl(null);
         setManualImageFile(null);
+        manualEditorRef.current?.injectImage(null);
+        if (postId) removeImagePosition(postId).catch(console.error);
+        setImageInsertAt(undefined);
     };
 
     const handleAiFileSelected = (file: File) => {
@@ -358,9 +386,11 @@ export default function PostPreviewPage() {
             setImageInsertAt(imageIdx);
             if (postId) {
                 saveImagePosition(postId, imageIdx).catch(console.error);
+            } else {
+                setImageInsertAt(undefined);
+                if (postId) removeImagePosition(postId).catch(console.error);
             }
         }
-        // ✅ Lưu TOÀN BỘ blocks
         setLiveBlocks(blocks);
     };
 
@@ -375,30 +405,55 @@ export default function PostPreviewPage() {
         }
     };
 
+    useEffect(() => {
+        if (activeTab !== "manual" || !initialBlocksLoaded) return;
+        if (!aiSelectedImageUrl) return;
+
+        // Retry cho đến khi editorRef available
+        const tryInject = (attempts = 0) => {
+            if (manualEditorRef.current) {
+                manualEditorRef.current.injectImage(aiSelectedImageUrl);
+            } else if (attempts < 15) {
+                setTimeout(() => tryInject(attempts + 1), 50);
+            }
+        };
+
+        setTimeout(() => tryInject(), 0);
+    }, [activeTab, initialBlocksLoaded, aiSelectedImageUrl]);
+
     // ── Save từ Manual tab ────────────────────────────────────────────────────
     const handleSaveFromManual = async () => {
         if (!postDetail || !postId) return;
         setIsSaving(true);
         try {
-            // ✅ Strip image blocks khi serialize
             const blocksToSave = liveBlocks.filter(b => b.type !== "image");
 
-            let resolvedImageUrl: string | undefined =
-                manualImageUrl?.startsWith("http") ? manualImageUrl : undefined;
+            const hasImageBlock = liveBlocks.some(b => b.type === "image");
 
-            if (manualImageFile) {
-                const res = await dispatch(uploadImagePost({
-                    postId,
-                    imageFile: manualImageFile,
-                    folder: "post-images",
-                })).unwrap();
-                resolvedImageUrl = res.imageUrl;
-                setManualImageUrl(res.imageUrl);
-                setManualImageFile(null);
+            let resolvedImageUrl: string | null = null;
 
-                if (imageInsertAt !== undefined) {
-                    saveImagePosition(postId, imageInsertAt).catch(console.error);
+            if (hasImageBlock) {
+                if (manualImageFile) {
+                    const res = await dispatch(uploadImagePost({
+                        postId,
+                        imageFile: manualImageFile,
+                        folder: "post-images",
+                    })).unwrap();
+                    resolvedImageUrl = res.imageUrl;
+                    setManualImageUrl(res.imageUrl);
+                    setManualImageFile(null);
+                    if (imageInsertAt !== undefined) {
+                        saveImagePosition(postId, imageInsertAt).catch(console.error);
+                    }
+                } else if (manualImageUrl?.startsWith("http")) {
+                    resolvedImageUrl = manualImageUrl;
                 }
+            } else {
+                setManualImageUrl(null);
+                setManualImageFile(null);
+                setAiSelectedImageUrl(null);
+                setImageInsertAt(undefined);
+                removeImagePosition(postId).catch(console.error);
             }
 
             const data: UpdatePostContentRequest = {
@@ -464,9 +519,15 @@ export default function PostPreviewPage() {
                                flex items-center justify-between gap-4 shrink-0">
                 <div className="flex items-center gap-4 min-w-0">
                     <button
-                        onClick={() => navigate(-1)}
+                        onClick={() => {
+                            if (!postDetail?.imageUrl && !aiSelectedImageUrl) {
+                                notify.error("Bài đăng phải có ảnh trước khi rời trang!");
+                                return;
+                            }
+                            navigate(-1);
+                        }}
                         className="flex items-center gap-2 text-slate-400 hover:text-white
-                                   transition text-sm font-medium shrink-0"
+               transition text-sm font-medium shrink-0"
                     >
                         <FiArrowLeft size={16} />
                         <span className="hidden sm:inline">Quay lại</span>
@@ -596,7 +657,10 @@ export default function PostPreviewPage() {
                                                     title,
                                                 })
                                             }
-                                            onSelectImage={handleAiSelectImage}
+                                            onSelectImage={async (url) => {
+                                                await handleAiSelectImage(url);
+                                                setAiPendingImageFile(null);
+                                            }}
                                             onClearImage={handleAiClearImage}
                                             onFileSelected={handleAiFileSelected}
                                         />
@@ -609,10 +673,10 @@ export default function PostPreviewPage() {
                                             selectedImageUrl={aiSelectedImageUrl}
                                             loading={postLoading}
                                             error={error}
-                                            onGenerate={(p, a, s) =>
-                                                dispatch(generateImage({ prompt: p, aspectRatio: a, imageSize: s }))
-                                            }
-                                            onSelectImage={(url) => {
+                                            onGenerate={(_p, _a, _s) => {
+                                                dispatch(generateImage({ prompt: _p, aspectRatio: _a, imageSize: _s }));
+                                            }}
+                                            onSelectImage={async (url) => {
                                                 handleAiSelectImage(url);
                                                 setAiPendingImageFile(null);
                                             }}

@@ -43,7 +43,16 @@ interface BlockWithId extends ContentBlock {
 interface BlockEditorProps {
     initialBlocks?: ContentBlock[];
     onChange?: (blocks: ContentBlock[]) => void;
-    editorRef?: React.MutableRefObject<{ getBlocks: () => ContentBlock[] } | null>;
+    editorRef?: React.MutableRefObject<{
+        getBlocks: () => ContentBlock[];
+        /**
+         * Inject hoặc replace image block hiện có.
+         * - Nếu đã có image block → cập nhật src tại chỗ (giữ nguyên vị trí).
+         * - Nếu chưa có → chèn sau heading đầu tiên (hoặc đầu danh sách).
+         * - url = null → xóa image block.
+         */
+        injectImage: (url: string | null) => void;
+    } | null>;
     postId?: string;
     eventUrlPath?: string;
 
@@ -301,14 +310,12 @@ function BlockFieldEditor({
                         </span>
                     </div>
                     <div className="rounded-xl border border-primary/30 bg-primary/5 overflow-hidden">
-                        {/* Preview nút */}
                         <div className="px-4 py-3 flex items-center justify-center border-b border-primary/10">
                             <div className="px-6 py-2 rounded-full text-sm font-semibold text-white"
                                 style={{ background: "linear-gradient(135deg, #7c3bed, #a855f7)" }}>
                                 {(block as any).label || "Đăng ký ngay"}
                             </div>
                         </div>
-                        {/* Config row */}
                         <div className="px-4 py-2.5 flex items-center gap-3">
                             <MdOutlineLink className="text-primary text-base shrink-0" />
                             <div className="flex-1 min-w-0">
@@ -361,8 +368,23 @@ function BlockFieldEditor({
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ảnh</span>
                     {block.src ? (
                         <div className="space-y-2">
-                            <div className="rounded-xl overflow-hidden border border-slate-800">
-                                <img src={block.src} alt={block.alt ?? ""} className="w-full max-h-48 object-cover" />
+                            {/* Hover overlay để thay ảnh */}
+                            <div
+                                className="relative rounded-xl overflow-hidden border border-slate-800 cursor-pointer group/img"
+                                onClick={() => fileRef.current?.click()}
+                            >
+                                <img
+                                    src={block.src}
+                                    alt={block.alt ?? ""}
+                                    className="w-full max-h-48 object-cover"
+                                />
+                                {/* Overlay khi hover */}
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/img:opacity-100
+                                        transition-opacity flex flex-col items-center justify-center gap-1.5">
+                                    <MdOutlineImage className="text-white text-2xl" />
+                                    <p className="text-white text-xs font-semibold">Thay đổi ảnh</p>
+                                    <p className="text-white/60 text-[10px]">JPG, JPEG, PNG • Tối đa 10MB</p>
+                                </div>
                             </div>
                         </div>
                     ) : (
@@ -370,22 +392,23 @@ function BlockFieldEditor({
                             type="button"
                             onClick={() => fileRef.current?.click()}
                             className="w-full flex flex-col items-center justify-center gap-2 py-6
-                                       border-2 border-dashed border-slate-700 hover:border-primary/50
-                                       rounded-xl text-slate-500 hover:text-slate-300 transition-all"
+                               border-2 border-dashed border-slate-700 hover:border-primary/50
+                               rounded-xl text-slate-500 hover:text-slate-300 transition-all"
                         >
                             <MdOutlineImage className="text-2xl" />
                             <p className="text-xs">Nhấn để chọn ảnh</p>
-                            <p className="text-[10px] text-slate-600">Tối đa 10MB</p>
+                            <p className="text-[10px] text-slate-600">JPG, JPEG, PNG • Tối đa 10MB</p>
                         </button>
                     )}
                     <input
                         ref={fileRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/jpg,image/png"
                         className="hidden"
                         onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) onUploadImage(file);
+                            e.target.value = "";
                         }}
                     />
                 </div>
@@ -429,7 +452,9 @@ export default function BlockEditor({
             : [withId({ type: "heading", level: 1, text: "" }), withId({ type: "paragraph", text: "" })]
     );
 
-    // Chỉ block image nếu đã có 1 rồi (dù disableImageBlock = false)
+    const blocksRef = useRef(blocks);
+    blocksRef.current = blocks;
+
     const hasImageBlock = blocks.some((b) => b.type === "image");
     const hasCTABlock = blocks.some((b) => b.type === "button");
 
@@ -478,7 +503,6 @@ export default function BlockEditor({
         const newBlocks = blocks.filter((b) => b._id !== id);
         update(newBlocks);
 
-        // Nếu xóa image block → notify parent image cleared
         if (removedBlock?.type === "image") {
             onImageChange?.(null, null);
         }
@@ -490,15 +514,40 @@ export default function BlockEditor({
 
         const src = URL.createObjectURL(file);
         update(blocks.map((b) => (b._id === id ? { ...b, src, _pendingFile: file } as any : b)));
-
-        // Notify parent image changed (dùng cho ManualSection)
         onImageChange?.(file, src);
     };
 
-    // Expose getBlocks cho parent
+    // ─── Expose API ───────────────────────────────────────────────────────────
     if (editorRef) {
         editorRef.current = {
-            getBlocks: () => blocks.map(stripId),
+            getBlocks: () => blocksRef.current.map(stripId),
+            injectImage: (url: string | null) => {
+                const currentBlocks = blocksRef.current;
+                if (!url) {
+                    const newBlocks = currentBlocks.filter(b => b.type !== "image");
+                    update(newBlocks);
+                    return;
+                }
+
+                const imageBlockData: ContentBlock = { type: "image", src: url, alt: "Post image" };
+                const existingIdx = currentBlocks.findIndex(b => b.type === "image");
+
+                if (existingIdx !== -1) {
+                    const newBlocks = currentBlocks.map((b, i) =>
+                        i === existingIdx ? { ...b, src: url, alt: "Post image" } : b
+                    );
+                    update(newBlocks);
+                } else {
+                    const headingIdx = currentBlocks.findIndex(b => b.type === "heading");
+                    const insertAt = headingIdx !== -1 ? headingIdx + 1 : 0;
+                    const newBlocks = [
+                        ...currentBlocks.slice(0, insertAt),
+                        withId(imageBlockData),
+                        ...currentBlocks.slice(insertAt),
+                    ];
+                    update(newBlocks);
+                }
+            },
         };
     }
 
@@ -507,18 +556,15 @@ export default function BlockEditor({
             {/* Toolbar */}
             <div className="flex flex-wrap gap-2 pb-3 border-b border-slate-800">
                 {TOOLBAR_ITEMS.map((item) => {
-                    // Ẩn nút Ảnh nếu disableImageBlock = true
                     if (item.type === "image" && disableImageBlock) return null;
 
-                    // Disable nút Ảnh nếu đã có 1 image block
                     const isDisabled =
                         (item.type === "image" && hasImageBlock) ||
                         ((item.type as string) === "button" && hasCTABlock);
 
                     return (
-                        <div className="relative group/tip">
+                        <div key={item.type} className="relative group/tip">
                             <button
-                                key={item.type}
                                 type="button"
                                 onClick={() => !isDisabled && handleAdd(item.type as ContentBlock["type"])}
                                 disabled={isDisabled}
@@ -535,7 +581,6 @@ export default function BlockEditor({
                                     <span className="ml-1 text-[9px] text-slate-700 font-normal">(đã có)</span>
                                 )}
                             </button>
-                            {/* Custom tooltip */}
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5
                     bg-slate-800 border border-slate-700 rounded-lg text-[10px] text-slate-300
                     whitespace-nowrap opacity-0 group-hover/tip:opacity-100 pointer-events-none

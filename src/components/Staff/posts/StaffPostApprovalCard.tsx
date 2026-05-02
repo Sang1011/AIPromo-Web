@@ -3,6 +3,7 @@ import {
     FaEye,
     FaCalendar,
 } from "react-icons/fa";
+import extractPlainText from "../../../utils/extractPlainText";
 
 interface PostApprovalCardProps {
     id: string;
@@ -90,7 +91,7 @@ export default function StaffPostApprovalCard({
                         {title}
                     </h3>
                     <p className="text-slate-400 text-sm mt-2 line-clamp-3 leading-relaxed">
-                        {description}
+                        {extractPlainText(description)}
                     </p>
                 </div>
 

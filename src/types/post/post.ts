@@ -27,7 +27,7 @@ export interface UpdatePostContentRequest {
     title: string;
     body: string;
     summary?: string;
-    imageUrl?: string;
+    imageUrl?: string | null;
     slug?: string;
     promptUsed?: string;
     aiModel?: string;

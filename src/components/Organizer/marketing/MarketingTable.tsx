@@ -6,6 +6,7 @@ import type { AppDispatch, RootState } from "../../../store";
 import { fetchOrganizerPosts, setPostFilters } from "../../../store/postSlice";
 import type { PostStatus } from "../../../types/post/post";
 import Pagination from "../shared/Pagination";
+import extractPlainText from "../../../utils/extractPlainText";
 
 export const MARKETING_STATUS_VI: Record<string, { label: string; className: string }> = {
     Draft: { label: "Bản nháp", className: "bg-slate-800/50 text-slate-400 border-slate-700" },
@@ -42,24 +43,6 @@ function ThreadsIcon({ className = "" }: { className?: string }) {
             <path d="M141.537 88.988a66.667 66.667 0 0 0-2.518-1.143c-1.482-27.307-16.403-42.94-41.457-43.1h-.34c-14.986 0-27.449 6.396-35.12 18.036l13.779 9.452c5.73-8.695 14.724-10.548 21.347-10.548h.23c8.249.053 14.474 2.452 18.502 7.13 2.932 3.405 4.893 8.11 5.864 14.05-7.314-1.244-15.224-1.626-23.68-1.14-23.82 1.372-39.134 15.265-38.105 34.569.522 9.792 5.4 18.216 13.735 23.719 7.047 4.652 16.124 6.927 25.557 6.412 12.458-.683 22.231-5.436 29.049-14.127 5.178-6.6 8.453-15.153 9.899-25.93 5.937 3.583 10.337 8.298 12.767 13.966 4.132 9.635 4.373 25.468-8.546 38.318-11.319 11.259-24.929 16.1-45.488 16.243-22.788-.163-40.05-7.497-51.316-21.803C33.598 127.02 28.35 110.05 28.13 89.24c.22-20.812 5.468-37.783 15.594-50.454C55.003 24.676 72.266 17.34 95.054 17.18c22.95.162 40.56 7.52 52.346 21.86 5.765 7.016 10.098 15.82 12.928 26.067l16.214-4.326c-3.43-12.588-8.853-23.565-16.242-32.767C145.036 10.8 123.088 1.2 95.1 1L94.9 1C67.02 1.2 45.39 10.8 30.336 28.014 17.046 43.378 10.21 64.576 10 89.18v.08c.21 24.603 7.046 45.801 20.336 61.165C45.39 167.638 67.02 177.2 94.9 177.4h.2c24.986-.176 42.653-6.73 57.16-21.166 19.515-19.425 18.968-43.705 12.526-58.601-4.547-10.594-13.278-19.232-23.25-24.645Zm-40.23 37.97c-10.426.583-21.24-4.1-21.82-14.18-.427-7.557 5.377-15.99 22.645-17.01 1.98-.114 3.921-.169 5.827-.169 6.14 0 11.8.598 16.82 1.733-1.913 23.786-13.017 28.86-23.471 29.626Z" />
         </svg>
     );
-}
-
-function extractPlainText(body: string): string {
-    try {
-        const blocks = JSON.parse(body);
-        if (!Array.isArray(blocks)) return body;
-        return blocks
-            .map((b: any) => {
-                if (b.type === "paragraph" || b.type === "heading") return b.text ?? "";
-                if (b.type === "highlight") return b.content ?? "";
-                if (b.type === "list") return (b.items ?? []).join(" ");
-                return "";
-            })
-            .filter(Boolean)
-            .join(" ");
-    } catch {
-        return body;
-    }
 }
 
 export default function MarketingTable() {

@@ -8,7 +8,10 @@ import { interceptorAPI } from "../../../utils/attachInterceptors";
 import toast from "react-hot-toast";
 import StaffPostApprovalCard from "./StaffPostApprovalCard";
 import StaffPostApprovalPagination from "./StaffPostApprovalPagination";
-import type { AdminPostItem } from "../../../types/post/post";
+import type { AdminPostItem, ContentBlock } from "../../../types/post/post";
+import { injectImageBlock } from "../../../utils/injectImageBlock";
+import { parseBodyToBlocks } from "../../../utils/renderPostContent";
+import PostBlockRenderer from "../../Organizer/post/PostBlockRenderer";
 
 const pageSize = 10;
 
@@ -102,21 +105,22 @@ function PostDetailModal({
                                 </div>
                             </div>
 
-                            {/* Image */}
-                            {data.imageUrl && (
-                                <div className="rounded-xl overflow-hidden border border-slate-700/50">
-                                    <img src={data.imageUrl} alt={data.title} className="w-full h-auto object-cover max-h-64" />
-                                </div>
-                            )}
-
                             {/* Content */}
                             <div>
                                 <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Nội dung</label>
                                 <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/30">
-                                    <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{data.body}</p>
+                                    {(() => {
+                                        const blocks: ContentBlock[] = injectImageBlock(
+                                            parseBodyToBlocks(data.body).filter(b => b.type !== "image"),
+                                            data.imageUrl ?? null,
+                                        );
+                                        const bodyBlocks = blocks[0]?.type === "heading" ? blocks.slice(1) : blocks;
+                                        return bodyBlocks.length > 0
+                                            ? <PostBlockRenderer blocks={bodyBlocks} />
+                                            : <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{data.body}</p>;
+                                    })()}
                                 </div>
                             </div>
-
                             {/* AI Info */}
                             {(data.promptUsed || data.aiModel) && (
                                 <div>
@@ -457,11 +461,10 @@ export default function StaffPostApprovalQueue({
                                 <button
                                     key={tab.key}
                                     onClick={() => handleTabChange(tab.key)}
-                                    className={`px-4 py-2 rounded-md text-xs font-bold transition-colors ${
-                                        activeTab === tab.key
-                                            ? "bg-fuchsia-500 text-white"
-                                            : "text-slate-400 hover:text-white"
-                                    }`}
+                                    className={`px-4 py-2 rounded-md text-xs font-bold transition-colors ${activeTab === tab.key
+                                        ? "bg-fuchsia-500 text-white"
+                                        : "text-slate-400 hover:text-white"
+                                        }`}
                                 >
                                     {tab.label}
                                     {count > 0 ? ` (${count})` : ""}

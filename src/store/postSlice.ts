@@ -345,11 +345,11 @@ export const generateImage = createAsyncThunk(
     async (data: GenerateImageRequestBody, { rejectWithValue }) => {
         try {
             const res = await postService.generateImage(data);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Bạn không thể tạo ảnh với prompt đã nhập");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Token của bạn đã hết hạn hoặc không đủ để tạo ảnh");
 
             return res.data.data.imageUrl;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Bạn không thể tạo ảnh với prompt đã nhập");
+            return rejectWithValue(error?.response?.data?.message ?? "Token của bạn đã hết hạn hoặc không đủ để tạo ảnh");
         }
     }
 );
@@ -614,6 +614,11 @@ const postSlice = createSlice({
         clearDistributionMetricsThreads(state) { state.distributionMetricsThreads = null; },
         clearDistributionMetricsThreadMap(state) { state.distributionMetricsThreadsMap = {}; },
         clearExternalDistribution(state) { state.externalDistribution = null; },
+        setGeneratedImageUrl(state, action: PayloadAction<string | null>) {
+            state.generatedImageUrl = action.payload;
+            state.loading.generateImage = false;
+            state.error.generateImage = null;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -895,5 +900,6 @@ export const {
     clearDistributionMetricsThreads,
     clearDistributionMetricsThreadMap,
     clearExternalDistribution,
+    setGeneratedImageUrl,
 } = postSlice.actions;
 export default postSlice.reducer;

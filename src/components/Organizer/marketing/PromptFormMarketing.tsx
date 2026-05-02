@@ -22,23 +22,30 @@ import {
     clearGeneratedImageUrl,
     createPostDraft,
     generateContentPostUsingAI,
-    generateImage,
-    updatePostContent,
-    uploadImagePost,
+    setGeneratedImageUrl,
+    uploadImagePost
 } from "../../../store/postSlice";
 import type { GetEventDetailResponse } from "../../../types/event/event";
-import type { ContentBlock, CreatePostDraftRequest, UpdatePostContentRequest } from "../../../types/post/post";
+import type { ContentBlock, CreatePostDraftRequest } from "../../../types/post/post";
 import { buildContextPrompt } from "../../../utils/buildContextPrompt";
 import { formatDateTime } from "../../../utils/formatDateTime";
 import { injectImageBlock } from "../../../utils/injectImageBlock";
 import { notify } from "../../../utils/notify";
 import { saveImagePosition } from "../../../utils/postImagePosition";
 import { serializeBlocksToBody } from "../../../utils/renderPostContent";
+import PostBlockRenderer from "../post/PostBlockRenderer";
 import { TONE_OPTIONS } from "./AIContentTab";
 import AIImageTab from "./AIImageTab";
 import BlockEditor from "./BlockEditor";
 import UploadImageSection from "./UploadImageSection";
-import PostBlockRenderer from "../post/PostBlockRenderer";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+// Khớp với kiểu editorRef đã được expose bởi BlockEditor (bao gồm injectImage)
+type EditorRefHandle = {
+    getBlocks: () => ContentBlock[];
+    injectImage: (url: string | null) => void;
+};
 
 // ─── Reusable display helpers ─────────────────────────────────────────────────
 
@@ -187,7 +194,7 @@ function ImageHintBanner({
     );
 }
 
-// ─── GeneratePreviewModal (giống PostPreviewPage) ─────────────────────────────
+// ─── GeneratePreviewModal ─────────────────────────────────────────────────────
 
 function GeneratePreviewModal({
     blocks,
@@ -214,7 +221,6 @@ function GeneratePreviewModal({
                     </button>
                 </div>
 
-                {/* Token warning */}
                 <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3 shrink-0">
                     <MdOutlineWarningAmber className="text-amber-400 text-lg mt-0.5 shrink-0" />
                     <div className="space-y-0.5">
@@ -269,7 +275,7 @@ function GeneratePreviewModal({
     );
 }
 
-// ─── AIContentSection (redesigned — giống PostPreviewPage flow) ───────────────
+// ─── AIContentSection ─────────────────────────────────────────────────────────
 
 function AIContentSection({
     generatedDraft,
@@ -297,11 +303,8 @@ function AIContentSection({
 }) {
     const [tone, setTone] = useState("");
     const [userPrompt, setUserPrompt] = useState("");
-
-    // Preview modal state
     const [previewData, setPreviewData] = useState<{ blocks: ContentBlock[]; title: string } | null>(null);
 
-    // Parse blocks từ generatedDraft (text only)
     const generatedBlocks: ContentBlock[] = (() => {
         if (!generatedDraft?.body) return [];
         try {
@@ -325,12 +328,10 @@ function AIContentSection({
     const handleConfirmSave = () => {
         if (!previewData) return;
         onSaveDraft(previewData.blocks, previewData.title);
-        // Modal sẽ tự đóng sau khi save xong (parent navigate đi)
     };
 
     return (
         <div className="space-y-5">
-            {/* ── Image ── */}
             <ImageHintBanner
                 selectedImageUrl={selectedImageUrl}
                 onSelectImage={onSelectImage}
@@ -338,7 +339,6 @@ function AIContentSection({
                 onFileSelected={onFileSelected}
             />
 
-            {/* ── Token warning banner (always visible) ── */}
             <div className="flex items-start gap-3 bg-amber-500/8 border border-amber-500/15 rounded-2xl px-4 py-3">
                 <MdOutlineWarningAmber className="text-amber-500/70 text-base mt-0.5 shrink-0" />
                 <p className="text-xs text-amber-500/70 leading-relaxed">
@@ -349,7 +349,6 @@ function AIContentSection({
                 </p>
             </div>
 
-            {/* ── Tone ── */}
             <div>
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Phong cách{" "}
@@ -372,7 +371,6 @@ function AIContentSection({
                 </div>
             </div>
 
-            {/* ── Prompt ── */}
             <div>
                 <label className="block text-sm font-semibold text-slate-400 mb-2">
                     Yêu cầu thêm{" "}
@@ -389,14 +387,12 @@ function AIContentSection({
                 />
             </div>
 
-            {/* ── Error ── */}
             {error?.generateAI && (
                 <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                     {error.generateAI}
                 </p>
             )}
 
-            {/* ── Generate button ── */}
             <button
                 type="button"
                 onClick={() => onGenerate(tone, userPrompt)}
@@ -412,10 +408,8 @@ function AIContentSection({
                         : <><MdOutlineBolt /><span>Tạo nội dung với AI</span></>}
             </button>
 
-            {/* ── Kết quả — giống PostPreviewPage: block list nhỏ + nút Xem preview ── */}
             {hasResult && (
                 <div className="space-y-4 animate-fadeIn">
-                    {/* Success + meta */}
                     <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-3">
                         <MdOutlineCheckCircle className="text-green-400 text-xl shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -434,7 +428,6 @@ function AIContentSection({
                         </div>
                     </div>
 
-                    {/* Title preview */}
                     {generatedDraft?.title && (
                         <div>
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tiêu đề</p>
@@ -444,7 +437,6 @@ function AIContentSection({
                         </div>
                     )}
 
-                    {/* Block list (compact — giống PostPreviewPage) */}
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <MdOutlineSmartToy className="text-primary text-sm" />
@@ -466,7 +458,6 @@ function AIContentSection({
                         </div>
                     </div>
 
-                    {/* CTA: Xem preview → modal */}
                     <button
                         type="button"
                         onClick={handleOpenPreview}
@@ -479,7 +470,6 @@ function AIContentSection({
                 </div>
             )}
 
-            {/* ── Preview Modal ── */}
             {previewData && (
                 <GeneratePreviewModal
                     blocks={previewData.blocks}
@@ -493,12 +483,14 @@ function AIContentSection({
     );
 }
 
+// ─── ManualSection ────────────────────────────────────────────────────────────
+
 function ManualSection({
     isSaving,
     onSaveDraft,
     sharedImageUrl,
     sharedImageFile,
-    sharedEventUrlPath
+    sharedEventUrlPath,
 }: {
     loading: any;
     isSaving: boolean;
@@ -507,22 +499,18 @@ function ManualSection({
     onSaveDraft: (blocks: ContentBlock[], title: string, imageFile: File | null, imageUrl: string | null) => void;
     sharedEventUrlPath?: string;
 }) {
-    const editorRef = useRef<{ getBlocks: () => ContentBlock[] } | null>(null);
+    const editorRef = useRef<EditorRefHandle | null>(null);
     const [title, setTitle] = useState("");
-
-    // Track image state locally — nhưng KHÔNG dùng làm key của BlockEditor
     const [pendingFile, setPendingFile] = useState<File | null>(sharedImageFile);
     const [imageUrl, setImageUrl] = useState<string | null>(sharedImageUrl);
-
-    // Sync từ parent khi shared image thay đổi (tab AI Image → chọn ảnh)
-    // Dùng ref để tránh reset state không cần thiết
-    const prevSharedUrl = useRef(sharedImageUrl);
+    const prevSharedUrl = useRef<string | null>(null);
     useEffect(() => {
-        if (sharedImageUrl !== prevSharedUrl.current) {
-            prevSharedUrl.current = sharedImageUrl;
-            setImageUrl(sharedImageUrl);
-            setPendingFile(sharedImageFile);
-        }
+        if (sharedImageUrl === prevSharedUrl.current) return;
+        prevSharedUrl.current = sharedImageUrl;
+
+        setImageUrl(sharedImageUrl);
+        setPendingFile(sharedImageFile);
+        editorRef.current?.injectImage(sharedImageUrl);
     }, [sharedImageUrl, sharedImageFile]);
 
     const handleImageChange = (file: File | null, url: string | null) => {
@@ -531,15 +519,11 @@ function ManualSection({
     };
 
     const handleSave = () => {
-        // Lấy toàn bộ blocks từ editor (bao gồm image block nếu có)
         const allBlocks = editorRef.current?.getBlocks() ?? [];
-        // Strip image blocks khi serialize — ảnh được lưu qua imageUrl riêng
         const textBlocks = allBlocks.filter(b => b.type !== "image");
         onSaveDraft(textBlocks, title, pendingFile, imageUrl);
     };
 
-    // Initial blocks: inject image nếu có sharedImageUrl lúc mount
-    // Chỉ tính 1 lần khi mount — KHÔNG thay đổi sau đó (không dùng làm key)
     const initialBlocksRef = useRef<ContentBlock[]>(
         injectImageBlock([], sharedImageUrl)
     );
@@ -584,10 +568,9 @@ function ManualSection({
             </div>
 
             {/*
-             * KEY FIX: Không dùng imageUrl làm key → BlockEditor không bao giờ unmount.
-             * initialBlocks chỉ dùng lúc mount (tính 1 lần qua ref).
-             * Khi user thêm image block trong editor → onImageChange cập nhật state local.
-             * Khi shared image thay đổi từ tab khác → không remount, user tự thêm block ảnh.
+             * BlockEditor mount 1 lần duy nhất với initialBlocks (stable ref).
+             * Khi sharedImageUrl thay đổi → useEffect bên trên gọi editorRef.injectImage().
+             * Không dùng key động → BlockEditor không bao giờ bị unmount/remount.
              */}
             <BlockEditor
                 editorRef={editorRef}
@@ -673,37 +656,32 @@ export default function PromptFormMarketing() {
             const postId: string = result as string;
             if (!postId) { notify.error("Không lấy được postId"); return; }
 
-            let resolvedImageUrl: string | null =
-                imageUrl && !imageUrl.startsWith("blob:") ? imageUrl : null;
+            let fileToUpload: File | null = pendingFile;
 
-            if (pendingFile) {
+            if (!fileToUpload && imageUrl && imageUrl.startsWith("http")) {
                 try {
-                    const uploadRes = await dispatch(uploadImagePost({
-                        postId,
-                        imageFile: pendingFile,
-                        folder: "post-images",
-                    })).unwrap();
-                    resolvedImageUrl = uploadRes.imageUrl;
-                } catch (err: any) {
-                    notify.error(err?.message || "Upload ảnh thất bại");
+                    const blob = await fetch(imageUrl).then(r => r.blob());
+                    const ext = blob.type.includes("png") ? "png" : "jpg";
+                    fileToUpload = new File([blob], `ai-image.${ext}`, { type: blob.type });
+                } catch {
+                    notify.error("Không thể tải ảnh AI về để upload");
                 }
             }
 
-            if (resolvedImageUrl) {
-                const updateData: UpdatePostContentRequest = {
-                    title: draftPayload.title,
-                    body: draftPayload.body,
-                    imageUrl: resolvedImageUrl,
-                    promptUsed: draftPayload.promptUsed ?? "",
-                    aiModel: draftPayload.aiModel ?? "",
-                    aiTokensUsed: draftPayload.aiTokensUsed ?? 0,
-                    trackingToken: undefined,
-                };
-                await dispatch(updatePostContent({ postId, data: updateData })).unwrap();
+            if (fileToUpload) {
+                try {
+                    await dispatch(uploadImagePost({
+                        postId,
+                        imageFile: fileToUpload,
+                        folder: "post-images",
+                    })).unwrap();
 
-                const headingIdx = blocks.findIndex(b => b.type === "heading");
-                const insertAt = headingIdx !== -1 ? headingIdx + 1 : 0;
-                saveImagePosition(postId, insertAt).catch(console.error);
+                    const headingIdx = blocks.findIndex(b => b.type === "heading");
+                    const insertAt = headingIdx !== -1 ? headingIdx + 1 : 0;
+                    saveImagePosition(postId, insertAt).catch(console.error);
+                } catch (err: any) {
+                    notify.error(err?.message || "Upload ảnh thất bại");
+                }
             }
 
             notify.success("Đã lưu bản nháp!");
@@ -789,7 +767,6 @@ export default function PromptFormMarketing() {
 
             {/* Right — Tabs */}
             <div className="bg-primary/5 rounded-3xl border border-primary/10 overflow-hidden">
-                {/* Tab bar */}
                 <div className="flex border-b border-primary/10">
                     {TABS.map((tab) => {
                         const isActive = activeTab === tab.id;
@@ -851,8 +828,11 @@ export default function PromptFormMarketing() {
                             selectedImageUrl={selectedImageUrl}
                             loading={loading}
                             error={error}
-                            onGenerate={(p, a, s) =>
-                                dispatch(generateImage({ prompt: p, aspectRatio: a, imageSize: s }))
+                            onGenerate={(_p, _a, _s) =>
+                                // dispatch(generateImage({ prompt: p, aspectRatio: a, imageSize: s }))
+                                dispatch(setGeneratedImageUrl(
+                                    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTI8T-lGleySo2D8ZvH2UVNtGn9IF6lkyXesw&s"
+                                ))
                             }
                             onSelectImage={handleSelectImage}
                             onClearImage={handleClearImage}

@@ -25,18 +25,14 @@ interface AIImageTabProps {
 
 export default function AIImageTab({
     generatedImageUrl,
-    selectedImageUrl,
     loading,
     error,
     onGenerate,
     onSelectImage,
-    onClearImage,
 }: AIImageTabProps) {
     const [prompt, setPrompt] = useState("");
     const [aspectRatio, setAspectRatio] = useState<string>("1:1");
     const [imageSize, setImageSize] = useState<string>("512x512");
-
-    const isSelected = !!generatedImageUrl && selectedImageUrl === generatedImageUrl;
 
     return (
         <div className="space-y-5">
@@ -145,39 +141,27 @@ export default function AIImageTab({
                     </a>
 
                     <div className="grid grid-cols-2 gap-3">
-                        {isSelected ? (
+                        <>
                             <button
                                 type="button"
-                                onClick={onClearImage}
-                                className="col-span-2 border border-red-500/40 text-red-400
-                                           hover:bg-red-500/10 py-3 rounded-2xl font-semibold
-                                           text-sm transition-all"
-                            >
-                                Bỏ chọn ảnh này
-                            </button>
-                        ) : (
-                            <>
-                                <button
-                                    type="button"
-                                    onClick={() => onSelectImage(generatedImageUrl)}
-                                    className="bg-green-600 hover:bg-green-500 text-white
+                                onClick={() => onSelectImage(generatedImageUrl)}
+                                className="bg-green-600 hover:bg-green-500 text-white
                                                py-3 rounded-2xl font-bold text-sm transition-all"
-                                >
-                                    Dùng ảnh này cho bài Post
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
-                                    disabled={loading.generateImage || !prompt.trim()}
-                                    className="border border-slate-700 text-slate-300
+                            >
+                                Dùng ảnh này cho bài Post
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onGenerate(prompt, aspectRatio, imageSize)}
+                                disabled={loading.generateImage || !prompt.trim()}
+                                className="border border-slate-700 text-slate-300
                                                hover:border-primary/50 hover:text-white
                                                disabled:opacity-50 py-3 rounded-2xl
                                                font-semibold text-sm transition-all"
-                                >
-                                    Tạo lại
-                                </button>
-                            </>
-                        )}
+                            >
+                                Tạo lại
+                            </button>
+                        </>
                     </div>
                 </div>
             )}
