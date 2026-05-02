@@ -55,14 +55,7 @@ export const fetchCreateHashtag = createAsyncThunk<
     async (data, thunkAPI) => {
         try {
             const createResp = await hashtagService.createHashtag(data);
-            // API may return an ApiResponse<number> or plain number
-            const respData: any = createResp?.data;
-            let newId: number;
-            if (respData && typeof respData === 'object' && ('data' in respData)) {
-                newId = respData.data as number;
-            } else {
-                newId = respData as number;
-            }
+            let newId = createResp.data.data as number;
             const detailResp = await hashtagService.getHashtagById(newId);
             return detailResp.data.data as Hashtag;
         } catch (error) {

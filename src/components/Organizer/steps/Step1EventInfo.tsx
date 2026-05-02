@@ -107,7 +107,7 @@ function CreateHashtagModal({ initialName, onClose, onCreated }: CreateHashtagMo
         setLoading(true);
         try {
             const res = await dispatch(fetchCreateHashtag({ name: trimmed })).unwrap();
-            onCreated({ id: res as unknown as number, name: trimmed });
+            onCreated({ id: res.id, name: res.name });
         } catch {
             setError("Tạo hashtag thất bại, vui lòng thử lại");
         } finally {

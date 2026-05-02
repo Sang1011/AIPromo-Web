@@ -1,9 +1,10 @@
 import type { AxiosResponse } from "axios";
 import type { CreateHashtagRequest, GetAllHashtagsResponse, GetHashtagByIdResponse } from "../types/hashtag/hashtag";
 import { interceptorAPI } from "../utils/attachInterceptors";
+import type { ApiResponse } from "../types/api";
 
 const hashtagService = {
-    createHashtag: (data: CreateHashtagRequest): Promise<AxiosResponse<number>> => {
+    createHashtag: (data: CreateHashtagRequest): Promise<AxiosResponse<ApiResponse<number>>> => {
         return interceptorAPI().post("/hashtags", data);
     },
     getAllHashtags: (
