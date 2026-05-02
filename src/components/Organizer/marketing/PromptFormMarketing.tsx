@@ -22,7 +22,7 @@ import {
     clearGeneratedImageUrl,
     createPostDraft,
     generateContentPostUsingAI,
-    setGeneratedImageUrl,
+    generateImage,
     uploadImagePost
 } from "../../../store/postSlice";
 import type { GetEventDetailResponse } from "../../../types/event/event";
@@ -828,11 +828,8 @@ export default function PromptFormMarketing() {
                             selectedImageUrl={selectedImageUrl}
                             loading={loading}
                             error={error}
-                            onGenerate={(_p, _a, _s) =>
-                                // dispatch(generateImage({ prompt: p, aspectRatio: a, imageSize: s }))
-                                dispatch(setGeneratedImageUrl(
-                                    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTI8T-lGleySo2D8ZvH2UVNtGn9IF6lkyXesw&s"
-                                ))
+                            onGenerate={(p, a, s) =>
+                                dispatch(generateImage({ prompt: p, aspectRatio: a, imageSize: s }))
                             }
                             onSelectImage={handleSelectImage}
                             onClearImage={handleClearImage}
