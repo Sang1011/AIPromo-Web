@@ -470,7 +470,7 @@ export default function Step3Settings({
                     <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                         <FiLink />
                     </div>
-                    <h2 className="text-lg font-semibold text-white">Đường dẫn tuỳ chỉnh</h2>
+                    <h2 className="text-lg font-semibold text-white">* Đường dẫn tuỳ chỉnh</h2>
                 </div>
                 <p className="text-sm text-slate-400 mb-4">Tạo đường dẫn ngắn gọn cho sự kiện của bạn</p>
                 <div className="space-y-2">
