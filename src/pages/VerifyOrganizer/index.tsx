@@ -247,8 +247,8 @@ export default function VerifyOrganizer() {
                   ${disabled
                     ? "opacity-40 cursor-not-allowed border-[#1E293B]"
                     : errors["logo"]
-                    ? "border-red-500/60 hover:border-red-400 cursor-pointer"
-                    : "border-[#1E293B] hover:border-primary/40 cursor-pointer"
+                      ? "border-red-500/60 hover:border-red-400 cursor-pointer"
+                      : "border-[#1E293B] hover:border-primary/40 cursor-pointer"
                   }`}
               >
                 {logoPreview ? (
@@ -622,23 +622,22 @@ export default function VerifyOrganizer() {
               )}
             </div>
 
-            {/* BankSelect replaces the old bankCode text input */}
-            <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
-              <BankSelect
-                label="Tên ngân hàng"
-                required
-                banks={BANKS}
-                value={formData.bankInfo.bankCode}
-                onChange={(v: string) => updateBankInfo("bankCode", v)}
-                error={!!errors["bankCode"]}
-              />
-              {errors["bankCode"] && (
-                <p className={errMsgCls}>
-                  <span className="material-symbols-outlined text-[13px]">error</span>
-                  {errors["bankCode"]}
-                </p>
-              )}
-            </div>
+            <BankSelect
+              label="Tên ngân hàng"
+              required
+              banks={BANKS}
+              value={formData.bankInfo.bankCode}
+              onChange={(v: string) => updateBankInfo("bankCode", v)}
+              error={!!errors["bankCode"]}
+              disabled={disabled}
+              labelCls={labelCls}
+            />
+            {errors["bankCode"] && (
+              <p className={errMsgCls}>
+                <span className="material-symbols-outlined text-[13px]">error</span>
+                {errors["bankCode"]}
+              </p>
+            )}
 
             <div>
               <label className={labelCls} htmlFor="branch_name">
