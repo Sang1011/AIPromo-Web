@@ -91,8 +91,8 @@ function SessionCard({
 
     return (
         <div className={`group relative flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border transition-all duration-200 ${hasTicketConflict
-                ? "bg-amber-950/20 border-amber-500/25 hover:border-amber-500/40"
-                : "bg-[#18122B] border-white/5 hover:border-primary/25 hover:bg-[#1e1638]"
+            ? "bg-amber-950/20 border-amber-500/25 hover:border-amber-500/40"
+            : "bg-[#18122B] border-white/5 hover:border-primary/25 hover:bg-[#1e1638]"
             }`}>
             <div className={`absolute left-0 top-3 bottom-3 w-0.5 rounded-full transition-colors ${hasTicketConflict ? "bg-amber-500/50" : "bg-primary/30 group-hover:bg-primary/60"
                 }`} />
@@ -294,7 +294,7 @@ export default function Step2Schedule({
 
     // ── Auto-derive eventStartAt/eventEndAt from sessions ─────────────────────
     useEffect(() => {
-        if (!eventId || eventData?.status !== "Draft") return;
+        if (!eventId || (eventData?.status !== "Draft" && eventData?.status !== "Suspended")) return;
 
         if (sessions.length === 0) {
             setTimeForm(prev => ({ ...prev, eventStartAt: "", eventEndAt: "" }));

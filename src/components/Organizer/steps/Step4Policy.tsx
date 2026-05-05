@@ -109,7 +109,7 @@ export default function Step4Policy({
         }
     };
 
-    const isDraft = eventData?.status === "Draft";
+    const isDraft = eventData?.status === "Draft" || eventData?.status === "Suspended";
 
     // ── helpers ──────────────────────────────────────────────
     const updateTitle = (si: number, value: string) => {
