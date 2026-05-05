@@ -6,19 +6,19 @@ import { MdMenu, MdOutlineKeyboardArrowRight, MdOutlinePalette } from 'react-ico
 import { Circle, Group, Text as KonvaText, Layer, Line, Rect, Stage, Transformer } from 'react-konva';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import SeatMapReadOnly from '../../components/Organizer/seatmap/SeatMapReadOnly';
 import type { AppDispatch, RootState } from '../../store';
 import { fetchEventById } from '../../store/eventSlice';
 import { fetchAssignAreas, fetchGetListSeatMapByCurrentOrganizer, fetchGetSeatMap, fetchUpdateSeatMap } from '../../store/seatMapSlice';
 import { fetchGetAllTicketTypes } from '../../store/ticketTypeSlice';
 import type { Area, EditorMode, Entity, HistoryState, Seat, SeatLayoutType, SeatMapData, SelectionBox, TextEntity } from '../../types/config/seatmap';
 import type { EventSession } from '../../types/event/event';
+import type { GetListSeatMapByCurrentOrganizerItem } from '../../types/seatmap/seatmap';
 import type { TicketTypeItem } from '../../types/ticketType/ticketType';
 import { getSeatsBoundingBox } from '../../utils/getSeatBoundingBox';
 import { getWorldPointer } from '../../utils/getWorldPointer';
 import { notify } from '../../utils/notify';
 import { validateSeatMap } from '../../utils/validateSeatMap';
-import type { GetListSeatMapByCurrentOrganizerItem } from '../../types/seatmap/seatmap';
-import SeatMapReadOnly from '../../components/Organizer/seatmap/SeatMapReadOnly';
 
 const GRID_SIZE = 20;
 const CANVAS_WIDTH = 1550;
@@ -79,14 +79,14 @@ const SeatMapEditorPage: React.FC = () => {
     const [showPropertiesPanel, setShowPropertiesPanel] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-    const [seatLayoutType, setSeatLayoutType] = useState<SeatLayoutType>('grid');
+    const [seatLayoutType, _setSeatLayoutType] = useState<SeatLayoutType>('grid');
     const [gridRows, setGridRows] = useState(3);
     const [gridColumns, setGridColumns] = useState(5);
     const [seatWidth, setSeatWidth] = useState(15);
     const [seatHeight, setSeatHeight] = useState(15);
     const [seatSpacing, setSeatSpacing] = useState(10);
-    const [arcTotalSeats, setArcTotalSeats] = useState(20);
-    const [arcCurvature, setArcCurvature] = useState(180);
+    const [arcTotalSeats, _setArcTotalSeats] = useState(20);
+    const [arcCurvature, _setArcCurvature] = useState(180);
     const groupDragAnchorRef = useRef<Konva.Node | null>(null);
     const [ticketTypes, setTicketTypes] = useState<TicketTypeItem[]>([]);
     const stageRef = useRef<Konva.Stage>(null);
@@ -2759,49 +2759,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                 }}>
                                                     BỐ TRÍ GHẾ
                                                 </label>
-                                                <div style={{
-                                                    display: 'flex',
-                                                    gap: '8px',
-                                                    background: '#16162a',
-                                                    borderRadius: '8px',
-                                                    padding: '4px',
-                                                    marginBottom: '16px'
-                                                }}>
-                                                    <button
-                                                        onClick={() => setSeatLayoutType('grid')}
-                                                        style={{
-                                                            flex: 1,
-                                                            background: seatLayoutType === 'grid' ? '#8B5CF6' : 'transparent',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            padding: '8px 12px',
-                                                            color: seatLayoutType === 'grid' ? 'white' : '#6b7280',
-                                                            fontSize: '12px',
-                                                            fontWeight: 500,
-                                                            cursor: 'pointer',
-                                                            transition: 'all 0.2s'
-                                                        }}
-                                                    >
-                                                        Lưới
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setSeatLayoutType('arc')}
-                                                        style={{
-                                                            flex: 1,
-                                                            background: seatLayoutType === 'arc' ? '#8B5CF6' : 'transparent',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            padding: '8px 12px',
-                                                            color: seatLayoutType === 'arc' ? 'white' : '#6b7280',
-                                                            fontSize: '12px',
-                                                            fontWeight: 500,
-                                                            cursor: 'pointer',
-                                                            transition: 'all 0.2s'
-                                                        }}
-                                                    >
-                                                        Vòng cung
-                                                    </button>
-                                                </div>
 
                                                 <div style={{ marginBottom: '16px' }}>
                                                     <label style={{
@@ -2969,69 +2926,6 @@ const SeatMapEditorPage: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 )}
-
-                                                {seatLayoutType === 'arc' && (
-                                                    <>
-                                                        <div style={{ marginBottom: '12px' }}>
-                                                            <label style={{
-                                                                display: 'block',
-                                                                fontSize: '11px',
-                                                                color: '#9ca3af',
-                                                                marginBottom: '8px'
-                                                            }}>
-                                                                Tổng số ghế
-                                                            </label>
-                                                            <input
-                                                                type="number"
-                                                                min="2"
-                                                                max="50"
-                                                                value={arcTotalSeats}
-                                                                onChange={(e) => setArcTotalSeats(Math.max(2, Number(e.target.value)))}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    background: '#16162a',
-                                                                    border: '1px solid #2a2a3e',
-                                                                    borderRadius: '6px',
-                                                                    padding: '8px 10px',
-                                                                    color: '#e5e7eb',
-                                                                    fontSize: '13px',
-                                                                    outline: 'none'
-                                                                }}
-                                                            />
-                                                        </div>
-                                                        <div style={{ marginBottom: '12px' }}>
-                                                            <label style={{
-                                                                display: 'block',
-                                                                fontSize: '11px',
-                                                                color: '#9ca3af',
-                                                                marginBottom: '8px'
-                                                            }}>
-                                                                Độ cong (độ)
-                                                            </label>
-                                                            <select
-                                                                value={arcCurvature}
-                                                                onChange={(e) => setArcCurvature(Number(e.target.value))}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    background: '#16162a',
-                                                                    border: '1px solid #2a2a3e',
-                                                                    borderRadius: '6px',
-                                                                    padding: '8px 10px',
-                                                                    color: '#e5e7eb',
-                                                                    fontSize: '13px',
-                                                                    outline: 'none',
-                                                                }}
-                                                            >
-                                                                <option value={120}>1/3 vòng (120°)</option>
-                                                                <option value={180}>Nửa vòng (180°)</option>
-                                                                <option value={240}>2/3 vòng (240°)</option>
-                                                                <option value={270}>3/4 vòng (270°)</option>
-                                                                <option value={325}>Gần tròn (325°)</option>
-                                                            </select>
-                                                        </div>
-                                                    </>
-                                                )}
-
                                                 {(() => {
                                                     const tt = ticketTypes.find(t => t.id === selectedSection?.ticketTypeId);
                                                     const alreadyCreated = seats.filter(s => s.sectionId === selectedSection?.id).length;
