@@ -4,6 +4,7 @@ import type { RootState, AppDispatch } from "../../store";
 import { Link, useNavigate } from "react-router-dom";
 import { fetchAllEvents } from "../../store/eventSlice";
 import logo from '../../assets/logo.svg'
+import { MdAdd } from "react-icons/md";
 
 interface UserInfo {
   userId?: string;
@@ -303,7 +304,7 @@ const Header: React.FC = () => {
                 boxShadow: "0 4px 15px rgba(124, 58, 237, 0.3)",
               }}
             >
-              <span className="material-symbols-outlined text-[18px]">add</span>
+              <MdAdd className="text-[18px]" />
               <span className="hidden sm:inline">{isOrganizer ? "Quản lý sự kiện" : "Tạo sự kiện"}</span>
             </button>
 

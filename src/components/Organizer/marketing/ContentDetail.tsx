@@ -323,7 +323,7 @@ export default function ContentDetail({
 
     const canPublish = post?.canPublish && post.status === "Approved";
     const canEdit = post?.canEdit && post.status === "Draft";
-    const canArchive = post?.canArchive && post.status === "Published";
+    const canArchive = post?.canArchive;
     const canPush = post?.status === "Published";
 
     const rawBlocks = parseBodyToBlocks(post?.body ?? "");
@@ -586,7 +586,7 @@ export default function ContentDetail({
                                         }}
                                         className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm bg-primary text-white border border-primary hover:bg-primary/90 active:scale-95 shadow-lg shadow-primary/40 transition-all"
                                     >
-                                        <MdOutlineCheckCircle className="text-base" /> Đăng bài lên công khai
+                                        <MdOutlineCheckCircle className="text-base" /> {post.status === "Approved" ? "Đăng bài lên công khai" : "Đăng lại"}
                                     </button>
                                 )}
 

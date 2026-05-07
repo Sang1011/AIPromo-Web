@@ -319,10 +319,10 @@ export const generateContentPostUsingAI = createAsyncThunk(
     async ({ eventId, userPromptRequirement }: { eventId: string; userPromptRequirement?: string }, { rejectWithValue }) => {
         try {
             const res = await postService.generateContentPostUsingAI(eventId, userPromptRequirement);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Bạn không đủ token để tạo nội dung bằng AI");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa");
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Bạn không đủ token để tạo nội dung bằng AI");
+            return rejectWithValue(error?.response?.data?.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa");
         }
     }
 );
@@ -345,11 +345,11 @@ export const generateImage = createAsyncThunk(
     async (data: GenerateImageRequestBody, { rejectWithValue }) => {
         try {
             const res = await postService.generateImage(data);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Token của bạn đã hết hạn hoặc không đủ để tạo ảnh");
+            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa");
 
             return res.data.data.imageUrl;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Token của bạn đã hết hạn hoặc không đủ để tạo ảnh");
+            return rejectWithValue(error?.response?.data?.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa");
         }
     }
 );

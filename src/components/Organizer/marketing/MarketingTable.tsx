@@ -104,7 +104,7 @@ export default function MarketingTable() {
                     <thead className="bg-slate-900/80 text-slate-500 uppercase text-[12px] font-black tracking-widest">
                         <tr>
                             <th className="px-8 py-5">Tiêu đề nội dung</th>
-                            <th className="px-8 py-5">Trạng thái</th>
+                            <th className="px-8 py-5 min-w-[120px]">Trạng thái</th>
                             <th className="px-8 py-5">Phiên bản</th>
                             <th className="px-8 py-5">Phân phối</th>
                             <th className="px-8 py-5">Ngày tạo</th>
@@ -136,11 +136,11 @@ export default function MarketingTable() {
                                         </p>
                                     </td>
                                     <td className="px-8 py-6">
-                                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase border ${statusInfo.className}`}>
+                                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase border whitespace-nowrap ${statusInfo.className}`}>
                                             {statusInfo.label}
                                         </span>
                                     </td>
-                                    <td className="px-8 py-6 text-slate-400 text-sm">
+                                    <td className="px-8 py-6 text-slate-400 text-sm whitespace-nowrap">
                                         v{post.version}
                                     </td>
                                     <td className="px-8 py-6">
