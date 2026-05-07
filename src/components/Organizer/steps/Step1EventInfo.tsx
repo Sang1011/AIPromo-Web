@@ -273,7 +273,7 @@ export default function Step1EventInfo({
         if (!eventForm.description.trim()) newErrors.description = "Mô tả sự kiện không được để trống";
         else if (eventForm.description.length > 300) newErrors.description = "Mô tả tối đa 300 ký tự";
         if (!eventForm.location.trim()) newErrors.location = "Địa điểm không được để trống";
-        else if (eventForm.location.length > 500) newErrors.location = "Địa điểm tối đa 500 ký tự";
+        else if (eventForm.location.length > 150) newErrors.location = "Địa điểm tối đa 150 ký tự";
         if (eventForm.selectedHashtags.length < 1) newErrors.selectedHashtags = "Phải chọn ít nhất 1 hashtag";
         if (eventForm.selectedCategories.length < 1) newErrors.selectedCategories = "Phải chọn ít nhất 1 thể loại";
         if (eventForm.actors.length !== 0) {
