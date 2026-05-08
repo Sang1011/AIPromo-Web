@@ -1,16 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-
 const HeroSection: React.FC = () => {
   return (
     <section className="relative h-screen min-h-[800px] flex items-center overflow-hidden">
       {/* YouTube Video Background */}
       <div className="absolute inset-0 overflow-hidden z-0">
-        <iframe
-          className="absolute top-1/2 left-1/2 w-[177.77vh] h-[56.25vw] min-w-full min-h-full -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-          src="https://www.youtube.com/embed/VRnaVqZfrAE?autoplay=1&mute=1&loop=1&playlist=VRnaVqZfrAE&controls=0&showinfo=0&rel=0&playsinline=1&modestbranding=1"
-          allow="autoplay; fullscreen"
-        ></iframe>
+        <video
+          className="absolute top-1/2 left-1/2 w-[177.77vh] h-[56.25vw] min-w-full min-h-full -translate-x-1/2 -translate-y-1/2 pointer-events-none object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          src="/AIPROMO.mp4"
+        />
       </div>
 
       {/* Lớp phủ gradient (Overlay) */}
@@ -40,9 +42,9 @@ const HeroSection: React.FC = () => {
           {/* Actions */}
           <div className="flex flex-wrap gap-4">
             <button className="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-primary/30 flex items-center gap-2 group">
-          <Link to="/verify-organizer"> Bắt đầu ngay</Link>   
+              <Link to="/verify-organizer"> Bắt đầu ngay</Link>
             </button>
-         
+
           </div>
         </div>
       </div>
