@@ -2056,25 +2056,6 @@ const SeatMapEditorPage: React.FC = () => {
                     >
                         {seatMapLoading ? 'Đang lưu...' : 'Lưu sơ đồ'}
                     </button>
-                    <button
-                        onClick={() => {
-                            const data = serializeSeatMap();
-                            console.log('=== SPEC ===');
-                            console.log(JSON.stringify(data, null, 2));
-                        }}
-                        style={{
-                            background: 'transparent',
-                            border: '1px solid #4b5563',
-                            borderRadius: '8px',
-                            padding: '10px 16px',
-                            color: '#9ca3af',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Log spec
-                    </button>
                 </div>
             </div>
 
