@@ -45,10 +45,9 @@ const ORDER_STATUS_MAP: Record<string, { label: string; cls: string; icon: React
 };
 
 const TICKET_STATUS_MAP: Record<string, { label: string; cls: string }> = {
-    active: { label: "Kích hoạt", cls: "bg-emerald-400/15 text-emerald-300" },
+    valid: { label: "Kích hoạt", cls: "bg-emerald-400/15 text-emerald-300" },
     used: { label: "Đã dùng", cls: "bg-slate-400/15 text-slate-400" },
     cancelled: { label: "Đã huỷ", cls: "bg-rose-400/15 text-rose-300" },
-    pending: { label: "Chờ xử lý", cls: "bg-amber-400/15 text-amber-300" },
 };
 
 // ── Section label ─────────────────────────────────────────────────────────────
