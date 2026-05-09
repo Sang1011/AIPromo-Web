@@ -592,6 +592,7 @@ export default function PaymentTicket() {
   const isWalletInsufficient =
     selectedMethod === "wallet" && !walletLoading && !walletNotFound && walletBalance < total;
   const isOrderReadyForPayment = Boolean(resolvedOrderId) && total >= 0;
+  const isZeroAmountOrder = total === 0;
 
   const [isPaying, setIsPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
@@ -749,9 +750,30 @@ export default function PaymentTicket() {
     localStorage.setItem("tracking_ticket_quantity", String(ticketQuantity))
 
     if (total === 0) {
-      await clearOldOrderFromFirebase();
-      navigate("/order/success");
-      return;
+      setIsPaying(true);
+      try {
+        const result = await dispatch(
+          fetchPaymentOrder({
+            orderId: resolvedOrderId,
+            method: "BatchWalletPay",
+            description: `Thanh toán đơn ${resolvedOrderId} bằng Ví`,
+          })
+        );
+
+        if (fetchPaymentOrder.fulfilled.match(result)) {
+          await clearOldOrderFromFirebase();
+          navigate("/order/success");
+          return;
+        }
+
+        const errMsg =
+          (result.payload as any)?.message ??
+          (result.error?.message ?? "Thanh toán thất bại, vui lòng thử lại.");
+        setPayError(errMsg);
+        return;
+      } finally {
+        setIsPaying(false);
+      }
     }
 
     setIsPaying(true);
@@ -801,19 +823,14 @@ export default function PaymentTicket() {
       const result = await dispatch(
         fetchPaymentOrder({
           orderId: resolvedOrderId,
-          method: selectedMethod === "wallet" ? "BatchWalletPay" : "BatchDirectPay",
-          description: `Thanh toán đơn ${resolvedOrderId} bằng ${selectedMethod === "wallet" ? "Ví" : "VNPay"}`,
+          method: isZeroAmountOrder || selectedMethod === "wallet" ? "BatchWalletPay" : "BatchDirectPay",
+          description: `Thanh toán đơn ${resolvedOrderId} bằng ${isZeroAmountOrder || selectedMethod === "wallet" ? "Ví" : "VNPay"}`,
         })
       );
 
       if (fetchPaymentOrder.fulfilled.match(result)) {
         const payload = (result.payload as any)?.data as PaymentOrderPaymentResponse;
 
-        // Dọn Firebase + localStorage trước khi redirect
-        // Lưu ý: nếu thanh toán qua VNPay (redirect sang trang ngoài),
-        // nên gọi clearOldOrderFromFirebase() ở trang callback VNPay thay vì ở đây
-        // vì window.location.href sẽ unmount component trước khi await hoàn tất.
-        // Với wallet pay (không redirect), gọi tại đây là an toàn.
         if (selectedMethod === "wallet") {
           await clearOldOrderFromFirebase();
           navigate("/order/success");
@@ -1059,13 +1076,14 @@ export default function PaymentTicket() {
                 </label>
 
                 {/* VNPay */}
-                <label className="block relative cursor-pointer group">
+                <label className={`block relative group ${isZeroAmountOrder ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
                   <input
                     type="radio"
                     name="payment_method"
                     className="peer hidden"
                     checked={selectedMethod === "vnpay"}
-                    onChange={() => setSelectedMethod("vnpay")}
+                    disabled={isZeroAmountOrder}
+                    onChange={() => !isZeroAmountOrder && setSelectedMethod("vnpay")}
                   />
                   <div className={`p-6 rounded-xl border transition-all ${selectedMethod === "vnpay" ? "border-[#793bed] bg-[#793bed]/5" : "border-white/10 group-hover:border-[#793bed]/50"}`}>
                     <div className="flex items-center justify-between">
