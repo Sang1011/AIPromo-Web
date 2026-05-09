@@ -877,7 +877,7 @@ function TopPostsTable({ fb, ig, th }: {
             const eng = d.metrics.likes + d.metrics.comments;
             const er = calcFacebookER(d.metrics.likes, d.metrics.comments, d.metrics.reach);
             const cvr = calcFacebookCVR(d.metrics.buyCount, d.metrics.clickCount);
-            const ctr = calcFacebookCTR(d.metrics.clicks, d.metrics.reach);
+            const ctr = calcFacebookCTR(d.metrics.clickCount, d.metrics.reach);
             return {
                 id: d.post.id + "_fb", title: d.post.title, publishedAt: d.post.publishedAt,
                 platform: "Facebook" as const,

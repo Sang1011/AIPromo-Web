@@ -22,18 +22,18 @@ export function calcFacebookER(likes: number, comments: number, reach: number): 
  * NOTE: Facebook không trả về impressions qua Graph API cơ bản,
  * nên dùng reach làm mẫu số — CTR này là ước tính, thực tế có thể cao hơn
  */
-export function calcFacebookCTR(clicks: number, reach: number): number | null {
-    if (reach <= 0 || clicks <= 0) return null
-    return clicks / reach
+export function calcFacebookCTR(clickCount: number, reach: number): number | null {
+    if (reach <= 0 || clickCount <= 0) return null
+    return clickCount / reach
 }
 
 /**
  * CVR = buyCount / clicks
  * buyCount = số vé bán được từ tracking link này
  */
-export function calcFacebookCVR(buyCount: number, clicks: number): number | null {
-    if (clicks <= 0) return null
-    return buyCount / clicks
+export function calcFacebookCVR(buyCount: number, clickCount: number): number | null {
+    if (clickCount <= 0) return null
+    return buyCount / clickCount
 }
 
 // ─── Instagram ───────────────────────────────────────────────────────────────
