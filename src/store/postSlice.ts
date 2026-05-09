@@ -22,6 +22,7 @@ import type {
     PostDistribution,
 } from "../types/post/post";
 import type { PaginatedResponse } from "../types/api";
+import { extractErrorMessage } from "../utils/extractErrorMessageMarketing";
 
 interface PostState {
     postDetail: PostDetail | null;
@@ -316,13 +317,24 @@ export const publishApprovedPost = createAsyncThunk(
 
 export const generateContentPostUsingAI = createAsyncThunk(
     "post/generateContentPostUsingAI",
-    async ({ eventId, userPromptRequirement }: { eventId: string; userPromptRequirement?: string }, { rejectWithValue }) => {
+    async (
+        { eventId, userPromptRequirement }: { eventId: string; userPromptRequirement?: string },
+        { rejectWithValue }
+    ) => {
         try {
             const res = await postService.generateContentPostUsingAI(eventId, userPromptRequirement);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa");
+            if (!res.data.isSuccess)
+                return rejectWithValue(
+                    res.data.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa"
+                );
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa");
+            return rejectWithValue(
+                extractErrorMessage(
+                    error,
+                    "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa"
+                )
+            );
         }
     }
 );
@@ -345,11 +357,18 @@ export const generateImage = createAsyncThunk(
     async (data: GenerateImageRequestBody, { rejectWithValue }) => {
         try {
             const res = await postService.generateImage(data);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa");
-
+            if (!res.data.isSuccess)
+                return rejectWithValue(
+                    res.data.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa"
+                );
             return res.data.data.imageUrl;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa");
+            return rejectWithValue(
+                extractErrorMessage(
+                    error,
+                    "Server đang bị quá tải, vui lòng thử lại trong ít phút nữa"
+                )
+            );
         }
     }
 );
@@ -359,13 +378,15 @@ export const sendToChatBox = createAsyncThunk(
     async (userPrompt: string, { rejectWithValue }) => {
         try {
             const res = await postService.sendToChatBox(userPrompt);
-            if (!res.data.isSuccess) return rejectWithValue(res.data.message ?? "Lỗi khi gửi tin nhắn");
+            if (!res.data.isSuccess)
+                return rejectWithValue(res.data.message ?? "Lỗi khi gửi tin nhắn");
             return res.data.data;
         } catch (error: any) {
-            return rejectWithValue(error?.response?.data?.message ?? "Lỗi khi gửi tin nhắn");
+            return rejectWithValue(extractErrorMessage(error, "Lỗi khi gửi tin nhắn"));
         }
     }
 );
+
 
 export const fetchAdminPosts = createAsyncThunk(
     "post/fetchAdminPosts",

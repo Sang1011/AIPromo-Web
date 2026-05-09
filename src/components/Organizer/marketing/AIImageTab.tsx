@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MdOutlineDownload, MdOutlineImage } from "react-icons/md";
+import { notify } from "../../../utils/notify";
 
 function Spinner() {
     return (
@@ -144,7 +145,10 @@ export default function AIImageTab({
                         <>
                             <button
                                 type="button"
-                                onClick={() => onSelectImage(generatedImageUrl)}
+                                onClick={() => {
+                                    onSelectImage(generatedImageUrl);
+                                    notify.success("Đã chọn ảnh này cho bài Post");
+                                }}
                                 className="bg-green-600 hover:bg-green-500 text-white
                                                py-3 rounded-2xl font-bold text-sm transition-all"
                             >

@@ -37,6 +37,7 @@ import PostBlockRenderer from "../post/PostBlockRenderer";
 import { TONE_OPTIONS } from "./AIContentTab";
 import AIImageTab from "./AIImageTab";
 import BlockEditor from "./BlockEditor";
+import InsufficientTokenCard, { isInsufficientTokenError } from "./InsufficientTokenCard";
 import UploadImageSection from "./UploadImageSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -275,7 +276,6 @@ function GeneratePreviewModal({
     );
 }
 
-// ─── AIContentSection ─────────────────────────────────────────────────────────
 
 function AIContentSection({
     generatedDraft,
@@ -330,8 +330,15 @@ function AIContentSection({
         onSaveDraft(previewData.blocks, previewData.title);
     };
 
+    const tokenError =
+        isInsufficientTokenError(error?.generateAI) ? error.generateAI : null;
+
     return (
         <div className="space-y-5">
+            {tokenError && (
+                <InsufficientTokenCard upgradeHref="/organizer/subscription" />
+            )}
+
             <ImageHintBanner
                 selectedImageUrl={selectedImageUrl}
                 onSelectImage={onSelectImage}
@@ -387,7 +394,7 @@ function AIContentSection({
                 />
             </div>
 
-            {error?.generateAI && (
+            {error?.generateAI && !tokenError && (
                 <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                     {error.generateAI}
                 </p>
@@ -396,7 +403,7 @@ function AIContentSection({
             <button
                 type="button"
                 onClick={() => onGenerate(tone, userPrompt)}
-                disabled={isGenerating}
+                disabled={isGenerating || !!tokenError}
                 className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50
                            disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold
                            flex items-center justify-center gap-2 transition-all neon-button-glow"

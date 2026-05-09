@@ -1026,6 +1026,10 @@ const SeatMapViewerPage: React.FC = () => {
             notify.success('Tạo order thành công');
         } else {
             notify.error(getOrderErrorMessage(result.payload));
+            if (eventId && eventSessionId) {
+                dispatch(fetchGetSeatMap({ eventId, sessionId: eventSessionId }));
+                dispatch(fetchGetAllTicketTypes({ eventId, eventSessionId }));
+            }
         }
     };
 
