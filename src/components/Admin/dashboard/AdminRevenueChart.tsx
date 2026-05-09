@@ -74,7 +74,7 @@ export default function AdminRevenueChart() {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
             const dateKey = formatDateKey(date);
-            
+
             // Use existing data or create empty entry
             if (dataMap.has(dateKey)) {
                 allDays.push(dataMap.get(dateKey)!);
@@ -149,7 +149,7 @@ export default function AdminRevenueChart() {
             const mouseY = ((e.clientY - rect.top) / rect.height) * chartData.height;
 
             // Find which bar the mouse is over
-            const bar = chartData.bars.find(b => 
+            const bar = chartData.bars.find(b =>
                 mouseX >= b.x && mouseX <= b.x + b.width &&
                 mouseY >= b.y && mouseY <= chartData!.padding.top + chartData!.chartHeight
             );
@@ -183,7 +183,7 @@ export default function AdminRevenueChart() {
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h2 className="text-lg font-bold text-white">
-                            Xu hướng Doanh thu & Giao dịch
+                            Xu hướng Doanh thu & Giao dịch (từ ví và thanh toán vé)
                         </h2>
                         <p className="text-[#a592c8] text-sm">
                             Đang tải dữ liệu...
@@ -203,7 +203,7 @@ export default function AdminRevenueChart() {
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h2 className="text-lg font-bold text-white">
-                            Xu hướng Doanh thu & Giao dịch
+                            Xu hướng Doanh thu & Giao dịch (từ ví và thanh toán vé)
                         </h2>
                         <p className="text-[#a592c8] text-sm">
                             Số liệu {selectedDays} ngày gần nhất
@@ -242,7 +242,7 @@ export default function AdminRevenueChart() {
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h2 className="text-lg font-bold text-white">
-                        Xu hướng Doanh thu & Giao dịch
+                        Xu hướng Doanh thu & Giao dịch (từ ví và thanh toán vé)
                     </h2>
                     <p className="text-[#a592c8] text-sm">
                         Số liệu {selectedDays} ngày gần nhất
@@ -260,7 +260,7 @@ export default function AdminRevenueChart() {
                     ))}
                 </select>
             </div>
-            
+
             <div className="h-64 relative w-full">
                 <svg
                     className="w-full h-full"
@@ -414,7 +414,7 @@ export default function AdminRevenueChart() {
                     ))}
                 </div>
             </div>
-            
+
             {/* Legend */}
             <div className="flex items-center justify-center gap-6 mt-4 text-xs text-[#a592c8]">
                 <div className="flex items-center gap-2">

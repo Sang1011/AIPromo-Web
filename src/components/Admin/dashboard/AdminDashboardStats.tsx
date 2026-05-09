@@ -50,6 +50,9 @@ export default function AdminDashboardStats() {
     const eventsData = data.kpis.events;
     const ticketsData = data.kpis.ticketsSold;
     const userDistData = data.userDistribution;
+    const ticketRevenue = data.kpis?.revenueBreakdown?.ticketRevenue ?? 0;
+    const aiPackageRevenue =
+        data.kpis?.revenueBreakdown?.aiPackageRevenue ?? 0;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -62,20 +65,33 @@ export default function AdminDashboardStats() {
                 iconBg={revenueData.isPositiveGrowth ? "bg-emerald-500/10" : "bg-red-500/10"}
                 iconColor={revenueData.isPositiveGrowth ? "text-emerald-400" : "text-red-400"}
                 showGradientBar
-            />
+            >
+                <div className="mt-3">
+                    <div className="text-sm font-semibold text-emerald-400">
+                        {formatCurrency(ticketRevenue)}{" "}
+                        <span className="text-[#a592c8] text-xs font-medium">từ vé</span>
+                    </div>
+                    <div className="text-sm font-semibold text-indigo-300 mt-1">
+                        {formatCurrency(aiPackageRevenue)}{" "}
+                        <span className="text-[#a592c8] text-xs font-medium">
+                            từ gói AI
+                        </span>
+                    </div>
+                </div>
+            </AdminStatsCard>
             <AdminStatsCard
                 label="Người dùng Hoạt động"
                 value={formatNumber(activeUsersData.total)}
                 icon={<MdGroup className="text-sm" />}
             >
                 <div className="w-full bg-[#302447] h-1.5 rounded-full overflow-hidden flex mt-2">
-                    <div 
-                        className="bg-primary h-full rounded-full" 
-                        style={{ width: `${userDistData.organizers.percentage}%` }} 
+                    <div
+                        className="bg-primary h-full rounded-full"
+                        style={{ width: `${userDistData.organizers.percentage}%` }}
                     />
-                    <div 
-                        className="bg-indigo-400 h-full rounded-full" 
-                        style={{ width: `${userDistData.attendees.percentage}%` }} 
+                    <div
+                        className="bg-indigo-400 h-full rounded-full"
+                        style={{ width: `${userDistData.attendees.percentage}%` }}
                     />
                 </div>
                 <div className="flex justify-between mt-3">
