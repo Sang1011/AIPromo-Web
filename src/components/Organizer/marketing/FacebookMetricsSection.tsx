@@ -182,15 +182,15 @@ export default function FacebookMetricsSection({ post }: { post: PostDetail }) {
 
             {m && (() => {
                 const er = calcFacebookER(m.likes, m.comments, m.reach);
-                const ctr = calcFacebookCTR(m.clicks, m.reach);
-                const cvr = calcFacebookCVR(m.buyCount, m.clicks);
+                const ctr = calcFacebookCTR(m.clickCount, m.reach);
+                const cvr = calcFacebookCVR(m.buyCount, m.clickCount);
 
                 return (
                     <div className="space-y-5">
                         <SectionDivider label="Phân phối" />
                         <div className="grid grid-cols-2 gap-3">
                             <StatCard icon={<MdOutlinePeopleAlt />} label="Reach" value={fmt(m.reach)} sub="Người tiếp cận" color="text-violet-400" borderColor="border-violet-500/20" />
-                            <StatCard icon={<MdOutlineTouchApp />} label="Clicks" value={fmt(m.clicks)} sub="Lượt nhấp" color="text-emerald-400" borderColor="border-emerald-500/20" />
+                            <StatCard icon={<MdOutlineTouchApp />} label="Clicks Count" value={fmt(m.clickCount)} sub="Lượt nhấp" color="text-emerald-400" borderColor="border-emerald-500/20" />
                         </div>
 
                         <SectionDivider label="Tương tác" />

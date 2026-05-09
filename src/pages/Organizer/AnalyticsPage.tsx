@@ -414,7 +414,6 @@ function PlatformRatesPanel({ fb, ig, th }: {
     const fbReach = fb.reduce((s, d) => s + d.metrics.reach, 0);
     const fbLikes = fb.reduce((s, d) => s + d.metrics.likes, 0);
     const fbComments = fb.reduce((s, d) => s + d.metrics.comments, 0);
-    const fbClicks = fb.reduce((s, d) => s + d.metrics.clicks, 0);
     const fbBuyCount = fb.reduce((s, d) => s + d.metrics.buyCount, 0);
     const fbClickCount = fb.reduce((s, d) => s + d.metrics.clickCount, 0);
     const fbShares = fb.reduce((s, d) => s + d.metrics.shares, 0);
@@ -437,7 +436,7 @@ function PlatformRatesPanel({ fb, ig, th }: {
     const thClickCount = th.reduce((s, d) => s + (d.metrics.clickCount ?? 0), 0);
 
     const fbER = calcFacebookER(fbLikes, fbComments, fbReach);
-    const fbCTR = calcFacebookCTR(fbClicks, fbReach);
+    const fbCTR = calcFacebookCTR(fbClickCount, fbReach);
     const fbCVR = calcFacebookCVR(fbBuyCount, fbClickCount);
 
     const igER = calcInstagramER(igLikes, igComments, igSaves, igShares, igReach);
@@ -458,14 +457,14 @@ function PlatformRatesPanel({ fb, ig, th }: {
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-center">
                         <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Reach</p><p className="text-xl font-black text-blue-300 tabular-nums">{fmt(fbReach)}</p></div>
-                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Clicks</p><p className="text-xl font-black text-emerald-400 tabular-nums">{fmt(fbClicks)}</p></div>
+                        <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Clicks Count</p><p className="text-xl font-black text-emerald-400 tabular-nums">{fmt(fbClickCount)}</p></div>
                         <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Likes</p><p className="text-xl font-black text-blue-400 tabular-nums">{fmt(fbLikes)}</p></div>
                         <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Comments</p><p className="text-xl font-black text-violet-400 tabular-nums">{fmt(fbComments)}</p></div>
                         <div><p className="text-xs text-slate-600 font-black uppercase tracking-widest">Shares</p><p className="text-xl font-black text-cyan-400 tabular-nums">{fmt(fbShares)}</p></div>
                     </div>
                     <div className="space-y-3">
                         <RateBar label="Engagement Rate" value={fbER} gradient="linear-gradient(90deg,#3b82f6,#8b5cf6)" formula="(likes+comments)/reach" />
-                        <RateBar label="Click-Through Rate" value={fbCTR} gradient="linear-gradient(90deg,#10b981,#06b6d4)" formula="clicks/reach" />
+                        <RateBar label="Click-Through Rate" value={fbCTR} gradient="linear-gradient(90deg,#10b981,#06b6d4)" formula="clickCount/reach" />
                         <RateBar label="Conversion Rate" value={fbCVR} gradient="linear-gradient(90deg,#f59e0b,#ef4444)" formula="buyCount/clickCount" />
                     </div>
                 </div>
